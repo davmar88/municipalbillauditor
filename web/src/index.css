@@ -1,0 +1,44 @@
+@import 'tailwindcss';
+
+@theme {
+  --font-sans:
+    system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
+    sans-serif;
+
+  /* Brand: a calm, deep teal. 700 on white passes WCAG AA for text. */
+  --color-brand-50: #eef8f6;
+  --color-brand-100: #d5eeea;
+  --color-brand-200: #acdcd4;
+  --color-brand-300: #78c3b7;
+  --color-brand-500: #1f8a7c;
+  --color-brand-600: #157266;
+  --color-brand-700: #0f5e57;
+  --color-brand-800: #0c4b46;
+  --color-brand-900: #0a3a36;
+}
+
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-slate-50 text-slate-900 antialiased;
+    min-width: 320px;
+  }
+
+  /* One consistent, clearly visible focus style for keyboard users. */
+  :focus-visible {
+    outline: 3px solid var(--color-brand-500);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  [tabindex='-1']:focus {
+    outline: none;
+  }
+}

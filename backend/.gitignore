@@ -1,0 +1,45 @@
+# Secrets: only .env.example is committed.
+.env
+.env.backup
+.env.production
+.env.*.local
+auth.json
+
+# Dependencies and build output
+/vendor
+/node_modules
+/public/build
+/public/hot
+/public/storage
+/bootstrap/cache/*.php
+
+# Local SQLite databases
+*.sqlite
+*.sqlite-journal
+*.sqlite3
+/database/*.sqlite*
+
+# Uploaded bill files and other runtime storage
+/storage/app/private/*
+!/storage/app/private/.gitignore
+/storage/app/public/*
+!/storage/app/public/.gitignore
+/storage/*.key
+/storage/pail
+
+# Tooling
+*.log
+.phpunit.result.cache
+/.phpunit.cache
+.phpactor.json
+_ide_helper.php
+Homestead.json
+Homestead.yaml
+/.codex
+/.cursor/
+/.idea
+/.nova
+/.vscode
+/.zed
+.DS_Store
+Thumbs.db
