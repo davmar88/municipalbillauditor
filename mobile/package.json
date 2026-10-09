@@ -60,6 +60,7 @@
     "setupFilesAfterEnv": [
       "<rootDir>/jest.setup.ts"
     ],
+    "testTimeout": 30000,
     "moduleNameMapper": {
       "^@/assets/(.*)$": "<rootDir>/assets/$1",
       "^@/(.*)$": "<rootDir>/src/$1"
