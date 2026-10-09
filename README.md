@@ -45,6 +45,23 @@ With the starting guesses, the business is still loss-making in Year 3, subscrip
 - **False alarms burn trust.** A wrong flag costs a paying customer time with the municipality.
 - **Personal financial data.** The app must comply with POPIA from day one.
 
+## The app
+
+| Folder | What it is |
+|---|---|
+| [`backend/`](backend/README.md) | Laravel API: accounts, bills, the audit rules, dispute letters, deadlines and POPIA features |
+| [`web/`](web/README.md) | React web app (Vite, TypeScript) |
+| [`mobile/`](mobile/README.md) | React Native app for Android and iOS (Expo, TypeScript) |
+| [`docs/`](docs/) | The [API contract](docs/api.md) all three follow, the [audit rules](docs/audit-rules.md) and the [architecture and POPIA design](docs/architecture.md) |
+
+To try it locally, start the API first (see [`backend/README.md`](backend/README.md)), seed it, then run the web or mobile app against it. The seeded demo login is `demo@example.com` / `password`; its newest Johannesburg bill shows an estimated reading, a usage spike, a business tariff on a sectional title property and charges during a water outage.
+
+Reading bills from a photo needs an Anthropic API key in the backend `.env` and the user's opt-in. Without it, people type in the line items from their bill.
+
 ## Status
 
-Early planning. No application code yet.
+First working version. Before real users:
+- Confirm each metro's dispute window, response times and escalation steps against its credit control by-law (all are marked unverified defaults).
+- Try AI bill reading on real South African bills.
+- Finish the POPIA groundwork in [`docs/architecture.md`](docs/architecture.md): Information Officer, privacy notice, operator agreement, retention schedule and breach procedure.
+- Replace the placeholder app icons and splash screen.
