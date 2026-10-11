@@ -47,4 +47,4 @@ With the starting guesses, the business is still loss-making in Year 3, subscrip
 
 ## Status
 
-Early planning. No application code yet.
+Early planning. No application code yet. The first screen layouts and visual system are in [`docs/design.md`](docs/design.md).
