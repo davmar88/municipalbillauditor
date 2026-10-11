@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Bill;
 use App\Models\Dispute;
 use App\Models\User;
+use Carbon\CarbonImmutable;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -21,7 +22,18 @@ class DemoSmokeTest extends TestCase
     {
         parent::setUp();
 
+        // The demo is built relative to today. Fix the day so the figures
+        // below hold all year: September has 30 days, and last month's
+        // credit falls in the same year.
+        CarbonImmutable::setTestNow('2026-10-11 09:00:00');
         $this->seed(DemoSeeder::class);
+    }
+
+    protected function tearDown(): void
+    {
+        CarbonImmutable::setTestNow();
+
+        parent::tearDown();
     }
 
     private function as(string $email): User

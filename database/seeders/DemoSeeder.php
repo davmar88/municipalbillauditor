@@ -51,6 +51,9 @@ class DemoSeeder extends Seeder
 
     private CarbonImmutable $today;
 
+    /** The clock before seeding, so a test that froze time keeps it. */
+    private ?CarbonImmutable $clock = null;
+
     public function __construct(
         private readonly AuditService $audit,
         private readonly DisputeService $disputes,
@@ -58,6 +61,7 @@ class DemoSeeder extends Seeder
 
     public function run(): void
     {
+        $this->clock = CarbonImmutable::hasTestNow() ? CarbonImmutable::now() : null;
         $this->today = CarbonImmutable::today();
         $metros = Metro::query()->get()->keyBy('slug');
 
@@ -67,7 +71,7 @@ class DemoSeeder extends Seeder
         $this->business($metros['tshwane']);
         $this->staff();
 
-        CarbonImmutable::setTestNow();
+        CarbonImmutable::setTestNow($this->clock);
     }
 
     /**
@@ -319,7 +323,7 @@ class DemoSeeder extends Seeder
 
         CarbonImmutable::setTestNow($billDate);
         $this->audit->run($bill);
-        CarbonImmutable::setTestNow();
+        CarbonImmutable::setTestNow($this->clock);
 
         return $bill->refresh();
     }
@@ -349,7 +353,7 @@ class DemoSeeder extends Seeder
             $this->disputes->record($dispute->refresh(), DisputeEventKind::Acknowledged, $acknowledged, ['reference' => $reference]);
         }
 
-        CarbonImmutable::setTestNow();
+        CarbonImmutable::setTestNow($this->clock);
     }
 
     /** The first day of the month, $ago months back. */
