@@ -1,6 +1,6 @@
 # Design: screens and layout
 
-This is the first layout for the app. It covers the service flow, four phone screens for households and three web screens for managing agents and businesses. The mockups are on a design canvas: <https://claude.ai/artifact/EswiWTVaWHW7absDnVB7tC> (private until shared from its Share menu).
+This is the first layout for the app. It covers the service flow, four phone screens for households, three web screens for managing agents and businesses, and the landing page. The mockups are on a design canvas: <https://claude.ai/artifact/EswiWTVaWHW7absDnVB7tC> (private until shared from its Share menu).
 
 ## Principles
 
@@ -51,6 +51,10 @@ The web app uses a dark sidebar (232 px) and a fluid content area. On a phone th
 ### Businesses and body corporates (web)
 
 7. **Claim.** The back-refund claimed, the monthly saving since the fix and the fee rate, then a dated timeline, a table showing how the fee is calculated, the tariff before and after the fix, and the evidence on file. The fee table makes it clear that nothing is invoiced until money reaches the municipal account.
+
+### Landing page
+
+8. **Landing page.** A hero with the marked-up bill, a dark band with three proof figures, the four errors (each with a marked-up snippet), five steps from photo to credit, pricing for all three customers, metro links and an FAQ. The search setup, heading outline and structured data are in [landing-page.md](landing-page.md).
 
 ## Visual system
 
