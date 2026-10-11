@@ -16,14 +16,14 @@ The copy explains the service in the order a customer worries about it:
 
 ## Search setup
 
-| Item | Value |
-|---|---|
-| URL | `/` |
-| Language | `<html lang="en-ZA">` |
-| Title (55 characters) | Dispute a wrong municipal bill \| Municipal Bill Auditor |
+| Item                              | Value                                                                                                                                               |
+| --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| URL                               | `/`                                                                                                                                                 |
+| Language                          | `<html lang="en-ZA">`                                                                                                                               |
+| Title (55 characters)             | Dispute a wrong municipal bill \| Municipal Bill Auditor                                                                                            |
 | Meta description (147 characters) | Wrong municipal bill? Send a photo. We find estimated readings, wrong tariffs and outage charges, then write and chase your dispute. Free to check. |
-| Canonical | The page's own URL |
-| Open Graph | Same title and description, `og:locale` `en_ZA`, and a 1200 × 630 image of the marked-up bill from the hero |
+| Canonical                         | The page's own URL                                                                                                                                  |
+| Open Graph                        | Same title and description, `og:locale` `en_ZA`, and a 1200 × 630 image of the marked-up bill from the hero                                         |
 
 ## Heading outline
 
@@ -32,27 +32,27 @@ There is one H1, and every section opens with an H2 that names what a person wou
 - **H1** Wrong municipal bill? We find the error and get it fixed.
 - **H2** Billing errors are common, and they can be fixed.
 - **H2** The four municipal billing errors we check for
-  - **H3** Estimated meter readings, Wrong tariff category, Charges during outages, Spikes against your history
+    - **H3** Estimated meter readings, Wrong tariff category, Charges during outages, Spikes against your history
 - **H2** How we fix a wrong municipal bill
-  - **H3** One per step, plus three notes on deadlines, paying the undisputed amount and account credits
+    - **H3** One per step, plus three notes on deadlines, paying the undisputed amount and account credits
 - **H2** Free to check. Simple pricing when we do the work.
-  - **H3** Households, Landlords and managing agents, Businesses and body corporates
+    - **H3** Households, Landlords and managing agents, Businesses and body corporates
 - **H2** Municipal bill disputes in Johannesburg, Tshwane and eThekwini
 - **H2** Questions about disputing a municipal bill
-  - **H3** One per question
+    - **H3** One per question
 - **H2** Check your bill before the dispute window closes.
 
 ## Search terms
 
 These are starting guesses, not researched search volumes. Check them in Google Search Console and Keyword Planner before writing more pages.
 
-| Section | Terms it targets |
-|---|---|
-| Title, hero | dispute municipal bill, wrong municipal bill, check municipal bill |
-| Four errors | estimated meter reading, estimated water reading, wrong tariff on municipal bill, billed during water outage |
-| How it works | how to dispute a municipal bill, municipal billing query |
-| Metros | City of Johannesburg billing dispute, Tshwane municipal account query, eThekwini billing dispute |
-| FAQ | how long to dispute a municipal bill, pay while a bill is in dispute |
+| Section      | Terms it targets                                                                                             |
+| ------------ | ------------------------------------------------------------------------------------------------------------ |
+| Title, hero  | dispute municipal bill, wrong municipal bill, check municipal bill                                           |
+| Four errors  | estimated meter reading, estimated water reading, wrong tariff on municipal bill, billed during water outage |
+| How it works | how to dispute a municipal bill, municipal billing query                                                     |
+| Metros       | City of Johannesburg billing dispute, Tshwane municipal account query, eThekwini billing dispute             |
+| FAQ          | how long to dispute a municipal bill, pay while a bill is in dispute                                         |
 
 ## Pages to build next
 
@@ -76,16 +76,21 @@ Add JSON-LD to the page head:
 
 ```json
 {
-  "@context": "https://schema.org",
-  "@type": "Service",
-  "serviceType": "Municipal bill checks and disputes",
-  "provider": { "@type": "Organization", "name": "Municipal Bill Auditor" },
-  "areaServed": [
-    { "@type": "City", "name": "Johannesburg" },
-    { "@type": "City", "name": "Pretoria" },
-    { "@type": "City", "name": "Durban" }
-  ],
-  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "ZAR", "description": "Free bill check" }
+    "@context": "https://schema.org",
+    "@type": "Service",
+    "serviceType": "Municipal bill checks and disputes",
+    "provider": { "@type": "Organization", "name": "Municipal Bill Auditor" },
+    "areaServed": [
+        { "@type": "City", "name": "Johannesburg" },
+        { "@type": "City", "name": "Pretoria" },
+        { "@type": "City", "name": "Durban" }
+    ],
+    "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "ZAR",
+        "description": "Free bill check"
+    }
 }
 ```
 

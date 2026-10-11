@@ -17,18 +17,18 @@ These come from the risks in the [README](../README.md).
 
 One flow serves all three customers. Only who pays changes.
 
-| Step | Who | What happens |
-|---|---|---|
-| 1 | Customer | Sends the bill by photo, email forward or PDF |
-| 2 | Bill Auditor | Reads meter readings, tariff and charges |
-| 3 | Bill Auditor | Runs the four checks: estimated readings, wrong tariff, outage charges, spikes against history |
-| 4 | Customer | No flags: gets an all-clear and the bill is kept as usage history. Flags: confirms the facts only they know |
-| 5 | Bill Auditor | Drafts the dispute from the metro's template and sets the deadline |
-| 6 | Customer | Approves the letter, or pays for a managed dispute |
-| 7 | Bill Auditor | Lodges it, records the reference number and tracks the reply date |
-| 8 | Bill Auditor | No reply in time: escalates to the ward councillor, then the Public Protector |
-| 9 | Municipality | Corrects the bill and credits the account |
-| 10 | Bill Auditor | Confirms the credit on the next bill, then invoices any success fee |
+| Step | Who          | What happens                                                                                                |
+| ---- | ------------ | ----------------------------------------------------------------------------------------------------------- |
+| 1    | Customer     | Sends the bill by photo, email forward or PDF                                                               |
+| 2    | Bill Auditor | Reads meter readings, tariff and charges                                                                    |
+| 3    | Bill Auditor | Runs the four checks: estimated readings, wrong tariff, outage charges, spikes against history              |
+| 4    | Customer     | No flags: gets an all-clear and the bill is kept as usage history. Flags: confirms the facts only they know |
+| 5    | Bill Auditor | Drafts the dispute from the metro's template and sets the deadline                                          |
+| 6    | Customer     | Approves the letter, or pays for a managed dispute                                                          |
+| 7    | Bill Auditor | Lodges it, records the reference number and tracks the reply date                                           |
+| 8    | Bill Auditor | No reply in time: escalates to the ward councillor, then the Public Protector                               |
+| 9    | Municipality | Corrects the bill and credits the account                                                                   |
+| 10   | Bill Auditor | Confirms the credit on the next bill, then invoices any success fee                                         |
 
 ## Screens
 
@@ -58,15 +58,15 @@ The web app uses a dark sidebar (232 px) and a fluid content area. On a phone th
 
 ## Visual system
 
-| Token | Value | Use |
-|---|---|---|
-| Ink | `#12161C` | Text, sidebar, summary blocks |
-| Secondary text | `#4A525C` | Supporting copy |
-| Ground | `#ECEEF0` web, `#F3F4F6` phone | Page background |
-| Surface | `#FFFFFF` | Cards and the bill |
-| Rule | `#DCE0E5` | Borders |
-| Flag orange | `#C2410C`; text `#9A3412` on `#FBE4D6` | Marks on the bill, finding numbers, "Likely error" |
-| Action blue | `#1D4ED8`; text `#1E3A8A` on `#DCE5FB` | Buttons, progress, confirmed savings |
+| Token          | Value                                  | Use                                                |
+| -------------- | -------------------------------------- | -------------------------------------------------- |
+| Ink            | `#12161C`                              | Text, sidebar, summary blocks                      |
+| Secondary text | `#4A525C`                              | Supporting copy                                    |
+| Ground         | `#ECEEF0` web, `#F3F4F6` phone         | Page background                                    |
+| Surface        | `#FFFFFF`                              | Cards and the bill                                 |
+| Rule           | `#DCE0E5`                              | Borders                                            |
+| Flag orange    | `#C2410C`; text `#9A3412` on `#FBE4D6` | Marks on the bill, finding numbers, "Likely error" |
+| Action blue    | `#1D4ED8`; text `#1E3A8A` on `#DCE5FB` | Buttons, progress, confirmed savings               |
 
 - Orange means something is wrong or needs attention. Blue means an action or progress. Red and green are not used, so the two states differ in lightness as well as hue.
 - **Type:** Archivo for UI and headings (headings at 88–90% width), IBM Plex Mono for money, meter readings, account numbers and timeline dates.

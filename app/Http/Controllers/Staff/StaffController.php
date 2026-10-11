@@ -1,0 +1,145 @@
+<?php
+
+namespace App\Http\Controllers\Staff;
+
+use App\Audit\Deadlines\Stage;
+use App\Enums\BillStatus;
+use App\Enums\DisputeEventKind;
+use App\Enums\DisputeMode;
+use App\Http\Controllers\Controller;
+use App\Http\Presenters\DisputePresenter;
+use App\Http\Requests\RecordDisputeEventRequest;
+use App\Models\Bill;
+use App\Models\Dispute;
+use App\Services\DisputeService;
+use Carbon\CarbonImmutable;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+use Inertia\Inertia;
+use Inertia\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
+
+/**
+ * The team's work queue: managed disputes to lodge, disputes needing an
+ * escalation, and bills waiting for their details.
+ */
+class StaffController extends Controller
+{
+    public function index(DisputeService $disputes): Response
+    {
+        $toLodge = Dispute::query()
+            ->whereNotNull('submitted_on')
+            ->whereNull('lodged_on')
+            ->with(['property.metro', 'bill', 'findings', 'organisation'])
+            ->oldest('submitted_on')
+            ->get();
+
+        $open = Dispute::query()
+            ->whereNotNull('lodged_on')
+            ->whereNull('credit_on')
+            ->whereNull('closed_on')
+            ->where('mode', '!=', DisputeMode::Self)
+            ->with(['property.metro', 'bill.user', 'findings', 'organisation.users'])
+            ->get()
+            ->filter(fn (Dispute $d) => $d->stage()->needsAction());
+
+        $bills = Bill::query()
+            ->where(fn ($q) => $q->whereIn('status', [BillStatus::NeedsEntry, BillStatus::NeedsProperty])->orWhere('needs_review', true))
+            ->with('organisation')
+            ->latest()
+            ->limit(50)
+            ->get();
+
+        $row = fn (Dispute $d) => [
+            ...DisputePresenter::summary($d),
+            'organisation' => $d->organisation->name,
+            'letterSubject' => $d->letter_subject,
+            'letterBody' => $d->letter_body,
+            'billingEmail' => $d->property->metro->billing_email,
+            'billUrl' => $d->bill->file_path ? route('staff.bills.file', $d->bill) : null,
+        ];
+
+        return Inertia::render('staff/index', [
+            'toLodge' => $toLodge->map($row)->values(),
+            'needsEscalation' => $open->map(fn (Dispute $d) => [
+                ...$row($d),
+                'councillorLetter' => $this->councillorLetter($d, $disputes),
+            ])->values(),
+            'eventKinds' => RecordDisputeEventRequest::options(),
+            'bills' => $bills->map(fn (Bill $b) => [
+                'id' => $b->id,
+                'organisation' => $b->organisation->name,
+                'status' => $b->status->label(),
+                'note' => $b->review_note,
+                'received' => $b->created_at->format('j M Y'),
+            ])->values(),
+        ]);
+    }
+
+    public function lodge(Request $request, Dispute $dispute, DisputeService $disputes): RedirectResponse
+    {
+        abort_if($dispute->lodged_on !== null, 422, 'Already lodged.');
+
+        $data = $request->validate([
+            'lodged_on' => ['required', 'date', 'before_or_equal:today'],
+            'reference' => ['nullable', 'string', 'max:60'],
+        ]);
+
+        $disputes->lodge($dispute, CarbonImmutable::parse($data['lodged_on']), $data['reference'] ?? null, $request->user(), 'Lodged by our team');
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Marked as lodged.']);
+
+        return back();
+    }
+
+    /**
+     * The letter our team sends to the ward councillor, signed as the
+     * customer who sent the bill.
+     *
+     * @return array{subject: string, body: string}|null
+     */
+    private function councillorLetter(Dispute $dispute, DisputeService $disputes): ?array
+    {
+        $customer = $dispute->bill->user ?? $dispute->organisation->users->first();
+
+        if ($customer === null || $dispute->stage() !== Stage::ReplyOverdue) {
+            return null;
+        }
+
+        $letter = $disputes->councillorLetter($dispute, $customer);
+
+        return $letter ? ['subject' => $letter->subject, 'body' => $letter->body] : null;
+    }
+
+    /**
+     * Our team records what happened on the disputes it manages.
+     */
+    public function record(RecordDisputeEventRequest $request, Dispute $dispute, DisputeService $disputes): RedirectResponse
+    {
+        abort_if($dispute->mode === DisputeMode::Self, 403, 'The customer manages this dispute.');
+
+        $disputes->record(
+            $dispute,
+            DisputeEventKind::from($request->validated('kind')),
+            CarbonImmutable::parse($request->validated('happened_on')),
+            $request->details(),
+            $request->user(),
+        );
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Recorded.']);
+
+        return back();
+    }
+
+    /**
+     * Staff can open a bill's file to lodge or type it in.
+     */
+    public function billFile(Bill $bill): StreamedResponse
+    {
+        abort_if($bill->file_path === null, 404);
+
+        return Storage::disk(config('auditor.bill_disk'))->response($bill->file_path, $bill->file_name, [
+            'Content-Type' => $bill->file_mime,
+            'Cache-Control' => 'private, no-store',
+        ]);
+    }
+}

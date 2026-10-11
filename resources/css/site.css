@@ -1,0 +1,74 @@
+/* The public pages: server-rendered Blade, light only, scanned on their own
+   so the marketing CSS stays small. */
+@import 'tailwindcss' source(none);
+
+@source '../views/marketing';
+
+@theme {
+    --font-sans:
+        'Archivo', ui-sans-serif, system-ui, -apple-system, 'Segoe UI',
+        sans-serif;
+    --font-mono:
+        'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+
+    --color-ink: #12161c;
+    --color-ink-2: #3a4250;
+    --color-muted: #4a525c;
+    --color-ground: #f3f4f6;
+    --color-paper: #ffffff;
+    --color-well: #f6f7f8;
+    --color-rule: #dce0e5;
+    --color-rule-soft: #e1e4e8;
+    --color-dots: #c9cfd6;
+    --color-night: #0b0e12;
+    --color-night-rule: #2a313b;
+    --color-night-text: #d4d9df;
+    --color-night-muted: #b9c0c9;
+    --color-flag: #c2410c;
+    --color-flag-ink: #9a3412;
+    --color-flag-soft: #fbe4d6;
+    --color-flag-light: #f59e6b;
+    --color-action: #1d4ed8;
+    --color-action-ink: #1e3a8a;
+    --color-action-soft: #dce5fb;
+    --color-action-light: #a8c0ff;
+    --color-chart-muted: #7b8591;
+}
+
+@layer base {
+    html {
+        color-scheme: light;
+        scroll-behavior: smooth;
+    }
+
+    body {
+        @apply bg-ground text-ink font-sans text-[17px] leading-[1.55] antialiased;
+    }
+
+    a {
+        @apply text-action hover:text-action-ink;
+    }
+
+    :focus-visible {
+        @apply outline-action rounded-sm outline-[3px] outline-offset-2;
+    }
+
+    details > summary {
+        list-style: none;
+    }
+
+    details > summary::-webkit-details-marker {
+        display: none;
+    }
+
+    .figures {
+        font-family: var(--font-mono);
+        font-variant-numeric: tabular-nums;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    html {
+        scroll-behavior: auto;
+    }
+}
