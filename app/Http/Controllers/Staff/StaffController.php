@@ -11,12 +11,12 @@ use App\Enums\DisputeMode;
 use App\Http\Controllers\Controller;
 use App\Http\Presenters\DisputePresenter;
 use App\Http\Requests\RecordDisputeEventRequest;
+use App\Jobs\SendDispute;
 use App\Models\Bill;
 use App\Models\Dispute;
 use App\Models\Organisation;
 use App\Services\Billing\MarginReport;
 use App\Services\Billing\Wallet;
-use App\Services\Disputes\DisputeMailer;
 use App\Services\Disputes\RecipientFinder;
 use App\Services\DisputeService;
 use Carbon\CarbonImmutable;
@@ -98,15 +98,19 @@ class StaffController extends Controller
     /**
      * Send a held dispute, once the municipality's address is known.
      */
-    public function send(Dispute $dispute, DisputeMailer $mailer): RedirectResponse
+    public function send(Dispute $dispute): RedirectResponse
     {
         abort_if($dispute->submitted_on === null || $dispute->lodged_on !== null, 422, 'Only approved, unsent disputes can be sent.');
 
-        $to = $mailer->send($dispute);
+        $dispute->update(['held_reason' => null]);
+        SendDispute::dispatch($dispute);
+        $dispute->refresh();
 
-        Inertia::flash('toast', $to !== null
-            ? ['type' => 'success', 'message' => "Sent to {$to}."]
-            : ['type' => 'error', 'message' => 'Still held: there is no address or no permission from the customer.']);
+        Inertia::flash('toast', match (true) {
+            $dispute->lodged_on !== null => ['type' => 'success', 'message' => "Sent to {$dispute->sent_to}."],
+            $dispute->held_reason !== null => ['type' => 'error', 'message' => 'Still held: there is no address or no permission from the customer.'],
+            default => ['type' => 'success', 'message' => 'Sending it now.'],
+        });
 
         return back();
     }

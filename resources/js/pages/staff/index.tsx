@@ -86,9 +86,11 @@ export default function StaffIndex({
                             <p className="text-sm">
                                 {dispute.heldReason === 'no_mandate'
                                     ? "Held: the customer hasn't given us their permission to send it."
-                                    : dispute.recipient
-                                      ? `Ready to email to ${dispute.recipient}.`
-                                      : 'Held: we have no account queries email for this municipality. Add a verified one in the reference data, then send it.'}
+                                    : dispute.heldReason === 'send_failed'
+                                      ? `Held: emailing it to ${dispute.recipient ?? 'the municipality'} failed after several tries. Check the mail settings, then send it again.`
+                                      : dispute.recipient
+                                        ? `Ready to email to ${dispute.recipient}.`
+                                        : 'Held: we have no account queries email for this municipality. Add a verified one in the reference data, then send it.'}
                             </p>
                             {dispute.recipient &&
                                 dispute.heldReason !== 'no_mandate' && (

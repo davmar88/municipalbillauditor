@@ -11,7 +11,6 @@ use App\Services\BillChecker;
 use App\Services\BillWriter;
 use App\Services\Claude\ClaudeCosts;
 use App\Services\CustomerMail;
-use App\Services\Disputes\DisputeApproval;
 use App\Services\Municipalities\MunicipalityDirectory;
 use App\Services\Reading\BillReader;
 use App\Services\Reading\BillReadingFailed;
@@ -80,7 +79,7 @@ class ReadBill implements ShouldQueue
         $bill->property()->associate($property)->save();
         $audit->run($bill);
         $mail->billChecked($bill->refresh());
-        app(DisputeApproval::class)->autoSend($bill);
+        AutoSendDispute::dispatch($bill)->afterCommit();
     }
 
     public function failed(?Throwable $exception): void

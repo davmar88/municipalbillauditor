@@ -4,12 +4,12 @@ namespace App\Services;
 
 use App\Enums\BillStatus;
 use App\Enums\Job;
+use App\Jobs\AutoSendDispute;
 use App\Jobs\ReadBill;
 use App\Models\Bill;
 use App\Models\Organisation;
 use App\Services\Billing\InsufficientCredit;
 use App\Services\Billing\Wallet;
-use App\Services\Disputes\DisputeApproval;
 
 /**
  * A bill check as a paid job: charge for it once, then read and check the
@@ -56,7 +56,7 @@ class BillChecker
 
         $this->audit->run($bill);
         $this->mail->billChecked($bill->refresh());
-        app(DisputeApproval::class)->autoSend($bill);
+        AutoSendDispute::dispatch($bill)->afterCommit();
 
         return true;
     }

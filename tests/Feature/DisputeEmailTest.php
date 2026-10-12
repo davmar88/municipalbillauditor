@@ -2,7 +2,9 @@
 
 namespace Tests\Feature;
 
+use App\Enums\BillStatus;
 use App\Enums\DisputeEventKind;
+use App\Enums\Job;
 use App\Enums\OrganisationKind;
 use App\Mail\DisputeEmail;
 use App\Models\Bill;
@@ -11,9 +13,13 @@ use App\Models\DisputeMessage;
 use App\Models\Municipality;
 use App\Models\User;
 use App\Notifications\CustomerNotice;
+use App\Services\BillChecker;
+use App\Services\Billing\Wallet;
 use App\Services\BillIntake;
 use App\Services\Disputes\DisputeApproval;
+use App\Services\Disputes\DisputeMailer;
 use App\Services\Disputes\RecipientFinder;
+use App\Services\DisputeService;
 use App\Services\Reading\BillReader;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -21,6 +27,7 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Testing\AssertableInertia as Assert;
+use Symfony\Component\Mailer\Exception\TransportException;
 use Tests\Support\FakeBillReader;
 use Tests\TestCase;
 
@@ -191,6 +198,49 @@ class DisputeEmailTest extends TestCase
 
         $dispute = Dispute::sole();
         $this->assertNotNull($dispute->lodged_on);
+        Mail::assertSent(DisputeEmail::class, 1);
+    }
+
+    public function test_a_mail_failure_during_auto_send_leaves_the_bill_checked_and_holds_the_dispute(): void
+    {
+        $user = $this->household();
+        $staff = User::factory()->staff()->create();
+        $this->johannesburg()->update(['billing_email' => 'billing@joburg.example.org', 'billing_email_verified_at' => now()]);
+        $user->organisation->forceFill(['dispute_mandate_at' => now(), 'auto_send_disputes' => true])->save();
+        $bill = $this->flaggedBill($user);
+        Dispute::query()->delete();
+
+        Mail::shouldReceive('to')->andThrow(new TransportException('Connection refused'));
+        app(BillChecker::class)->check($bill->refresh());
+
+        $this->assertSame(BillStatus::Checked, $bill->refresh()->status);
+        $this->assertTrue(app(Wallet::class)->hasPaid(Job::BillCheck, $bill));
+
+        $dispute = Dispute::sole();
+        $this->assertNull($dispute->lodged_on);
+        $this->assertSame(DisputeMailer::SEND_FAILED, $dispute->held_reason);
+        $this->assertTrue(app(Wallet::class)->hasPaid(Job::Dispute, $dispute));
+        Notification::assertSentTo($staff, CustomerNotice::class, fn (CustomerNotice $n) => $n->kind === 'staff_dispute_held');
+    }
+
+    public function test_a_dispute_is_emailed_once_however_often_it_is_sent(): void
+    {
+        $user = $this->household();
+        $bill = $this->flaggedBill($user);
+        $this->johannesburg()->update(['billing_email' => 'billing@joburg.example.org', 'billing_email_verified_at' => now()]);
+        $user->organisation->forceFill(['dispute_mandate_at' => now()])->save();
+        $dispute = app(DisputeService::class)->draft($bill, $user);
+        app(DisputeService::class)->submit($dispute, $user);
+
+        $mailer = app(DisputeMailer::class);
+        $mailer->send($dispute);
+        $mailer->send($dispute);
+
+        // Even if the lodged date were lost, the copy of the email we sent
+        // stops a second one.
+        $dispute->refresh()->forceFill(['lodged_on' => null])->save();
+        $mailer->send($dispute);
+
         Mail::assertSent(DisputeEmail::class, 1);
     }
 

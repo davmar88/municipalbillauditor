@@ -108,9 +108,11 @@ class DisputeController extends Controller
         $dispute = $disputes->draft($bill, $request->user());
         $dispute = $approval->approve($dispute, $request->user(), $data['letter_body'], $request->boolean('mandate'));
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => $dispute->lodged_on !== null
-            ? "Sent to {$dispute->sent_to}. We've copied you in."
-            : "Approved. We're finding the municipality's email address and will send it as soon as we have it."]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => match (true) {
+            $dispute->lodged_on !== null => "Sent to {$dispute->sent_to}. We've copied you in.",
+            $dispute->held_reason === 'no_address' => "Approved. We're finding the municipality's email address and will send it as soon as we have it.",
+            default => "Approved. We're sending it now and will copy you in.",
+        }]);
 
         return to_route('disputes.show', $dispute);
     }

@@ -86,9 +86,12 @@ class DisputePresenter
                 'daysLeft' => $awaitingLodging ? null : $status->daysLeft,
                 'progress' => $awaitingLodging ? null : $status->progress,
                 'note' => $awaitingLodging
-                    ? ($dispute->held_reason === 'no_mandate'
-                        ? 'We need your permission to send disputes for you. Switch it on in your account settings.'
-                        : "We don't have ".($dispute->property->municipality?->name ?? 'the municipality')."'s account queries email yet. Our team is finding it, and the dispute goes out as soon as they do.")
+                    ? match ($dispute->held_reason) {
+                        'no_mandate' => 'We need your permission to send disputes for you. Switch it on in your account settings.',
+                        'no_address' => "We don't have ".($dispute->property->municipality?->name ?? 'the municipality')."'s account queries email yet. Our team is finding it, and the dispute goes out as soon as they do.",
+                        'send_failed' => "Our email didn't go through, so our team is sending it. You don't need to do anything.",
+                        default => "We're emailing your dispute now. You'll be copied in.",
+                    }
                     : $status->note,
             ],
             'sentTo' => $dispute->sent_to,

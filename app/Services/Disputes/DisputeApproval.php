@@ -4,6 +4,7 @@ namespace App\Services\Disputes;
 
 use App\Audit\Enums\Confidence;
 use App\Enums\Job;
+use App\Jobs\SendDispute;
 use App\Models\Bill;
 use App\Models\Dispute;
 use App\Models\Finding;
@@ -23,13 +24,13 @@ class DisputeApproval
 {
     public function __construct(
         private readonly DisputeService $disputes,
-        private readonly DisputeMailer $mailer,
         private readonly Wallet $wallet,
         private readonly CustomerMail $mail,
     ) {}
 
     /**
-     * The customer approves and pays for the dispute; it is emailed at once.
+     * The customer approves and pays for the dispute; it is emailed straight
+     * after, from the queue.
      * Ticking the mandate box records the customer's permission for this and
      * later disputes.
      *
@@ -48,7 +49,7 @@ class DisputeApproval
         }
 
         $this->disputes->submit($dispute, $user, $letterBody);
-        $this->mailer->send($dispute->refresh());
+        SendDispute::dispatch($dispute)->afterCommit();
 
         return $dispute->refresh();
     }
@@ -78,7 +79,11 @@ class DisputeApproval
             return null;
         }
 
-        $dispute = $this->disputes->draft($bill, $user);
+        try {
+            $dispute = $this->disputes->draft($bill, $user);
+        } catch (ValidationException) {
+            return null;
+        }
 
         try {
             $this->disputes->submit($dispute, $user);
@@ -90,7 +95,7 @@ class DisputeApproval
             return null;
         }
 
-        $this->mailer->send($dispute->refresh());
+        SendDispute::dispatch($dispute)->afterCommit();
 
         return $dispute->refresh();
     }

@@ -15,9 +15,12 @@ use App\Notifications\CustomerNotice;
 use App\Services\CustomerMail;
 use App\Services\DisputeService;
 use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
+use Throwable;
 
 /**
  * Emails disputes to the municipality, on the customer's behalf: the
@@ -31,6 +34,8 @@ class DisputeMailer
 
     public const NO_ADDRESS = 'no_address';
 
+    public const SEND_FAILED = 'send_failed';
+
     public function __construct(
         private readonly RecipientFinder $recipients,
         private readonly DisputeService $disputes,
@@ -41,12 +46,34 @@ class DisputeMailer
      * Send an approved dispute. Without the customer's mandate, or without
      * an address for the municipality, it is held and nothing is sent.
      * Returns the address it went to.
+     *
+     * One send at a time per dispute: a double-clicked approval, or staff
+     * sending it while the queue does, emails the municipality once.
      */
     public function send(Dispute $dispute): ?string
     {
-        $dispute->loadMissing(['organisation', 'property.municipality', 'bill']);
+        return Cache::lock("dispute-send:{$dispute->id}", 120)->block(15, fn () => $this->sendOnce($dispute->refresh()));
+    }
 
+    /**
+     * The last try to send failed: hold the dispute for our team.
+     */
+    public function sendFailed(Dispute $dispute, ?Throwable $exception): void
+    {
         if ($dispute->lodged_on !== null) {
+            return;
+        }
+
+        Log::error('A dispute could not be emailed', ['dispute' => $dispute->id, 'error' => $exception?->getMessage()]);
+        $this->hold($dispute, self::SEND_FAILED);
+    }
+
+    private function sendOnce(Dispute $dispute): ?string
+    {
+        $dispute->loadMissing(['organisation', 'property.municipality', 'bill']);
+        $alreadySent = $dispute->messages()->where('direction', DisputeMessage::OUT)->where('kind', 'dispute')->exists();
+
+        if ($dispute->lodged_on !== null || $alreadySent) {
             return $dispute->sent_to;
         }
 
@@ -172,21 +199,25 @@ class DisputeMailer
         $already = $dispute->held_reason === $reason;
         $dispute->update(['held_reason' => $reason, 'held_since' => $dispute->held_since ?? now()]);
 
-        if ($already || $reason !== self::NO_ADDRESS) {
+        if ($already || $reason === self::NO_MANDATE) {
             return;
         }
 
-        $this->mail->disputeHeld($dispute);
+        if ($reason === self::NO_ADDRESS) {
+            $this->mail->disputeHeld($dispute);
+        }
 
         $staff = User::query()->where('is_staff', true)->whereNotNull('email_verified_at')->get();
 
         if ($staff->isNotEmpty()) {
+            $municipality = $dispute->property->municipality?->name ?? 'an unknown municipality';
+
             Notification::send($staff, new CustomerNotice(
                 kind: 'staff_dispute_held',
-                subject: 'A dispute is waiting for a municipality email address',
-                lines: [
-                    "{$dispute->organisation->name}'s dispute for ".($dispute->property->municipality?->name ?? 'an unknown municipality')
-                        .' is held: we have no address for account queries. Add a verified one in the reference data and send it from the work queue.',
+                subject: $reason === self::NO_ADDRESS ? 'A dispute is waiting for a municipality email address' : 'A dispute could not be emailed',
+                lines: [$reason === self::NO_ADDRESS
+                    ? "{$dispute->organisation->name}'s dispute for {$municipality} is held: we have no address for account queries. Add a verified one in the reference data and send it from the work queue."
+                    : "{$dispute->organisation->name}'s dispute for {$municipality} failed to send after several tries. Check the mail settings and send it again from the work queue.",
                 ],
                 actionText: 'Open the work queue',
                 actionUrl: route('staff.index'),
