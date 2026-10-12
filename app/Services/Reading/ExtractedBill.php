@@ -5,6 +5,7 @@ namespace App\Services\Reading;
 use App\Audit\Enums\ReadingType;
 use App\Audit\Enums\Service;
 use App\Audit\Money;
+use App\Services\Claude\ClaudeUsage;
 use Brick\Math\BigDecimal;
 use Brick\Math\RoundingMode;
 use Carbon\CarbonImmutable;
@@ -44,7 +45,14 @@ final readonly class ExtractedBill
         public array $charges,
         public array $notes,
         public array $raw,
+        public ?ClaudeUsage $usage = null,
     ) {}
+
+    /** The same reading, with what the Claude call that produced it used. */
+    public function withUsage(ClaudeUsage $usage): self
+    {
+        return new self(...[...get_object_vars($this), 'usage' => $usage]);
+    }
 
     /**
      * @param  array<string, mixed>  $data  The decoded structured output.

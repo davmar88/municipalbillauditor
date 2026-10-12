@@ -14,6 +14,7 @@ use App\Http\Requests\RecordDisputeEventRequest;
 use App\Models\Bill;
 use App\Models\Dispute;
 use App\Models\Organisation;
+use App\Services\Billing\MarginReport;
 use App\Services\Billing\Wallet;
 use App\Services\DisputeService;
 use Carbon\CarbonImmutable;
@@ -139,6 +140,22 @@ class StaffController extends Controller
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Recorded.']);
 
         return back();
+    }
+
+    /**
+     * The month's revenue against what Claude cost us.
+     */
+    public function margin(Request $request, MarginReport $report): Response
+    {
+        $month = $request->query('month');
+        $month = is_string($month) && preg_match('/^\d{4}-\d{2}$/', $month)
+            ? CarbonImmutable::createFromFormat('!Y-m', $month)
+            : CarbonImmutable::now();
+
+        return Inertia::render('staff/margin', [
+            'report' => $report->forMonth($month),
+            'months' => MarginReport::months(),
+        ]);
     }
 
     /**

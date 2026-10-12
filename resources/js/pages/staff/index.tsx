@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { NativeSelect } from '@/components/ui/native-select';
 import { Spinner } from '@/components/ui/spinner';
 import { localToday } from '@/lib/dates';
-import { index, reference } from '@/routes/staff';
+import { index, margin, reference } from '@/routes/staff';
 import { file } from '@/routes/staff/bills';
 import { lodge } from '@/routes/staff/disputes';
 import { eft } from '@/routes/staff/organisations';
@@ -63,9 +63,14 @@ export default function StaffIndex({
                     title="Work queue"
                     description="Managed disputes to lodge, disputes that need the next step, and bills waiting for their details."
                     actions={
-                        <Button variant="outline" asChild>
-                            <Link href={reference()}>Reference data</Link>
-                        </Button>
+                        <>
+                            <Button variant="outline" asChild>
+                                <Link href={margin()}>Margin</Link>
+                            </Button>
+                            <Button variant="outline" asChild>
+                                <Link href={reference()}>Reference data</Link>
+                            </Button>
+                        </>
                     }
                 />
 

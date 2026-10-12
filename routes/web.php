@@ -81,6 +81,7 @@ Route::middleware(['auth', 'verified', 'can:staff'])->prefix('staff')->name('sta
     Route::post('disputes/{dispute}/events', [StaffController::class, 'record'])->name('disputes.events.store');
     Route::get('bills/{bill}/file', [StaffController::class, 'billFile'])->name('bills.file');
     Route::post('organisations/{organisation}/eft', [StaffController::class, 'recordEft'])->name('organisations.eft');
+    Route::get('margin', [StaffController::class, 'margin'])->name('margin');
     Route::get('reference', [ReferenceDataController::class, 'index'])->name('reference');
     Route::put('municipalities/{municipality:id}', [ReferenceDataController::class, 'updateMunicipality'])->name('municipalities.update');
     Route::post('outages', [ReferenceDataController::class, 'storeOutage'])->name('outages.store');

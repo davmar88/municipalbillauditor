@@ -64,6 +64,8 @@ class ClaudeBillReaderTest extends TestCase
         $this->assertSame('2026-10-03', $bill->billDate->toDateString());
         $this->assertSame('562.05', $bill->charges[1]['amount']);
         $this->assertSame([], $bill->warnings());
+        $this->assertSame('test-model', $bill->usage->counts[0]->model);
+        $this->assertSame([1200, 300], [$bill->usage->counts[0]->input, $bill->usage->counts[0]->output]);
 
         $request = $this->requests[0];
         $body = json_decode((string) $request->getBody(), true);
@@ -89,9 +91,13 @@ class ClaudeBillReaderTest extends TestCase
 
     public function test_a_declined_request_needs_the_details_typed_in(): void
     {
-        $this->expectException(BillReadingFailed::class);
-
-        $this->reader($this->message('', 'refusal'))->read('JPEG', 'image/jpeg');
+        try {
+            $this->reader($this->message('', 'refusal'))->read('JPEG', 'image/jpeg');
+            $this->fail('Expected the read to fail.');
+        } catch (BillReadingFailed $e) {
+            // A declined request still costs: its usage comes with the failure.
+            $this->assertSame(1200, $e->usage->counts[0]->input);
+        }
     }
 
     public function test_something_that_is_not_a_bill_is_turned_back(): void

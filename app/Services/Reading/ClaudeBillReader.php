@@ -4,6 +4,7 @@ namespace App\Services\Reading;
 
 use Anthropic\Client;
 use Anthropic\Core\Exceptions\AnthropicException;
+use App\Services\Claude\ClaudeUsage;
 use Illuminate\Support\Facades\Log;
 use JsonException;
 
@@ -57,16 +58,18 @@ class ClaudeBillReader implements BillReader
             throw new BillReadingFailed("We couldn't reach the bill reader just now, so this bill needs its details typed in.", previous: $e);
         }
 
+        $usage = ClaudeUsage::fromMessage($message, $this->model);
+
         $stopReason = $message->stopReason instanceof \BackedEnum ? $message->stopReason->value : $message->stopReason;
 
         if ($stopReason === 'refusal') {
             Log::warning('Bill reading was declined', ['category' => $message->stopDetails?->category]);
 
-            throw new BillReadingFailed("This bill couldn't be read automatically, so it needs its details typed in.");
+            throw (new BillReadingFailed("This bill couldn't be read automatically, so it needs its details typed in."))->withUsage($usage);
         }
 
         if ($stopReason === 'max_tokens') {
-            throw new BillReadingFailed('This bill was too long to read automatically, so it needs its details typed in.');
+            throw (new BillReadingFailed('This bill was too long to read automatically, so it needs its details typed in.'))->withUsage($usage);
         }
 
         foreach ($message->content as $block) {
@@ -77,7 +80,7 @@ class ClaudeBillReader implements BillReader
             try {
                 $data = json_decode($block->text, true, flags: JSON_THROW_ON_ERROR);
             } catch (JsonException $e) {
-                throw new BillReadingFailed("We couldn't make sense of this bill automatically, so it needs its details typed in.", previous: $e);
+                throw (new BillReadingFailed("We couldn't make sense of this bill automatically, so it needs its details typed in.", previous: $e))->withUsage($usage);
             }
 
             if (! is_array($data)) {
@@ -87,12 +90,12 @@ class ClaudeBillReader implements BillReader
             $bill = ExtractedBill::fromArray($data);
 
             if (! $bill->isMunicipalBill) {
-                throw new BillReadingFailed("This doesn't look like a municipal bill. If it is one, type in its details.");
+                throw (new BillReadingFailed("This doesn't look like a municipal bill. If it is one, type in its details."))->withUsage($usage);
             }
 
-            return $bill;
+            return $bill->withUsage($usage);
         }
 
-        throw new BillReadingFailed("We couldn't make sense of this bill automatically, so it needs its details typed in.");
+        throw (new BillReadingFailed("We couldn't make sense of this bill automatically, so it needs its details typed in."))->withUsage($usage);
     }
 }

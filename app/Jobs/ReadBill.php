@@ -9,6 +9,7 @@ use App\Models\Property;
 use App\Services\AuditService;
 use App\Services\BillChecker;
 use App\Services\BillWriter;
+use App\Services\Claude\ClaudeCosts;
 use App\Services\CustomerMail;
 use App\Services\Municipalities\MunicipalityDirectory;
 use App\Services\Reading\BillReader;
@@ -34,7 +35,7 @@ class ReadBill implements ShouldQueue
 
     public function __construct(public Bill $bill) {}
 
-    public function handle(BillReader $reader, BillWriter $writer, AuditService $audit, MunicipalityDirectory $directory, BillChecker $checker, CustomerMail $mail): void
+    public function handle(BillReader $reader, BillWriter $writer, AuditService $audit, MunicipalityDirectory $directory, BillChecker $checker, CustomerMail $mail, ClaudeCosts $costs): void
     {
         $bill = $this->bill;
 
@@ -52,10 +53,18 @@ class ReadBill implements ShouldQueue
             $contents = Storage::disk(config('auditor.bill_disk'))->get($bill->file_path);
             $read = $reader->read((string) $contents, (string) $bill->file_mime);
         } catch (BillReadingFailed $e) {
+            if ($e->usage !== null) {
+                $costs->record($e->usage, $bill->organisation, $bill, 'bill_read');
+            }
+
             $bill->update(['status' => BillStatus::NeedsEntry, 'review_note' => $e->getMessage()]);
             $checker->refund($bill, "Bill check refunded: we couldn't read the bill automatically");
 
             return;
+        }
+
+        if ($read->usage !== null) {
+            $costs->record($read->usage, $bill->organisation, $bill, 'bill_read');
         }
 
         $writer->applyExtraction($bill, $read);

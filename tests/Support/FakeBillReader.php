@@ -2,6 +2,7 @@
 
 namespace Tests\Support;
 
+use App\Services\Claude\ClaudeUsage;
 use App\Services\Reading\BillReader;
 use App\Services\Reading\ExtractedBill;
 use Throwable;
@@ -17,7 +18,10 @@ class FakeBillReader implements BillReader
     /**
      * @param  array<string, mixed>|Throwable  $result
      */
-    public function __construct(private readonly array|Throwable $result) {}
+    public function __construct(
+        private readonly array|Throwable $result,
+        private readonly ?ClaudeUsage $usage = null,
+    ) {}
 
     public function read(string $contents, string $mimeType): ExtractedBill
     {
@@ -27,7 +31,9 @@ class FakeBillReader implements BillReader
             throw $this->result;
         }
 
-        return ExtractedBill::fromArray($this->result);
+        $bill = ExtractedBill::fromArray($this->result);
+
+        return $this->usage !== null ? $bill->withUsage($this->usage) : $bill;
     }
 
     /**
