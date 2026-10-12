@@ -34,9 +34,11 @@
                 ]],
                 ['Who sees it', [
                     'You, and anyone else on your account.',
-                    'Our team, when you ask us to handle a dispute or a bill needs its details typed in.',
-                    'The municipality, which receives your dispute letter and the attachments you approve.',
-                    'Anthropic, which reads the bill image or PDF for us when automatic reading is switched on. It receives the file and returns the figures.',
+                    'Our team, when a dispute or a bill needs a person to look at it.',
+                    'The municipality, which receives your dispute by email, with the attachments you approve, once you have given us permission to send disputes for you.',
+                    'Anthropic, which reads the bill and the municipality\'s replies for us when automatic reading is switched on. It receives the files and returns what they say.',
+                    'Our email provider, which delivers the dispute emails and passes the municipality\'s replies back to us.',
+                    'Paystack, which takes card payments for top-ups and monthly fees. We never see or store your card number.',
                 ]],
                 ['How we keep it safe', [
                     'Bills and meter photos are stored privately, never at a public link, and are only shown to people signed in to your account.',

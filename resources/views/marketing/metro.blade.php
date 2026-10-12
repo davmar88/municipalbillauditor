@@ -64,8 +64,8 @@
                 </li>
                 <li class="flex flex-col gap-2 border-t-4 border-action pt-4">
                     <span class="font-mono text-sm font-semibold text-action">WHERE</span>
-                    <h3 class="text-xl font-bold">Lodged with billing queries</h3>
-                    <p class="text-base text-ink-2">The letter goes to {{ $metro->billing_addressee }}@if ($metro->billing_email) (<span class="font-mono text-sm">{{ $metro->billing_email }}</span>)@endif, with your bill and meter photo attached.</p>
+                    <h3 class="text-xl font-bold">Emailed to billing queries</h3>
+                    <p class="text-base text-ink-2">We email it to {{ $metro->billing_addressee }} for you, with your bill and meter photo attached and you copied in. Their replies come to us.</p>
                 </li>
                 <li class="flex flex-col gap-2 border-t-4 border-action pt-4">
                     <span class="font-mono text-sm font-semibold text-action">{{ $metro->reply_window_days }} DAYS</span>
@@ -74,8 +74,8 @@
                 </li>
                 <li class="flex flex-col gap-2 border-t-4 border-dashed border-[#a9b1bb] pt-4">
                     <span class="font-mono text-sm font-semibold text-muted">ONLY IF NEEDED</span>
-                    <h3 class="text-xl font-bold">Ward councillor, then the Public Protector</h3>
-                    <p class="text-base text-ink-2">No reply? We write to your ward councillor. If it's still not resolved {{ $metro->councillor_window_days }} days later, we take it to the Public Protector.</p>
+                    <h3 class="text-xl font-bold">Follow-up, municipal manager, Public Protector</h3>
+                    <p class="text-base text-ink-2">No reply? We follow up, then escalate to the municipal manager. If it's still not resolved, we write your Public Protector complaint for you to lodge.</p>
                 </li>
             </ol>
         </div>

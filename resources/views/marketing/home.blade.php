@@ -22,7 +22,7 @@
             '@type' => 'Service',
             'serviceType' => 'Municipal bill checks and disputes',
             'provider' => ['@id' => route('home').'#organization'],
-            'areaServed' => $metros->map(fn ($m) => ['@type' => 'City', 'name' => $m->area_name ?? $m->short_name])->values()->all(),
+            'areaServed' => ['@type' => 'Country', 'name' => 'South Africa'],
             'offers' => ['@type' => 'Offer', 'price' => $sitePrices['billCheckAmount'], 'priceCurrency' => 'ZAR', 'description' => 'Bill check'],
         ],
         [
@@ -42,7 +42,7 @@
             <div class="flex flex-col gap-6">
                 <span class="font-mono text-xs leading-[18px] font-semibold tracking-[0.1em] text-flag-ink">MUNICIPAL BILL CHECKS AND DISPUTES · SOUTH AFRICA</span>
                 <h1 id="hero-h" class="text-[clamp(38px,4.6vw,64px)] leading-[1.04] font-extrabold tracking-[-0.02em] text-balance">Wrong municipal bill? We find the error and get it fixed.</h1>
-                <p class="max-w-[560px] text-[clamp(18px,1.6vw,20px)] leading-[1.55] text-ink-2">Send us a photo of your bill. We check every line for estimated readings, wrong tariffs, outage charges and sudden spikes. Then we write the dispute in your metro's format and chase the municipality until the credit is on your account.</p>
+                <p class="max-w-[560px] text-[clamp(18px,1.6vw,20px)] leading-[1.55] text-ink-2">Send us a photo of your bill. We check every line for estimated readings, wrong tariffs, outage charges and sudden spikes. Then we email the dispute to your municipality, read its replies and chase it until the credit is on your account. Every municipality in South Africa, by email.</p>
                 <div class="flex flex-wrap gap-3">
                     <a href="{{ $checkUrl }}" class="flex h-14 items-center gap-2.5 rounded-lg bg-action px-6 text-lg font-semibold text-white no-underline hover:bg-action-ink hover:text-white">
                         @include('marketing.partials.camera')
@@ -121,7 +121,7 @@
             @include('marketing.partials.steps')
             <div class="grid grid-cols-[repeat(auto-fit,minmax(min(300px,100%),1fr))] gap-4">
                 @foreach ([
-                    ['Deadlines set for your metro', 'Each metro has its own dispute window. We show your date as soon as we check, and remind you before it closes.'],
+                    ['Deadlines set for your municipality', 'Each municipality has its own dispute window. We show your date as soon as we check, and remind you before it closes.'],
                     ['Keep paying the undisputed part', 'We work out that amount, so your account stays in good standing while the dispute runs.'],
                     ['Refunds arrive as account credit', 'Municipalities usually correct the bill rather than pay cash. We tell you when the credit lands.'],
                 ] as [$title, $text])
@@ -181,9 +181,10 @@
     <section id="metros" aria-labelledby="metros-h" class="scroll-mt-4 py-[clamp(64px,8vw,96px)]">
         <div class="mx-auto flex max-w-[1200px] flex-col gap-8 px-[clamp(16px,4vw,40px)]">
             <div class="flex max-w-[760px] flex-col gap-3.5">
-                <h2 id="metros-h" class="text-[clamp(28px,3.4vw,40px)] leading-[1.1] font-extrabold tracking-tight text-balance">Municipal bill disputes in {{ $metros->pluck('short_name')->join(', ', ' and ') }}</h2>
-                <p class="text-lg text-ink-2">Each metro has its own dispute process and deadlines, so we write every letter for the metro that bills you.</p>
+                <h2 id="metros-h" class="text-[clamp(28px,3.4vw,40px)] leading-[1.1] font-extrabold tracking-tight text-balance">Every municipality in South Africa</h2>
+                <p class="text-lg text-ink-2">All 257: the 8 metros and every local and district municipality. We read which one bills you from your bill and find where its account queries go, so you never need to know where to send anything. Each has its own dispute process and deadlines, and we follow them.</p>
             </div>
+            <h3 class="text-xl font-bold">Billing disputes in {{ $metros->pluck('short_name')->join(', ', ' and ') }}</h3>
             <div class="grid grid-cols-[repeat(auto-fit,minmax(min(300px,100%),1fr))] gap-4">
                 @foreach ($metros as $metro)
                     <a href="{{ route('metro.show', $metro) }}" class="flex min-h-[88px] items-center justify-between gap-3 rounded-lg border border-rule bg-paper px-6 text-ink no-underline hover:border-action hover:text-ink">
@@ -195,9 +196,7 @@
                     </a>
                 @endforeach
             </div>
-            @if (config('auditor.contact_email'))
-                <p class="text-base text-ink-2">Billed by another municipality? <a href="mailto:{{ config('auditor.contact_email') }}?subject=Please%20cover%20my%20municipality" class="font-semibold">Tell us which one</a> and we'll let you know when we cover it.</p>
-            @endif
+            <p class="text-base text-ink-2">Billed by another municipality? <a href="{{ $checkUrl }}" class="font-semibold">Send us your bill</a>: we cover it too.</p>
         </div>
     </section>
 
