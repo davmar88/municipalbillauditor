@@ -12,6 +12,7 @@ use App\Models\Dispute;
 use App\Models\Finding;
 use App\Models\Reminder;
 use App\Notifications\DisputeReminder;
+use App\Services\Disputes\DisputeChaser;
 use Carbon\CarbonImmutable;
 use DateTimeInterface;
 use Illuminate\Console\Attributes\Description;
@@ -22,8 +23,9 @@ use Illuminate\Support\Facades\Notification;
 
 /**
  * Runs daily. Reminds customers before the dispute window closes on a
- * flagged bill, and when a dispute they sent themselves needs escalating.
- * Managed disputes are escalated by our team from the staff queue instead.
+ * flagged bill, chases the disputes we emailed (follow-up, escalation,
+ * Public Protector draft), and reminds customers whose older disputes
+ * they sent themselves when those need escalating.
  */
 #[Signature('disputes:remind')]
 #[Description('Email customers about dispute deadlines and overdue replies')]
@@ -32,10 +34,10 @@ class SendDisputeReminders extends Command
     /** Days before the dispute window closes that we remind, nearest first. */
     private const WINDOW_NOTICES = [2, 7];
 
-    public function handle(): int
+    public function handle(DisputeChaser $chaser): int
     {
         $today = CarbonImmutable::today();
-        $sent = $this->windowClosing($today) + $this->escalations($today);
+        $sent = $this->windowClosing($today) + $this->escalations($today) + $chaser->run($today);
 
         $this->info($sent === 1 ? '1 reminder sent.' : "{$sent} reminders sent.");
 
