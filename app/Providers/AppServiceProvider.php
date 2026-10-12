@@ -11,6 +11,9 @@ use App\Services\Payments\PaystackGateway;
 use App\Services\Reading\BillReader;
 use App\Services\Reading\ClaudeBillReader;
 use App\Services\Reading\ManualOnlyReader;
+use App\Services\Replies\ClaudeReplyReader;
+use App\Services\Replies\ManualReplyReader;
+use App\Services\Replies\ReplyReader;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
@@ -49,6 +52,25 @@ class AppServiceProvider extends ServiceProvider
                 model: $config['model'],
                 effort: $config['effort'],
                 maxTokens: $config['max_tokens'],
+            );
+        });
+
+        // Municipal replies to disputes, read with the same client. Without
+        // a key our team reads them.
+        $this->app->bind(ReplyReader::class, function () {
+            $config = config('auditor.reader');
+
+            if (blank($config['api_key'])) {
+                return new ManualReplyReader;
+            }
+
+            return new ClaudeReplyReader(
+                client: new AnthropicClient(
+                    apiKey: $config['api_key'],
+                    requestOptions: ['timeout' => $config['timeout'], 'maxRetries' => 2],
+                ),
+                model: $config['reply_model'],
+                effort: $config['effort'],
             );
         });
     }

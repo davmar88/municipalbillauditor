@@ -15,6 +15,7 @@ import { index, margin, reference } from '@/routes/staff';
 import { file } from '@/routes/staff/bills';
 import { lodge, send } from '@/routes/staff/disputes';
 import { eft } from '@/routes/staff/organisations';
+import { record as recordReply } from '@/routes/staff/replies';
 import { store as recordEvent } from '@/routes/staff/disputes/events';
 import type { DisputeSummary, Option } from '@/types';
 
@@ -41,6 +42,14 @@ type Props = {
         received: string;
     }[];
     organisations: StaffOrganisation[];
+    replies: {
+        id: number;
+        organisation: string;
+        from: string | null;
+        subject: string | null;
+        excerpt: string;
+        received: string;
+    }[];
 };
 
 type StaffOrganisation = {
@@ -56,6 +65,7 @@ export default function StaffIndex({
     eventKinds,
     bills,
     organisations,
+    replies,
 }: Props) {
     return (
         <>
@@ -308,6 +318,102 @@ export default function StaffIndex({
                                     Open the bill
                                 </a>
                             </Button>
+                        </li>
+                    ))}
+                </Queue>
+
+                <Queue
+                    title="Replies we couldn't read"
+                    empty="Every municipal reply has been read."
+                    count={replies.length}
+                >
+                    {replies.map((reply) => (
+                        <li
+                            key={reply.id}
+                            className="flex flex-col gap-3 rounded-lg border bg-card p-4"
+                        >
+                            <span className="flex flex-col">
+                                <span className="font-semibold">
+                                    {reply.organisation} · {reply.subject}
+                                </span>
+                                <span className="text-sm [overflow-wrap:anywhere] text-muted-foreground">
+                                    {reply.from} · {reply.received}
+                                </span>
+                            </span>
+                            <p className="text-sm whitespace-pre-wrap">
+                                {reply.excerpt}
+                            </p>
+                            <Form
+                                {...recordReply.form(reply.id)}
+                                options={{ preserveScroll: true }}
+                                className="grid gap-3 sm:grid-cols-[12rem_10rem_1fr_auto] sm:items-end"
+                            >
+                                {({ processing, errors }) => (
+                                    <>
+                                        <div className="grid gap-1.5">
+                                            <Label
+                                                htmlFor={`outcome_${reply.id}`}
+                                            >
+                                                It says
+                                            </Label>
+                                            <NativeSelect
+                                                id={`outcome_${reply.id}`}
+                                                name="outcome"
+                                                defaultValue="acknowledgement"
+                                            >
+                                                <option value="acknowledgement">
+                                                    Acknowledged
+                                                </option>
+                                                <option value="more_information">
+                                                    Needs more information
+                                                </option>
+                                                <option value="upheld">
+                                                    Upheld
+                                                </option>
+                                                <option value="rejected">
+                                                    Rejected
+                                                </option>
+                                                <option value="unrelated">
+                                                    Nothing to record
+                                                </option>
+                                            </NativeSelect>
+                                            <InputError
+                                                message={errors.outcome}
+                                            />
+                                        </div>
+                                        <div className="grid gap-1.5">
+                                            <Label
+                                                htmlFor={`reply_ref_${reply.id}`}
+                                            >
+                                                Reference
+                                            </Label>
+                                            <Input
+                                                id={`reply_ref_${reply.id}`}
+                                                name="reference"
+                                                className="font-mono"
+                                            />
+                                        </div>
+                                        <div className="grid gap-1.5">
+                                            <Label
+                                                htmlFor={`reply_note_${reply.id}`}
+                                            >
+                                                Note
+                                            </Label>
+                                            <Input
+                                                id={`reply_note_${reply.id}`}
+                                                name="note"
+                                            />
+                                        </div>
+                                        <Button
+                                            type="submit"
+                                            disabled={processing}
+                                        >
+                                            {processing && <Spinner />}
+                                            Record
+                                        </Button>
+                                    </>
+                                )}
+                            </Form>
                         </li>
                     ))}
                 </Queue>

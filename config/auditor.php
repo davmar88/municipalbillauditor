@@ -17,6 +17,8 @@ return [
     'reader' => [
         'api_key' => env('ANTHROPIC_API_KEY'),
         'model' => env('ANTHROPIC_BILL_MODEL') ?: 'claude-opus-5-5',
+        // Municipal replies to disputes. The same model as bills unless set.
+        'reply_model' => env('ANTHROPIC_REPLY_MODEL') ?: (env('ANTHROPIC_BILL_MODEL') ?: 'claude-opus-5-5'),
         'effort' => env('ANTHROPIC_BILL_EFFORT', 'medium'),
         'max_tokens' => 16000,
         'timeout' => (float) env('ANTHROPIC_TIMEOUT', 120),

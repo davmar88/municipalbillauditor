@@ -80,6 +80,7 @@ Route::middleware(['auth', 'verified', 'can:staff'])->prefix('staff')->name('sta
     Route::get('/', [StaffController::class, 'index'])->name('index');
     Route::post('disputes/{dispute}/lodge', [StaffController::class, 'lodge'])->name('disputes.lodge');
     Route::post('disputes/{dispute}/send', [StaffController::class, 'send'])->name('disputes.send');
+    Route::post('replies/{message}', [StaffController::class, 'recordReply'])->name('replies.record');
     Route::post('disputes/{dispute}/events', [StaffController::class, 'record'])->name('disputes.events.store');
     Route::get('bills/{bill}/file', [StaffController::class, 'billFile'])->name('bills.file');
     Route::post('organisations/{organisation}/eft', [StaffController::class, 'recordEft'])->name('organisations.eft');

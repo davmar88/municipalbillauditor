@@ -3,38 +3,45 @@
 namespace App\Http\Controllers;
 
 use App\Enums\BillSource;
+use App\Jobs\ReadDisputeReply;
+use App\Models\Dispute;
+use App\Models\DisputeMessage;
 use App\Models\Organisation;
 use App\Services\BillIntake;
+use App\Services\Inbound\InboundEmailParser;
+use App\Services\Inbound\InboundMessage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Arr;
 
 /**
- * Forwarded e-bills. Customers forward their e-bill to <code>@<domain>; the
- * email provider's inbound webhook posts the message here as a multipart
- * form with the recipient in "to" (or "recipient") and the attachments as
- * files, and sends the shared secret in the X-Inbound-Secret header.
+ * Email arriving at our inbound domain, from the provider's webhook.
+ *
+ * Municipalities reply to disputes at d-<token>@<domain>: those replies
+ * are kept and read. Customers forward e-bills to <code>@<domain>: those
+ * bills are checked. InboundEmailParser verifies and reads the post,
+ * whichever provider sent it.
  */
 class InboundEmailController extends Controller
 {
-    public function __invoke(Request $request, BillIntake $intake): JsonResponse
+    public function __invoke(Request $request, InboundEmailParser $parser, BillIntake $intake): JsonResponse
     {
-        $secret = (string) config('auditor.inbound_email_secret');
+        $message = $parser->parse($request);
 
-        if ($secret === '' || ! hash_equals($secret, (string) $request->header('X-Inbound-Secret'))) {
+        if ($message === null) {
             return response()->json(['message' => 'Not found.'], 404);
         }
 
-        $organisation = $this->organisationFor((string) ($request->input('to') ?? $request->input('recipient')));
+        if (($dispute = $this->disputeFor($message->recipients)) !== null) {
+            $this->storeReply($message, $dispute);
+
+            return response()->json(['accepted' => 1], 202);
+        }
+
+        $organisation = $this->organisationFor($message->recipients);
         $accepted = 0;
 
         if ($organisation !== null) {
-            foreach (Arr::flatten($request->allFiles()) as $file) {
-                if (! $file instanceof UploadedFile || ! $file->isValid()) {
-                    continue;
-                }
-
+            foreach ($message->attachments as $file) {
                 $mime = (string) $file->getMimeType();
                 $tooBig = $file->getSize() > (int) config('auditor.max_upload_kb') * 1024;
 
@@ -52,11 +59,41 @@ class InboundEmailController extends Controller
         return response()->json(['accepted' => $accepted], 202);
     }
 
+    private function disputeFor(string $recipients): ?Dispute
+    {
+        $domain = preg_quote(strtolower((string) config('auditor.inbound_email_domain')), '/');
+
+        if (! preg_match_all('/d-([a-z0-9]{24})@'.$domain.'/i', strtolower($recipients), $matches)) {
+            return null;
+        }
+
+        return Dispute::query()->whereIn('reply_token', $matches[1])->first();
+    }
+
+    /**
+     * Keep the reply, and have it read.
+     */
+    private function storeReply(InboundMessage $message, Dispute $dispute): void
+    {
+        $reply = $dispute->messages()->create([
+            'direction' => DisputeMessage::IN,
+            'kind' => 'reply',
+            'from_address' => $message->from,
+            'to_address' => $message->recipients,
+            'subject' => $message->subject,
+            'body' => $message->text,
+            'message_id' => $message->messageId,
+            'in_reply_to' => $message->inReplyTo,
+        ]);
+
+        ReadDisputeReply::dispatch($reply)->afterCommit();
+    }
+
     private function organisationFor(string $recipients): ?Organisation
     {
         $domain = preg_quote(strtolower((string) config('auditor.inbound_email_domain')), '/');
 
-        if (! preg_match_all('/([a-z0-9]+)@'.$domain.'/i', strtolower($recipients), $matches)) {
+        if (! preg_match_all('/(?<![a-z0-9-])([a-z0-9]+)@'.$domain.'/i', strtolower($recipients), $matches)) {
             return null;
         }
 

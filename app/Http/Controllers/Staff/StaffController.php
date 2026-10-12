@@ -8,12 +8,14 @@ use App\Enums\BillStatus;
 use App\Enums\CreditKind;
 use App\Enums\DisputeEventKind;
 use App\Enums\DisputeMode;
+use App\Enums\ReplyClassification;
 use App\Http\Controllers\Controller;
 use App\Http\Presenters\DisputePresenter;
 use App\Http\Requests\RecordDisputeEventRequest;
 use App\Jobs\SendDispute;
 use App\Models\Bill;
 use App\Models\Dispute;
+use App\Models\DisputeMessage;
 use App\Models\Organisation;
 use App\Services\Billing\MarginReport;
 use App\Services\Billing\Wallet;
@@ -24,6 +26,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -79,6 +82,21 @@ class StaffController extends Controller
                 'councillorLetter' => $this->councillorLetter($d, $disputes),
             ])->values(),
             'eventKinds' => RecordDisputeEventRequest::options(),
+            'replies' => DisputeMessage::query()
+                ->where('direction', DisputeMessage::IN)
+                ->where('classification', ReplyClassification::Unread)
+                ->with('dispute.organisation')
+                ->oldest()
+                ->limit(30)
+                ->get()
+                ->map(fn (DisputeMessage $m) => [
+                    'id' => $m->id,
+                    'organisation' => $m->dispute->organisation->name,
+                    'from' => $m->from_address,
+                    'subject' => $m->subject,
+                    'excerpt' => Str::limit((string) $m->body, 600),
+                    'received' => $m->created_at->format('j M Y'),
+                ])->values(),
             'organisations' => Organisation::query()->orderBy('name')->get()->map(fn (Organisation $o) => [
                 'id' => $o->id,
                 'name' => $o->name,
@@ -93,6 +111,45 @@ class StaffController extends Controller
                 'received' => $b->created_at->format('j M Y'),
             ])->values(),
         ]);
+    }
+
+    /**
+     * Our team reads a reply Claude couldn't, and records what it says.
+     */
+    public function recordReply(Request $request, DisputeMessage $message, DisputeService $disputes): RedirectResponse
+    {
+        abort_unless($message->direction === DisputeMessage::IN && $message->classification === ReplyClassification::Unread, 422, 'This reply has been dealt with.');
+
+        $data = $request->validate([
+            'outcome' => ['required', Rule::in(['acknowledgement', 'more_information', 'upheld', 'rejected', 'unrelated'])],
+            'reference' => ['nullable', 'string', 'max:60'],
+            'note' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $classification = ReplyClassification::from($data['outcome']);
+        $kind = match ($classification) {
+            ReplyClassification::Acknowledgement => DisputeEventKind::Acknowledged,
+            ReplyClassification::MoreInformation => DisputeEventKind::InfoRequested,
+            ReplyClassification::Upheld => DisputeEventKind::Upheld,
+            ReplyClassification::Rejected => DisputeEventKind::Rejected,
+            default => null,
+        };
+
+        if ($kind !== null && $message->dispute->lodged_on !== null) {
+            $disputes->record($message->dispute, $kind, CarbonImmutable::today(), [
+                'reference' => $data['reference'] ?? null,
+                'note' => $data['note'] ?? null,
+            ], $request->user());
+        }
+
+        $message->update([
+            'classification' => $classification,
+            'reading' => [...($message->reading ?? []), 'summary' => $data['note'] ?? $message->reading['summary'] ?? null, 'read_by_staff' => $request->user()->id],
+            'read_at' => now(),
+        ]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Recorded.']);
+
+        return back();
     }
 
     /**

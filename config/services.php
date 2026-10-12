@@ -14,6 +14,11 @@ return [
     |
     */
 
+    // Inbound email: Mailgun's route forward signs each post with this key.
+    'mailgun' => [
+        'webhook_signing_key' => env('MAILGUN_WEBHOOK_SIGNING_KEY'),
+    ],
+
     'postmark' => [
         'key' => env('POSTMARK_API_KEY'),
     ],
