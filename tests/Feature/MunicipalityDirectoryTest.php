@@ -25,7 +25,7 @@ class MunicipalityDirectoryTest extends TestCase
         $this->artisan('municipalities:import')->expectsOutput('0 added, 257 updated.')->assertSuccessful();
 
         $this->assertSame(257, Municipality::count());
-        $this->assertSame(['A' => 8, 'B' => 205, 'C' => 44], Municipality::query()->selectRaw('category, count(*) as n')->groupBy('category')->pluck('n', 'category')->map(fn ($n) => (int) $n)->all());
+        $this->assertSame(['A' => 8, 'B' => 205, 'C' => 44], Municipality::query()->selectRaw('category, count(*) as n')->groupBy('category')->orderBy('category')->pluck('n', 'category')->map(fn ($n) => (int) $n)->all());
 
         // The existing metro keeps its rules, name and letter, and gains its code.
         $johannesburg->refresh();
