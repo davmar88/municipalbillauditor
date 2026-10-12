@@ -143,6 +143,64 @@ class DisputeChaseTest extends TestCase
         $this->assertNotNull($this->dispute->public_protector_draft_on);
     }
 
+    public function test_while_the_customer_owes_information_we_remind_them_once_and_never_escalate(): void
+    {
+        $this->johannesburg->update(['escalation_email' => 'manager@joburg.example.org']);
+        CarbonImmutable::setTestNow($this->dispute->lodged_on->addDays(5));
+        app(DisputeService::class)->record($this->dispute, DisputeEventKind::InfoRequested, CarbonImmutable::today(), ['note' => 'a photo of the water meter']);
+
+        $this->on(7);
+        Notification::assertNotSentTo($this->user, CustomerNotice::class, fn (CustomerNotice $n) => $n->kind === 'info_reminder');
+
+        $this->on(8);
+        $this->on(9);
+        $this->on(60);
+        $this->on(120);
+
+        $reminders = Notification::sent($this->user, CustomerNotice::class)->filter(fn (CustomerNotice $n) => $n->kind === 'info_reminder');
+        $this->assertCount(1, $reminders);
+        $this->assertStringContainsString('a photo of the water meter', $reminders->first()->lines[0]);
+        $this->assertSame([], $this->emailsTo('manager@joburg.example.org'));
+        $this->assertNull($this->dispute->public_protector_draft_on);
+        $this->assertCount(1, $this->emailsTo('billing@joburg.example.org'), 'No follow-up either: they did answer.');
+    }
+
+    public function test_once_the_customer_answers_escalation_waits_a_full_window_from_that_day(): void
+    {
+        $this->johannesburg->update(['escalation_email' => 'manager@joburg.example.org']);
+        CarbonImmutable::setTestNow($this->dispute->lodged_on->addDays(5));
+        app(DisputeService::class)->record($this->dispute, DisputeEventKind::InfoRequested, CarbonImmutable::today(), ['note' => 'proof of payment']);
+
+        // The customer says they sent it on day 40.
+        CarbonImmutable::setTestNow($this->dispute->lodged_on->addDays(40));
+        $this->actingAs($this->user)->post(route('disputes.information-sent', $this->dispute))->assertRedirect();
+        $this->assertTrue($this->dispute->refresh()->info_answered_on->isToday());
+
+        // From day 40: reply due day 61, councillor step day 62, window ends day 92.
+        $this->on(53);
+        $this->on(92);
+        $this->assertSame([], $this->emailsTo('manager@joburg.example.org'));
+
+        $this->on(93);
+        $this->assertCount(1, $this->emailsTo('manager@joburg.example.org'));
+    }
+
+    public function test_the_customers_reply_on_the_thread_answers_the_request(): void
+    {
+        CarbonImmutable::setTestNow($this->dispute->lodged_on->addDays(5));
+        app(DisputeService::class)->record($this->dispute, DisputeEventKind::InfoRequested, CarbonImmutable::today(), ['note' => 'a meter photo']);
+
+        $this->post(route('inbound.email'), [
+            'to' => $this->dispute->replyAddress(),
+            'from' => $this->user->email,
+            'subject' => 'RE: dispute',
+            'body-plain' => 'Photo attached.',
+            'Message-Id' => '<customer-1@example.com>',
+        ], ['X-Inbound-Secret' => 'test-inbound-secret'])->assertStatus(202);
+
+        $this->assertNotNull($this->dispute->refresh()->info_answered_on);
+    }
+
     public function test_an_answer_stops_the_chasing(): void
     {
         app(DisputeService::class)->record($this->dispute, DisputeEventKind::Rejected, CarbonImmutable::today(), ['note' => 'Reading was actual.']);

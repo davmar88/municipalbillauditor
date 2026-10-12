@@ -15,7 +15,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { Textarea } from '@/components/ui/textarea';
 import { localToday } from '@/lib/dates';
 import { show as showBill } from '@/routes/bills';
-import { index } from '@/routes/disputes';
+import { index, informationSent } from '@/routes/disputes';
 import { store as storeEvent } from '@/routes/disputes/events';
 import type { DisputeAction, DisputeDetail } from '@/types';
 
@@ -66,6 +66,35 @@ export default function DisputeShow({
                 />
 
                 <Status dispute={dispute} />
+
+                {dispute.infoRequest && (
+                    <section className="border-action/40 flex flex-col items-start gap-3 rounded-lg border bg-card p-5">
+                        <h2 className="text-lg font-bold">
+                            The municipality needs something from you
+                        </h2>
+                        <p>
+                            On {dispute.infoRequest.on} they asked for
+                            {dispute.infoRequest.what
+                                ? `: ${dispute.infoRequest.what}`
+                                : ' more information.'}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                            Reply to their email, which you were copied on. We
+                            don't escalate while they're waiting on you.
+                        </p>
+                        <Form
+                            {...informationSent.form(dispute.id)}
+                            options={{ preserveScroll: true }}
+                        >
+                            {({ processing }) => (
+                                <Button type="submit" disabled={processing}>
+                                    {processing && <Spinner />}
+                                    I've sent it
+                                </Button>
+                            )}
+                        </Form>
+                    </section>
+                )}
 
                 <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
                     <div className="flex min-w-0 flex-col gap-6">

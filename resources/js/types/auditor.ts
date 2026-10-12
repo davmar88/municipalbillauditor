@@ -219,6 +219,7 @@ export type DisputeDetail = DisputeSummary & {
     actions: DisputeAction[];
     creditAmount: string | null;
     sentTo: string | null;
+    infoRequest: { what: string | null; on: string } | null;
     messages: {
         id: number;
         direction: 'out' | 'in';

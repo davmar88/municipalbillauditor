@@ -51,6 +51,10 @@ class ReadDisputeReply implements ShouldQueue
         if ($sender !== null && $dispute->organisation->users()->whereRaw('LOWER(email) = ?', [$sender])->exists()) {
             $message->update(['kind' => 'customer', 'read_at' => now()]);
 
+            // Writing on the thread after the municipality asked for
+            // something counts as sending it.
+            $disputes->informationSent($dispute, null, 'You replied on the email thread with the information they asked for.');
+
             return;
         }
 

@@ -121,6 +121,19 @@ class DisputeController extends Controller
     }
 
     /**
+     * The customer tells us they sent the municipality what it asked for.
+     */
+    public function informationSent(Request $request, Dispute $dispute, DisputeService $disputes): RedirectResponse
+    {
+        $this->authorize('update', $dispute);
+
+        $disputes->informationSent($dispute, $request->user(), 'You told us you sent the information they asked for.');
+        Inertia::flash('toast', ['type' => 'success', 'message' => "Thanks. We'll keep chasing from here."]);
+
+        return back();
+    }
+
+    /**
      * A file the municipality attached to a reply, streamed to the
      * dispute's owner only.
      */

@@ -142,8 +142,14 @@ class DisputeService
                 ]),
                 // An answer either way: the municipality has dealt with it.
                 DisputeEventKind::ReplyReceived, DisputeEventKind::Upheld, DisputeEventKind::Rejected => $dispute->reply_received_on ??= $on,
-                // A request for information is a sign of life: no follow-up needed.
-                DisputeEventKind::InfoRequested => $dispute->acknowledged_on ??= $on,
+                // A request for information is a sign of life: no follow-up
+                // needed, and no escalation while the customer owes an answer.
+                DisputeEventKind::InfoRequested => $dispute->fill([
+                    'acknowledged_on' => $dispute->acknowledged_on ?? $on,
+                    'info_requested_on' => $on,
+                    'info_reminded_on' => null,
+                    'info_answered_on' => null,
+                ]),
                 DisputeEventKind::FollowedUp => $dispute->followed_up_on = $on,
                 DisputeEventKind::EscalatedManager => $dispute->escalated_manager_on = $on,
                 DisputeEventKind::EscalatedCouncillor => $dispute->escalated_councillor_on = $on,
@@ -178,6 +184,21 @@ class DisputeService
 
             return $event;
         });
+    }
+
+    /**
+     * The customer has sent the municipality what it asked for. The
+     * escalation clock starts again from today.
+     */
+    public function informationSent(Dispute $dispute, ?User $user, string $note): void
+    {
+        if (! $dispute->waitingOnCustomer()) {
+            return;
+        }
+
+        $today = CarbonImmutable::today();
+        $dispute->update(['info_answered_on' => $today]);
+        $this->record($dispute, DisputeEventKind::Note, $today, ['note' => $note], $user);
     }
 
     public function councillorLetter(Dispute $dispute, User $user): ?Letter

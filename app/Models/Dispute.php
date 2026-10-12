@@ -36,6 +36,9 @@ use Illuminate\Support\Carbon;
  * @property CarbonImmutable|null $lodged_on
  * @property string|null $reference
  * @property CarbonImmutable|null $acknowledged_on
+ * @property CarbonImmutable|null $info_requested_on
+ * @property CarbonImmutable|null $info_reminded_on
+ * @property CarbonImmutable|null $info_answered_on
  * @property CarbonImmutable|null $reply_received_on
  * @property CarbonImmutable|null $escalated_councillor_on
  * @property CarbonImmutable|null $escalated_public_protector_on
@@ -63,6 +66,7 @@ use Illuminate\Support\Carbon;
     'tariff_fixed_on', 'monthly_saving', 'credit_on', 'credit_amount',
     'credit_bill_id', 'closed_on', 'close_reason', 'reply_token', 'sent_to', 'sent_to_source',
     'held_reason', 'held_since', 'followed_up_on', 'escalated_manager_on', 'public_protector_draft_on',
+    'info_requested_on', 'info_reminded_on', 'info_answered_on',
 ])]
 class Dispute extends Model
 {
@@ -88,6 +92,9 @@ class Dispute extends Model
             'credit_amount' => 'decimal:2',
             'closed_on' => 'immutable_date',
             'held_since' => 'datetime',
+            'info_requested_on' => 'immutable_date',
+            'info_reminded_on' => 'immutable_date',
+            'info_answered_on' => 'immutable_date',
             'followed_up_on' => 'immutable_date',
             'escalated_manager_on' => 'immutable_date',
             'public_protector_draft_on' => 'immutable_date',
@@ -134,6 +141,12 @@ class Dispute extends Model
     public function replyAddress(): string
     {
         return 'd-'.$this->reply_token.'@'.config('auditor.inbound_email_domain');
+    }
+
+    /** The municipality asked the customer for something and is still waiting. */
+    public function waitingOnCustomer(): bool
+    {
+        return $this->info_requested_on !== null && $this->info_answered_on === null;
     }
 
     /** Emailed by us, so we read the replies and chase them. */

@@ -95,6 +95,10 @@ class DisputePresenter
                     : $status->note,
             ],
             'sentTo' => $dispute->sent_to,
+            'infoRequest' => $dispute->waitingOnCustomer() ? [
+                'what' => $dispute->events->where('kind', DisputeEventKind::InfoRequested)->last()?->note,
+                'on' => $dispute->info_requested_on->format('j M Y'),
+            ] : null,
             'messages' => $dispute->messages()->where('kind', '!=', 'customer')->get()->map(fn (DisputeMessage $m) => [
                 'id' => $m->id,
                 'direction' => $m->direction,

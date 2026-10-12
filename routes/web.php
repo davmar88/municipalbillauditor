@@ -57,6 +57,7 @@ Route::middleware(['auth', 'verified', 'organisation'])->group(function () {
     Route::get('disputes/{dispute}', [DisputeController::class, 'show'])->name('disputes.show');
     Route::get('disputes/{dispute}/messages/{message}/files/{index}', [DisputeController::class, 'messageFile'])->whereNumber('index')->name('disputes.messages.file');
     Route::post('disputes/{dispute}/events', [DisputeEventController::class, 'store'])->name('disputes.events.store');
+    Route::post('disputes/{dispute}/information-sent', [DisputeController::class, 'informationSent'])->name('disputes.information-sent');
 
     Route::get('portfolio', PortfolioController::class)->name('portfolio');
     Route::get('properties', [PropertyController::class, 'index'])->name('properties.index');
