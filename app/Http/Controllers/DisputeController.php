@@ -3,17 +3,17 @@
 namespace App\Http\Controllers;
 
 use App\Audit\Money;
-use App\Enums\DisputeMode;
+use App\Enums\Job;
 use App\Enums\OrganisationKind;
 use App\Http\Presenters\BillPresenter;
 use App\Http\Presenters\DisputePresenter;
 use App\Models\Bill;
 use App\Models\Dispute;
 use App\Models\Finding;
+use App\Services\Billing\Wallet;
 use App\Services\DisputeService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -47,7 +47,7 @@ class DisputeController extends Controller
         ]);
     }
 
-    public function create(Request $request, Bill $bill, DisputeService $disputes): Response|RedirectResponse
+    public function create(Request $request, Bill $bill, DisputeService $disputes, Wallet $wallet): Response|RedirectResponse
     {
         $this->authorize('update', $bill);
 
@@ -70,7 +70,6 @@ class DisputeController extends Controller
             'bill' => BillPresenter::summary($bill->load('property', 'findings')),
             'dispute' => [
                 'id' => $dispute->id,
-                'mode' => $dispute->mode->value,
                 'letterSubject' => $dispute->letter_subject,
                 'letterBody' => $dispute->letter_body,
                 'disputedTotal' => Money::format($dispute->disputed_total),
@@ -85,7 +84,7 @@ class DisputeController extends Controller
                 'rulesVerified' => (bool) $municipality?->rules_verified,
             ],
             'kind' => $organisation->kind->value,
-            'modes' => $this->modes($organisation->kind),
+            'quote' => $wallet->quote($organisation, Job::Dispute)->toArray(),
             'pendingQuestions' => $bill->findings->filter(fn (Finding $f) => $f->awaitingAnswer())->count(),
             'attachments' => array_values(array_filter([
                 $bill->file_path ? ['name' => $bill->file_name ?? 'Your bill', 'url' => route('bills.file', $bill)] : null,
@@ -99,17 +98,13 @@ class DisputeController extends Controller
         $this->authorize('update', $bill);
 
         $data = $request->validate([
-            'mode' => ['required', Rule::enum(DisputeMode::class)],
             'letter_body' => ['required', 'string', 'max:20000'],
         ]);
 
         $dispute = $disputes->draft($bill, $request->user());
-        $disputes->submit($dispute, DisputeMode::from($data['mode']), $request->user(), $data['letter_body']);
+        $disputes->submit($dispute, $request->user(), $data['letter_body']);
 
-        Inertia::flash('toast', [
-            'type' => 'success',
-            'message' => $dispute->refresh()->lodged_on !== null ? 'Dispute recorded as sent.' : 'Handed to our team. We\'ll lodge it and keep you posted.',
-        ]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Handed to our team. We\'ll lodge it and keep you posted.']);
 
         return to_route('disputes.show', $dispute);
     }
@@ -128,30 +123,5 @@ class DisputeController extends Controller
             'councillorLetter' => $letter ? ['subject' => $letter->subject, 'body' => $letter->body] : null,
             'isBusiness' => $dispute->organisation->kind === OrganisationKind::Business,
         ]);
-    }
-
-    /**
-     * @return list<array{value: string, label: string, price: ?string, description: string}>
-     */
-    private function modes(OrganisationKind $kind): array
-    {
-        return match ($kind) {
-            OrganisationKind::Household => [
-                ['value' => DisputeMode::Self->value, 'label' => "I'll send it", 'price' => 'Free',
-                    'description' => 'Open the letter in your email app, send it, then tell us. We remind you when a reply is due.'],
-                ['value' => DisputeMode::Managed->value, 'label' => 'Handle it for me', 'price' => Money::format(config('auditor.prices.household_dispute')),
-                    'description' => 'We lodge it, chase the municipality and escalate to your councillor if nobody replies. We email you a payment link.'],
-            ],
-            OrganisationKind::Agent => [
-                ['value' => DisputeMode::Managed->value, 'label' => 'Lodge it for me', 'price' => 'Included',
-                    'description' => 'Part of your subscription: we lodge it, chase it and escalate it.'],
-                ['value' => DisputeMode::Self->value, 'label' => "I'll send it", 'price' => 'Included',
-                    'description' => 'Send it yourself and tell us. We track the deadline.'],
-            ],
-            OrganisationKind::Business => [
-                ['value' => DisputeMode::SuccessFee->value, 'label' => 'Run this claim', 'price' => null,
-                    'description' => 'We lodge and chase the claim. Our fee is a share of what reaches your account, invoiced only once it does.'],
-            ],
-        };
     }
 }

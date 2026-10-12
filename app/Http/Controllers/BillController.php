@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Audit\Enums\CheckType;
 use App\Enums\BillStatus;
+use App\Enums\Job;
 use App\Enums\OrganisationKind;
 use App\Http\Presenters\BillPresenter;
 use App\Http\Presenters\PropertyPresenter;
@@ -12,6 +13,7 @@ use App\Models\Bill;
 use App\Models\Municipality;
 use App\Models\Property;
 use App\Services\AuditService;
+use App\Services\Billing\Wallet;
 use App\Services\BillIntake;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -23,7 +25,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class BillController extends Controller
 {
-    public function index(Request $request): Response
+    public function index(Request $request, Wallet $wallet): Response
     {
         $organisation = $request->user()->organisation;
 
@@ -43,6 +45,7 @@ class BillController extends Controller
             'askMunicipality' => $organisation->kind === OrganisationKind::Household && ! $organisation->properties()->exists(),
             'checks' => array_map(fn (CheckType $c) => ['value' => $c->value, 'label' => $c->label()], CheckType::cases()),
             'maxUploadMb' => intdiv((int) config('auditor.max_upload_kb'), 1024),
+            'quote' => $wallet->quote($organisation, Job::BillCheck)->toArray(),
         ]);
     }
 
@@ -69,7 +72,7 @@ class BillController extends Controller
         return to_route('bills.show', $bill);
     }
 
-    public function show(Bill $bill): Response
+    public function show(Bill $bill, Wallet $wallet): Response
     {
         $this->authorize('view', $bill);
 
@@ -79,6 +82,7 @@ class BillController extends Controller
                 ? $bill->organisation->properties()->orderBy('name')->get()->map(fn (Property $p) => PropertyPresenter::option($p))->values()
                 : [],
             'municipalities' => $bill->property !== null && $bill->property->municipality_id === null ? Municipality::options() : [],
+            'quote' => $bill->status === BillStatus::WaitingForCredit ? $wallet->quote($bill->organisation, Job::BillCheck)->toArray() : null,
         ]);
     }
 

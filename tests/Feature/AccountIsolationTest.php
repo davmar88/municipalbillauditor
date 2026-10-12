@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Enums\DisputeMode;
 use App\Enums\OrganisationKind;
 use App\Models\Dispute;
 use App\Models\User;
@@ -22,12 +21,12 @@ class AccountIsolationTest extends TestCase
     public function test_another_account_cannot_reach_a_bill_or_its_dispute(): void
     {
         Storage::fake('local');
-        $owner = User::factory()->forKind(OrganisationKind::Household)->create();
+        $owner = User::factory()->forKind(OrganisationKind::Household)->withCredit()->create();
         $bill = app(BillIntake::class)->createSample($owner->organisation, $owner);
         $bill->update(['file_path' => 'bills/1/secret.pdf', 'file_name' => 'bill.pdf', 'file_mime' => 'application/pdf']);
         Storage::disk('local')->put('bills/1/secret.pdf', 'PDF');
         $disputes = app(DisputeService::class);
-        $dispute = $disputes->submit($disputes->draft($bill, $owner), DisputeMode::Self, $owner);
+        $dispute = $disputes->submit($disputes->draft($bill, $owner), $owner);
         $finding = $bill->findings->first();
         $property = $bill->property;
 

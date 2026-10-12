@@ -1,10 +1,10 @@
 import { Form, Head, Link } from '@inertiajs/react';
-import { CircleAlert, Mail, Paperclip, Pencil } from 'lucide-react';
+import { CircleAlert, Paperclip, Pencil } from 'lucide-react';
 import { useState } from 'react';
 import { FlagNumber } from '@/components/audit/flag-number';
 import { findingAmount } from '@/components/audit/finding-card';
 import { PageBody, PageHeader } from '@/components/audit/page-header';
-import { CopyButton } from '@/components/copy-button';
+import { PriceNotice } from '@/components/audit/price-notice';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
@@ -12,18 +12,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { show as showBill } from '@/routes/bills';
 import { index, store } from '@/routes/disputes';
-import type {
-    BillSummary,
-    DisputeMode,
-    Finding,
-    OrganisationKind,
-} from '@/types';
+import type { BillSummary, Finding, JobQuote, OrganisationKind } from '@/types';
 
 type Props = {
     bill: BillSummary;
     dispute: {
         id: number;
-        mode: DisputeMode;
         letterSubject: string;
         letterBody: string;
         disputedTotal: string;
@@ -38,41 +32,21 @@ type Props = {
         rulesVerified: boolean;
     };
     kind: OrganisationKind;
-    modes: {
-        value: DisputeMode;
-        label: string;
-        price: string | null;
-        description: string;
-    }[];
+    quote: JobQuote;
     pendingQuestions: number;
     attachments: { name: string; url: string }[];
-};
-
-const submitLabels: Record<DisputeMode, string> = {
-    self: "I've sent it",
-    managed: 'Hand it to your team',
-    success_fee: 'Start this claim',
 };
 
 export default function DisputeCreate({
     bill,
     dispute,
     municipality,
-    modes,
+    quote,
     pendingQuestions,
     attachments,
 }: Props) {
-    const [mode, setMode] = useState<DisputeMode>(
-        modes.some((m) => m.value === dispute.mode)
-            ? dispute.mode
-            : modes[0].value,
-    );
     const [body, setBody] = useState(dispute.letterBody);
     const [editing, setEditing] = useState(false);
-    const mailto = municipality.email
-        ? `mailto:${municipality.email}?subject=${encodeURIComponent(dispute.letterSubject)}&body=${encodeURIComponent(body)}`
-        : null;
-
     return (
         <>
             <Head title="Your dispute" />
@@ -221,79 +195,12 @@ export default function DisputeCreate({
                                 )}
                             </section>
 
-                            <fieldset className="flex flex-col gap-3">
-                                <legend className="mb-3 text-lg font-bold">
-                                    Who sends it?
-                                </legend>
-                                <div className="grid gap-3 sm:grid-cols-2">
-                                    {modes.map((option) => (
-                                        <label
-                                            key={option.value}
-                                            className={cn(
-                                                'flex cursor-pointer flex-col gap-1.5 rounded-lg border-2 bg-card p-4 has-[:focus-visible]:ring-[3px] has-[:focus-visible]:ring-ring/50',
-                                                mode === option.value
-                                                    ? 'border-primary'
-                                                    : 'border-border',
-                                            )}
-                                        >
-                                            <span className="flex items-center justify-between gap-2">
-                                                <span className="flex items-center gap-2 font-semibold">
-                                                    <input
-                                                        type="radio"
-                                                        name="mode"
-                                                        value={option.value}
-                                                        checked={
-                                                            mode ===
-                                                            option.value
-                                                        }
-                                                        onChange={() =>
-                                                            setMode(
-                                                                option.value,
-                                                            )
-                                                        }
-                                                        className="size-4 accent-primary"
-                                                    />
-                                                    {option.label}
-                                                </span>
-                                                {option.price && (
-                                                    <span className="figures text-sm font-semibold">
-                                                        {option.price}
-                                                    </span>
-                                                )}
-                                            </span>
-                                            <span className="text-sm text-muted-foreground">
-                                                {option.description}
-                                            </span>
-                                        </label>
-                                    ))}
-                                </div>
-                                <InputError message={errors.mode} />
-                            </fieldset>
-
-                            {mode === 'self' && (
-                                <div className="flex flex-col gap-2 rounded-lg border bg-card p-4">
-                                    <p className="text-sm">
-                                        Send it from your own email, with the
-                                        attachments, then come back and tell us.
-                                        We'll start the reply clock from today.
-                                    </p>
-                                    <div className="flex flex-wrap gap-2">
-                                        {mailto && (
-                                            <Button variant="outline" asChild>
-                                                <a href={mailto}>
-                                                    <Mail aria-hidden />
-                                                    Open in my email app
-                                                </a>
-                                            </Button>
-                                        )}
-                                        <CopyButton
-                                            value={`${dispute.letterSubject}\n\n${body}`}
-                                            label="Copy the letter"
-                                            className="h-11 border"
-                                        />
-                                    </div>
-                                </div>
-                            )}
+                            <PriceNotice
+                                quote={quote}
+                                action="A dispute"
+                                whenShort="Top up first, then approve it here."
+                            />
+                            <InputError message={errors.credit} />
 
                             <div className="flex flex-col gap-2 border-t pt-5 sm:flex-row sm:items-center">
                                 <Button
@@ -301,16 +208,17 @@ export default function DisputeCreate({
                                     size="lg"
                                     disabled={
                                         processing ||
-                                        dispute.findings.length === 0
+                                        dispute.findings.length === 0 ||
+                                        !quote.affordable
                                     }
                                 >
                                     {processing && <Spinner />}
-                                    {submitLabels[mode]}
+                                    Approve the dispute
                                 </Button>
                                 <span className="text-sm text-muted-foreground">
                                     {dispute.deadline &&
                                         `Dispute by ${dispute.deadline}${municipality.rulesVerified ? '' : ' (our estimate)'}. `}
-                                    Nothing is sent until you choose.
+                                    Nothing is sent until you approve it.
                                 </span>
                             </div>
                         </>

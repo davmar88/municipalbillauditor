@@ -50,6 +50,7 @@ use Illuminate\Support\Facades\Storage;
  * @property list<string>|null $skipped
  * @property string|null $meter_photo_path
  * @property Carbon|null $checked_at
+ * @property Carbon|null $waiting_since
  */
 #[Fillable([
     'property_id', 'user_id', 'source', 'status', 'needs_review', 'review_note',
@@ -57,7 +58,7 @@ use Illuminate\Support\Facades\Storage;
     'bill_date', 'due_date', 'period_start', 'period_end', 'account_number',
     'municipality_name', 'municipality_email', 'municipality_address', 'municipality_phone',
     'tariff_label', 'tariff_category', 'total_due', 'read_method', 'extraction',
-    'passed', 'skipped', 'meter_photo_path', 'checked_at',
+    'passed', 'skipped', 'meter_photo_path', 'checked_at', 'waiting_since',
 ])]
 class Bill extends Model
 {
@@ -92,6 +93,7 @@ class Bill extends Model
             'passed' => 'array',
             'skipped' => 'array',
             'checked_at' => 'datetime',
+            'waiting_since' => 'datetime',
         ];
     }
 

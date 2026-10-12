@@ -20,8 +20,9 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias(['organisation' => EnsureUserHasOrganisation::class]);
 
-        // Forwarded e-bills arrive from the email provider, not a browser.
-        $middleware->validateCsrfTokens(except: ['inbound/email']);
+        // Forwarded e-bills, dispute replies and payment notices arrive
+        // from other services, not a browser.
+        $middleware->validateCsrfTokens(except: ['inbound/email', 'inbound/dispute-email', 'webhooks/paystack']);
 
         $middleware->web(append: [
             HandleAppearance::class,

@@ -4,14 +4,18 @@ namespace Tests\Feature;
 
 use App\Enums\BillSource;
 use App\Enums\BillStatus;
+use App\Enums\CreditKind;
 use App\Enums\OrganisationKind;
 use App\Models\Bill;
 use App\Models\Municipality;
 use App\Models\User;
+use App\Notifications\CustomerNotice;
+use App\Services\Billing\Wallet;
 use App\Services\Reading\BillReader;
 use App\Services\Reading\BillReadingFailed;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\Support\FakeBillReader;
@@ -26,11 +30,12 @@ class BillUploadTest extends TestCase
         parent::setUp();
 
         Storage::fake('local');
+        Notification::fake();
     }
 
     private function household(): User
     {
-        return User::factory()->forKind(OrganisationKind::Household)->create();
+        return User::factory()->forKind(OrganisationKind::Household)->withCredit()->create();
     }
 
     private function reader(FakeBillReader $reader): FakeBillReader
@@ -134,6 +139,53 @@ class BillUploadTest extends TestCase
         $bill = Bill::sole();
         $this->assertSame(BillStatus::NeedsEntry, $bill->status);
         $this->assertSame("This doesn't look like a municipal bill.", $bill->review_note);
+
+        // A failed read is refunded.
+        $this->assertSame('100.00', app(Wallet::class)->balance($user->organisation));
+        $this->assertSame(['job', 'refund'], $user->organisation->creditTransactions()->where('job', 'bill_check')->orderBy('id')->pluck('kind')->map->value->all());
+    }
+
+    public function test_a_bill_check_is_paid_once_from_credit(): void
+    {
+        $this->reader(new FakeBillReader(FakeBillReader::output()));
+        $user = $this->household();
+
+        $this->actingAs($user)->get(route('bills.index'))->assertInertia(fn (Assert $page) => $page
+            ->where('quote.price', 'R15.00')
+            ->where('quote.affordable', true),
+        );
+
+        $this->post(route('bills.store'), ['bill' => UploadedFile::fake()->create('bill.pdf', 50, 'application/pdf')]);
+        $bill = Bill::sole();
+        $this->assertSame('85.00', app(Wallet::class)->balance($user->organisation));
+
+        // Re-checking, answering or correcting costs nothing more.
+        $this->post(route('bills.recheck', $bill))->assertRedirect();
+        $this->assertSame('85.00', app(Wallet::class)->balance($user->organisation));
+        Notification::assertSentTo($user, CustomerNotice::class, fn (CustomerNotice $n) => $n->kind === 'bill_checked');
+    }
+
+    public function test_a_bill_without_credit_waits_and_is_checked_after_a_top_up(): void
+    {
+        $reader = $this->reader(new FakeBillReader(FakeBillReader::output()));
+        $user = User::factory()->forKind(OrganisationKind::Household)->create();
+
+        $this->actingAs($user)->post(route('bills.store'), ['bill' => UploadedFile::fake()->create('bill.pdf', 50, 'application/pdf')]);
+
+        $bill = Bill::sole();
+        $this->assertSame(BillStatus::WaitingForCredit, $bill->status);
+        $this->assertSame([], $reader->mimeTypes, 'Nothing is read before it is paid for.');
+        Notification::assertSentTo($user, CustomerNotice::class, fn (CustomerNotice $n) => $n->kind === 'waiting_for_credit');
+
+        $this->get(route('bills.show', $bill))->assertInertia(fn (Assert $page) => $page
+            ->where('bill.status', 'waiting_for_credit')
+            ->where('quote.shortfall', 'R15.00'),
+        );
+
+        app(Wallet::class)->credit($user->organisation, CreditKind::TopUp, '50', 'payment:test', 'Card top-up');
+
+        $this->assertSame(BillStatus::Checked, $bill->refresh()->status);
+        $this->assertSame('35.00', app(Wallet::class)->balance($user->organisation));
     }
 
     public function test_without_an_api_key_every_bill_is_typed_in(): void

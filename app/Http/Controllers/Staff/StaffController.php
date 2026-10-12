@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Staff;
 
 use App\Audit\Deadlines\Stage;
+use App\Audit\Money;
 use App\Enums\BillStatus;
+use App\Enums\CreditKind;
 use App\Enums\DisputeEventKind;
 use App\Enums\DisputeMode;
 use App\Http\Controllers\Controller;
@@ -11,11 +13,14 @@ use App\Http\Presenters\DisputePresenter;
 use App\Http\Requests\RecordDisputeEventRequest;
 use App\Models\Bill;
 use App\Models\Dispute;
+use App\Models\Organisation;
+use App\Services\Billing\Wallet;
 use App\Services\DisputeService;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -67,6 +72,12 @@ class StaffController extends Controller
                 'councillorLetter' => $this->councillorLetter($d, $disputes),
             ])->values(),
             'eventKinds' => RecordDisputeEventRequest::options(),
+            'organisations' => Organisation::query()->orderBy('name')->get()->map(fn (Organisation $o) => [
+                'id' => $o->id,
+                'name' => $o->name,
+                'kind' => $o->kind->label(),
+                'balance' => Money::format($o->credit_balance),
+            ])->values(),
             'bills' => $bills->map(fn (Bill $b) => [
                 'id' => $b->id,
                 'organisation' => $b->organisation->name,
@@ -126,6 +137,34 @@ class StaffController extends Controller
             $request->user(),
         );
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Recorded.']);
+
+        return back();
+    }
+
+    /**
+     * A customer paid by EFT: add it to their credit. The bank reference
+     * makes it count once, however often the form is sent.
+     */
+    public function recordEft(Request $request, Organisation $organisation, Wallet $wallet): RedirectResponse
+    {
+        $data = $request->validate([
+            'amount' => ['required', 'decimal:0,2', 'gt:0', 'max:100000'],
+            'bank_reference' => ['required', 'string', 'max:60'],
+        ]);
+
+        $reference = Str::of($data['bank_reference'])->lower()->replaceMatches('/\s+/', '')->limit(60, '')->value();
+        $transaction = $wallet->credit(
+            $organisation,
+            CreditKind::TopUp,
+            $data['amount'],
+            "eft:{$organisation->id}:{$reference}",
+            "EFT top-up, bank reference {$data['bank_reference']}",
+            by: $request->user(),
+        );
+
+        Inertia::flash('toast', $transaction->wasRecentlyCreated
+            ? ['type' => 'success', 'message' => Money::format($data['amount'])." added to {$organisation->name}'s credit."]
+            : ['type' => 'error', 'message' => 'That bank reference was already recorded for this account.']);
 
         return back();
     }

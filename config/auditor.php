@@ -42,13 +42,43 @@ return [
     'information_officer' => env('INFORMATION_OFFICER'),
 
     /*
-    | Prices. These are the pricing model's starting guesses, not decided
-    | prices. Organisations can carry a negotiated rate instead.
+    | Prices, in rand.
+    |
+    | Households pay a fixed price per job from prepaid credit. A bill check
+    | reads the bill and runs the four checks; a dispute covers drafting it,
+    | emailing the municipality, reading its replies, chasing and
+    | escalating. Managing agents and businesses pay a flat monthly fee per
+    | organisation (or a negotiated one), which includes a number of bill
+    | checks a month and unlimited disputes. Checks beyond that come from
+    | prepaid credit at the household price.
     */
     'prices' => [
-        'household_dispute' => env('PRICE_HOUSEHOLD_DISPUTE', '299'),
-        'per_unit_month' => env('PRICE_PER_UNIT_MONTH', '50'),
-        'success_fee_rate' => env('SUCCESS_FEE_RATE', '0.25'),
+        'jobs' => [
+            'bill_check' => env('PRICE_JOB_BILL_CHECK', '15'),
+            'dispute' => env('PRICE_JOB_DISPUTE', '49'),
+        ],
+        'top_ups' => array_values(array_filter(array_map('trim', explode(',', (string) env('TOP_UP_PACKS', '50,100,250,500'))))),
+        'welcome_credit' => env('WELCOME_CREDIT', '0'),
+        'agent_month' => env('PRICE_AGENT_MONTH', '1500'),
+        'business_month' => env('PRICE_BUSINESS_MONTH', '2500'),
+        'included_bill_checks' => (int) env('INCLUDED_BILL_CHECKS_PER_MONTH', 100),
+    ],
+
+    /*
+    | What Claude costs us, in US dollars per million tokens, to work out
+    | the margin on each job. Writing to the prompt cache costs 1.25 times
+    | the input price.
+    */
+    'claude_prices' => [
+        'models' => [
+            'claude-opus-5-5' => ['input' => '4.00', 'output' => '20.00', 'cache_read' => '0.20'],
+            'claude-sonnet-5-5' => ['input' => '2.00', 'output' => '10.00', 'cache_read' => '0.20'],
+            // No cache read price given for Haiku yet: cache reads are costed at
+            // the input price until one is set, which overstates the cost.
+            'claude-haiku-5-5' => ['input' => '0.10', 'output' => '0.50', 'cache_read' => null],
+        ],
+        'cache_write_multiplier' => '1.25',
+        'usd_zar' => env('USD_ZAR_RATE', '18.50'),
     ],
 
     /*

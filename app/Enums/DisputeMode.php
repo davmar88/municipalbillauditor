@@ -4,15 +4,16 @@ namespace App\Enums;
 
 enum DisputeMode: string
 {
-    /** The customer sends the letter. Free. */
+    /**
+     * The customer sent the letter themselves. No longer offered: kept for
+     * disputes sent that way before every dispute was emailed by us.
+     */
     case Self = 'self';
-    /** We lodge, chase and escalate for a flat fee (households). */
+    /** We email it, read the replies, chase and escalate. */
     case Managed = 'managed';
-    /** We run the claim for a share of what is recovered (businesses). */
-    case SuccessFee = 'success_fee';
 
     public function isManagedByUs(): bool
     {
-        return $this !== self::Self;
+        return $this === self::Managed;
     }
 }

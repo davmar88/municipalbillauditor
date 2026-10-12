@@ -3,8 +3,11 @@
 namespace App\Providers;
 
 use Anthropic\Client as AnthropicClient;
+use App\Http\Controllers\Marketing\PageController;
 use App\Models\Municipality;
 use App\Models\User;
+use App\Services\Payments\PaymentGateway;
+use App\Services\Payments\PaystackGateway;
 use App\Services\Reading\BillReader;
 use App\Services\Reading\ClaudeBillReader;
 use App\Services\Reading\ManualOnlyReader;
@@ -23,6 +26,12 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        $this->app->bind(PaymentGateway::class, fn () => new PaystackGateway(
+            secretKey: (string) config('services.paystack.secret_key'),
+            baseUrl: (string) config('services.paystack.base_url'),
+            timeout: (int) config('services.paystack.timeout'),
+        ));
+
         // Bills are read by Claude when an API key is configured. Without
         // one, every bill waits for its details to be typed in.
         $this->app->bind(BillReader::class, function () {
@@ -58,6 +67,14 @@ class AppServiceProvider extends ServiceProvider
             'footerMetros',
             Municipality::landingPages(),
         ));
+
+        // Prices come from config, so the public pages never quote an old
+        // one. "Free" only appears when there is welcome credit.
+        View::composer('marketing.*', function ($view) {
+            $prices = PageController::prices();
+
+            $view->with('sitePrices', $prices)->with('checkLabel', $prices['welcome'] !== null ? 'Check my bill free' : 'Check my bill');
+        });
     }
 
     /**

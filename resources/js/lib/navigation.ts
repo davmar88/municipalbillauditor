@@ -5,8 +5,10 @@ import {
     LayoutGrid,
     ReceiptText,
     Scale,
+    Wallet,
 } from 'lucide-react';
 import { index as bills } from '@/routes/bills';
+import { index as credit } from '@/routes/credit';
 import { index as disputes } from '@/routes/disputes';
 import { index as properties } from '@/routes/properties';
 import { portfolio } from '@/routes';
@@ -25,18 +27,21 @@ export function mainNavigation(kind: OrganisationKind | undefined): NavItem[] {
                 { title: 'Bills', href: bills(), icon: ReceiptText },
                 { title: 'Disputes', href: disputes(), icon: FileText },
                 { title: 'Properties', href: properties(), icon: Building2 },
+                { title: 'Credit', href: credit(), icon: Wallet },
             ];
         case 'business':
             return [
                 { title: 'Claims', href: disputes(), icon: Scale },
                 { title: 'Bills', href: bills(), icon: ReceiptText },
                 { title: 'Properties', href: properties(), icon: Building2 },
+                { title: 'Credit', href: credit(), icon: Wallet },
             ];
         default:
             return [
                 { title: 'Bills', href: bills(), icon: ReceiptText },
                 { title: 'Disputes', href: disputes(), icon: FileText },
                 { title: 'Property', href: properties(), icon: House },
+                { title: 'Credit', href: credit(), icon: Wallet },
             ];
     }
 }

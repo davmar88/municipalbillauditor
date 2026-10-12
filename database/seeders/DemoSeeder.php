@@ -9,6 +9,7 @@ use App\Audit\Enums\TariffCategory;
 use App\Audit\Money;
 use App\Enums\BillSource;
 use App\Enums\BillStatus;
+use App\Enums\CreditKind;
 use App\Enums\DisputeEventKind;
 use App\Enums\DisputeMode;
 use App\Enums\FindingState;
@@ -22,6 +23,7 @@ use App\Models\Property;
 use App\Models\TariffRate;
 use App\Models\User;
 use App\Services\AuditService;
+use App\Services\Billing\Wallet;
 use App\Services\DisputeService;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Seeder;
@@ -123,6 +125,7 @@ class DemoSeeder extends Seeder
     private function household(Municipality $municipality): void
     {
         $user = $this->user('household@example.com', 'Thandi Mokoena', OrganisationKind::Household, 'Thandi Mokoena');
+        $this->credit($user, '100');
         $home = $this->property($user->organisation, $municipality, 'Home', null, 'Melville', PropertyType::Residential, '5021 4478 2210', '12 Fourth Avenue, Melville');
         $water = [16, 15, 17, 16, 16];
         $power = [480, 455, 470, 490, 462];
@@ -207,11 +210,19 @@ class DemoSeeder extends Seeder
             $last = $this->bill($scheme, $user, $this->month($ago), ['water' => [400], 'electricity' => [5400]], tariff: TariffCategory::Business);
         }
 
-        $this->dispute($last, $user, DisputeMode::SuccessFee, submitted: $this->after($last, 3), lodged: $this->after($last, 5), reference: 'TSH-BC-20931', acknowledged: $this->after($last, 13));
+        $this->dispute($last, $user, DisputeMode::Managed, submitted: $this->after($last, 3), lodged: $this->after($last, 5), reference: 'TSH-BC-20931', acknowledged: $this->after($last, 13));
 
         for ($ago = 3; $ago >= 1; $ago--) {
             $this->bill($scheme, $user, $this->month($ago), ['water' => [400], 'electricity' => [5400]], tariff: TariffCategory::BulkResidential);
         }
+    }
+
+    /**
+     * The demo household has some credit to try a check and a dispute with.
+     */
+    private function credit(User $user, string $amount): void
+    {
+        app(Wallet::class)->credit($user->organisation, CreditKind::TopUp, $amount, "demo:{$user->organisation_id}", 'Demo credit');
     }
 
     private function staff(): void
@@ -340,13 +351,16 @@ class DemoSeeder extends Seeder
             }
         }
 
+        // Built directly rather than sent: the demo emails nobody.
         CarbonImmutable::setTestNow($submitted);
         $dispute = $this->disputes->draft($bill->refresh(), $user);
-        $this->disputes->submit($dispute, $mode, $user);
+        $dispute->update(['mode' => $mode, 'submitted_on' => $submitted]);
 
-        if ($lodged !== null && $mode !== DisputeMode::Self) {
+        if ($mode === DisputeMode::Self) {
+            $this->disputes->lodge($dispute->refresh(), $submitted, null, $user, 'Sent by you');
+        } elseif ($lodged !== null) {
             CarbonImmutable::setTestNow($lodged);
-            $this->disputes->lodge($dispute->refresh(), $lodged, null, null, 'Lodged by our team');
+            $this->disputes->lodge($dispute->refresh(), $lodged, null, null, 'Sent to the municipality');
         }
 
         if ($reference !== null && $acknowledged !== null) {

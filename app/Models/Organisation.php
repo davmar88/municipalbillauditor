@@ -2,12 +2,16 @@
 
 namespace App\Models;
 
+use App\Audit\Money;
 use App\Enums\OrganisationKind;
+use App\Services\Billing\Wallet;
 use Database\Factories\OrganisationFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 
 /**
@@ -18,10 +22,17 @@ use Illuminate\Support\Str;
  * @property OrganisationKind $kind
  * @property string $name
  * @property string $forwarding_code
- * @property string|null $unit_price
- * @property string|null $success_fee_rate
+ * @property string|null $monthly_fee
+ * @property string $credit_balance
+ * @property string|null $card_authorization
+ * @property string|null $card_last4
+ * @property string|null $card_brand
+ * @property string|null $card_expiry
+ * @property string|null $card_email
+ * @property Carbon|null $card_saved_at
  */
-#[Fillable(['kind', 'name', 'forwarding_code', 'unit_price', 'success_fee_rate'])]
+#[Fillable(['kind', 'name', 'forwarding_code', 'monthly_fee'])]
+#[Hidden(['card_authorization'])]
 class Organisation extends Model
 {
     /** @use HasFactory<OrganisationFactory> */
@@ -31,6 +42,11 @@ class Organisation extends Model
     {
         static::creating(function (Organisation $organisation) {
             $organisation->forwarding_code ??= self::newForwardingCode();
+        });
+
+        // New accounts start with the welcome credit, when there is one.
+        static::created(function (Organisation $organisation) {
+            app(Wallet::class)->welcome($organisation);
         });
     }
 
@@ -47,8 +63,11 @@ class Organisation extends Model
     {
         return [
             'kind' => OrganisationKind::class,
-            'unit_price' => 'decimal:2',
-            'success_fee_rate' => 'decimal:4',
+            'monthly_fee' => 'decimal:2',
+            'credit_balance' => 'decimal:2',
+            // A reusable Paystack authorization: enough to charge the card.
+            'card_authorization' => 'encrypted',
+            'card_saved_at' => 'datetime',
         ];
     }
 
@@ -82,6 +101,18 @@ class Organisation extends Model
         return $this->hasMany(FeeInvoice::class);
     }
 
+    /** @return HasMany<Payment, $this> */
+    public function payments(): HasMany
+    {
+        return $this->hasMany(Payment::class);
+    }
+
+    /** @return HasMany<CreditTransaction, $this> */
+    public function creditTransactions(): HasMany
+    {
+        return $this->hasMany(CreditTransaction::class);
+    }
+
     /**
      * Delete the organisation and everything it holds. Bills go one by one
      * so their files are deleted from the private disk too.
@@ -98,13 +129,25 @@ class Organisation extends Model
         return $this->forwarding_code.'@'.config('auditor.inbound_email_domain');
     }
 
-    public function successFeeRate(): string
+    /** Agents and businesses pay a monthly fee; households pay per job. */
+    public function paysMonthly(): bool
     {
-        return $this->success_fee_rate ?? (string) config('auditor.prices.success_fee_rate');
+        return $this->kind !== OrganisationKind::Household;
     }
 
-    public function unitPrice(): string
+    /**
+     * The monthly fee this organisation pays: negotiated, or the standard
+     * fee for its kind. Null for households.
+     */
+    public function monthlyFee(): ?string
     {
-        return $this->unit_price ?? (string) config('auditor.prices.per_unit_month');
+        if (! $this->paysMonthly()) {
+            return null;
+        }
+
+        return (string) Money::money($this->monthly_fee ?? match ($this->kind) {
+            OrganisationKind::Agent => (string) config('auditor.prices.agent_month'),
+            default => (string) config('auditor.prices.business_month'),
+        });
     }
 }

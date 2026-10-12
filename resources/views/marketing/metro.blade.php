@@ -7,7 +7,7 @@
 @endphp
 
 @section('title', "{$metro->short_name} billing disputes | Municipal Bill Auditor")
-@section('description', "Wrong {$metro->name} bill? We check it free for estimated readings, wrong tariffs and outage charges, then write your dispute and chase it to the credit.")
+@section('description', "Wrong {$metro->name} bill? We check it for estimated readings, wrong tariffs and outage charges, then write your dispute and chase it to the credit.")
 @section('canonical', route('metro.show', $metro))
 
 @include('marketing.partials.jsonld', ['data' => [
@@ -18,7 +18,7 @@
             'serviceType' => "Municipal bill disputes in {$metro->short_name}",
             'provider' => ['@type' => 'Organization', 'name' => config('app.name'), 'url' => route('home')],
             'areaServed' => ['@type' => 'City', 'name' => $metro->area_name ?? $metro->short_name],
-            'offers' => ['@type' => 'Offer', 'price' => '0', 'priceCurrency' => 'ZAR', 'description' => 'Free bill check'],
+            'offers' => ['@type' => 'Offer', 'price' => $sitePrices['billCheckAmount'], 'priceCurrency' => 'ZAR', 'description' => 'Bill check'],
         ],
         [
             '@type' => 'BreadcrumbList',
@@ -41,7 +41,7 @@
             <div class="flex flex-wrap gap-3">
                 <a href="{{ $checkUrl }}" class="flex h-14 items-center gap-2.5 rounded-lg bg-action px-6 text-lg font-semibold text-white no-underline hover:bg-action-ink hover:text-white">
                     @include('marketing.partials.camera')
-                    Check my bill free
+                    {{ $checkLabel }}
                 </a>
                 <a href="#letter" class="flex h-14 items-center rounded-lg border border-[#a9b1bb] bg-paper px-[22px] text-lg font-semibold text-ink no-underline hover:border-ink hover:text-ink">See a sample letter</a>
             </div>

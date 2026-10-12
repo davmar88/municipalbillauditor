@@ -12,6 +12,7 @@ import { ConfirmAction } from '@/components/audit/confirm-action';
 import { FindingCard } from '@/components/audit/finding-card';
 import { MarkedBill } from '@/components/audit/marked-bill';
 import { MunicipalityOptions } from '@/components/audit/municipality-options';
+import { PriceNotice } from '@/components/audit/price-notice';
 import { PageBody, PageHeader } from '@/components/audit/page-header';
 import { SummaryBand } from '@/components/audit/summary-band';
 import { UsageChart, UsageKey } from '@/components/audit/usage-chart';
@@ -38,6 +39,7 @@ import {
 import type {
     BillDetail,
     Finding,
+    JobQuote,
     MunicipalityOption,
     PropertyOption,
 } from '@/types';
@@ -46,12 +48,14 @@ type Props = {
     bill: BillDetail;
     properties: PropertyOption[];
     municipalities: MunicipalityOption[];
+    quote: JobQuote | null;
 };
 
 export default function BillShow({
     bill,
     properties: propertyOptions,
     municipalities,
+    quote,
 }: Props) {
     const reading = bill.status === 'received' || bill.status === 'reading';
 
@@ -88,6 +92,19 @@ export default function BillShow({
                 />
 
                 {reading && <Reading bill={bill} />}
+                {bill.status === 'waiting_for_credit' && quote && (
+                    <section className="border-action/40 flex max-w-xl flex-col items-start gap-3 rounded-lg border bg-card p-6">
+                        <h2 className="text-lg font-bold">
+                            This bill is waiting for credit
+                        </h2>
+                        <p className="text-foreground/80">
+                            We have it safe. As soon as you top up, we read and
+                            check it, and email you what we find. You don't need
+                            to send it again.
+                        </p>
+                        <PriceNotice quote={quote} action="Checking a bill" />
+                    </section>
+                )}
                 {bill.status === 'needs_entry' && <NeedsEntry bill={bill} />}
                 {bill.status === 'needs_property' && (
                     <NeedsProperty bill={bill} options={propertyOptions} />

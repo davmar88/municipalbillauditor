@@ -41,7 +41,6 @@ use Illuminate\Support\Carbon;
  * @property CarbonImmutable|null $escalated_public_protector_on
  * @property CarbonImmutable|null $tariff_fixed_on
  * @property string|null $monthly_saving
- * @property string|null $back_refund_claimed
  * @property CarbonImmutable|null $credit_on
  * @property string|null $credit_amount
  * @property int|null $credit_bill_id
@@ -53,7 +52,7 @@ use Illuminate\Support\Carbon;
     'property_id', 'bill_id', 'mode', 'letter_subject', 'letter_body', 'disputed_total',
     'undisputed_amount', 'dispute_deadline', 'submitted_on', 'lodged_on', 'reference', 'acknowledged_on',
     'reply_received_on', 'escalated_councillor_on', 'escalated_public_protector_on',
-    'tariff_fixed_on', 'monthly_saving', 'back_refund_claimed', 'credit_on', 'credit_amount',
+    'tariff_fixed_on', 'monthly_saving', 'credit_on', 'credit_amount',
     'credit_bill_id', 'closed_on', 'close_reason',
 ])]
 class Dispute extends Model
@@ -76,7 +75,6 @@ class Dispute extends Model
             'escalated_public_protector_on' => 'immutable_date',
             'tariff_fixed_on' => 'immutable_date',
             'monthly_saving' => 'decimal:2',
-            'back_refund_claimed' => 'decimal:2',
             'credit_on' => 'immutable_date',
             'credit_amount' => 'decimal:2',
             'closed_on' => 'immutable_date',
@@ -111,12 +109,6 @@ class Dispute extends Model
     public function events(): HasMany
     {
         return $this->hasMany(DisputeEvent::class)->orderBy('happened_on')->orderBy('id');
-    }
-
-    /** @return HasMany<FeeInvoice, $this> */
-    public function feeInvoices(): HasMany
-    {
-        return $this->hasMany(FeeInvoice::class);
     }
 
     public function facts(): CaseFacts

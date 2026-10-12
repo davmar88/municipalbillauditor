@@ -12,8 +12,10 @@ import { NativeSelect } from '@/components/ui/native-select';
 import { Spinner } from '@/components/ui/spinner';
 import { privacy } from '@/routes';
 import { index, sample, show, store } from '@/routes/bills';
+import { PriceNotice } from '@/components/audit/price-notice';
 import type {
     BillSummary,
+    JobQuote,
     MunicipalityOption,
     Option,
     PropertyOption,
@@ -27,6 +29,7 @@ type Props = {
     askMunicipality: boolean;
     checks: Option[];
     maxUploadMb: number;
+    quote: JobQuote;
 };
 
 const checkHints: Record<string, string> = {
@@ -43,6 +46,7 @@ export default function BillsIndex({
     askMunicipality,
     checks,
     maxUploadMb,
+    quote,
 }: Props) {
     const { organisation } = usePage().props;
     const household = organisation?.kind === 'household';
@@ -59,7 +63,7 @@ export default function BillsIndex({
                     >
                         <div className="flex flex-col gap-2">
                             <span className="font-mono text-xs font-semibold tracking-[0.12em] text-flag-ink">
-                                {household ? 'FREE BILL CHECK' : 'CHECK A BILL'}
+                                CHECK A BILL
                             </span>
                             <h1
                                 id="check-h"
@@ -81,6 +85,12 @@ export default function BillsIndex({
                             askMunicipality={askMunicipality}
                             choosesProperty={choosesProperty}
                             maxUploadMb={maxUploadMb}
+                        />
+
+                        <PriceNotice
+                            quote={quote}
+                            action="Checking a bill"
+                            whenShort="You can still send it: it waits, and we check it as soon as you top up."
                         />
 
                         {organisation && (

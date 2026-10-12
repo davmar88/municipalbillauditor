@@ -7,15 +7,11 @@ use App\Audit\Deadlines\Stage;
 use App\Audit\Deadlines\TimelineStep;
 use App\Audit\Enums\CheckType;
 use App\Audit\Enums\TariffCategory;
-use App\Audit\Fees\Pricing;
 use App\Audit\Money;
 use App\Enums\DisputeEventKind;
-use App\Enums\DisputeMode;
-use App\Enums\FeeKind;
 use App\Models\Bill;
 use App\Models\Dispute;
 use App\Models\DisputeEvent;
-use App\Models\FeeInvoice;
 use App\Models\Finding;
 use Carbon\CarbonImmutable;
 
@@ -49,7 +45,6 @@ class DisputePresenter
             'lodgedOn' => $dispute->lodged_on?->format('j M Y'),
             'reference' => $dispute->reference,
             'issues' => $dispute->findings->count(),
-            'backRefundClaimed' => $dispute->back_refund_claimed !== null ? Money::format($dispute->back_refund_claimed) : null,
         ];
     }
 
@@ -58,7 +53,7 @@ class DisputePresenter
      */
     public static function detail(Dispute $dispute): array
     {
-        $dispute->loadMissing(['property.municipality', 'bill', 'findings', 'events', 'feeInvoices', 'organisation']);
+        $dispute->loadMissing(['property.municipality', 'bill', 'findings', 'events', 'organisation']);
         $today = CarbonImmutable::today();
         $rules = $dispute->property->rules();
         $facts = $dispute->facts();
@@ -104,14 +99,7 @@ class DisputePresenter
             ])->values(),
             'actions' => $dispute->lodged_on !== null ? self::actions($stage, $dispute->reference !== null, $dispute->mode->isManagedByUs()) : [],
             'creditAmount' => $dispute->credit_amount !== null ? Money::format($dispute->credit_amount) : null,
-            'fees' => $dispute->mode === DisputeMode::SuccessFee ? self::fees($dispute) : null,
             'tariff' => self::tariff($dispute),
-            'invoices' => $dispute->feeInvoices->map(fn (FeeInvoice $invoice) => [
-                'id' => $invoice->id,
-                'description' => $invoice->description,
-                'amount' => Money::format($invoice->amount),
-                'status' => $invoice->status->value,
-            ])->values(),
         ];
     }
 
@@ -145,36 +133,6 @@ class DisputePresenter
         $actions[] = ['kind' => DisputeEventKind::Closed->value, 'label' => 'Close this dispute', 'fields' => ['note']];
 
         return $actions;
-    }
-
-    /**
-     * The success fee as the business claim screen shows it.
-     *
-     * @return array<string, mixed>
-     */
-    private static function fees(Dispute $dispute): array
-    {
-        $rate = $dispute->organisation->successFeeRate();
-        $monthlySaving = $dispute->monthly_saving ?? self::expectedMonthlySaving($dispute);
-        $fee = Pricing::successFee($dispute->back_refund_claimed ?? $dispute->disputed_total, $monthlySaving, $rate);
-        $invoiced = Money::sum($dispute->feeInvoices->map(fn (FeeInvoice $i) => Money::of($i->amount)));
-        $savingsInvoiced = $dispute->feeInvoices->where('kind', FeeKind::MonthlySaving)->count();
-
-        return [
-            'rate' => rtrim(rtrim((string) Money::of($rate)->multipliedBy(100), '0'), '.').'%',
-            'backRefund' => Money::format($fee->backRefund),
-            'backRefundFee' => Money::format($fee->backRefundFee),
-            'backRefundInvoiced' => $dispute->feeInvoices->contains('kind', FeeKind::BackRefund),
-            'monthlySaving' => $monthlySaving !== null ? Money::format($fee->monthlySaving) : null,
-            'monthlySavingFee' => Money::format($fee->monthlySavingFee),
-            'savingsTotal' => Money::format($fee->savingsTotal),
-            'savingsFeeTotal' => Money::format($fee->savingsFeeTotal),
-            'savingsInvoiced' => $savingsInvoiced,
-            'savingMonths' => $fee->savingMonths,
-            'totalWon' => Money::format($fee->totalWon),
-            'totalFee' => Money::format($fee->totalFee),
-            'invoicedSoFar' => Money::format($invoiced),
-        ];
     }
 
     private static function expectedMonthlySaving(Dispute $dispute): ?string
@@ -219,7 +177,7 @@ class DisputePresenter
                 'total' => $after->total_due !== null ? Money::format($after->total_due) : null,
             ] : null,
             'expected' => $expected?->label(),
-            'monthlySaving' => $dispute->monthly_saving !== null ? Money::format($dispute->monthly_saving) : null,
+            'monthlySaving' => ($saving = $dispute->monthly_saving ?? self::expectedMonthlySaving($dispute)) !== null ? Money::format($saving) : null,
         ];
     }
 }

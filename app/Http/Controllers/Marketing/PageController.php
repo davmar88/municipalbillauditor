@@ -10,9 +10,12 @@ use App\Audit\Letters\LetterInput;
 use App\Audit\Letters\LetterItem;
 use App\Audit\Letters\LetterWriter;
 use App\Audit\Money;
+use App\Enums\Job;
 use App\Http\Controllers\Controller;
 use App\Models\Municipality;
+use App\Services\Billing\Wallet;
 use App\Support\SiteContent;
+use Brick\Math\BigDecimal;
 use DateTimeImmutable;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Str;
@@ -31,7 +34,7 @@ class PageController extends Controller
             'checks' => SiteContent::checks(),
             'steps' => SiteContent::steps(),
             'faq' => SiteContent::faq(),
-            'prices' => $this->prices(),
+            'prices' => self::prices(),
         ]);
     }
 
@@ -85,14 +88,26 @@ class PageController extends Controller
     }
 
     /**
-     * @return array{household: string, unit: string, successFee: string}
+     * The prices the public pages quote, from config.
+     *
+     * @return array{billCheck: string, billCheckAmount: string, dispute: string, agentMonth: string, businessMonth: string, includedChecks: int, smallestTopUp: string, welcome: ?string}
      */
-    private function prices(): array
+    public static function prices(): array
     {
+        $rand = fn (string $amount) => Str::replaceLast('.00', '', Money::format($amount));
+        $packs = array_map(fn (string $a) => Money::of($a), config('auditor.prices.top_ups'));
+        $welcome = Money::money((string) config('auditor.prices.welcome_credit'));
+
         return [
-            'household' => Str::replaceLast('.00', '', Money::format(config('auditor.prices.household_dispute'))),
-            'unit' => Str::replaceLast('.00', '', Money::format(config('auditor.prices.per_unit_month'))),
-            'successFee' => rtrim(rtrim((string) Money::of(config('auditor.prices.success_fee_rate'))->multipliedBy(100), '0'), '.').'%',
+            'billCheck' => $rand(Job::BillCheck->price()),
+            'billCheckAmount' => Job::BillCheck->price(),
+            'dispute' => $rand(Job::Dispute->price()),
+            'agentMonth' => $rand((string) config('auditor.prices.agent_month')),
+            'businessMonth' => $rand((string) config('auditor.prices.business_month')),
+            'includedChecks' => Wallet::includedChecks(),
+            'smallestTopUp' => $packs === [] ? $rand(Job::BillCheck->price()) : $rand((string) BigDecimal::min(...$packs)),
+            // Only mention free credit when there is some.
+            'welcome' => $welcome->isPositive() ? $rand((string) $welcome) : null,
         ];
     }
 }

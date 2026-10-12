@@ -31,6 +31,7 @@ export type MunicipalityOption = {
 
 export type BillStatus =
     | 'received'
+    | 'waiting_for_credit'
     | 'reading'
     | 'needs_entry'
     | 'needs_property'
@@ -150,7 +151,7 @@ export type BillDetail = BillSummary & {
     history: UsageSeries[];
 };
 
-export type DisputeMode = 'self' | 'managed' | 'success_fee';
+export type DisputeMode = 'self' | 'managed';
 
 export type DisputeSummary = {
     id: number;
@@ -170,7 +171,6 @@ export type DisputeSummary = {
     lodgedOn: string | null;
     reference: string | null;
     issues: number;
-    backRefundClaimed: string | null;
 };
 
 export type TimelineState = 'done' | 'current' | 'upcoming' | 'if_needed';
@@ -187,22 +187,6 @@ export type DisputeAction = {
     kind: string;
     label: string;
     fields: ('reference' | 'note' | 'amount')[];
-};
-
-export type SuccessFee = {
-    rate: string;
-    backRefund: string;
-    backRefundFee: string;
-    backRefundInvoiced: boolean;
-    monthlySaving: string | null;
-    monthlySavingFee: string;
-    savingsTotal: string;
-    savingsFeeTotal: string;
-    savingsInvoiced: number;
-    savingMonths: number;
-    totalWon: string;
-    totalFee: string;
-    invoicedSoFar: string;
 };
 
 export type TariffSnapshot = {
@@ -234,19 +218,12 @@ export type DisputeDetail = DisputeSummary & {
     findings: { number: number; title: string; amount: string | null }[];
     actions: DisputeAction[];
     creditAmount: string | null;
-    fees: SuccessFee | null;
     tariff: {
         before: TariffSnapshot;
         after: TariffSnapshot | null;
         expected: string | null;
         monthlySaving: string | null;
     } | null;
-    invoices: {
-        id: number;
-        description: string;
-        amount: string;
-        status: string;
-    }[];
 };
 
 export type PropertyDetail = {
@@ -284,4 +261,13 @@ export type PortfolioRow = {
     atStake: string | null;
     deadlineLabel: string | null;
     href: string;
+};
+
+export type JobQuote = {
+    job: 'bill_check' | 'dispute';
+    price: string;
+    coveredByPlan: boolean;
+    balance: string;
+    affordable: boolean;
+    shortfall: string | null;
 };

@@ -3,6 +3,7 @@
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\BillController;
 use App\Http\Controllers\BillDetailsController;
+use App\Http\Controllers\CreditController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DisputeController;
 use App\Http\Controllers\DisputeEventController;
@@ -10,6 +11,7 @@ use App\Http\Controllers\FindingController;
 use App\Http\Controllers\InboundEmailController;
 use App\Http\Controllers\Marketing\PageController;
 use App\Http\Controllers\Marketing\SitemapController;
+use App\Http\Controllers\PaystackWebhookController;
 use App\Http\Controllers\PortfolioController;
 use App\Http\Controllers\PropertyController;
 use App\Http\Controllers\Staff\ReferenceDataController;
@@ -25,6 +27,9 @@ Route::get('robots.txt', [SitemapController::class, 'robots'])->name('robots');
 
 // Forwarded e-bills from the email provider's inbound webhook.
 Route::post('inbound/email', InboundEmailController::class)->middleware('throttle:120,1')->name('inbound.email');
+
+// Paystack's payment notices.
+Route::post('webhooks/paystack', PaystackWebhookController::class)->middleware('throttle:120,1')->name('webhooks.paystack');
 
 Route::middleware(['auth', 'verified', 'organisation'])->group(function () {
     Route::get('dashboard', DashboardController::class)->name('dashboard');
@@ -59,7 +64,13 @@ Route::middleware(['auth', 'verified', 'organisation'])->group(function () {
     Route::patch('properties/{property}/municipality', [PropertyController::class, 'setMunicipality'])->name('properties.municipality');
     Route::delete('properties/{property}', [PropertyController::class, 'destroy'])->name('properties.destroy');
 
+    Route::get('credit', [CreditController::class, 'index'])->name('credit.index');
+    Route::post('credit/top-up', [CreditController::class, 'topUp'])->middleware('throttle:20,1')->name('credit.top-up');
+    Route::post('credit/invoices/{invoice}/pay', [CreditController::class, 'payInvoice'])->middleware('throttle:20,1')->name('credit.invoices.pay');
+    Route::get('credit/callback', [CreditController::class, 'callback'])->name('credit.callback');
+
     Route::get('settings/account', [AccountController::class, 'edit'])->name('account.edit');
+    Route::delete('settings/account/card', [AccountController::class, 'destroyCard'])->name('account.card.destroy');
     Route::patch('settings/account', [AccountController::class, 'update'])->name('account.update');
     Route::delete('settings/account/bills', [AccountController::class, 'destroyBills'])->name('account.bills.destroy');
 });
@@ -69,6 +80,7 @@ Route::middleware(['auth', 'verified', 'can:staff'])->prefix('staff')->name('sta
     Route::post('disputes/{dispute}/lodge', [StaffController::class, 'lodge'])->name('disputes.lodge');
     Route::post('disputes/{dispute}/events', [StaffController::class, 'record'])->name('disputes.events.store');
     Route::get('bills/{bill}/file', [StaffController::class, 'billFile'])->name('bills.file');
+    Route::post('organisations/{organisation}/eft', [StaffController::class, 'recordEft'])->name('organisations.eft');
     Route::get('reference', [ReferenceDataController::class, 'index'])->name('reference');
     Route::put('municipalities/{municipality:id}', [ReferenceDataController::class, 'updateMunicipality'])->name('municipalities.update');
     Route::post('outages', [ReferenceDataController::class, 'storeOutage'])->name('outages.store');

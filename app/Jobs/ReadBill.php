@@ -7,7 +7,9 @@ use App\Enums\OrganisationKind;
 use App\Models\Bill;
 use App\Models\Property;
 use App\Services\AuditService;
+use App\Services\BillChecker;
 use App\Services\BillWriter;
+use App\Services\CustomerMail;
 use App\Services\Municipalities\MunicipalityDirectory;
 use App\Services\Reading\BillReader;
 use App\Services\Reading\BillReadingFailed;
@@ -18,7 +20,9 @@ use Illuminate\Support\Facades\Storage;
 use Throwable;
 
 /**
- * Reads an uploaded or forwarded bill, matches it to a property and checks it.
+ * Reads an uploaded or forwarded bill, matches it to a property and checks
+ * it. This is the paid bill check: it is charged before the bill is read,
+ * waits if there isn't enough credit, and is refunded if the read fails.
  */
 class ReadBill implements ShouldQueue
 {
@@ -30,11 +34,15 @@ class ReadBill implements ShouldQueue
 
     public function __construct(public Bill $bill) {}
 
-    public function handle(BillReader $reader, BillWriter $writer, AuditService $audit, MunicipalityDirectory $directory): void
+    public function handle(BillReader $reader, BillWriter $writer, AuditService $audit, MunicipalityDirectory $directory, BillChecker $checker, CustomerMail $mail): void
     {
         $bill = $this->bill;
 
         if (! in_array($bill->status, [BillStatus::Received, BillStatus::Reading], true) || $bill->file_path === null) {
+            return;
+        }
+
+        if (! $checker->pay($bill)) {
             return;
         }
 
@@ -45,6 +53,7 @@ class ReadBill implements ShouldQueue
             $read = $reader->read((string) $contents, (string) $bill->file_mime);
         } catch (BillReadingFailed $e) {
             $bill->update(['status' => BillStatus::NeedsEntry, 'review_note' => $e->getMessage()]);
+            $checker->refund($bill, "Bill check refunded: we couldn't read the bill automatically");
 
             return;
         }
@@ -60,6 +69,7 @@ class ReadBill implements ShouldQueue
 
         $bill->property()->associate($property)->save();
         $audit->run($bill);
+        $mail->billChecked($bill->refresh());
     }
 
     public function failed(?Throwable $exception): void
@@ -68,6 +78,8 @@ class ReadBill implements ShouldQueue
             'status' => BillStatus::NeedsEntry,
             'review_note' => 'Something went wrong reading this bill, so it needs its details typed in.',
         ]);
+
+        app(BillChecker::class)->refund($this->bill, 'Bill check refunded: something went wrong reading the bill');
     }
 
     private function propertyFor(Bill $bill, ExtractedBill $read, MunicipalityDirectory $directory): ?Property

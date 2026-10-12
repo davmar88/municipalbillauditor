@@ -1,5 +1,6 @@
 import { Form, Head, Link } from '@inertiajs/react';
 import { Download } from 'lucide-react';
+import { useState } from 'react';
 import { Chip } from '@/components/audit/chip';
 import { PageBody, PageHeader } from '@/components/audit/page-header';
 import { CopyButton } from '@/components/copy-button';
@@ -13,6 +14,7 @@ import { localToday } from '@/lib/dates';
 import { index, reference } from '@/routes/staff';
 import { file } from '@/routes/staff/bills';
 import { lodge } from '@/routes/staff/disputes';
+import { eft } from '@/routes/staff/organisations';
 import { store as recordEvent } from '@/routes/staff/disputes/events';
 import type { DisputeSummary, Option } from '@/types';
 
@@ -36,6 +38,14 @@ type Props = {
         note: string | null;
         received: string;
     }[];
+    organisations: StaffOrganisation[];
+};
+
+type StaffOrganisation = {
+    id: number;
+    name: string;
+    kind: string;
+    balance: string;
 };
 
 export default function StaffIndex({
@@ -43,6 +53,7 @@ export default function StaffIndex({
     needsEscalation,
     eventKinds,
     bills,
+    organisations,
 }: Props) {
     return (
         <>
@@ -264,6 +275,8 @@ export default function StaffIndex({
                         </li>
                     ))}
                 </Queue>
+
+                <EftForm organisations={organisations} />
             </PageBody>
         </>
     );
@@ -272,6 +285,84 @@ export default function StaffIndex({
 StaffIndex.layout = {
     breadcrumbs: [{ title: 'Work queue', href: index() }],
 };
+
+/**
+ * A customer paid by EFT. The bank reference is recorded once only, so
+ * sending the form twice doesn't credit twice.
+ */
+function EftForm({ organisations }: { organisations: StaffOrganisation[] }) {
+    const [organisationId, setOrganisationId] = useState<number | null>(null);
+    const chosen = organisations.find((o) => o.id === organisationId);
+
+    return (
+        <section className="flex flex-col gap-3">
+            <h2 className="text-lg font-bold">Record an EFT top-up</h2>
+            <div className="flex flex-col gap-3 rounded-lg border bg-card p-5">
+                <div className="grid max-w-md gap-1.5">
+                    <Label htmlFor="eft_organisation">Account</Label>
+                    <NativeSelect
+                        id="eft_organisation"
+                        value={organisationId ?? ''}
+                        onChange={(e) =>
+                            setOrganisationId(
+                                e.target.value ? Number(e.target.value) : null,
+                            )
+                        }
+                    >
+                        <option value="">Choose an account</option>
+                        {organisations.map((o) => (
+                            <option key={o.id} value={o.id}>
+                                {o.name} ({o.kind}, credit {o.balance})
+                            </option>
+                        ))}
+                    </NativeSelect>
+                </div>
+                {chosen && (
+                    <Form
+                        {...eft.form(chosen.id)}
+                        options={{ preserveScroll: true }}
+                        resetOnSuccess
+                        className="grid gap-3 sm:grid-cols-[10rem_1fr_auto] sm:items-end"
+                    >
+                        {({ processing, errors }) => (
+                            <>
+                                <div className="grid gap-1.5">
+                                    <Label htmlFor="eft_amount">
+                                        Amount (R)
+                                    </Label>
+                                    <Input
+                                        id="eft_amount"
+                                        name="amount"
+                                        inputMode="decimal"
+                                        required
+                                    />
+                                    <InputError message={errors.amount} />
+                                </div>
+                                <div className="grid gap-1.5">
+                                    <Label htmlFor="eft_reference">
+                                        Bank reference
+                                    </Label>
+                                    <Input
+                                        id="eft_reference"
+                                        name="bank_reference"
+                                        required
+                                    />
+                                    <InputError
+                                        message={errors.bank_reference}
+                                    />
+                                </div>
+                                <Button type="submit" disabled={processing}>
+                                    {processing && <Spinner />}
+                                    Add to {chosen.name}'s credit
+                                </Button>
+                            </>
+                        )}
+                    </Form>
+                )}
+            </div>
+        </section>
+    );
+}
 
 function Queue({
     title,

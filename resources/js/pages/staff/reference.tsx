@@ -423,7 +423,7 @@ function MunicipalityForm({ municipality }: { municipality: Municipality }) {
                         <span className="figures text-xs text-muted-foreground">
                             {[municipality.code, municipality.province]
                                 .filter(Boolean)
-                                .join(' Â· ')}
+                                .join(' · ')}
                         </span>
                         <Chip
                             tone={
