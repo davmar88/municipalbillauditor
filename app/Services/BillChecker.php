@@ -82,21 +82,24 @@ class BillChecker
             ->get();
 
         foreach ($waiting as $bill) {
-            if (! $this->wallet->quote($organisation, Job::BillCheck)->affordable) {
+            // Pay before touching the bill, so the balance is spent as we
+            // go. A bill the credit doesn't cover keeps its place and isn't
+            // emailed about again.
+            if (! $this->pay($bill)) {
                 break;
             }
 
             $resumed++;
+            $bill->update(['status' => BillStatus::Received, 'waiting_since' => null]);
 
-            // Typed-in bills are checked; uploaded ones are read first.
+            // Typed-in bills are checked; uploaded ones are read first. Both
+            // find the charge just made rather than paying again.
             if ($bill->read_method === 'manual' && $bill->property_id !== null && $bill->bill_date !== null) {
-                $bill->update(['status' => BillStatus::Received, 'waiting_since' => null]);
                 $this->check($bill);
 
                 continue;
             }
 
-            $bill->update(['status' => BillStatus::Received, 'waiting_since' => null]);
             ReadBill::dispatch($bill);
         }
 

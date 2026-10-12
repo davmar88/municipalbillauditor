@@ -7,6 +7,7 @@ use App\Enums\FeeStatus;
 use App\Enums\Job;
 use App\Models\CreditTransaction;
 use App\Models\FeeInvoice;
+use App\Models\Payment;
 use App\Services\Billing\Wallet;
 use App\Services\Payments\PaymentFailed;
 use App\Services\Payments\PaymentService;
@@ -99,8 +100,10 @@ class CreditController extends Controller
     }
 
     /**
-     * Where Paystack sends the customer back. It only shows the result: the
-     * webhook does the crediting.
+     * Where Paystack sends the customer back. We ask Paystack how the
+     * payment went and, when it succeeded, apply it through the same
+     * once-only path as the webhook: the webhook may not reach us, and
+     * whichever arrives second changes nothing.
      */
     public function callback(Request $request, PaymentService $payments): RedirectResponse
     {
@@ -112,10 +115,23 @@ class CreditController extends Controller
             $result = null;
         }
 
-        Inertia::flash('toast', $result?->succeeded()
-            ? ['type' => 'success', 'message' => 'Payment received, thank you. It shows here as soon as Paystack confirms it.']
-            : ['type' => 'error', 'message' => "The payment didn't go through. Nothing was charged."]);
+        $applied = $result?->succeeded() && $this->ours($request, $result->reference) && $payments->confirm($result);
+
+        Inertia::flash('toast', match (true) {
+            $applied => ['type' => 'success', 'message' => 'Payment received, thank you.'],
+            (bool) $result?->succeeded() => ['type' => 'success', 'message' => 'Payment received. It shows here as soon as Paystack confirms it.'],
+            default => ['type' => 'error', 'message' => "The payment didn't go through. Nothing was charged."],
+        });
 
         return to_route('credit.index');
+    }
+
+    /** Only the account that started a payment applies it from here. */
+    private function ours(Request $request, string $reference): bool
+    {
+        return Payment::query()
+            ->where('reference', $reference)
+            ->where('organisation_id', $request->user()->organisation_id)
+            ->exists();
     }
 }

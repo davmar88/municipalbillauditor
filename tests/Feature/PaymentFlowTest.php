@@ -70,7 +70,7 @@ class PaymentFlowTest extends TestCase
         ];
     }
 
-    public function test_a_top_up_goes_to_checkout_and_is_credited_once_by_the_webhook(): void
+    public function test_a_top_up_goes_to_checkout_and_is_credited_once(): void
     {
         $user = User::factory()->forKind(OrganisationKind::Household)->create();
 
@@ -90,16 +90,40 @@ class PaymentFlowTest extends TestCase
         $this->assertSame($user->email, $this->gateway->checkouts[0]['email']);
         $this->assertSame(route('credit.callback'), $this->gateway->checkouts[0]['callback']);
 
-        // Coming back only shows the result.
+        // Coming back verifies the payment with Paystack and credits it.
         $this->get(route('credit.callback', ['reference' => $payment->reference]))->assertRedirect(route('credit.index'));
-        $this->assertSame('0.00', app(Wallet::class)->balance($user->organisation));
-
-        $this->webhook('charge.success', $this->success($payment))->assertOk();
-        $this->webhook('charge.success', $this->success($payment))->assertOk();
-
         $this->assertSame(PaymentStatus::Success, $payment->refresh()->status);
         $this->assertSame('100.00', app(Wallet::class)->balance($user->organisation));
+
+        // The webhook for the same payment, and a second visit, change nothing.
+        $this->webhook('charge.success', $this->success($payment))->assertOk();
+        $this->get(route('credit.callback', ['reference' => $payment->reference]));
+
+        $this->assertSame('100.00', app(Wallet::class)->balance($user->organisation));
         $this->assertSame(1, $user->organisation->creditTransactions()->count());
+    }
+
+    public function test_the_webhook_credits_a_top_up_on_its_own(): void
+    {
+        $user = User::factory()->forKind(OrganisationKind::Household)->create();
+        $payment = Payment::create(['organisation_id' => $user->organisation_id, 'user_id' => $user->id, 'purpose' => 'top_up', 'amount' => '50.00', 'status' => 'pending']);
+
+        $this->webhook('charge.success', $this->success($payment))->assertOk();
+        $this->webhook('charge.success', $this->success($payment))->assertOk();
+
+        $this->assertSame('50.00', app(Wallet::class)->balance($user->organisation));
+        $this->assertSame(1, $user->organisation->creditTransactions()->count());
+    }
+
+    public function test_one_account_cannot_apply_another_accounts_payment_from_the_callback(): void
+    {
+        $owner = User::factory()->forKind(OrganisationKind::Household)->create();
+        $payment = Payment::create(['organisation_id' => $owner->organisation_id, 'purpose' => 'top_up', 'amount' => '50.00', 'status' => 'pending']);
+
+        $this->actingAs(User::factory()->forKind(OrganisationKind::Household)->create())
+            ->get(route('credit.callback', ['reference' => $payment->reference]));
+
+        $this->assertSame(PaymentStatus::Pending, $payment->refresh()->status);
     }
 
     public function test_the_webhook_refuses_a_bad_signature_and_a_wrong_amount(): void

@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Notifications\CustomerNotice;
 use App\Services\Billing\Wallet;
 use App\Services\Reading\BillReader;
+use Carbon\CarbonImmutable;
 use App\Services\Reading\BillReadingFailed;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -196,6 +197,37 @@ class BillUploadTest extends TestCase
         ]);
 
         $this->assertSame(BillStatus::NeedsEntry, Bill::sole()->status);
+    }
+
+    public function test_a_top_up_checks_only_the_waiting_bills_it_covers_in_order(): void
+    {
+        $reader = $this->reader(new FakeBillReader(FakeBillReader::output()));
+        $user = User::factory()->forKind(OrganisationKind::Household)->create();
+        $this->actingAs($user);
+
+        foreach (range(1, 3) as $n) {
+            CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-10-10 09:00')->addMinutes($n));
+            $this->post(route('bills.store'), ['bill' => UploadedFile::fake()->create("bill-{$n}.pdf", 50, 'application/pdf')]);
+        }
+
+        CarbonImmutable::setTestNow('2026-10-11 09:00');
+        $waitingSince = Bill::orderBy('id')->pluck('waiting_since', 'id')->map(fn ($d) => (string) $d)->all();
+        Notification::assertSentToTimes($user, CustomerNotice::class, 3);
+
+        app(Wallet::class)->credit($user->organisation, CreditKind::TopUp, '20', 'payment:one', 'Card top-up');
+
+        $bills = Bill::orderBy('id')->get();
+        $this->assertSame(BillStatus::Checked, $bills[0]->status);
+        $this->assertSame([BillStatus::WaitingForCredit, BillStatus::WaitingForCredit], [$bills[1]->status, $bills[2]->status]);
+        $this->assertSame([$waitingSince[$bills[1]->id], $waitingSince[$bills[2]->id]], [(string) $bills[1]->waiting_since, (string) $bills[2]->waiting_since]);
+        $this->assertCount(1, $reader->mimeTypes, 'Only the bill the credit covers is read.');
+        $this->assertSame('5.00', app(Wallet::class)->balance($user->organisation));
+
+        // One "bill checked" email; no new "waiting for credit" ones.
+        Notification::assertSentToTimes($user, CustomerNotice::class, 4);
+        Notification::assertSentTo($user, CustomerNotice::class, fn (CustomerNotice $n) => $n->kind === 'bill_checked');
+
+        CarbonImmutable::setTestNow();
     }
 
     public function test_typing_in_a_bill_checks_it(): void
