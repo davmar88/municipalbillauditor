@@ -4,7 +4,7 @@ namespace Tests\Unit\Audit;
 
 use App\Audit\Deadlines\CaseClock;
 use App\Audit\Deadlines\CaseFacts;
-use App\Audit\Deadlines\MetroRules;
+use App\Audit\Deadlines\MunicipalityRules;
 use App\Audit\Deadlines\Stage;
 use Brick\Math\BigDecimal;
 use DateTimeImmutable;
@@ -12,11 +12,11 @@ use PHPUnit\Framework\TestCase;
 
 class CaseClockTest extends TestCase
 {
-    private MetroRules $rules;
+    private MunicipalityRules $rules;
 
     protected function setUp(): void
     {
-        $this->rules = new MetroRules;
+        $this->rules = new MunicipalityRules;
     }
 
     private function day(string $date): DateTimeImmutable

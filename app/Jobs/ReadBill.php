@@ -8,6 +8,7 @@ use App\Models\Bill;
 use App\Models\Property;
 use App\Services\AuditService;
 use App\Services\BillWriter;
+use App\Services\Municipalities\MunicipalityDirectory;
 use App\Services\Reading\BillReader;
 use App\Services\Reading\BillReadingFailed;
 use App\Services\Reading\ExtractedBill;
@@ -29,7 +30,7 @@ class ReadBill implements ShouldQueue
 
     public function __construct(public Bill $bill) {}
 
-    public function handle(BillReader $reader, BillWriter $writer, AuditService $audit): void
+    public function handle(BillReader $reader, BillWriter $writer, AuditService $audit, MunicipalityDirectory $directory): void
     {
         $bill = $this->bill;
 
@@ -49,7 +50,7 @@ class ReadBill implements ShouldQueue
         }
 
         $writer->applyExtraction($bill, $read);
-        $property = $this->propertyFor($bill, $read);
+        $property = $this->propertyFor($bill, $read, $directory);
 
         if ($property === null) {
             $bill->update(['status' => BillStatus::NeedsProperty]);
@@ -69,7 +70,7 @@ class ReadBill implements ShouldQueue
         ]);
     }
 
-    private function propertyFor(Bill $bill, ExtractedBill $read): ?Property
+    private function propertyFor(Bill $bill, ExtractedBill $read, MunicipalityDirectory $directory): ?Property
     {
         $organisation = $bill->organisation;
         $property = $bill->property;
@@ -93,6 +94,13 @@ class ReadBill implements ShouldQueue
                 'account_number' => $property->account_number ?? $read->accountNumber,
                 'address' => $property->address ?? $read->propertyAddress,
                 'suburb' => $property->suburb ?? $read->suburb,
+                // The customer never has to know who bills them: the name on
+                // the bill decides. A name two municipalities share is left
+                // for the customer to choose.
+                'municipality_id' => $property->municipality_id ?? $directory->match(
+                    $read->municipality,
+                    implode(' ', array_filter([$read->propertyAddress, $read->suburb, $read->municipalityAddress])),
+                )?->id,
             ], fn ($value) => $value !== null))->save();
         }
 

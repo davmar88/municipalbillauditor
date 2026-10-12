@@ -53,7 +53,7 @@ class SendDisputeReminders extends Command
             ->whereNotNull('property_id')
             ->whereDoesntHave('disputes', fn (Builder $q) => $q->whereNotNull('submitted_on'))
             ->whereHas('findings', fn (Builder $q) => $q->where('state', '!=', 'dismissed'))
-            ->with(['property.metro', 'findings', 'organisation.users'])
+            ->with(['property.municipality', 'findings', 'organisation.users'])
             ->get();
 
         foreach ($bills as $bill) {
@@ -63,7 +63,7 @@ class SendDisputeReminders extends Command
                 continue;
             }
 
-            $deadline = CaseClock::disputeDeadline($bill->bill_date, $bill->property->metro->rules());
+            $deadline = CaseClock::disputeDeadline($bill->bill_date, $bill->property->rules());
             $left = (int) $today->diffInDays($deadline, false);
             $notice = collect(self::WINDOW_NOTICES)->first(fn (int $days) => $left >= 0 && $left <= $days);
 
@@ -99,12 +99,12 @@ class SendDisputeReminders extends Command
             ->whereNotNull('lodged_on')
             ->whereNull('credit_on')
             ->whereNull('closed_on')
-            ->with(['property.metro', 'bill', 'organisation.users'])
+            ->with(['property.municipality', 'bill', 'organisation.users'])
             ->get();
 
         foreach ($disputes as $dispute) {
             $stage = $dispute->stage($today);
-            $rules = $dispute->property->metro->rules();
+            $rules = $dispute->property->rules();
 
             $reminder = match ($stage) {
                 Stage::ReplyOverdue => [

@@ -12,14 +12,14 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * A reported water or electricity outage in a suburb, entered by staff.
  *
  * @property int $id
- * @property int $metro_id
+ * @property int $municipality_id
  * @property string $suburb
  * @property Service $service
  * @property CarbonImmutable $starts_on
  * @property CarbonImmutable $ends_on
  * @property string|null $source
  */
-#[Fillable(['metro_id', 'suburb', 'service', 'starts_on', 'ends_on', 'source'])]
+#[Fillable(['municipality_id', 'suburb', 'service', 'starts_on', 'ends_on', 'source'])]
 class Outage extends Model
 {
     protected function casts(): array
@@ -31,9 +31,9 @@ class Outage extends Model
         ];
     }
 
-    /** @return BelongsTo<Metro, $this> */
-    public function metro(): BelongsTo
+    /** @return BelongsTo<Municipality, $this> */
+    public function municipality(): BelongsTo
     {
-        return $this->belongsTo(Metro::class);
+        return $this->belongsTo(Municipality::class);
     }
 }

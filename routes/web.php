@@ -56,6 +56,7 @@ Route::middleware(['auth', 'verified', 'organisation'])->group(function () {
     Route::get('properties', [PropertyController::class, 'index'])->name('properties.index');
     Route::post('properties', [PropertyController::class, 'store'])->name('properties.store');
     Route::put('properties/{property}', [PropertyController::class, 'update'])->name('properties.update');
+    Route::patch('properties/{property}/municipality', [PropertyController::class, 'setMunicipality'])->name('properties.municipality');
     Route::delete('properties/{property}', [PropertyController::class, 'destroy'])->name('properties.destroy');
 
     Route::get('settings/account', [AccountController::class, 'edit'])->name('account.edit');
@@ -69,7 +70,7 @@ Route::middleware(['auth', 'verified', 'can:staff'])->prefix('staff')->name('sta
     Route::post('disputes/{dispute}/events', [StaffController::class, 'record'])->name('disputes.events.store');
     Route::get('bills/{bill}/file', [StaffController::class, 'billFile'])->name('bills.file');
     Route::get('reference', [ReferenceDataController::class, 'index'])->name('reference');
-    Route::put('metros/{metro:id}', [ReferenceDataController::class, 'updateMetro'])->name('metros.update');
+    Route::put('municipalities/{municipality:id}', [ReferenceDataController::class, 'updateMunicipality'])->name('municipalities.update');
     Route::post('outages', [ReferenceDataController::class, 'storeOutage'])->name('outages.store');
     Route::delete('outages/{outage}', [ReferenceDataController::class, 'destroyOutage'])->name('outages.destroy');
     Route::post('tariffs', [ReferenceDataController::class, 'storeTariff'])->name('tariffs.store');

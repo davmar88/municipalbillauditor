@@ -1,3 +1,4 @@
+import { MunicipalityOptions } from '@/components/audit/municipality-options';
 import { Form, Head, Link, usePage } from '@inertiajs/react';
 import { Camera, ChevronRight, FileUp, Mail } from 'lucide-react';
 import { useRef, useState } from 'react';
@@ -11,14 +12,19 @@ import { NativeSelect } from '@/components/ui/native-select';
 import { Spinner } from '@/components/ui/spinner';
 import { privacy } from '@/routes';
 import { index, sample, show, store } from '@/routes/bills';
-import type { BillSummary, MetroOption, Option, PropertyOption } from '@/types';
+import type {
+    BillSummary,
+    MunicipalityOption,
+    Option,
+    PropertyOption,
+} from '@/types';
 import { AddressText } from '@/components/address-text';
 
 type Props = {
     bills: BillSummary[];
     properties: PropertyOption[];
-    metros: MetroOption[];
-    needsMetro: boolean;
+    municipalities: MunicipalityOption[];
+    askMunicipality: boolean;
     checks: Option[];
     maxUploadMb: number;
 };
@@ -33,8 +39,8 @@ const checkHints: Record<string, string> = {
 export default function BillsIndex({
     bills,
     properties,
-    metros,
-    needsMetro,
+    municipalities,
+    askMunicipality,
     checks,
     maxUploadMb,
 }: Props) {
@@ -71,8 +77,8 @@ export default function BillsIndex({
 
                         <UploadForm
                             properties={properties}
-                            metros={metros}
-                            needsMetro={needsMetro}
+                            municipalities={municipalities}
+                            askMunicipality={askMunicipality}
                             choosesProperty={choosesProperty}
                             maxUploadMb={maxUploadMb}
                         />
@@ -170,14 +176,14 @@ BillsIndex.layout = {
 
 function UploadForm({
     properties,
-    metros,
-    needsMetro,
+    municipalities,
+    askMunicipality,
     choosesProperty,
     maxUploadMb,
 }: {
     properties: PropertyOption[];
-    metros: MetroOption[];
-    needsMetro: boolean;
+    municipalities: MunicipalityOption[];
+    askMunicipality: boolean;
     choosesProperty: boolean;
     maxUploadMb: number;
 }) {
@@ -218,27 +224,33 @@ function UploadForm({
         >
             {({ processing, errors, submit }) => (
                 <>
-                    {needsMetro && (
+                    {askMunicipality && (
                         <div className="grid gap-2">
-                            <Label htmlFor="metro_id">
-                                Which municipality bills you?
+                            <Label htmlFor="municipality_id">
+                                Which municipality bills you?{' '}
+                                <span className="font-normal text-muted-foreground">
+                                    (optional)
+                                </span>
                             </Label>
                             <NativeSelect
-                                id="metro_id"
-                                name="metro_id"
-                                required
+                                id="municipality_id"
+                                name="municipality_id"
                                 defaultValue=""
+                                aria-describedby="municipality_hint"
                             >
-                                <option value="" disabled>
-                                    Choose your metro
-                                </option>
-                                {metros.map((metro) => (
-                                    <option key={metro.id} value={metro.id}>
-                                        {metro.name}
-                                    </option>
-                                ))}
+                                <MunicipalityOptions
+                                    municipalities={municipalities}
+                                    placeholder="Read it from my bill"
+                                />
                             </NativeSelect>
-                            <InputError message={errors.metro_id} />
+                            <p
+                                id="municipality_hint"
+                                className="text-sm text-muted-foreground"
+                            >
+                                We cover every municipality in South Africa and
+                                read yours from the bill.
+                            </p>
+                            <InputError message={errors.municipality_id} />
                         </div>
                     )}
 

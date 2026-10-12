@@ -2,6 +2,7 @@ import { Form, Head } from '@inertiajs/react';
 import { Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { Chip } from '@/components/audit/chip';
+import { MunicipalityOptions } from '@/components/audit/municipality-options';
 import { PageBody, PageHeader } from '@/components/audit/page-header';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
@@ -11,7 +12,7 @@ import { NativeSelect } from '@/components/ui/native-select';
 import { Spinner } from '@/components/ui/spinner';
 import { Textarea } from '@/components/ui/textarea';
 import { reference } from '@/routes/staff';
-import { update as updateMetro } from '@/routes/staff/metros';
+import { update as updateMunicipality } from '@/routes/staff/municipalities';
 import {
     destroy as destroyOutage,
     store as storeOutage,
@@ -22,12 +23,21 @@ import {
 } from '@/routes/staff/tariffs';
 import type { Option } from '@/types';
 
-type Metro = {
+type Municipality = {
     id: number;
+    code: string | null;
     name: string;
     shortName: string;
+    province: string | null;
+    category: string;
+    aliases: string[];
+    propertyCount: number;
     billingAddressee: string;
     billingEmail: string | null;
+    billingEmailSource: string | null;
+    billingEmailVerified: boolean;
+    escalationEmail: string | null;
+    escalationEmailVerified: boolean;
     disputeWindowDays: number;
     replyWindowDays: number;
     councillorWindowDays: number;
@@ -38,10 +48,10 @@ type Metro = {
 };
 
 type Props = {
-    metros: Metro[];
+    municipalities: Municipality[];
     outages: {
         id: number;
-        metro: string;
+        municipality: string;
         suburb: string;
         service: string;
         startsOn: string;
@@ -50,7 +60,7 @@ type Props = {
     }[];
     tariffs: {
         id: number;
-        metro: string;
+        municipality: string;
         category: string;
         service: string;
         rate: string;
@@ -63,7 +73,7 @@ type Props = {
 };
 
 export default function Reference({
-    metros,
+    municipalities,
     outages,
     tariffs,
     services,
@@ -75,15 +85,10 @@ export default function Reference({
             <PageBody className="max-w-5xl">
                 <PageHeader
                     title="Reference data"
-                    description="What the checks and letters rely on. Mark rules and rates as verified only once you've checked them against the metro's own documents."
+                    description="What the checks and letters rely on. Mark rules and rates as verified only once you've checked them against the municipality's own documents."
                 />
 
-                <section className="flex flex-col gap-4">
-                    <h2 className="text-lg font-bold">Metros</h2>
-                    {metros.map((metro) => (
-                        <MetroForm key={metro.id} metro={metro} />
-                    ))}
-                </section>
+                <MunicipalityDirectory municipalities={municipalities} />
 
                 <section className="flex flex-col gap-4">
                     <h2 className="text-lg font-bold">Reported outages</h2>
@@ -95,9 +100,9 @@ export default function Reference({
                     >
                         {({ processing, errors }) => (
                             <>
-                                <MetroSelect
-                                    metros={metros}
-                                    error={errors.metro_id}
+                                <MunicipalitySelect
+                                    municipalities={municipalities}
+                                    error={errors.municipality_id}
                                     id="outage_metro"
                                 />
                                 <Field
@@ -175,7 +180,7 @@ export default function Reference({
                     <SimpleTable
                         empty="No outages recorded."
                         headings={[
-                            'Metro',
+                            'Municipality',
                             'Suburb',
                             'Service',
                             'Dates',
@@ -184,7 +189,7 @@ export default function Reference({
                         rows={outages.map((o) => ({
                             id: o.id,
                             cells: [
-                                o.metro,
+                                o.municipality,
                                 o.suburb,
                                 o.service,
                                 `${o.startsOn} to ${o.endsOn}`,
@@ -205,9 +210,9 @@ export default function Reference({
                     >
                         {({ processing, errors }) => (
                             <>
-                                <MetroSelect
-                                    metros={metros}
-                                    error={errors.metro_id}
+                                <MunicipalitySelect
+                                    municipalities={municipalities}
+                                    error={errors.municipality_id}
                                     id="tariff_metro"
                                 />
                                 <Field
@@ -294,7 +299,7 @@ export default function Reference({
                     <SimpleTable
                         empty="No rates recorded."
                         headings={[
-                            'Metro',
+                            'Municipality',
                             'Category',
                             'Service',
                             'Rate',
@@ -304,7 +309,7 @@ export default function Reference({
                         rows={tariffs.map((t) => ({
                             id: t.id,
                             cells: [
-                                t.metro,
+                                t.municipality,
                                 t.category,
                                 t.service,
                                 t.rate,
@@ -324,127 +329,249 @@ Reference.layout = {
     breadcrumbs: [{ title: 'Reference data', href: reference() }],
 };
 
-function MetroForm({ metro }: { metro: Metro }) {
+/**
+ * All 257 municipalities. Search by name, code or alias; without a search,
+ * the ones customers' properties are in come first.
+ */
+function MunicipalityDirectory({
+    municipalities,
+}: {
+    municipalities: Municipality[];
+}) {
+    const [query, setQuery] = useState('');
+    const needle = query.trim().toLowerCase();
+    const matches = needle
+        ? municipalities.filter((m) =>
+              [
+                  m.name,
+                  m.shortName,
+                  m.code ?? '',
+                  m.province ?? '',
+                  ...m.aliases,
+              ]
+                  .join(' ')
+                  .toLowerCase()
+                  .includes(needle),
+          )
+        : municipalities.filter((m) => m.propertyCount > 0);
+    const shown = matches.slice(0, 12);
+    const withEmail = municipalities.filter((m) => m.billingEmail).length;
+    const verified = municipalities.filter(
+        (m) => m.billingEmailVerified,
+    ).length;
+
+    return (
+        <section className="flex flex-col gap-4">
+            <div className="flex flex-col gap-1">
+                <h2 className="text-lg font-bold">Municipalities</h2>
+                <p className="text-sm text-muted-foreground">
+                    {municipalities.length} in the directory. {withEmail} have a
+                    billing email, {verified} of them verified by us. A dispute
+                    goes to a verified address first, then the one printed on
+                    the customer's bill, then an unverified one.
+                </p>
+            </div>
+            <div className="grid max-w-md gap-1.5">
+                <Label htmlFor="municipality_search">Find a municipality</Label>
+                <Input
+                    id="municipality_search"
+                    type="search"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    placeholder="Name, code or province"
+                />
+            </div>
+            {!needle && (
+                <p className="text-sm text-muted-foreground">
+                    Showing the municipalities our customers' properties are in.
+                </p>
+            )}
+            {shown.length === 0 && (
+                <p className="text-sm text-muted-foreground">
+                    No municipality matches.
+                </p>
+            )}
+            {shown.map((municipality) => (
+                <MunicipalityForm
+                    key={municipality.id}
+                    municipality={municipality}
+                />
+            ))}
+            {matches.length > shown.length && (
+                <p className="text-sm text-muted-foreground">
+                    {matches.length - shown.length} more. Narrow the search to
+                    see them.
+                </p>
+            )}
+        </section>
+    );
+}
+
+function MunicipalityForm({ municipality }: { municipality: Municipality }) {
     return (
         <Form
-            {...updateMetro.form(metro.id)}
+            {...updateMunicipality.form(municipality.id)}
             options={{ preserveScroll: true }}
             className="flex flex-col gap-4 rounded-lg border bg-card p-5"
         >
             {({ processing, errors }) => (
                 <>
                     <div className="flex flex-wrap items-center gap-2">
-                        <h3 className="text-base font-bold">{metro.name}</h3>
+                        <h3 className="text-base font-bold">
+                            {municipality.name}
+                        </h3>
+                        <span className="figures text-xs text-muted-foreground">
+                            {[municipality.code, municipality.province]
+                                .filter(Boolean)
+                                .join(' Â· ')}
+                        </span>
                         <Chip
                             tone={
-                                metro.rulesVerified ? 'action' : 'flag-outline'
+                                municipality.rulesVerified
+                                    ? 'action'
+                                    : 'flag-outline'
                             }
                         >
-                            {metro.rulesVerified
+                            {municipality.rulesVerified
                                 ? 'Rules verified'
                                 : 'Rules not verified'}
                         </Chip>
-                        {!metro.live && <Chip tone="missing">Not live</Chip>}
+                        {!municipality.live && (
+                            <Chip tone="missing">Not live</Chip>
+                        )}
                     </div>
                     <div className="grid gap-3 sm:grid-cols-2">
                         <Field
                             label="Addressee"
-                            id={`addressee_${metro.id}`}
+                            id={`addressee_${municipality.id}`}
                             error={errors.billing_addressee}
                         >
                             <Input
-                                id={`addressee_${metro.id}`}
+                                id={`addressee_${municipality.id}`}
                                 name="billing_addressee"
-                                defaultValue={metro.billingAddressee}
+                                defaultValue={municipality.billingAddressee}
                                 required
                             />
                         </Field>
                         <Field
                             label="Billing email"
-                            id={`email_${metro.id}`}
+                            id={`email_${municipality.id}`}
                             error={errors.billing_email}
                         >
                             <Input
-                                id={`email_${metro.id}`}
+                                id={`email_${municipality.id}`}
                                 name="billing_email"
                                 type="email"
-                                defaultValue={metro.billingEmail ?? ''}
+                                defaultValue={municipality.billingEmail ?? ''}
+                            />
+                            {municipality.billingEmailSource && (
+                                <span className="text-xs [overflow-wrap:anywhere] text-muted-foreground">
+                                    Source: {municipality.billingEmailSource}
+                                </span>
+                            )}
+                        </Field>
+                        <Field
+                            label="Escalation email (municipal manager)"
+                            id={`escalation_${municipality.id}`}
+                            error={errors.escalation_email}
+                        >
+                            <Input
+                                id={`escalation_${municipality.id}`}
+                                name="escalation_email"
+                                type="email"
+                                defaultValue={
+                                    municipality.escalationEmail ?? ''
+                                }
                             />
                         </Field>
+                    </div>
+                    <div className="flex flex-wrap gap-x-6 gap-y-2">
+                        <BooleanField
+                            name="billing_email_verified"
+                            label="Billing email confirmed with the municipality"
+                            defaultChecked={municipality.billingEmailVerified}
+                        />
+                        <BooleanField
+                            name="escalation_email_verified"
+                            label="Escalation email confirmed"
+                            defaultChecked={
+                                municipality.escalationEmailVerified
+                            }
+                        />
                     </div>
                     <div className="grid gap-3 sm:grid-cols-3">
                         <Field
                             label="Days to dispute"
-                            id={`dispute_${metro.id}`}
+                            id={`dispute_${municipality.id}`}
                             error={errors.dispute_window_days}
                         >
                             <Input
-                                id={`dispute_${metro.id}`}
+                                id={`dispute_${municipality.id}`}
                                 name="dispute_window_days"
                                 type="number"
                                 min={1}
-                                defaultValue={metro.disputeWindowDays}
+                                defaultValue={municipality.disputeWindowDays}
                             />
                         </Field>
                         <Field
                             label="Days for a reply"
-                            id={`reply_${metro.id}`}
+                            id={`reply_${municipality.id}`}
                             error={errors.reply_window_days}
                         >
                             <Input
-                                id={`reply_${metro.id}`}
+                                id={`reply_${municipality.id}`}
                                 name="reply_window_days"
                                 type="number"
                                 min={1}
-                                defaultValue={metro.replyWindowDays}
+                                defaultValue={municipality.replyWindowDays}
                             />
                         </Field>
                         <Field
                             label="Days for the councillor"
-                            id={`councillor_${metro.id}`}
+                            id={`councillor_${municipality.id}`}
                             error={errors.councillor_window_days}
                         >
                             <Input
-                                id={`councillor_${metro.id}`}
+                                id={`councillor_${municipality.id}`}
                                 name="councillor_window_days"
                                 type="number"
                                 min={1}
-                                defaultValue={metro.councillorWindowDays}
+                                defaultValue={municipality.councillorWindowDays}
                             />
                         </Field>
                     </div>
                     <Field
                         label="Where these rules come from"
-                        id={`notes_${metro.id}`}
+                        id={`notes_${municipality.id}`}
                         error={errors.rules_notes}
                     >
                         <Textarea
-                            id={`notes_${metro.id}`}
+                            id={`notes_${municipality.id}`}
                             name="rules_notes"
-                            defaultValue={metro.rulesNotes ?? ''}
+                            defaultValue={municipality.rulesNotes ?? ''}
                         />
                     </Field>
                     <Field
-                        label="Extra paragraph for this metro's letters"
-                        id={`paragraph_${metro.id}`}
+                        label="Extra paragraph for this municipality's letters"
+                        id={`paragraph_${municipality.id}`}
                         error={errors.letter_paragraph}
                     >
                         <Textarea
-                            id={`paragraph_${metro.id}`}
+                            id={`paragraph_${municipality.id}`}
                             name="letter_paragraph"
-                            defaultValue={metro.letterParagraph ?? ''}
+                            defaultValue={municipality.letterParagraph ?? ''}
                         />
                     </Field>
                     <div className="flex flex-wrap gap-x-6 gap-y-2">
                         <BooleanField
                             name="rules_verified"
-                            label="Rules checked against the metro's own documents"
-                            defaultChecked={metro.rulesVerified}
+                            label="Rules checked against the municipality's own documents"
+                            defaultChecked={municipality.rulesVerified}
                         />
                         <BooleanField
                             name="live"
                             label="Open to customers"
-                            defaultChecked={metro.live}
+                            defaultChecked={municipality.live}
                         />
                     </div>
                     <Button
@@ -453,7 +580,7 @@ function MetroForm({ metro }: { metro: Metro }) {
                         className="self-start"
                     >
                         {processing && <Spinner />}
-                        Save {metro.shortName}
+                        Save {municipality.shortName}
                     </Button>
                 </>
             )}
@@ -487,26 +614,31 @@ function BooleanField({
     );
 }
 
-function MetroSelect({
-    metros,
+function MunicipalitySelect({
+    municipalities,
     error,
     id,
 }: {
-    metros: Metro[];
+    municipalities: Municipality[];
     error?: string;
     id: string;
 }) {
     return (
-        <Field label="Metro" id={id} error={error}>
-            <NativeSelect id={id} name="metro_id" required defaultValue="">
-                <option value="" disabled>
-                    Choose a metro
-                </option>
-                {metros.map((metro) => (
-                    <option key={metro.id} value={metro.id}>
-                        {metro.shortName}
-                    </option>
-                ))}
+        <Field label="Municipality" id={id} error={error}>
+            <NativeSelect
+                id={id}
+                name="municipality_id"
+                required
+                defaultValue=""
+            >
+                <MunicipalityOptions
+                    municipalities={municipalities.map((m) => ({
+                        id: m.id,
+                        name: m.shortName,
+                        province: m.province,
+                    }))}
+                    placeholder="Choose a municipality"
+                />
             </NativeSelect>
         </Field>
     );

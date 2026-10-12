@@ -12,27 +12,27 @@ use DateTimeInterface;
  */
 final class CaseClock
 {
-    public static function disputeDeadline(DateTimeInterface $billDate, MetroRules $rules): DateTimeImmutable
+    public static function disputeDeadline(DateTimeInterface $billDate, MunicipalityRules $rules): DateTimeImmutable
     {
         return Dates::addDays($billDate, $rules->disputeWindowDays);
     }
 
-    public static function replyDue(DateTimeInterface $lodgedOn, MetroRules $rules): DateTimeImmutable
+    public static function replyDue(DateTimeInterface $lodgedOn, MunicipalityRules $rules): DateTimeImmutable
     {
         return Dates::addDays($lodgedOn, $rules->replyWindowDays);
     }
 
-    public static function councillorEscalationOn(DateTimeInterface $lodgedOn, MetroRules $rules): DateTimeImmutable
+    public static function councillorEscalationOn(DateTimeInterface $lodgedOn, MunicipalityRules $rules): DateTimeImmutable
     {
         return Dates::addDays(self::replyDue($lodgedOn, $rules), 1);
     }
 
-    public static function publicProtectorEscalationOn(DateTimeInterface $escalatedOn, MetroRules $rules): DateTimeImmutable
+    public static function publicProtectorEscalationOn(DateTimeInterface $escalatedOn, MunicipalityRules $rules): DateTimeImmutable
     {
         return Dates::addDays($escalatedOn, $rules->councillorWindowDays);
     }
 
-    public static function stage(CaseFacts $facts, MetroRules $rules, DateTimeInterface $today): Stage
+    public static function stage(CaseFacts $facts, MunicipalityRules $rules, DateTimeInterface $today): Stage
     {
         return match (true) {
             $facts->creditOn !== null => Stage::Resolved,
@@ -49,7 +49,7 @@ final class CaseClock
         };
     }
 
-    public static function status(CaseFacts $facts, MetroRules $rules, DateTimeInterface $today): CaseStatus
+    public static function status(CaseFacts $facts, MunicipalityRules $rules, DateTimeInterface $today): CaseStatus
     {
         $stage = self::stage($facts, $rules, $today);
 
@@ -154,7 +154,7 @@ final class CaseClock
     /**
      * @return list<TimelineStep>
      */
-    public static function timeline(CaseFacts $facts, MetroRules $rules, DateTimeInterface $today): array
+    public static function timeline(CaseFacts $facts, MunicipalityRules $rules, DateTimeInterface $today): array
     {
         $stage = self::stage($facts, $rules, $today);
         $finished = in_array($stage, [Stage::Resolved, Stage::Closed], true);

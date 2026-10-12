@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Marketing;
 
 use App\Http\Controllers\Controller;
-use App\Models\Metro;
+use App\Models\Municipality;
 use Illuminate\Http\Response;
 
 class SitemapController extends Controller
@@ -12,8 +12,8 @@ class SitemapController extends Controller
     {
         $urls = [
             ['loc' => route('home'), 'priority' => '1.0'],
-            ...Metro::query()->where('live', true)->orderBy('sort')->get()
-                ->map(fn (Metro $m) => ['loc' => route('metro.show', $m), 'priority' => '0.8'])->all(),
+            ...Municipality::landingPages()
+                ->map(fn (Municipality $m) => ['loc' => route('metro.show', $m), 'priority' => '0.8'])->all(),
             ['loc' => route('privacy'), 'priority' => '0.3'],
         ];
 

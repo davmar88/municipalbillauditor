@@ -41,6 +41,9 @@ class FakeBillReader implements BillReader
         return [
             'is_municipal_bill' => true,
             'municipality' => 'City of Johannesburg',
+            'municipality_email' => 'accounts@joburg.example.org',
+            'municipality_postal_address' => 'PO Box 1049, Johannesburg, 2000',
+            'municipality_phone' => '0860 562 874',
             'account_number' => '5021 4478 2210',
             'bill_date' => '2026-10-03',
             'due_date' => '2026-10-26',

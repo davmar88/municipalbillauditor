@@ -114,7 +114,7 @@ class DemoSmokeTest extends TestCase
         );
         $this->get(route('staff.reference'))->assertInertia(fn (Assert $page) => $page
             ->component('staff/reference')
-            ->has('metros', 3)
+            ->has('municipalities', 257)
             ->has('tariffs', 4),
         );
 

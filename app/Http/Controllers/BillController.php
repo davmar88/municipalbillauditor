@@ -9,7 +9,7 @@ use App\Http\Presenters\BillPresenter;
 use App\Http\Presenters\PropertyPresenter;
 use App\Http\Requests\StoreBillRequest;
 use App\Models\Bill;
-use App\Models\Metro;
+use App\Models\Municipality;
 use App\Models\Property;
 use App\Services\AuditService;
 use App\Services\BillIntake;
@@ -28,7 +28,7 @@ class BillController extends Controller
         $organisation = $request->user()->organisation;
 
         $bills = $organisation->bills()
-            ->with(['property', 'findings', 'dispute.property.metro'])
+            ->with(['property', 'findings', 'dispute.property.municipality'])
             ->orderByRaw('bill_date IS NULL DESC')
             ->orderByDesc('bill_date')
             ->orderByDesc('id')
@@ -39,9 +39,8 @@ class BillController extends Controller
             'bills' => $bills->map(fn (Bill $bill) => BillPresenter::summary($bill))->values(),
             'properties' => $organisation->properties()->orderBy('name')->orderBy('unit')->get()
                 ->map(fn (Property $p) => PropertyPresenter::option($p))->values(),
-            'metros' => Metro::query()->where('live', true)->orderBy('sort')->get()
-                ->map(fn (Metro $m) => ['id' => $m->id, 'name' => $m->displayName()])->values(),
-            'needsMetro' => $organisation->kind === OrganisationKind::Household && ! $organisation->properties()->exists(),
+            'municipalities' => Municipality::options(),
+            'askMunicipality' => $organisation->kind === OrganisationKind::Household && ! $organisation->properties()->exists(),
             'checks' => array_map(fn (CheckType $c) => ['value' => $c->value, 'label' => $c->label()], CheckType::cases()),
             'maxUploadMb' => intdiv((int) config('auditor.max_upload_kb'), 1024),
         ]);
@@ -53,7 +52,7 @@ class BillController extends Controller
         $property = $request->property();
 
         if ($property === null && $organisation->kind === OrganisationKind::Household) {
-            $property = $intake->homeFor($organisation, Metro::findOrFail($request->integer('metro_id')));
+            $property = $intake->homeFor($organisation, $request->filled('municipality_id') ? Municipality::find($request->integer('municipality_id')) : null);
         }
 
         $bill = $intake->storeUpload($organisation, $request->file('bill'), $property, $request->user());
@@ -79,6 +78,7 @@ class BillController extends Controller
             'properties' => $bill->status === BillStatus::NeedsProperty
                 ? $bill->organisation->properties()->orderBy('name')->get()->map(fn (Property $p) => PropertyPresenter::option($p))->values()
                 : [],
+            'municipalities' => $bill->property !== null && $bill->property->municipality_id === null ? Municipality::options() : [],
         ]);
     }
 

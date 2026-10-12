@@ -31,7 +31,7 @@ class StaffController extends Controller
         $toLodge = Dispute::query()
             ->whereNotNull('submitted_on')
             ->whereNull('lodged_on')
-            ->with(['property.metro', 'bill', 'findings', 'organisation'])
+            ->with(['property.municipality', 'bill', 'findings', 'organisation'])
             ->oldest('submitted_on')
             ->get();
 
@@ -40,7 +40,7 @@ class StaffController extends Controller
             ->whereNull('credit_on')
             ->whereNull('closed_on')
             ->where('mode', '!=', DisputeMode::Self)
-            ->with(['property.metro', 'bill.user', 'findings', 'organisation.users'])
+            ->with(['property.municipality', 'bill.user', 'findings', 'organisation.users'])
             ->get()
             ->filter(fn (Dispute $d) => $d->stage()->needsAction());
 
@@ -56,7 +56,7 @@ class StaffController extends Controller
             'organisation' => $d->organisation->name,
             'letterSubject' => $d->letter_subject,
             'letterBody' => $d->letter_body,
-            'billingEmail' => $d->property->metro->billing_email,
+            'billingEmail' => $d->property->municipality?->billing_email,
             'billUrl' => $d->bill->file_path ? route('staff.bills.file', $d->bill) : null,
         ];
 

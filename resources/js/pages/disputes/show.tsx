@@ -43,7 +43,7 @@ export default function DisputeShow({
                 <PageHeader
                     eyebrow={
                         <>
-                            {dispute.property} · {dispute.metro}
+                            {dispute.property} · {dispute.municipality}
                         </>
                     }
                     title={title}

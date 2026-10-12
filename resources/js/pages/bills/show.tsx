@@ -11,6 +11,7 @@ import {
 import { ConfirmAction } from '@/components/audit/confirm-action';
 import { FindingCard } from '@/components/audit/finding-card';
 import { MarkedBill } from '@/components/audit/marked-bill';
+import { MunicipalityOptions } from '@/components/audit/municipality-options';
 import { PageBody, PageHeader } from '@/components/audit/page-header';
 import { SummaryBand } from '@/components/audit/summary-band';
 import { UsageChart, UsageKey } from '@/components/audit/usage-chart';
@@ -30,15 +31,28 @@ import {
     create as createDispute,
     show as showDispute,
 } from '@/routes/disputes';
-import { index as properties } from '@/routes/properties';
-import type { BillDetail, Finding, PropertyOption } from '@/types';
+import {
+    municipality as setMunicipality,
+    index as properties,
+} from '@/routes/properties';
+import type {
+    BillDetail,
+    Finding,
+    MunicipalityOption,
+    PropertyOption,
+} from '@/types';
 
 type Props = {
     bill: BillDetail;
     properties: PropertyOption[];
+    municipalities: MunicipalityOption[];
 };
 
-export default function BillShow({ bill, properties: propertyOptions }: Props) {
+export default function BillShow({
+    bill,
+    properties: propertyOptions,
+    municipalities,
+}: Props) {
     const reading = bill.status === 'received' || bill.status === 'reading';
 
     return (
@@ -48,7 +62,7 @@ export default function BillShow({ bill, properties: propertyOptions }: Props) {
                 <PageHeader
                     eyebrow={
                         bill.property
-                            ? [bill.property.label, bill.metro?.name]
+                            ? [bill.property.label, bill.municipality?.name]
                                   .filter(Boolean)
                                   .join(' · ')
                             : 'Bill'
@@ -77,6 +91,12 @@ export default function BillShow({ bill, properties: propertyOptions }: Props) {
                 {bill.status === 'needs_entry' && <NeedsEntry bill={bill} />}
                 {bill.status === 'needs_property' && (
                     <NeedsProperty bill={bill} options={propertyOptions} />
+                )}
+                {bill.property && !bill.municipality && !reading && (
+                    <ChooseMunicipality
+                        propertyId={bill.property.id}
+                        options={municipalities}
+                    />
                 )}
                 {bill.status === 'checked' && <Checked bill={bill} />}
             </PageBody>
@@ -230,6 +250,65 @@ function NeedsProperty({
                 </Link>{' '}
                 first.
             </p>
+        </section>
+    );
+}
+
+/**
+ * Shown when the name on the bill didn't tell us which municipality sent
+ * it, or matched two of them.
+ */
+function ChooseMunicipality({
+    propertyId,
+    options,
+}: {
+    propertyId: number;
+    options: MunicipalityOption[];
+}) {
+    return (
+        <section className="border-action/40 flex max-w-xl flex-col gap-4 rounded-lg border bg-card p-6">
+            <h2 className="text-lg font-bold">
+                Which municipality sent this bill?
+            </h2>
+            <p className="text-foreground/80">
+                We couldn't tell from the bill. Choose it once and we'll know
+                where to send disputes for this property.
+            </p>
+            <Form
+                {...setMunicipality.form(propertyId)}
+                options={{ preserveScroll: true }}
+                className="flex flex-col gap-3"
+            >
+                {({ processing, errors }) => (
+                    <>
+                        <div className="grid gap-2">
+                            <Label htmlFor="municipality_id">
+                                Municipality
+                            </Label>
+                            <NativeSelect
+                                id="municipality_id"
+                                name="municipality_id"
+                                required
+                                defaultValue=""
+                            >
+                                <MunicipalityOptions
+                                    municipalities={options}
+                                    placeholder="Choose a municipality"
+                                />
+                            </NativeSelect>
+                            <InputError message={errors.municipality_id} />
+                        </div>
+                        <Button
+                            type="submit"
+                            className="self-start"
+                            disabled={processing}
+                        >
+                            {processing && <Spinner />}
+                            Save
+                        </Button>
+                    </>
+                )}
+            </Form>
         </section>
     );
 }

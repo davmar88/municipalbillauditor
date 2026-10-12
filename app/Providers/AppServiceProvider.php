@@ -3,7 +3,7 @@
 namespace App\Providers;
 
 use Anthropic\Client as AnthropicClient;
-use App\Models\Metro;
+use App\Models\Municipality;
 use App\Models\User;
 use App\Services\Reading\BillReader;
 use App\Services\Reading\ClaudeBillReader;
@@ -53,10 +53,10 @@ class AppServiceProvider extends ServiceProvider
 
         Gate::define('staff', fn (User $user): bool => (bool) $user->is_staff);
 
-        // Every public page links to the metros we cover from its footer.
+        // Every public page links to the metro landing pages from its footer.
         View::composer('marketing.layout', fn ($view) => $view->with(
             'footerMetros',
-            Metro::query()->where('live', true)->orderBy('sort')->get(),
+            Municipality::landingPages(),
         ));
     }
 

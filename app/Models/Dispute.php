@@ -144,12 +144,12 @@ class Dispute extends Model
 
     public function stage(?\DateTimeInterface $today = null): Stage
     {
-        return CaseClock::stage($this->facts(), $this->property->metro->rules(), $today ?? now());
+        return CaseClock::stage($this->facts(), $this->property->rules(), $today ?? now());
     }
 
     public function status(?\DateTimeInterface $today = null): CaseStatus
     {
-        return CaseClock::status($this->facts(), $this->property->metro->rules(), $today ?? now());
+        return CaseClock::status($this->facts(), $this->property->rules(), $today ?? now());
     }
 
     public function findingsSummary(): string

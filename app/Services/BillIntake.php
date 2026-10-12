@@ -11,7 +11,7 @@ use App\Enums\BillSource;
 use App\Enums\BillStatus;
 use App\Jobs\ReadBill;
 use App\Models\Bill;
-use App\Models\Metro;
+use App\Models\Municipality;
 use App\Models\Organisation;
 use App\Models\Property;
 use App\Models\User;
@@ -81,12 +81,13 @@ class BillIntake
 
     /**
      * The first bill from a household creates its home: households have one
-     * property, so there is nothing to ask.
+     * property, so there is nothing to ask. Its municipality comes from the
+     * bill when the customer didn't choose one.
      */
-    public function homeFor(Organisation $organisation, Metro $metro): Property
+    public function homeFor(Organisation $organisation, ?Municipality $municipality): Property
     {
         return $organisation->properties()->first() ?? $organisation->properties()->create([
-            'metro_id' => $metro->id,
+            'municipality_id' => $municipality?->id,
             'name' => 'Home',
             'property_type' => PropertyType::Residential,
         ]);
@@ -98,9 +99,9 @@ class BillIntake
      */
     public function createSample(Organisation $organisation, User $user): Bill
     {
-        $metro = Metro::query()->where('live', true)->orderBy('sort')->firstOrFail();
+        $municipality = Municipality::query()->where('live', true)->orderBy('sort')->firstOrFail();
         $property = $organisation->properties()->create([
-            'metro_id' => $metro->id,
+            'municipality_id' => $municipality->id,
             'name' => 'Sample home',
             'address' => '38 Sample Street',
             'property_type' => PropertyType::Residential,

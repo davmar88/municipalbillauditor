@@ -43,7 +43,7 @@ class AccountIsolationTest extends TestCase
         $this->get(route('disputes.create', $bill))->assertForbidden();
         $this->get(route('disputes.show', $dispute))->assertForbidden();
         $this->post(route('disputes.events.store', $dispute), ['kind' => 'note', 'happened_on' => now()->toDateString()])->assertForbidden();
-        $this->put(route('properties.update', $property), ['name' => 'Mine now', 'metro_id' => $property->metro_id, 'property_type' => 'residential'])->assertForbidden();
+        $this->put(route('properties.update', $property), ['name' => 'Mine now', 'municipality_id' => $property->municipality_id, 'property_type' => 'residential'])->assertForbidden();
         $this->delete(route('properties.destroy', $property))->assertForbidden();
 
         // A property from another account can't be used for an upload either.

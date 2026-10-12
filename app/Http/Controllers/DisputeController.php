@@ -26,7 +26,7 @@ class DisputeController extends Controller
 
         $disputes = $organisation->disputes()
             ->whereNotNull('submitted_on')
-            ->with(['property.metro', 'bill', 'findings'])
+            ->with(['property.municipality', 'bill', 'findings'])
             ->latest('submitted_on')
             ->latest('id')
             ->get();
@@ -64,7 +64,7 @@ class DisputeController extends Controller
         }
 
         $organisation = $bill->organisation;
-        $metro = $bill->property->metro;
+        $municipality = $bill->property->municipality;
 
         return Inertia::render('disputes/create', [
             'bill' => BillPresenter::summary($bill->load('property', 'findings')),
@@ -78,11 +78,11 @@ class DisputeController extends Controller
                 'deadline' => $dispute->dispute_deadline?->format('j M Y'),
                 'findings' => $dispute->findings->map(fn (Finding $f) => BillPresenter::finding($f))->values(),
             ],
-            'metro' => [
-                'name' => $metro->name,
-                'addressee' => $metro->billing_addressee,
-                'email' => $metro->billing_email,
-                'rulesVerified' => $metro->rules_verified,
+            'municipality' => [
+                'name' => $municipality?->name ?? 'your municipality',
+                'addressee' => $municipality?->billing_addressee,
+                'email' => $municipality?->billing_email,
+                'rulesVerified' => (bool) $municipality?->rules_verified,
             ],
             'kind' => $organisation->kind->value,
             'modes' => $this->modes($organisation->kind),

@@ -27,13 +27,13 @@ final class SiteContent
     /**
      * @return list<array{figure: string, text: string, source: ?string, metro: string}>
      */
-    public static function visibleProof(?string $metro = null): array
+    public static function visibleProof(?string $municipality = null): array
     {
         $showUnverified = (bool) config('auditor.show_unverified_claims');
 
         return array_values(array_filter(
             self::proof(),
-            fn (array $item) => ($item['source'] !== null || $showUnverified) && ($metro === null || $item['metro'] === $metro),
+            fn (array $item) => ($item['source'] !== null || $showUnverified) && ($municipality === null || $item['metro'] === $municipality),
         ));
     }
 

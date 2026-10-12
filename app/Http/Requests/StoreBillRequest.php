@@ -2,7 +2,6 @@
 
 namespace App\Http\Requests;
 
-use App\Enums\OrganisationKind;
 use App\Models\Property;
 use App\Services\BillIntake;
 use Illuminate\Foundation\Http\FormRequest;
@@ -13,7 +12,6 @@ class StoreBillRequest extends FormRequest
     public function rules(): array
     {
         $organisation = $this->user()->organisation;
-        $firstHouseholdBill = $organisation->kind === OrganisationKind::Household && ! $organisation->properties()->exists();
 
         return [
             'bill' => [
@@ -23,7 +21,8 @@ class StoreBillRequest extends FormRequest
                 'max:'.config('auditor.max_upload_kb'),
             ],
             'property_id' => ['nullable', Rule::exists('properties', 'id')->where('organisation_id', $organisation->id)],
-            'metro_id' => [Rule::requiredIf($firstHouseholdBill), 'nullable', Rule::exists('metros', 'id')->where('live', true)],
+            // Optional: we read the municipality from the bill.
+            'municipality_id' => ['nullable', Rule::exists('municipalities', 'id')->where('live', true)],
         ];
     }
 
@@ -33,7 +32,6 @@ class StoreBillRequest extends FormRequest
             'bill.required' => 'Choose a photo or PDF of your bill.',
             'bill.mimetypes' => 'Send a photo (JPEG, PNG, WebP) or a PDF of the bill.',
             'bill.max' => 'That file is too big. Try a smaller photo or the PDF.',
-            'metro_id.required' => 'Choose the municipality that bills you.',
         ];
     }
 

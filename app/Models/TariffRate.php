@@ -15,7 +15,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * keeps the estimate cautious and explainable.
  *
  * @property int $id
- * @property int $metro_id
+ * @property int $municipality_id
  * @property TariffCategory $category
  * @property Service $service
  * @property string $rate
@@ -24,7 +24,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string|null $source
  * @property bool $verified
  */
-#[Fillable(['metro_id', 'category', 'service', 'rate', 'unit', 'effective_from', 'source', 'verified'])]
+#[Fillable(['municipality_id', 'category', 'service', 'rate', 'unit', 'effective_from', 'source', 'verified'])]
 class TariffRate extends Model
 {
     protected function casts(): array
@@ -38,9 +38,9 @@ class TariffRate extends Model
         ];
     }
 
-    /** @return BelongsTo<Metro, $this> */
-    public function metro(): BelongsTo
+    /** @return BelongsTo<Municipality, $this> */
+    public function municipality(): BelongsTo
     {
-        return $this->belongsTo(Metro::class);
+        return $this->belongsTo(Municipality::class);
     }
 }

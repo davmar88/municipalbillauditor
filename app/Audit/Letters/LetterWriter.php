@@ -80,7 +80,7 @@ final class LetterWriter
     }
 
     public static function councillor(
-        string $metroName,
+        string $municipalityName,
         string $senderName,
         string $accountNumber,
         string $propertyAddress,
@@ -104,7 +104,7 @@ final class LetterWriter
             '',
             "Subject: {$subject}",
             '',
-            "I lodged a billing dispute with {$metroName} on ".Dates::long($lodgedOn)."{$ref} about "
+            "I lodged a billing dispute with {$municipalityName} on ".Dates::long($lodgedOn)."{$ref} about "
                 .Money::format($disputedTotal).' on my account. A reply was due by '.Dates::long($replyDueOn)
                 .', and I have not received one.',
             '',

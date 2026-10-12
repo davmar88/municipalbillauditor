@@ -60,18 +60,18 @@ class BillPresenter
      */
     public static function detail(Bill $bill): array
     {
-        $bill->loadMissing(['readings', 'charges', 'findings', 'property.metro', 'dispute']);
+        $bill->loadMissing(['readings', 'charges', 'findings', 'property.municipality', 'dispute']);
         $findings = $bill->findings;
         $flaggedBy = self::flagIndex($findings);
-        $metro = $bill->property?->metro;
+        $municipality = $bill->property?->municipality;
         $deadline = null;
 
-        if ($bill->bill_date !== null && $metro !== null) {
-            $date = CaseClock::disputeDeadline($bill->bill_date, $metro->rules());
+        if ($bill->bill_date !== null && $municipality !== null) {
+            $date = CaseClock::disputeDeadline($bill->bill_date, $municipality->rules());
             $deadline = [
                 'date' => $date->format('j M Y'),
                 'daysLeft' => (int) CarbonImmutable::today()->diffInDays($date, false),
-                'verified' => $metro->rules_verified,
+                'verified' => $municipality->rules_verified,
             ];
         }
 
@@ -85,7 +85,7 @@ class BillPresenter
             'period' => $bill->period_start && $bill->period_end
                 ? $bill->period_start->format('j M').' to '.$bill->period_end->format('j M Y')
                 : null,
-            'metro' => $metro ? ['name' => $metro->name, 'shortName' => $metro->short_name] : null,
+            'municipality' => $municipality ? ['name' => $municipality->name, 'shortName' => $municipality->short_name] : null,
             'readings' => $bill->readings->map(fn (MeterReading $r) => [
                 'id' => $r->id,
                 'service' => $r->service->value,

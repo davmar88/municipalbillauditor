@@ -178,7 +178,7 @@ class DisputeFlowTest extends TestCase
         $month = $bill->period_start;
 
         Outage::create([
-            'metro_id' => $bill->property->metro_id,
+            'municipality_id' => $bill->property->municipality_id,
             'suburb' => 'melville',
             'service' => Service::Water,
             'starts_on' => $month->addDays(11),

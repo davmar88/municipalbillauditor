@@ -37,7 +37,7 @@ class DisputeService
      */
     public function draft(Bill $bill, User $user): Dispute
     {
-        $bill->loadMissing(['property.metro', 'findings', 'organisation']);
+        $bill->loadMissing(['property.municipality', 'findings', 'organisation']);
         $findings = $bill->findings->filter(fn (Finding $f) => $f->disputable())->values();
 
         if ($findings->isEmpty()) {
@@ -58,7 +58,7 @@ class DisputeService
             'disputed_total' => (string) $letter->disputedTotal,
             'undisputed_amount' => $letter->undisputedAmount !== null ? (string) $letter->undisputedAmount : null,
             'dispute_deadline' => $bill->bill_date !== null
-                ? CaseClock::disputeDeadline($bill->bill_date, $bill->property->metro->rules())
+                ? CaseClock::disputeDeadline($bill->bill_date, $bill->property->rules())
                 : null,
             'back_refund_claimed' => $this->backRefundClaimed($findings, $letter),
         ])->save();
@@ -204,15 +204,15 @@ class DisputeService
         }
 
         $property = $dispute->property;
-        $metro = $property->metro;
+        $municipality = $property->municipality;
 
         return LetterWriter::councillor(
-            metroName: $metro->name,
+            municipalityName: $municipality?->name ?? 'the municipality',
             senderName: $this->senderName($dispute->organisation->kind, $user, $dispute->organisation->name),
             accountNumber: $dispute->bill->account_number ?? $property->account_number ?? '[account number]',
             propertyAddress: (string) $property->address,
             lodgedOn: $dispute->lodged_on,
-            replyDueOn: CaseClock::replyDue($dispute->lodged_on, $metro->rules()),
+            replyDueOn: CaseClock::replyDue($dispute->lodged_on, $property->rules()),
             reference: (string) $dispute->reference,
             disputedTotal: Money::of($dispute->disputed_total),
             letterDate: CarbonImmutable::today(),
@@ -234,10 +234,10 @@ class DisputeService
     private function letterFor(Bill $bill, Collection $findings, User $user): Letter
     {
         $property = $bill->property;
-        $metro = $property->metro;
+        $municipality = $property->municipality;
 
         return LetterWriter::dispute(new LetterInput(
-            addressee: $metro->billing_addressee,
+            addressee: $municipality?->billing_addressee ?? 'Account queries',
             senderName: $this->senderName($bill->organisation->kind, $user, $bill->organisation->name),
             accountNumber: $bill->account_number ?? $property->account_number ?? '[account number]',
             propertyAddress: (string) $property->address,
@@ -254,7 +254,7 @@ class DisputeService
             letterDate: CarbonImmutable::today(),
             propertyType: $property->property_type,
             hasMeterPhoto: $bill->meter_photo_path !== null,
-            extraParagraph: (string) $metro->letter_paragraph,
+            extraParagraph: (string) $municipality?->letter_paragraph,
         ));
     }
 

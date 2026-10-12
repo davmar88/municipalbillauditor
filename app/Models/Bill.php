@@ -37,6 +37,10 @@ use Illuminate\Support\Facades\Storage;
  * @property CarbonImmutable|null $period_start
  * @property CarbonImmutable|null $period_end
  * @property string|null $account_number
+ * @property string|null $municipality_name
+ * @property string|null $municipality_email
+ * @property string|null $municipality_address
+ * @property string|null $municipality_phone
  * @property string|null $tariff_label
  * @property TariffCategory $tariff_category
  * @property string|null $total_due
@@ -51,6 +55,7 @@ use Illuminate\Support\Facades\Storage;
     'property_id', 'user_id', 'source', 'status', 'needs_review', 'review_note',
     'file_path', 'file_name', 'file_mime', 'file_size',
     'bill_date', 'due_date', 'period_start', 'period_end', 'account_number',
+    'municipality_name', 'municipality_email', 'municipality_address', 'municipality_phone',
     'tariff_label', 'tariff_category', 'total_due', 'read_method', 'extraction',
     'passed', 'skipped', 'meter_photo_path', 'checked_at',
 ])]

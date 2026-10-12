@@ -6,7 +6,7 @@ use App\Enums\BillSource;
 use App\Enums\BillStatus;
 use App\Enums\OrganisationKind;
 use App\Models\Bill;
-use App\Models\Metro;
+use App\Models\Municipality;
 use App\Models\User;
 use App\Services\Reading\BillReader;
 use App\Services\Reading\BillReadingFailed;
@@ -44,11 +44,11 @@ class BillUploadTest extends TestCase
     {
         $reader = $this->reader(new FakeBillReader(FakeBillReader::output()));
         $user = $this->household();
-        $johannesburg = Metro::firstWhere('slug', 'johannesburg');
+        $johannesburg = Municipality::firstWhere('slug', 'johannesburg');
 
         $response = $this->actingAs($user)->post(route('bills.store'), [
             'bill' => UploadedFile::fake()->create('my bill.pdf', 120, 'application/pdf'),
-            'metro_id' => $johannesburg->id,
+            'municipality_id' => $johannesburg->id,
         ]);
 
         $bill = Bill::sole();
@@ -65,7 +65,7 @@ class BillUploadTest extends TestCase
         // The household's home is set up from the bill.
         $home = $bill->property;
         $this->assertSame('Home', $home->name);
-        $this->assertSame($johannesburg->id, $home->metro_id);
+        $this->assertSame($johannesburg->id, $home->municipality_id);
         $this->assertSame('5021 4478 2210', $home->account_number);
         $this->assertSame('Melville', $home->suburb);
 
@@ -78,15 +78,37 @@ class BillUploadTest extends TestCase
         );
     }
 
-    public function test_the_first_household_bill_needs_its_metro(): void
+    public function test_the_first_household_bill_tells_us_the_municipality(): void
     {
         $this->reader(new FakeBillReader(FakeBillReader::output()));
 
         $this->actingAs($this->household())
             ->post(route('bills.store'), ['bill' => UploadedFile::fake()->image('bill.jpg')])
-            ->assertSessionHasErrors('metro_id');
+            ->assertSessionHasNoErrors();
 
-        $this->assertSame(0, Bill::count());
+        $bill = Bill::sole();
+        $this->assertSame('johannesburg', $bill->property->municipality->slug);
+        $this->assertSame('accounts@joburg.example.org', $bill->municipality_email);
+        $this->assertSame(BillStatus::Checked, $bill->status);
+    }
+
+    public function test_an_unknown_municipality_is_left_for_the_customer_to_choose(): void
+    {
+        $this->reader(new FakeBillReader(FakeBillReader::output(['municipality' => 'Nowhere Local Municipality'])));
+        $user = $this->household();
+
+        $this->actingAs($user)->post(route('bills.store'), ['bill' => UploadedFile::fake()->image('bill.jpg')]);
+
+        $bill = Bill::sole();
+        $this->assertNull($bill->property->municipality_id);
+        $this->get(route('bills.show', $bill))->assertInertia(fn (Assert $page) => $page
+            ->where('bill.municipality', null)
+            ->has('municipalities', 3),
+        );
+
+        $tshwane = Municipality::firstWhere('slug', 'tshwane');
+        $this->patch(route('properties.municipality', $bill->property), ['municipality_id' => $tshwane->id])->assertRedirect();
+        $this->assertSame($tshwane->id, $bill->property->refresh()->municipality_id);
     }
 
     public function test_only_photos_and_pdfs_are_accepted(): void
@@ -94,7 +116,7 @@ class BillUploadTest extends TestCase
         $this->actingAs($this->household())
             ->post(route('bills.store'), [
                 'bill' => UploadedFile::fake()->create('bill.docx', 20, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'),
-                'metro_id' => Metro::first()->id,
+                'municipality_id' => Municipality::first()->id,
             ])
             ->assertSessionHasErrors('bill');
     }
@@ -106,7 +128,7 @@ class BillUploadTest extends TestCase
 
         $this->actingAs($user)->post(route('bills.store'), [
             'bill' => UploadedFile::fake()->image('bill.jpg'),
-            'metro_id' => Metro::first()->id,
+            'municipality_id' => Municipality::first()->id,
         ]);
 
         $bill = Bill::sole();
@@ -118,7 +140,7 @@ class BillUploadTest extends TestCase
     {
         $this->actingAs($this->household())->post(route('bills.store'), [
             'bill' => UploadedFile::fake()->image('bill.jpg'),
-            'metro_id' => Metro::first()->id,
+            'municipality_id' => Municipality::first()->id,
         ]);
 
         $this->assertSame(BillStatus::NeedsEntry, Bill::sole()->status);
@@ -129,7 +151,7 @@ class BillUploadTest extends TestCase
         $user = $this->household();
         $this->actingAs($user)->post(route('bills.store'), [
             'bill' => UploadedFile::fake()->image('bill.jpg'),
-            'metro_id' => Metro::first()->id,
+            'municipality_id' => Municipality::first()->id,
         ]);
         $bill = Bill::sole();
 
@@ -176,7 +198,7 @@ class BillUploadTest extends TestCase
         $user = $this->household();
         $this->actingAs($user)->post(route('bills.store'), [
             'bill' => UploadedFile::fake()->image('bill.jpg'),
-            'metro_id' => Metro::first()->id,
+            'municipality_id' => Municipality::first()->id,
         ]);
         $bill = Bill::sole();
 
@@ -192,8 +214,8 @@ class BillUploadTest extends TestCase
             ->get(route('bills.index'))
             ->assertInertia(fn (Assert $page) => $page
                 ->component('bills/index')
-                ->where('needsMetro', true)
-                ->has('metros', 3)
+                ->where('askMunicipality', true)
+                ->has('municipalities', 3)
                 ->has('checks', 4),
             );
     }

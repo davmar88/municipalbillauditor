@@ -28,6 +28,9 @@ final readonly class ExtractedBill
     public function __construct(
         public bool $isMunicipalBill,
         public ?string $municipality,
+        public ?string $municipalityEmail,
+        public ?string $municipalityAddress,
+        public ?string $municipalityPhone,
         public ?string $accountNumber,
         public ?CarbonImmutable $billDate,
         public ?CarbonImmutable $dueDate,
@@ -94,6 +97,9 @@ final readonly class ExtractedBill
         return new self(
             isMunicipalBill: (bool) ($data['is_municipal_bill'] ?? false),
             municipality: self::text($data['municipality'] ?? null),
+            municipalityEmail: self::email($data['municipality_email'] ?? null),
+            municipalityAddress: self::text($data['municipality_postal_address'] ?? null),
+            municipalityPhone: self::text($data['municipality_phone'] ?? null),
             accountNumber: self::text($data['account_number'] ?? null),
             billDate: self::date($data['bill_date'] ?? null),
             dueDate: self::date($data['due_date'] ?? null),
@@ -162,6 +168,19 @@ final readonly class ExtractedBill
         $value = trim((string) $value);
 
         return $value === '' ? null : mb_substr($value, 0, 255);
+    }
+
+    private static function email(mixed $value): ?string
+    {
+        $value = self::text($value);
+
+        if ($value === null) {
+            return null;
+        }
+
+        $value = strtolower(trim($value, " \t<>.;,"));
+
+        return filter_var($value, FILTER_VALIDATE_EMAIL) !== false ? $value : null;
     }
 
     /**

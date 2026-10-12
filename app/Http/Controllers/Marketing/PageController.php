@@ -11,7 +11,7 @@ use App\Audit\Letters\LetterItem;
 use App\Audit\Letters\LetterWriter;
 use App\Audit\Money;
 use App\Http\Controllers\Controller;
-use App\Models\Metro;
+use App\Models\Municipality;
 use App\Support\SiteContent;
 use DateTimeImmutable;
 use Illuminate\Contracts\View\View;
@@ -26,7 +26,7 @@ class PageController extends Controller
     public function home(): View
     {
         return view('marketing.home', [
-            'metros' => Metro::query()->where('live', true)->orderBy('sort')->get(),
+            'metros' => Municipality::landingPages(),
             'proof' => SiteContent::visibleProof(),
             'checks' => SiteContent::checks(),
             'steps' => SiteContent::steps(),
@@ -35,9 +35,9 @@ class PageController extends Controller
         ]);
     }
 
-    public function metro(Metro $metro): View
+    public function metro(Municipality $metro): View
     {
-        abort_unless($metro->live, 404);
+        abort_unless($metro->live && $metro->has_landing_page, 404);
 
         return view('marketing.metro', [
             'metro' => $metro,
@@ -46,7 +46,7 @@ class PageController extends Controller
             'checks' => SiteContent::checks(),
             'steps' => SiteContent::steps(),
             'faq' => SiteContent::faq(),
-            'otherMetros' => Metro::query()->where('live', true)->whereKeyNot($metro->id)->orderBy('sort')->get(),
+            'otherMetros' => Municipality::landingPages()->reject(fn (Municipality $m) => $m->is($metro))->values(),
         ]);
     }
 
@@ -59,7 +59,7 @@ class PageController extends Controller
      * The letter a customer of this metro would get for the example bill on
      * the landing page: an estimated water reading and an outage.
      */
-    private function sampleLetter(Metro $metro): Letter
+    private function sampleLetter(Municipality $metro): Letter
     {
         return LetterWriter::dispute(new LetterInput(
             addressee: $metro->billing_addressee,

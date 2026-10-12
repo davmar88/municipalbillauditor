@@ -26,7 +26,7 @@ class DisputePresenter
      */
     public static function summary(Dispute $dispute): array
     {
-        $dispute->loadMissing(['property.metro', 'bill', 'findings']);
+        $dispute->loadMissing(['property.municipality', 'bill', 'findings']);
         $submitted = $dispute->submitted_on !== null;
         $stage = $submitted ? $dispute->stage() : Stage::Draft;
         $status = $submitted ? $dispute->status() : null;
@@ -58,9 +58,9 @@ class DisputePresenter
      */
     public static function detail(Dispute $dispute): array
     {
-        $dispute->loadMissing(['property.metro', 'bill', 'findings', 'events', 'feeInvoices', 'organisation']);
+        $dispute->loadMissing(['property.municipality', 'bill', 'findings', 'events', 'feeInvoices', 'organisation']);
         $today = CarbonImmutable::today();
-        $rules = $dispute->property->metro->rules();
+        $rules = $dispute->property->rules();
         $facts = $dispute->facts();
         $status = CaseClock::status($facts, $rules, $today);
         $stage = $status->stage;
@@ -79,14 +79,14 @@ class DisputePresenter
             'letterSubject' => $dispute->letter_subject,
             'letterBody' => $dispute->letter_body,
             'undisputedAmount' => $dispute->undisputed_amount !== null ? Money::format($dispute->undisputed_amount) : null,
-            'metro' => $dispute->property->metro->name,
+            'municipality' => $dispute->property->municipality?->name,
             'status' => [
                 'headline' => $awaitingLodging ? 'With our team' : $status->headline,
                 'countdownLabel' => $awaitingLodging ? '' : $status->countdownLabel,
                 'daysLeft' => $awaitingLodging ? null : $status->daysLeft,
                 'progress' => $awaitingLodging ? null : $status->progress,
                 'note' => $awaitingLodging
-                    ? "We're lodging your dispute with {$dispute->property->metro->name}. We'll add the reference number when it arrives."
+                    ? "We're lodging your dispute with ".($dispute->property->municipality?->name ?? 'the municipality').". We'll add the reference number when it arrives."
                     : $status->note,
             ],
             'timeline' => $timeline,

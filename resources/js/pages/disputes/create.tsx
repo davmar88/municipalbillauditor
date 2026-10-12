@@ -31,7 +31,7 @@ type Props = {
         deadline: string | null;
         findings: Finding[];
     };
-    metro: {
+    municipality: {
         name: string;
         addressee: string;
         email: string | null;
@@ -57,7 +57,7 @@ const submitLabels: Record<DisputeMode, string> = {
 export default function DisputeCreate({
     bill,
     dispute,
-    metro,
+    municipality,
     modes,
     pendingQuestions,
     attachments,
@@ -69,8 +69,8 @@ export default function DisputeCreate({
     );
     const [body, setBody] = useState(dispute.letterBody);
     const [editing, setEditing] = useState(false);
-    const mailto = metro.email
-        ? `mailto:${metro.email}?subject=${encodeURIComponent(dispute.letterSubject)}&body=${encodeURIComponent(body)}`
+    const mailto = municipality.email
+        ? `mailto:${municipality.email}?subject=${encodeURIComponent(dispute.letterSubject)}&body=${encodeURIComponent(body)}`
         : null;
 
     return (
@@ -87,7 +87,7 @@ export default function DisputeCreate({
                         </Link>
                     }
                     title="Check your letter"
-                    description={`Written in the format ${metro.name} expects. Each metro has its own rules, so the template changes with your address.`}
+                    description={`Written in the format ${municipality.name} expects. Each municipality has its own rules, so the template changes with your address.`}
                 />
 
                 <Steps current={2} />
@@ -121,11 +121,11 @@ export default function DisputeCreate({
                                 aria-label="Letter"
                                 className="flex flex-col gap-4 rounded-[4px] border bg-paper p-5 shadow-[0_1px_2px_rgba(18,22,28,.06),0_10px_28px_rgba(18,22,28,.07)] sm:p-8"
                             >
-                                {metro.email && (
+                                {municipality.email && (
                                     <p className="text-sm text-muted-foreground">
                                         Billing queries email:{' '}
                                         <span className="figures text-[13px] text-foreground">
-                                            {metro.email}
+                                            {municipality.email}
                                         </span>
                                     </p>
                                 )}
@@ -309,7 +309,7 @@ export default function DisputeCreate({
                                 </Button>
                                 <span className="text-sm text-muted-foreground">
                                     {dispute.deadline &&
-                                        `Dispute by ${dispute.deadline}${metro.rulesVerified ? '' : ' (our estimate)'}. `}
+                                        `Dispute by ${dispute.deadline}${municipality.rulesVerified ? '' : ' (our estimate)'}. `}
                                     Nothing is sent until you choose.
                                 </span>
                             </div>

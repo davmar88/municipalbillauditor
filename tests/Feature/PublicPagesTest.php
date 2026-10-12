@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Models\Metro;
+use App\Models\Municipality;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -48,7 +48,7 @@ class PublicPagesTest extends TestCase
             ->assertSee('I will keep paying the undisputed amount of R1,982.85')
             ->assertSee('"@type":"BreadcrumbList"', false);
 
-        Metro::where('slug', 'tshwane')->update(['live' => false]);
+        Municipality::where('slug', 'tshwane')->update(['live' => false]);
         $this->get(route('metro.show', 'tshwane'))->assertNotFound();
         $this->get(route('metro.show', 'nowhere'))->assertNotFound();
     }
