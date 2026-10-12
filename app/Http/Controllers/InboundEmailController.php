@@ -12,6 +12,8 @@ use App\Services\Inbound\InboundEmailParser;
 use App\Services\Inbound\InboundMessage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 /**
  * Email arriving at our inbound domain, from the provider's webhook.
@@ -71,10 +73,36 @@ class InboundEmailController extends Controller
     }
 
     /**
-     * Keep the reply, and have it read.
+     * Keep the reply, with its PDF and image attachments, and have it read.
+     * A provider posting the same message again is ignored.
      */
     private function storeReply(InboundMessage $message, Dispute $dispute): void
     {
+        $duplicate = $message->messageId !== null && $dispute->messages()
+            ->where('direction', DisputeMessage::IN)
+            ->where('message_id', $message->messageId)
+            ->exists();
+
+        if ($duplicate) {
+            return;
+        }
+
+        $files = [];
+        $disk = Storage::disk(config('auditor.bill_disk'));
+
+        foreach ($message->attachments as $file) {
+            $mime = (string) $file->getMimeType();
+
+            if (! in_array($mime, BillIntake::ACCEPTED_MIME_TYPES, true) || $file->getSize() > (int) config('auditor.max_upload_kb') * 1024) {
+                continue;
+            }
+
+            // A random name: the stored path never carries the sender's file name.
+            $path = "dispute-replies/{$dispute->id}/".Str::uuid().'.'.($file->guessExtension() ?: 'bin');
+            $disk->put($path, (string) file_get_contents($file->getRealPath()));
+            $files[] = ['path' => $path, 'name' => Str::limit(basename($file->getClientOriginalName()), 200, ''), 'mime' => $mime, 'size' => (int) $file->getSize()];
+        }
+
         $reply = $dispute->messages()->create([
             'direction' => DisputeMessage::IN,
             'kind' => 'reply',
@@ -82,6 +110,7 @@ class InboundEmailController extends Controller
             'to_address' => $message->recipients,
             'subject' => $message->subject,
             'body' => $message->text,
+            'attachments' => $files === [] ? null : $files,
             'message_id' => $message->messageId,
             'in_reply_to' => $message->inReplyTo,
         ]);

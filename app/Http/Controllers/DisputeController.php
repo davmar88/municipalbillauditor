@@ -9,6 +9,7 @@ use App\Http\Presenters\BillPresenter;
 use App\Http\Presenters\DisputePresenter;
 use App\Models\Bill;
 use App\Models\Dispute;
+use App\Models\DisputeMessage;
 use App\Models\Finding;
 use App\Services\Billing\Wallet;
 use App\Services\Disputes\DisputeApproval;
@@ -16,9 +17,11 @@ use App\Services\Disputes\RecipientFinder;
 use App\Services\DisputeService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class DisputeController extends Controller
 {
@@ -115,6 +118,28 @@ class DisputeController extends Controller
         }]);
 
         return to_route('disputes.show', $dispute);
+    }
+
+    /**
+     * A file the municipality attached to a reply, streamed to the
+     * dispute's owner only.
+     */
+    public function messageFile(Dispute $dispute, DisputeMessage $message, int $index): StreamedResponse
+    {
+        $this->authorize('view', $dispute);
+        abort_unless($message->dispute_id === $dispute->id && $message->kind !== 'customer', 404);
+
+        return self::streamAttachment($message, $index);
+    }
+
+    public static function streamAttachment(DisputeMessage $message, int $index): StreamedResponse
+    {
+        $file = $message->attachments[$index] ?? abort(404);
+
+        return Storage::disk(config('auditor.bill_disk'))->response($file['path'], $file['name'], [
+            'Content-Type' => $file['mime'],
+            'Cache-Control' => 'private, no-store',
+        ]);
     }
 
     public function show(Request $request, Dispute $dispute, DisputeService $disputes): Response

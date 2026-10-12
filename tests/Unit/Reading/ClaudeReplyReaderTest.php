@@ -56,7 +56,7 @@ class ClaudeReplyReaderTest extends TestCase
     {
         $output = FakeReplyReader::output('upheld', ['credit_amount' => 924.0, 'reference' => 'JHB-1']);
 
-        $reading = $this->reader($this->message(json_encode($output)))->read('Municipality: City of Johannesburg', 'RE: Dispute', 'We will credit R924.');
+        $reading = $this->reader($this->message(json_encode($output)))->read('Municipality: City of Johannesburg', 'Revenue <revenue@joburg.example.org>', 'RE: Dispute', 'Please find attached.', [['mime' => 'application/pdf', 'contents' => '%PDF letter']]);
 
         $this->assertSame(ReplyClassification::Upheld, $reading->classification);
         $this->assertSame('924.00', $reading->creditAmount);
@@ -68,17 +68,19 @@ class ClaudeReplyReaderTest extends TestCase
         $this->assertSame('default', $body['fallbacks']);
         $this->assertSame('json_schema', $body['output_config']['format']['type']);
         $this->assertContains('rejected', $body['output_config']['format']['schema']['properties']['classification']['enum']);
-        $this->assertStringContainsString('We will credit R924.', $body['messages'][0]['content'][0]['text']);
+        $this->assertSame('document', $body['messages'][0]['content'][0]['type']);
+        $this->assertSame(base64_encode('%PDF letter'), $body['messages'][0]['content'][0]['source']['data']);
+        $this->assertStringContainsString('From: Revenue <revenue@joburg.example.org>', $body['messages'][0]['content'][1]['text']);
         $this->assertStringContainsString('server-side-fallback-2026-07-01', $this->requests[0]->getHeaderLine('anthropic-beta'));
     }
 
     public function test_a_declined_or_failed_request_leaves_the_reply_for_our_team(): void
     {
-        $declined = $this->reader($this->message('', 'refusal'))->read('', 'Subject', 'Body');
+        $declined = $this->reader($this->message('', 'refusal'))->read('', 'x@example.org', 'Subject', 'Body');
         $this->assertSame(ReplyClassification::Unread, $declined->classification);
         $this->assertSame(800, $declined->usage->counts[0]->input);
 
-        $failed = $this->reader(['type' => 'error', 'error' => ['type' => 'overloaded_error', 'message' => 'Overloaded']], 529)->read('', 'Subject', 'Body');
+        $failed = $this->reader(['type' => 'error', 'error' => ['type' => 'overloaded_error', 'message' => 'Overloaded']], 529)->read('', 'x@example.org', 'Subject', 'Body');
         $this->assertSame(ReplyClassification::Unread, $failed->classification);
         $this->assertNull($failed->usage);
     }

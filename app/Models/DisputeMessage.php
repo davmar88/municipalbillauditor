@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * An email about a dispute: one we sent the municipality, or a reply that
@@ -21,6 +22,7 @@ use Illuminate\Support\Carbon;
  * @property string|null $cc_address
  * @property string|null $subject
  * @property string|null $body
+ * @property list<array{path: string, name: string, mime: string, size: int}>|null $attachments
  * @property string|null $message_id
  * @property string|null $in_reply_to
  * @property ReplyClassification|null $classification
@@ -29,7 +31,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon $created_at
  */
 #[Fillable([
-    'direction', 'kind', 'from_address', 'to_address', 'cc_address', 'subject', 'body',
+    'direction', 'kind', 'from_address', 'to_address', 'cc_address', 'subject', 'body', 'attachments',
     'message_id', 'in_reply_to', 'classification', 'reading', 'read_at',
 ])]
 class DisputeMessage extends Model
@@ -43,8 +45,35 @@ class DisputeMessage extends Model
         return [
             'classification' => ReplyClassification::class,
             'reading' => 'array',
+            'attachments' => 'array',
             'read_at' => 'datetime',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        // Deleting a reply deletes its files too.
+        static::deleting(function (DisputeMessage $message) {
+            $disk = Storage::disk(config('auditor.bill_disk'));
+
+            foreach ($message->attachments ?? [] as $file) {
+                $disk->delete($file['path']);
+            }
+        });
+    }
+
+    /** The sender's address without the display name. */
+    public function senderEmail(): ?string
+    {
+        $from = (string) $this->from_address;
+
+        if (preg_match('/<([^>]+)>/', $from, $match)) {
+            $from = $match[1];
+        }
+
+        $from = strtolower(trim($from));
+
+        return filter_var($from, FILTER_VALIDATE_EMAIL) !== false ? $from : null;
     }
 
     /** @return BelongsTo<Dispute, $this> */

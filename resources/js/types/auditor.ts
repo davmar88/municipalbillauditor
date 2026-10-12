@@ -228,6 +228,7 @@ export type DisputeDetail = DisputeSummary & {
         who: string;
         classification: string | null;
         summary: string | null;
+        files: { name: string; url: string }[];
     }[];
     tariff: {
         before: TariffSnapshot;

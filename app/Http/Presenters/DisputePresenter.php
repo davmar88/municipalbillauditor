@@ -95,7 +95,7 @@ class DisputePresenter
                     : $status->note,
             ],
             'sentTo' => $dispute->sent_to,
-            'messages' => $dispute->messages()->get()->map(fn (DisputeMessage $m) => [
+            'messages' => $dispute->messages()->where('kind', '!=', 'customer')->get()->map(fn (DisputeMessage $m) => [
                 'id' => $m->id,
                 'direction' => $m->direction,
                 'kind' => $m->kind,
@@ -103,7 +103,11 @@ class DisputePresenter
                 'on' => $m->created_at->format('j M Y'),
                 'who' => $m->direction === DisputeMessage::OUT ? "To {$m->to_address}" : "From {$m->from_address}",
                 'classification' => $m->classification?->label(),
-                'summary' => $m->reading['summary'] ?? null,
+                'summary' => $m->classification?->matters() ? ($m->reading['summary'] ?? null) : null,
+                'files' => array_map(fn (int $i) => [
+                    'name' => $m->attachments[$i]['name'],
+                    'url' => route('disputes.messages.file', [$dispute, $m, $i]),
+                ], array_keys($m->attachments ?? [])),
             ])->values(),
             'timeline' => $timeline,
             'events' => $dispute->events->map(fn (DisputeEvent $e) => [

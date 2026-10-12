@@ -16,7 +16,8 @@ final class ReplySchema
         TEXT;
 
     public const INSTRUCTIONS = <<<'TEXT'
-        Read this reply to the dispute described above and classify it.
+        Read this reply to the dispute described above, and any letter attached to it, and classify it.
+        Use the attached letter when the email itself only says to see the attachment.
 
         - acknowledgement: the municipality has received or logged the dispute, usually with a reference,
           case, query or ticket number. Copy that number exactly into reference.

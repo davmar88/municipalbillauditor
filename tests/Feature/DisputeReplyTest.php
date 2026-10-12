@@ -18,8 +18,11 @@ use App\Services\Disputes\DisputeApproval;
 use App\Services\DisputeService;
 use App\Services\Replies\ReplyReader;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Tests\Support\FakeReplyReader;
 use Tests\TestCase;
 
@@ -57,14 +60,15 @@ class DisputeReplyTest extends TestCase
         return $reader;
     }
 
-    private function reply(string $body, ?string $to = null)
+    private function reply(string $body, ?string $to = null, string $from = 'Revenue <revenue@joburg.example.org>', ?string $messageId = null, array $files = [])
     {
         return $this->post(route('inbound.email'), [
             'to' => $to ?? "Disputes <{$this->dispute->replyAddress()}>",
-            'from' => 'Revenue <revenue@joburg.example.org>',
+            'from' => $from,
             'subject' => 'RE: '.$this->dispute->letter_subject,
             'body-plain' => $body,
-            'Message-Id' => '<abc@joburg.example.org>',
+            'Message-Id' => $messageId ?? '<'.Str::random(12).'@joburg.example.org>',
+            ...$files,
         ], ['X-Inbound-Secret' => 'test-inbound-secret']);
     }
 
@@ -167,6 +171,72 @@ class DisputeReplyTest extends TestCase
         $this->assertSame('5521', $this->dispute->refresh()->reference);
         $this->assertSame(ReplyClassification::Acknowledgement, $message->refresh()->classification);
         $this->get(route('staff.index'))->assertInertia(fn ($page) => $page->has('replies', 0));
+    }
+
+    public function test_the_customers_own_reply_all_changes_nothing_and_emails_nobody(): void
+    {
+        $reader = $this->reader(FakeReplyReader::output('upheld'));
+        $events = $this->dispute->events()->count();
+
+        $this->reply('So you will reverse the R924?', from: "{$this->user->name} <".strtoupper($this->user->email).'>');
+
+        $message = DisputeMessage::where('direction', 'in')->sole();
+        $this->assertSame('customer', $message->kind);
+        $this->assertNull($message->classification);
+        $this->assertSame([], $reader->read);
+        $this->assertSame($events, $this->dispute->events()->count());
+        Notification::assertNotSentTo($this->user, CustomerNotice::class, fn (CustomerNotice $n) => $n->kind === 'municipality_replied');
+    }
+
+    public function test_a_reply_from_another_domain_waits_for_our_team(): void
+    {
+        $this->reader(FakeReplyReader::output('upheld', ['summary' => 'Credit approved.']));
+
+        $this->reply('Your dispute is upheld.', from: 'Someone <someone@gmail.example.com>');
+
+        $message = DisputeMessage::where('direction', 'in')->sole();
+        $this->assertSame(ReplyClassification::Unread, $message->classification);
+        $this->assertSame('upheld', $message->reading['suggested']);
+        $this->assertNull($this->dispute->refresh()->reply_received_on);
+        Notification::assertNotSentTo($this->user, CustomerNotice::class, fn (CustomerNotice $n) => $n->kind === 'municipality_replied');
+
+        $this->actingAs(User::factory()->staff()->create())->get(route('staff.index'))->assertInertia(fn ($page) => $page
+            ->where('replies.0.unknownSender', true)
+            ->where('replies.0.suggestion', 'Upheld: Credit approved.'),
+        );
+    }
+
+    public function test_an_outcome_given_only_in_an_attached_letter_is_read(): void
+    {
+        Storage::fake('local');
+        $reader = $this->reader(FakeReplyReader::output('upheld', ['credit_amount' => 924]));
+
+        $this->reply('Please find attached.', files: [
+            'attachment-1' => UploadedFile::fake()->createWithContent('outcome.pdf', '%PDF-1.7 Your dispute is upheld; R924.00 will be credited.'),
+            'attachment-2' => UploadedFile::fake()->create('notes.txt', 1, 'text/plain'),
+        ]);
+
+        $this->assertCount(1, $reader->read[0]['files']);
+        $this->assertSame('application/pdf', $reader->read[0]['files'][0]['mime']);
+        $this->assertStringContainsString('R924.00 will be credited', $reader->read[0]['files'][0]['contents']);
+        $this->assertSame('awaiting_credit', $this->dispute->refresh()->stage()->value);
+
+        $message = DisputeMessage::where('direction', 'in')->sole();
+        Storage::disk('local')->assertExists($message->attachments[0]['path']);
+        $this->actingAs($this->user)->get(route('disputes.messages.file', [$this->dispute, $message, 0]))->assertOk();
+        $this->actingAs(User::factory()->create())->get(route('disputes.messages.file', [$this->dispute, $message, 0]))->assertForbidden();
+    }
+
+    public function test_the_same_message_posted_twice_is_stored_once(): void
+    {
+        $this->reader(FakeReplyReader::output('acknowledgement', ['reference' => 'JHB-9']));
+
+        $this->reply('Logged as JHB-9.', messageId: '<same@joburg.example.org>')->assertStatus(202);
+        $this->reply('Logged as JHB-9.', messageId: '<same@joburg.example.org>')->assertStatus(202);
+
+        $this->assertSame(1, DisputeMessage::where('direction', 'in')->count());
+        $this->assertSame(1, $this->dispute->events()->where('kind', DisputeEventKind::Acknowledged)->count());
+        $this->noticeOfKind('municipality_replied');
     }
 
     public function test_an_unknown_dispute_address_is_treated_like_any_other(): void

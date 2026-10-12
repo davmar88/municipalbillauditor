@@ -74,6 +74,13 @@ class Bill extends Model
             foreach (array_filter([$bill->file_path, $bill->meter_photo_path]) as $path) {
                 $disk->delete($path);
             }
+
+            // And the letters municipalities attached to replies about it.
+            DisputeMessage::query()
+                ->whereIn('dispute_id', $bill->disputes()->select('id'))
+                ->whereNotNull('attachments')
+                ->get()
+                ->each(fn (DisputeMessage $message) => $disk->delete(array_column($message->attachments ?? [], 'path')));
         });
     }
 

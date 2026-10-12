@@ -49,6 +49,9 @@ type Props = {
         subject: string | null;
         excerpt: string;
         received: string;
+        suggestion: string | null;
+        unknownSender: boolean;
+        files: { name: string; url: string }[];
     }[];
 };
 
@@ -340,9 +343,35 @@ export default function StaffIndex({
                                     {reply.from} · {reply.received}
                                 </span>
                             </span>
+                            {reply.unknownSender && (
+                                <p className="text-sm text-flag-ink">
+                                    Not from the municipality's email domain, so
+                                    nothing was applied. Check who sent it.
+                                </p>
+                            )}
                             <p className="text-sm whitespace-pre-wrap">
                                 {reply.excerpt}
                             </p>
+                            {reply.suggestion && (
+                                <p className="text-sm text-muted-foreground">
+                                    Claude read it as: {reply.suggestion}
+                                </p>
+                            )}
+                            {reply.files.length > 0 && (
+                                <p className="flex flex-wrap gap-3 text-sm">
+                                    {reply.files.map((file) => (
+                                        <a
+                                            key={file.url}
+                                            href={file.url}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="font-semibold"
+                                        >
+                                            {file.name}
+                                        </a>
+                                    ))}
+                                </p>
+                            )}
                             <Form
                                 {...recordReply.form(reply.id)}
                                 options={{ preserveScroll: true }}

@@ -229,6 +229,17 @@ export default function DisputeShow({
                                             {message.summary && (
                                                 <span>{message.summary}</span>
                                             )}
+                                            {message.files.map((file) => (
+                                                <a
+                                                    key={file.url}
+                                                    href={file.url}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    className="font-semibold"
+                                                >
+                                                    {file.name}
+                                                </a>
+                                            ))}
                                         </li>
                                     ))}
                                 </ul>

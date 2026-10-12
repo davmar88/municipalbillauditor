@@ -8,7 +8,7 @@ namespace App\Services\Replies;
  */
 class ManualReplyReader implements ReplyReader
 {
-    public function read(string $context, string $subject, string $body): ReplyReading
+    public function read(string $context, string $from, string $subject, string $body, array $files = []): ReplyReading
     {
         return ReplyReading::unread('Automatic reading is switched off, so our team will read this reply.');
     }

@@ -15,10 +15,17 @@ use App\Services\Replies\ReplyReading;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 /**
- * Reads a municipality's reply to a dispute, records what it means on the
- * dispute, and tells the customer in plain words, with what they need to do.
+ * Reads a reply to a dispute, records what it means on the dispute, and
+ * tells the customer in plain words, with what they need to do.
+ *
+ * Only the municipality moves a dispute on. The customer is copied in on
+ * every dispute email, so their own reply-all is kept as theirs and not
+ * read. A reply from an address outside the municipality's domains is read
+ * but left for our team to apply or dismiss.
  */
 class ReadDisputeReply implements ShouldQueue
 {
@@ -39,10 +46,28 @@ class ReadDisputeReply implements ShouldQueue
         }
 
         $dispute = $message->dispute()->with(['organisation', 'property.municipality', 'bill'])->firstOrFail();
-        $reading = $reader->read($this->context($dispute), (string) $message->subject, (string) $message->body);
+        $sender = $message->senderEmail();
+
+        if ($sender !== null && $dispute->organisation->users()->whereRaw('LOWER(email) = ?', [$sender])->exists()) {
+            $message->update(['kind' => 'customer', 'read_at' => now()]);
+
+            return;
+        }
+
+        $reading = $reader->read($this->context($dispute), (string) $message->from_address, (string) $message->subject, (string) $message->body, $this->files($message));
 
         if ($reading->usage !== null) {
             $costs->record($reading->usage, $dispute->organisation, $dispute, 'reply_read');
+        }
+
+        if (! $this->fromMunicipality($dispute, $sender)) {
+            $message->update([
+                'classification' => ReplyClassification::Unread,
+                'reading' => [...$reading->toArray(), 'suggested' => $reading->classification->value, 'unknown_sender' => true],
+                'read_at' => now(),
+            ]);
+
+            return;
         }
 
         $message->update([
@@ -121,6 +146,40 @@ class ReadDisputeReply implements ShouldQueue
         }
 
         $mail->municipalityReplied($dispute, $subject, $lines, $todo);
+    }
+
+    /**
+     * Whether the sender writes from the municipality: the domain of the
+     * address the dispute went to, or of its billing or escalation email.
+     */
+    private function fromMunicipality(Dispute $dispute, ?string $sender): bool
+    {
+        if ($sender === null) {
+            return false;
+        }
+
+        $domain = Str::after($sender, '@');
+        $known = collect([$dispute->sent_to, $dispute->property->municipality?->billing_email, $dispute->property->municipality?->escalation_email])
+            ->filter()
+            ->map(fn (string $email) => strtolower(Str::after($email, '@')))
+            ->unique();
+
+        return $known->contains(fn (string $known) => $domain === $known || str_ends_with($domain, '.'.$known));
+    }
+
+    /**
+     * The reply's attached letters, for the reader.
+     *
+     * @return list<array{mime: string, contents: string}>
+     */
+    private function files(DisputeMessage $message): array
+    {
+        $disk = Storage::disk(config('auditor.bill_disk'));
+
+        return array_values(array_filter(array_map(
+            fn (array $file) => $disk->exists($file['path']) ? ['mime' => $file['mime'], 'contents' => (string) $disk->get($file['path'])] : null,
+            $message->attachments ?? [],
+        )));
     }
 
     /**

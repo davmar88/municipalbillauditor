@@ -10,6 +10,7 @@ use App\Enums\DisputeEventKind;
 use App\Enums\DisputeMode;
 use App\Enums\ReplyClassification;
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\DisputeController;
 use App\Http\Presenters\DisputePresenter;
 use App\Http\Requests\RecordDisputeEventRequest;
 use App\Jobs\SendDispute;
@@ -95,6 +96,11 @@ class StaffController extends Controller
                     'from' => $m->from_address,
                     'subject' => $m->subject,
                     'excerpt' => Str::limit((string) $m->body, 600),
+                    'suggestion' => isset($m->reading['suggested'])
+                        ? ReplyClassification::from($m->reading['suggested'])->label().': '.($m->reading['summary'] ?? '')
+                        : null,
+                    'unknownSender' => (bool) ($m->reading['unknown_sender'] ?? false),
+                    'files' => array_map(fn (int $i) => ['name' => $m->attachments[$i]['name'], 'url' => route('staff.replies.file', [$m, $i])], array_keys($m->attachments ?? [])),
                     'received' => $m->created_at->format('j M Y'),
                 ])->values(),
             'organisations' => Organisation::query()->orderBy('name')->get()->map(fn (Organisation $o) => [
@@ -111,6 +117,14 @@ class StaffController extends Controller
                 'received' => $b->created_at->format('j M Y'),
             ])->values(),
         ]);
+    }
+
+    /**
+     * A file attached to a municipal reply.
+     */
+    public function replyFile(DisputeMessage $message, int $index): StreamedResponse
+    {
+        return DisputeController::streamAttachment($message, $index);
     }
 
     /**

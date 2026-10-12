@@ -55,6 +55,7 @@ Route::middleware(['auth', 'verified', 'organisation'])->group(function () {
     Route::post('bills/{bill}/dispute', [DisputeController::class, 'store'])->name('disputes.store');
     Route::get('disputes', [DisputeController::class, 'index'])->name('disputes.index');
     Route::get('disputes/{dispute}', [DisputeController::class, 'show'])->name('disputes.show');
+    Route::get('disputes/{dispute}/messages/{message}/files/{index}', [DisputeController::class, 'messageFile'])->whereNumber('index')->name('disputes.messages.file');
     Route::post('disputes/{dispute}/events', [DisputeEventController::class, 'store'])->name('disputes.events.store');
 
     Route::get('portfolio', PortfolioController::class)->name('portfolio');
@@ -81,6 +82,7 @@ Route::middleware(['auth', 'verified', 'can:staff'])->prefix('staff')->name('sta
     Route::post('disputes/{dispute}/lodge', [StaffController::class, 'lodge'])->name('disputes.lodge');
     Route::post('disputes/{dispute}/send', [StaffController::class, 'send'])->name('disputes.send');
     Route::post('replies/{message}', [StaffController::class, 'recordReply'])->name('replies.record');
+    Route::get('replies/{message}/files/{index}', [StaffController::class, 'replyFile'])->whereNumber('index')->name('replies.file');
     Route::post('disputes/{dispute}/events', [StaffController::class, 'record'])->name('disputes.events.store');
     Route::get('bills/{bill}/file', [StaffController::class, 'billFile'])->name('bills.file');
     Route::post('organisations/{organisation}/eft', [StaffController::class, 'recordEft'])->name('organisations.eft');

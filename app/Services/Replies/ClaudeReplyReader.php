@@ -19,6 +19,8 @@ use JsonException;
  */
 class ClaudeReplyReader implements ReplyReader
 {
+    private const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+
     public function __construct(
         private readonly Client $client,
         private readonly string $model,
@@ -26,16 +28,30 @@ class ClaudeReplyReader implements ReplyReader
         private readonly int $maxTokens = 4000,
     ) {}
 
-    public function read(string $context, string $subject, string $body): ReplyReading
+    public function read(string $context, string $from, string $subject, string $body, array $files = []): ReplyReading
     {
+        // Attached letters go first, as documents and images, the way bills
+        // are sent: the answer is often only in the attachment.
+        $attachments = [];
+
+        foreach ($files as $file) {
+            $source = ['type' => 'base64', 'mediaType' => $file['mime'], 'data' => base64_encode($file['contents'])];
+
+            $attachments[] = match (true) {
+                $file['mime'] === 'application/pdf' => ['type' => 'document', 'source' => $source],
+                in_array($file['mime'], self::IMAGE_TYPES, true) => ['type' => 'image', 'source' => $source],
+                default => null,
+            };
+        }
+
         try {
             $message = $this->client->beta->messages->create(
                 maxTokens: $this->maxTokens,
                 messages: [[
                     'role' => 'user',
-                    'content' => [['type' => 'text', 'text' => implode("\n\n", [
+                    'content' => [...array_values(array_filter($attachments)), ['type' => 'text', 'text' => implode("\n\n", [
                         "The dispute:\n{$context}",
-                        "The reply.\nSubject: {$subject}\n\n".mb_substr($body, 0, 20000),
+                        "The reply.\nFrom: {$from}\nSubject: {$subject}\n\n".mb_substr($body, 0, 20000),
                         ReplySchema::INSTRUCTIONS,
                     ])]],
                 ]],

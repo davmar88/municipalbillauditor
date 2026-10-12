@@ -11,7 +11,7 @@ use App\Services\Replies\ReplyReading;
  */
 class FakeReplyReader implements ReplyReader
 {
-    /** @var list<array{context: string, subject: string, body: string}> */
+    /** @var list<array{context: string, from: string, subject: string, body: string, files: list<array{mime: string, contents: string}>}> */
     public array $read = [];
 
     /**
@@ -19,9 +19,9 @@ class FakeReplyReader implements ReplyReader
      */
     public function __construct(private readonly array $result, private readonly ?ClaudeUsage $usage = null) {}
 
-    public function read(string $context, string $subject, string $body): ReplyReading
+    public function read(string $context, string $from, string $subject, string $body, array $files = []): ReplyReading
     {
-        $this->read[] = compact('context', 'subject', 'body');
+        $this->read[] = compact('context', 'from', 'subject', 'body', 'files');
 
         return ReplyReading::fromArray($this->result, $this->usage);
     }
