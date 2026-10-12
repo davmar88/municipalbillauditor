@@ -46,6 +46,14 @@ use Illuminate\Support\Carbon;
  * @property int|null $credit_bill_id
  * @property CarbonImmutable|null $closed_on
  * @property string|null $close_reason
+ * @property string|null $reply_token
+ * @property string|null $sent_to
+ * @property string|null $sent_to_source
+ * @property string|null $held_reason
+ * @property Carbon|null $held_since
+ * @property CarbonImmutable|null $followed_up_on
+ * @property CarbonImmutable|null $escalated_manager_on
+ * @property CarbonImmutable|null $public_protector_draft_on
  * @property Carbon $created_at
  */
 #[Fillable([
@@ -53,7 +61,8 @@ use Illuminate\Support\Carbon;
     'undisputed_amount', 'dispute_deadline', 'submitted_on', 'lodged_on', 'reference', 'acknowledged_on',
     'reply_received_on', 'escalated_councillor_on', 'escalated_public_protector_on',
     'tariff_fixed_on', 'monthly_saving', 'credit_on', 'credit_amount',
-    'credit_bill_id', 'closed_on', 'close_reason',
+    'credit_bill_id', 'closed_on', 'close_reason', 'reply_token', 'sent_to', 'sent_to_source',
+    'held_reason', 'held_since', 'followed_up_on', 'escalated_manager_on', 'public_protector_draft_on',
 ])]
 class Dispute extends Model
 {
@@ -78,6 +87,10 @@ class Dispute extends Model
             'credit_on' => 'immutable_date',
             'credit_amount' => 'decimal:2',
             'closed_on' => 'immutable_date',
+            'held_since' => 'datetime',
+            'followed_up_on' => 'immutable_date',
+            'escalated_manager_on' => 'immutable_date',
+            'public_protector_draft_on' => 'immutable_date',
         ];
     }
 
@@ -109,6 +122,24 @@ class Dispute extends Model
     public function events(): HasMany
     {
         return $this->hasMany(DisputeEvent::class)->orderBy('happened_on')->orderBy('id');
+    }
+
+    /** @return HasMany<DisputeMessage, $this> */
+    public function messages(): HasMany
+    {
+        return $this->hasMany(DisputeMessage::class)->orderBy('id');
+    }
+
+    /** The address the municipality replies to: d-<token>@<inbound domain>. */
+    public function replyAddress(): string
+    {
+        return 'd-'.$this->reply_token.'@'.config('auditor.inbound_email_domain');
+    }
+
+    /** Emailed by us, so we read the replies and chase them. */
+    public function sentByEmail(): bool
+    {
+        return $this->sent_to !== null;
     }
 
     public function facts(): CaseFacts

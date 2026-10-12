@@ -71,6 +71,7 @@ Route::middleware(['auth', 'verified', 'organisation'])->group(function () {
 
     Route::get('settings/account', [AccountController::class, 'edit'])->name('account.edit');
     Route::delete('settings/account/card', [AccountController::class, 'destroyCard'])->name('account.card.destroy');
+    Route::patch('settings/account/disputes', [AccountController::class, 'updateDisputes'])->name('account.disputes.update');
     Route::patch('settings/account', [AccountController::class, 'update'])->name('account.update');
     Route::delete('settings/account/bills', [AccountController::class, 'destroyBills'])->name('account.bills.destroy');
 });
@@ -78,6 +79,7 @@ Route::middleware(['auth', 'verified', 'organisation'])->group(function () {
 Route::middleware(['auth', 'verified', 'can:staff'])->prefix('staff')->name('staff.')->group(function () {
     Route::get('/', [StaffController::class, 'index'])->name('index');
     Route::post('disputes/{dispute}/lodge', [StaffController::class, 'lodge'])->name('disputes.lodge');
+    Route::post('disputes/{dispute}/send', [StaffController::class, 'send'])->name('disputes.send');
     Route::post('disputes/{dispute}/events', [StaffController::class, 'record'])->name('disputes.events.store');
     Route::get('bills/{bill}/file', [StaffController::class, 'billFile'])->name('bills.file');
     Route::post('organisations/{organisation}/eft', [StaffController::class, 'recordEft'])->name('organisations.eft');

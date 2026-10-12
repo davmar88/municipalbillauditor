@@ -1,4 +1,5 @@
 import { Form, Head, Link } from '@inertiajs/react';
+import { useState } from 'react';
 import Heading from '@/components/heading';
 import { CopyButton } from '@/components/copy-button';
 import InputError from '@/components/input-error';
@@ -9,6 +10,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { edit, update } from '@/routes/account';
 import { destroy as destroyBills } from '@/routes/account/bills';
 import { destroy as destroyCard } from '@/routes/account/card';
+import { update as updateDisputes } from '@/routes/account/disputes';
 import { index as credit } from '@/routes/credit';
 import { AddressText } from '@/components/address-text';
 
@@ -19,6 +21,8 @@ type Props = {
         kindLabel: string;
         forwardingAddress: string;
         pricing: string;
+        mandateOn: string | null;
+        autoSend: boolean;
         billCount: number;
         card: { last4: string; brand: string; expiry: string | null } | null;
     };
@@ -79,6 +83,42 @@ export default function Account({ account }: Props) {
                     </span>
                     <CopyButton value={account.forwardingAddress} />
                 </div>
+            </div>
+
+            <div className="space-y-3">
+                <Heading
+                    variant="small"
+                    title="Sending disputes for you"
+                    description={
+                        account.mandateOn
+                            ? `You authorised us on ${account.mandateOn} to send disputes about your account to the municipality on your behalf, and to follow them up and escalate them.`
+                            : 'We need your permission before we email a dispute to the municipality for you. Nothing is sent without it.'
+                    }
+                />
+                <Form
+                    {...updateDisputes.form()}
+                    options={{ preserveScroll: true }}
+                    className="space-y-3"
+                >
+                    {({ processing }) => (
+                        <>
+                            <Toggle
+                                name="mandate"
+                                label="Send disputes about my account on my behalf"
+                                defaultChecked={account.mandateOn !== null}
+                            />
+                            <Toggle
+                                name="auto_send"
+                                label="Send a dispute without asking me when a bill shows only likely errors"
+                                defaultChecked={account.autoSend}
+                            />
+                            <Button disabled={processing}>
+                                {processing && <Spinner />}
+                                Save
+                            </Button>
+                        </>
+                    )}
+                </Form>
             </div>
 
             <div className="space-y-3">
@@ -151,6 +191,32 @@ export default function Account({ account }: Props) {
                 </Form>
             </div>
         </>
+    );
+}
+
+/** A checkbox that always posts 1 or 0, so unticking it is saved too. */
+function Toggle({
+    name,
+    label,
+    defaultChecked,
+}: {
+    name: string;
+    label: string;
+    defaultChecked: boolean;
+}) {
+    const [checked, setChecked] = useState(defaultChecked);
+
+    return (
+        <label className="flex items-start gap-3 text-sm">
+            <input type="hidden" name={name} value={checked ? '1' : '0'} />
+            <input
+                type="checkbox"
+                checked={checked}
+                onChange={(e) => setChecked(e.target.checked)}
+                className="mt-0.5 size-4 accent-primary"
+            />
+            {label}
+        </label>
     );
 }
 

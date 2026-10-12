@@ -1,4 +1,4 @@
-import { Form, Head, Link, usePage } from '@inertiajs/react';
+import { Form, Head, Link } from '@inertiajs/react';
 import { FileText } from 'lucide-react';
 import { useState } from 'react';
 import { Chip } from '@/components/audit/chip';
@@ -18,7 +18,6 @@ import { show as showBill } from '@/routes/bills';
 import { index } from '@/routes/disputes';
 import { store as storeEvent } from '@/routes/disputes/events';
 import type { DisputeAction, DisputeDetail } from '@/types';
-import { AddressText } from '@/components/address-text';
 
 type Props = {
     dispute: DisputeDetail;
@@ -31,7 +30,6 @@ export default function DisputeShow({
     councillorLetter,
     isBusiness,
 }: Props) {
-    const { organisation } = usePage().props;
     const title = isBusiness
         ? (dispute.findings[0]?.title ?? 'Claim')
         : `Dispute · ${dispute.billMonth} bill`;
@@ -201,14 +199,46 @@ export default function DisputeShow({
                             </section>
                         )}
 
-                        {organisation && (
+                        {dispute.messages.length > 0 && (
+                            <section className="flex flex-col gap-3 rounded-lg border bg-card p-5">
+                                <h2 className="font-bold">Emails</h2>
+                                <ul className="flex flex-col gap-3 text-sm">
+                                    {dispute.messages.map((message) => (
+                                        <li
+                                            key={message.id}
+                                            className="flex flex-col gap-0.5"
+                                        >
+                                            <span className="flex flex-wrap items-center gap-2">
+                                                <span className="font-semibold">
+                                                    {message.direction === 'out'
+                                                        ? 'We sent'
+                                                        : 'They replied'}
+                                                </span>
+                                                <span className="text-muted-foreground">
+                                                    {message.on}
+                                                </span>
+                                                {message.classification && (
+                                                    <Chip tone="neutral">
+                                                        {message.classification}
+                                                    </Chip>
+                                                )}
+                                            </span>
+                                            <span className="[overflow-wrap:anywhere] text-muted-foreground">
+                                                {message.who}
+                                            </span>
+                                            {message.summary && (
+                                                <span>{message.summary}</span>
+                                            )}
+                                        </li>
+                                    ))}
+                                </ul>
+                            </section>
+                        )}
+
+                        {dispute.sentTo && (
                             <p className="text-sm text-muted-foreground">
-                                Got a reply? Forward it to{' '}
-                                <span className="figures [overflow-wrap:anywhere] text-foreground">
-                                    <AddressText
-                                        address={organisation.forwardingAddress}
-                                    />
-                                </span>
+                                The municipality's replies come straight to us.
+                                We read them and email you what they say.
                             </p>
                         )}
                     </div>

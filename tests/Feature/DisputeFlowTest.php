@@ -55,7 +55,7 @@ class DisputeFlowTest extends TestCase
             ->has('dispute.findings', 1),
         );
 
-        $response = $this->post(route('disputes.store', $bill), ['letter_body' => 'My edited letter.']);
+        $response = $this->post(route('disputes.store', $bill), ['letter_body' => 'My edited letter.', 'mandate' => '1']);
 
         $dispute = Dispute::sole();
         $response->assertRedirect(route('disputes.show', $dispute));
@@ -90,7 +90,7 @@ class DisputeFlowTest extends TestCase
             ->where('quote.shortfall', 'R49.00'),
         );
 
-        $this->post(route('disputes.store', $bill), ['letter_body' => 'Letter'])->assertSessionHasErrors('credit');
+        $this->post(route('disputes.store', $bill), ['letter_body' => 'Letter', 'mandate' => '1'])->assertSessionHasErrors('credit');
         $this->assertNull(Dispute::sole()->submitted_on);
         $this->assertSame(0, $user->organisation->creditTransactions()->count());
     }
@@ -99,7 +99,7 @@ class DisputeFlowTest extends TestCase
     {
         $user = User::factory()->forKind(OrganisationKind::Household)->withCredit()->create();
         $bill = $this->flaggedBill($user);
-        $this->actingAs($user)->post(route('disputes.store', $bill), ['letter_body' => 'Letter']);
+        $this->actingAs($user)->post(route('disputes.store', $bill), ['letter_body' => 'Letter', 'mandate' => '1']);
         $dispute = Dispute::sole();
         app(DisputeService::class)->lodge($dispute, CarbonImmutable::today(), null, null);
 
@@ -120,7 +120,7 @@ class DisputeFlowTest extends TestCase
     {
         $user = User::factory()->forKind(OrganisationKind::Household)->withCredit()->create();
         $bill = $this->flaggedBill($user);
-        $this->actingAs($user)->post(route('disputes.store', $bill), ['letter_body' => 'Letter']);
+        $this->actingAs($user)->post(route('disputes.store', $bill), ['letter_body' => 'Letter', 'mandate' => '1']);
         $dispute = Dispute::sole();
         app(DisputeService::class)->lodge($dispute, CarbonImmutable::today(), null, null);
 
@@ -142,7 +142,7 @@ class DisputeFlowTest extends TestCase
             ->where('quote.coveredByPlan', true),
         );
 
-        $this->post(route('disputes.store', $bill), ['letter_body' => 'Letter'])->assertSessionHasNoErrors();
+        $this->post(route('disputes.store', $bill), ['letter_body' => 'Letter', 'mandate' => '1'])->assertSessionHasNoErrors();
         $this->assertNotNull(Dispute::sole()->submitted_on);
         $this->assertSame('0.00', app(Wallet::class)->balance($user->organisation));
     }

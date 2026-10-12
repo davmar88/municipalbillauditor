@@ -12,6 +12,7 @@ use App\Enums\DisputeEventKind;
 use App\Models\Bill;
 use App\Models\Dispute;
 use App\Models\DisputeEvent;
+use App\Models\DisputeMessage;
 use App\Models\Finding;
 use Carbon\CarbonImmutable;
 
@@ -37,7 +38,7 @@ class DisputePresenter
             'submitted' => $submitted,
             'awaitingLodging' => $submitted && $dispute->lodged_on === null,
             'stage' => $stage->value,
-            'stageLabel' => $submitted && $dispute->lodged_on === null ? 'With our team to lodge' : $stage->label(),
+            'stageLabel' => $submitted && $dispute->lodged_on === null ? 'Waiting to be sent' : $stage->label(),
             'needsAction' => $submitted && $stage->needsAction(),
             'isOpen' => $stage->isOpen(),
             'nextDate' => $status?->nextDate?->format('j M Y'),
@@ -63,8 +64,12 @@ class DisputePresenter
 
         $timeline = array_map(fn (TimelineStep $step) => [
             'key' => $step->key,
-            'title' => $awaitingLodging && $step->key === 'lodged' ? 'Our team is lodging it' : $step->title,
-            'detail' => $awaitingLodging && $step->key === 'lodged' ? 'Handed over '.$dispute->submitted_on->format('j M') : $step->detail,
+            'title' => $awaitingLodging && $step->key === 'lodged' ? 'Waiting to be sent' : $step->title,
+            'detail' => match (true) {
+                $awaitingLodging && $step->key === 'lodged' => 'Approved '.$dispute->submitted_on->format('j M'),
+                $step->key === 'lodged' && $dispute->sent_to !== null => "Emailed to {$dispute->sent_to}",
+                default => $step->detail,
+            },
             'on' => $step->on?->format('j M'),
             'state' => $step->state,
         ], CaseClock::timeline($facts, $rules, $today));
@@ -76,14 +81,27 @@ class DisputePresenter
             'undisputedAmount' => $dispute->undisputed_amount !== null ? Money::format($dispute->undisputed_amount) : null,
             'municipality' => $dispute->property->municipality?->name,
             'status' => [
-                'headline' => $awaitingLodging ? 'With our team' : $status->headline,
+                'headline' => $awaitingLodging ? 'Waiting to be sent' : $status->headline,
                 'countdownLabel' => $awaitingLodging ? '' : $status->countdownLabel,
                 'daysLeft' => $awaitingLodging ? null : $status->daysLeft,
                 'progress' => $awaitingLodging ? null : $status->progress,
                 'note' => $awaitingLodging
-                    ? "We're lodging your dispute with ".($dispute->property->municipality?->name ?? 'the municipality').". We'll add the reference number when it arrives."
+                    ? ($dispute->held_reason === 'no_mandate'
+                        ? 'We need your permission to send disputes for you. Switch it on in your account settings.'
+                        : "We don't have ".($dispute->property->municipality?->name ?? 'the municipality')."'s account queries email yet. Our team is finding it, and the dispute goes out as soon as they do.")
                     : $status->note,
             ],
+            'sentTo' => $dispute->sent_to,
+            'messages' => $dispute->messages()->get()->map(fn (DisputeMessage $m) => [
+                'id' => $m->id,
+                'direction' => $m->direction,
+                'kind' => $m->kind,
+                'subject' => $m->subject,
+                'on' => $m->created_at->format('j M Y'),
+                'who' => $m->direction === DisputeMessage::OUT ? "To {$m->to_address}" : "From {$m->from_address}",
+                'classification' => $m->classification?->label(),
+                'summary' => $m->reading['summary'] ?? null,
+            ])->values(),
             'timeline' => $timeline,
             'events' => $dispute->events->map(fn (DisputeEvent $e) => [
                 'id' => $e->id,

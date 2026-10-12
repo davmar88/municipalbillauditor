@@ -218,6 +218,17 @@ export type DisputeDetail = DisputeSummary & {
     findings: { number: number; title: string; amount: string | null }[];
     actions: DisputeAction[];
     creditAmount: string | null;
+    sentTo: string | null;
+    messages: {
+        id: number;
+        direction: 'out' | 'in';
+        kind: string;
+        subject: string | null;
+        on: string;
+        who: string;
+        classification: string | null;
+        summary: string | null;
+    }[];
     tariff: {
         before: TariffSnapshot;
         after: TariffSnapshot | null;

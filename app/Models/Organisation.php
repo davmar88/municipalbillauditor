@@ -30,6 +30,9 @@ use Illuminate\Support\Str;
  * @property string|null $card_expiry
  * @property string|null $card_email
  * @property Carbon|null $card_saved_at
+ * @property Carbon|null $dispute_mandate_at
+ * @property int|null $dispute_mandate_user_id
+ * @property bool $auto_send_disputes
  */
 #[Fillable(['kind', 'name', 'forwarding_code', 'monthly_fee'])]
 #[Hidden(['card_authorization'])]
@@ -68,6 +71,8 @@ class Organisation extends Model
             // A reusable Paystack authorization: enough to charge the card.
             'card_authorization' => 'encrypted',
             'card_saved_at' => 'datetime',
+            'dispute_mandate_at' => 'datetime',
+            'auto_send_disputes' => 'boolean',
         ];
     }
 
@@ -127,6 +132,12 @@ class Organisation extends Model
     public function forwardingAddress(): string
     {
         return $this->forwarding_code.'@'.config('auditor.inbound_email_domain');
+    }
+
+    /** Whether the customer has let us send disputes for them. */
+    public function hasMandate(): bool
+    {
+        return $this->dispute_mandate_at !== null;
     }
 
     /** Agents and businesses pay a monthly fee; households pay per job. */

@@ -27,10 +27,10 @@ type Props = {
     };
     municipality: {
         name: string;
-        addressee: string;
-        email: string | null;
         rulesVerified: boolean;
     };
+    recipient: { email: string; source: string } | null;
+    hasMandate: boolean;
     kind: OrganisationKind;
     quote: JobQuote;
     pendingQuestions: number;
@@ -41,6 +41,8 @@ export default function DisputeCreate({
     bill,
     dispute,
     municipality,
+    recipient,
+    hasMandate,
     quote,
     pendingQuestions,
     attachments,
@@ -95,14 +97,28 @@ export default function DisputeCreate({
                                 aria-label="Letter"
                                 className="flex flex-col gap-4 rounded-[4px] border bg-paper p-5 shadow-[0_1px_2px_rgba(18,22,28,.06),0_10px_28px_rgba(18,22,28,.07)] sm:p-8"
                             >
-                                {municipality.email && (
-                                    <p className="text-sm text-muted-foreground">
-                                        Billing queries email:{' '}
-                                        <span className="figures text-[13px] text-foreground">
-                                            {municipality.email}
-                                        </span>
-                                    </p>
-                                )}
+                                <p className="text-sm text-muted-foreground">
+                                    {recipient ? (
+                                        <>
+                                            We email it to{' '}
+                                            <span className="figures text-[13px] text-foreground">
+                                                {recipient.email}
+                                            </span>
+                                            {recipient.source === 'bill' &&
+                                                ', the address printed on your bill'}
+                                            , copy you in, and read the replies
+                                            for you.
+                                        </>
+                                    ) : (
+                                        <>
+                                            We don't have {municipality.name}'s
+                                            account queries email yet, and we
+                                            never guess one. Approve it and we
+                                            send it as soon as our team has the
+                                            address.
+                                        </>
+                                    )}
+                                </p>
                                 <label
                                     htmlFor="letter_body"
                                     className="sr-only"
@@ -202,6 +218,29 @@ export default function DisputeCreate({
                             />
                             <InputError message={errors.credit} />
 
+                            {!hasMandate && (
+                                <div className="flex flex-col gap-1">
+                                    <label className="flex items-start gap-3 rounded-lg border bg-card p-4 text-sm">
+                                        <input
+                                            type="checkbox"
+                                            name="mandate"
+                                            value="1"
+                                            required
+                                            className="mt-0.5 size-4 accent-primary"
+                                        />
+                                        <span>
+                                            I authorise Municipal Bill Auditor
+                                            to send disputes about my municipal
+                                            account to the municipality on my
+                                            behalf, and to follow them up and
+                                            escalate them. I can withdraw this
+                                            in my account settings.
+                                        </span>
+                                    </label>
+                                    <InputError message={errors.mandate} />
+                                </div>
+                            )}
+
                             <div className="flex flex-col gap-2 border-t pt-5 sm:flex-row sm:items-center">
                                 <Button
                                     type="submit"
@@ -213,12 +252,13 @@ export default function DisputeCreate({
                                     }
                                 >
                                     {processing && <Spinner />}
-                                    Approve the dispute
+                                    Approve and send
                                 </Button>
                                 <span className="text-sm text-muted-foreground">
                                     {dispute.deadline &&
                                         `Dispute by ${dispute.deadline}${municipality.rulesVerified ? '' : ' (our estimate)'}. `}
-                                    Nothing is sent until you approve it.
+                                    Nothing is sent until you approve it. The
+                                    bill and meter photo go with it.
                                 </span>
                             </div>
                         </>

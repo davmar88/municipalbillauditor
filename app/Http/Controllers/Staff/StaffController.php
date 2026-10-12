@@ -16,6 +16,8 @@ use App\Models\Dispute;
 use App\Models\Organisation;
 use App\Services\Billing\MarginReport;
 use App\Services\Billing\Wallet;
+use App\Services\Disputes\DisputeMailer;
+use App\Services\Disputes\RecipientFinder;
 use App\Services\DisputeService;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
@@ -32,7 +34,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  */
 class StaffController extends Controller
 {
-    public function index(DisputeService $disputes): Response
+    public function index(DisputeService $disputes, RecipientFinder $recipients): Response
     {
         $toLodge = Dispute::query()
             ->whereNotNull('submitted_on')
@@ -67,7 +69,11 @@ class StaffController extends Controller
         ];
 
         return Inertia::render('staff/index', [
-            'toLodge' => $toLodge->map($row)->values(),
+            'toLodge' => $toLodge->map(fn (Dispute $d) => [
+                ...$row($d),
+                'heldReason' => $d->held_reason,
+                'recipient' => $recipients->for($d)['email'] ?? null,
+            ])->values(),
             'needsEscalation' => $open->map(fn (Dispute $d) => [
                 ...$row($d),
                 'councillorLetter' => $this->councillorLetter($d, $disputes),
@@ -87,6 +93,22 @@ class StaffController extends Controller
                 'received' => $b->created_at->format('j M Y'),
             ])->values(),
         ]);
+    }
+
+    /**
+     * Send a held dispute, once the municipality's address is known.
+     */
+    public function send(Dispute $dispute, DisputeMailer $mailer): RedirectResponse
+    {
+        abort_if($dispute->submitted_on === null || $dispute->lodged_on !== null, 422, 'Only approved, unsent disputes can be sent.');
+
+        $to = $mailer->send($dispute);
+
+        Inertia::flash('toast', $to !== null
+            ? ['type' => 'success', 'message' => "Sent to {$to}."]
+            : ['type' => 'error', 'message' => 'Still held: there is no address or no permission from the customer.']);
+
+        return back();
     }
 
     public function lodge(Request $request, Dispute $dispute, DisputeService $disputes): RedirectResponse

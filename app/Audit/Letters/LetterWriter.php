@@ -118,6 +118,138 @@ final class LetterWriter
     }
 
     /**
+     * A reminder on the same email thread when nobody has acknowledged the
+     * dispute by the reply date.
+     */
+    public static function followUp(
+        string $senderName,
+        string $accountNumber,
+        DateTimeImmutable $lodgedOn,
+        DateTimeImmutable $replyDueOn,
+        BigDecimal $disputedTotal,
+        string $originalSubject,
+    ): Letter {
+        $subject = str_starts_with($originalSubject, 'Re: ') ? $originalSubject : "Re: {$originalSubject}";
+        $lines = [
+            'Dear Sir or Madam,',
+            '',
+            'I disputed charges of '.Money::format($disputedTotal)." on account {$accountNumber} on ".Dates::long($lodgedOn)
+                .'. My dispute is below. I asked for an acknowledgement with a reference number and have not received one, and a reply was due by '
+                .Dates::long($replyDueOn).'.',
+            '',
+            'Please acknowledge the dispute with a reference number and tell me when I can expect it to be resolved.',
+            '',
+            'Yours faithfully,',
+            $senderName,
+        ];
+
+        return new Letter($subject, implode("\n", $lines), Money::money($disputedTotal), null);
+    }
+
+    /**
+     * To the municipal manager, when the dispute is still unanswered after
+     * the follow-up and the councillor's window.
+     */
+    public static function escalation(
+        string $municipalityName,
+        string $senderName,
+        string $accountNumber,
+        string $propertyAddress,
+        DateTimeImmutable $lodgedOn,
+        ?DateTimeImmutable $followedUpOn,
+        string $reference,
+        BigDecimal $disputedTotal,
+        DateTimeImmutable $letterDate,
+    ): Letter {
+        $ref = $reference !== '' ? " (reference {$reference})" : '';
+        $subject = "Unresolved billing dispute, account {$accountNumber}";
+        $lines = ['To: The Municipal Manager, '.$municipalityName, "From: {$senderName}, account {$accountNumber}"];
+
+        if ($propertyAddress !== '') {
+            $lines[] = "Property: {$propertyAddress}";
+        }
+
+        array_push(
+            $lines,
+            'Date: '.Dates::long($letterDate),
+            '',
+            "Subject: {$subject}",
+            '',
+            "I lodged a billing dispute with {$municipalityName}'s billing department on ".Dates::long($lodgedOn)."{$ref} about "
+                .Money::format($disputedTotal).' on my account.'
+                .($followedUpOn !== null ? ' I followed it up on '.Dates::long($followedUpOn).'.' : '')
+                .' I have not had an answer.',
+            '',
+            'Please see that the dispute is resolved and tell me the outcome. My original dispute is below.',
+            '',
+            'Yours faithfully,',
+            $senderName,
+        );
+
+        return new Letter($subject, implode("\n", $lines), Money::money($disputedTotal), null);
+    }
+
+    /**
+     * The complaint the customer lodges with the Public Protector
+     * themselves. We never send it.
+     */
+    public static function publicProtector(
+        string $municipalityName,
+        string $senderName,
+        string $accountNumber,
+        string $propertyAddress,
+        DateTimeImmutable $lodgedOn,
+        ?DateTimeImmutable $followedUpOn,
+        ?DateTimeImmutable $escalatedOn,
+        string $reference,
+        BigDecimal $disputedTotal,
+        DateTimeImmutable $letterDate,
+    ): Letter {
+        $ref = $reference !== '' ? " under reference {$reference}" : '';
+        $subject = "Complaint about {$municipalityName}: unresolved billing dispute, account {$accountNumber}";
+        $steps = ['- '.Dates::long($lodgedOn).": I lodged a written billing dispute with {$municipalityName}{$ref}."];
+
+        if ($followedUpOn !== null) {
+            $steps[] = '- '.Dates::long($followedUpOn).': I followed it up in writing.';
+        }
+
+        if ($escalatedOn !== null) {
+            $steps[] = '- '.Dates::long($escalatedOn).': I escalated it to the Municipal Manager.';
+        }
+
+        $lines = ['To: The Public Protector South Africa', "From: {$senderName}"];
+
+        if ($propertyAddress !== '') {
+            $lines[] = "Property: {$propertyAddress}";
+        }
+
+        array_push(
+            $lines,
+            'Date: '.Dates::long($letterDate),
+            '',
+            "Subject: {$subject}",
+            '',
+            "I am complaining about {$municipalityName}'s failure to resolve a billing dispute of "
+                .Money::format($disputedTotal)." on municipal account {$accountNumber}.",
+            '',
+            'What I have done so far:',
+        );
+        array_push($lines, ...$steps);
+        array_push(
+            $lines,
+            '',
+            'I have had no answer that resolves the dispute. I ask the Public Protector to investigate and to require the municipality to correct the account.',
+            '',
+            'Attached: my bill, my dispute and the follow-up emails.',
+            '',
+            'Yours faithfully,',
+            $senderName,
+        );
+
+        return new Letter($subject, implode("\n", $lines), Money::money($disputedTotal), null);
+    }
+
+    /**
      * @return array{0: string, 1: string} The claim sentence and what to ask for.
      */
     private static function claimAndRequest(LetterItem $item, LetterInput $input): array

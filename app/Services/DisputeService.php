@@ -69,7 +69,8 @@ class DisputeService
 
     /**
      * The customer approves the letter, and pays for the dispute: R49 from a
-     * household's credit, included in a monthly plan. Our team lodges it.
+     * household's credit, included in a monthly plan. DisputeApproval then
+     * emails it.
      */
     public function submit(Dispute $dispute, User $user, ?string $letterBody = null): Dispute
     {
@@ -93,7 +94,7 @@ class DisputeService
                     'user_id' => $user->id,
                     'kind' => DisputeEventKind::Note,
                     'happened_on' => $today,
-                    'note' => 'Handed to our team to lodge.',
+                    'note' => "Approved by {$user->name}.",
                 ]);
             });
         } catch (InsufficientCredit $e) {
@@ -139,7 +140,12 @@ class DisputeService
                     'acknowledged_on' => $on,
                     'reference' => $details['reference'] ?? $dispute->reference,
                 ]),
-                DisputeEventKind::ReplyReceived => $dispute->reply_received_on = $on,
+                // An answer either way: the municipality has dealt with it.
+                DisputeEventKind::ReplyReceived, DisputeEventKind::Upheld, DisputeEventKind::Rejected => $dispute->reply_received_on ??= $on,
+                // A request for information is a sign of life: no follow-up needed.
+                DisputeEventKind::InfoRequested => $dispute->acknowledged_on ??= $on,
+                DisputeEventKind::FollowedUp => $dispute->followed_up_on = $on,
+                DisputeEventKind::EscalatedManager => $dispute->escalated_manager_on = $on,
                 DisputeEventKind::EscalatedCouncillor => $dispute->escalated_councillor_on = $on,
                 DisputeEventKind::EscalatedPublicProtector => $dispute->escalated_public_protector_on = $on,
                 DisputeEventKind::TariffFixed => $dispute->fill([

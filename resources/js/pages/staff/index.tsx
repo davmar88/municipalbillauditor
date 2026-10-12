@@ -13,12 +13,14 @@ import { Spinner } from '@/components/ui/spinner';
 import { localToday } from '@/lib/dates';
 import { index, margin, reference } from '@/routes/staff';
 import { file } from '@/routes/staff/bills';
-import { lodge } from '@/routes/staff/disputes';
+import { lodge, send } from '@/routes/staff/disputes';
 import { eft } from '@/routes/staff/organisations';
 import { store as recordEvent } from '@/routes/staff/disputes/events';
 import type { DisputeSummary, Option } from '@/types';
 
 type StaffDispute = DisputeSummary & {
+    heldReason?: string | null;
+    recipient?: string | null;
     organisation: string;
     letterSubject: string;
     letterBody: string;
@@ -75,12 +77,39 @@ export default function StaffIndex({
                 />
 
                 <Queue
-                    title="To lodge"
-                    empty="Nothing waiting to be lodged."
+                    title="Approved but not sent"
+                    empty="Every approved dispute has gone out."
                     count={toLodge.length}
                 >
                     {toLodge.map((dispute) => (
                         <DisputeItem key={dispute.id} dispute={dispute}>
+                            <p className="text-sm">
+                                {dispute.heldReason === 'no_mandate'
+                                    ? "Held: the customer hasn't given us their permission to send it."
+                                    : dispute.recipient
+                                      ? `Ready to email to ${dispute.recipient}.`
+                                      : 'Held: we have no account queries email for this municipality. Add a verified one in the reference data, then send it.'}
+                            </p>
+                            {dispute.recipient &&
+                                dispute.heldReason !== 'no_mandate' && (
+                                    <Form
+                                        {...send.form(dispute.id)}
+                                        options={{ preserveScroll: true }}
+                                    >
+                                        {({ processing }) => (
+                                            <Button
+                                                type="submit"
+                                                disabled={processing}
+                                            >
+                                                {processing && <Spinner />}
+                                                Send it now
+                                            </Button>
+                                        )}
+                                    </Form>
+                                )}
+                            <p className="text-sm text-muted-foreground">
+                                Or, if it went out another way, record it:
+                            </p>
                             <Form
                                 {...lodge.form(dispute.id)}
                                 options={{ preserveScroll: true }}

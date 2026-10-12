@@ -11,6 +11,8 @@ use App\Models\Bill;
 use App\Models\Dispute;
 use App\Models\Finding;
 use App\Services\Billing\Wallet;
+use App\Services\Disputes\DisputeApproval;
+use App\Services\Disputes\RecipientFinder;
 use App\Services\DisputeService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -47,7 +49,7 @@ class DisputeController extends Controller
         ]);
     }
 
-    public function create(Request $request, Bill $bill, DisputeService $disputes, Wallet $wallet): Response|RedirectResponse
+    public function create(Request $request, Bill $bill, DisputeService $disputes, Wallet $wallet, RecipientFinder $recipients): Response|RedirectResponse
     {
         $this->authorize('update', $bill);
 
@@ -79,10 +81,11 @@ class DisputeController extends Controller
             ],
             'municipality' => [
                 'name' => $municipality?->name ?? 'your municipality',
-                'addressee' => $municipality?->billing_addressee,
-                'email' => $municipality?->billing_email,
                 'rulesVerified' => (bool) $municipality?->rules_verified,
             ],
+            // Where it will go, worked out for the customer.
+            'recipient' => $recipients->for($dispute),
+            'hasMandate' => $organisation->hasMandate(),
             'kind' => $organisation->kind->value,
             'quote' => $wallet->quote($organisation, Job::Dispute)->toArray(),
             'pendingQuestions' => $bill->findings->filter(fn (Finding $f) => $f->awaitingAnswer())->count(),
@@ -93,18 +96,21 @@ class DisputeController extends Controller
         ]);
     }
 
-    public function store(Request $request, Bill $bill, DisputeService $disputes): RedirectResponse
+    public function store(Request $request, Bill $bill, DisputeService $disputes, DisputeApproval $approval): RedirectResponse
     {
         $this->authorize('update', $bill);
 
         $data = $request->validate([
             'letter_body' => ['required', 'string', 'max:20000'],
+            'mandate' => ['boolean'],
         ]);
 
         $dispute = $disputes->draft($bill, $request->user());
-        $disputes->submit($dispute, $request->user(), $data['letter_body']);
+        $dispute = $approval->approve($dispute, $request->user(), $data['letter_body'], $request->boolean('mandate'));
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => 'Handed to our team. We\'ll lodge it and keep you posted.']);
+        Inertia::flash('toast', ['type' => 'success', 'message' => $dispute->lodged_on !== null
+            ? "Sent to {$dispute->sent_to}. We've copied you in."
+            : "Approved. We're finding the municipality's email address and will send it as soon as we have it."]);
 
         return to_route('disputes.show', $dispute);
     }
