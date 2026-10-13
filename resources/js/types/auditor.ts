@@ -279,7 +279,6 @@ export type PortfolioRow = {
 export type JobQuote = {
     job: 'bill_check' | 'dispute';
     price: string;
-    coveredByPlan: boolean;
     balance: string;
     affordable: boolean;
     shortfall: string | null;

@@ -31,18 +31,10 @@ export function PriceNotice({
         >
             <Wallet className="mt-0.5 size-4 shrink-0" aria-hidden />
             <span>
-                {quote.coveredByPlan ? (
-                    <>{action} is included in your monthly plan.</>
-                ) : (
-                    <>
-                        {action} costs{' '}
-                        <span className="figures font-semibold">
-                            {quote.price}
-                        </span>{' '}
-                        from your prepaid credit. Your balance is{' '}
-                        <span className="figures">{quote.balance}</span>.
-                    </>
-                )}
+                {action} costs{' '}
+                <span className="figures font-semibold">{quote.price}</span>{' '}
+                from your prepaid credit. Your balance is{' '}
+                <span className="figures">{quote.balance}</span>.
                 {!quote.affordable && (
                     <>
                         {' '}

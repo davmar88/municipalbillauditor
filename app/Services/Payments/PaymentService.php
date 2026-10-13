@@ -4,28 +4,25 @@ namespace App\Services\Payments;
 
 use App\Audit\Money;
 use App\Enums\CreditKind;
-use App\Enums\FeeStatus;
 use App\Enums\PaymentPurpose;
 use App\Enums\PaymentStatus;
-use App\Models\FeeInvoice;
 use App\Models\Organisation;
 use App\Models\Payment;
 use App\Models\User;
-use App\Notifications\CustomerNotice;
 use App\Services\Billing\Wallet;
-use App\Services\CustomerMail;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Card payments: top-ups and monthly fees.
+ * Card top-ups: the only way money comes in. Every account pays as it goes,
+ * so there are no fees to invoice and no cards kept on file.
  *
  * The customer pays on Paystack's checkout page. A payment is applied once,
  * after its amount and currency are checked against our own payment row,
- * by whichever hears from Paystack first: the customer coming back, the
- * answer to a saved-card charge, reconcile() asking about payments still
- * open, or Paystack's signed webhook. The webhook can't be relied on alone:
+ * by whichever hears from Paystack first: the customer coming back,
+ * reconcile() asking about payments still open, or Paystack's signed
+ * webhook. The webhook can't be relied on alone:
  * a Paystack account has one, and an account shared with another site
  * sends it there.
  */
@@ -34,7 +31,6 @@ class PaymentService
     public function __construct(
         private readonly PaymentGateway $gateway,
         private readonly Wallet $wallet,
-        private readonly CustomerMail $mail,
     ) {}
 
     /**
@@ -54,81 +50,14 @@ class PaymentService
         return $this->checkout($payment, $user->email);
     }
 
-    /**
-     * @throws PaymentFailed
-     */
-    public function startInvoicePayment(FeeInvoice $invoice, User $user): string
-    {
-        $payment = Payment::create([
-            'organisation_id' => $invoice->organisation_id,
-            'user_id' => $user->id,
-            'fee_invoice_id' => $invoice->id,
-            'purpose' => PaymentPurpose::FeeInvoice,
-            'amount' => $invoice->amount,
-            'currency' => 'ZAR',
-            'status' => PaymentStatus::Pending,
-        ]);
-
-        return $this->checkout($payment, $user->email);
-    }
-
     public function verify(string $reference): ChargeResult
     {
         return $this->gateway->verify($reference);
     }
 
     /**
-     * Charge a monthly fee to the organisation's saved card. When there is
-     * no card, or the charge fails, the customer gets a link to pay instead.
-     * A successful charge is applied straight away; one still processing is
-     * picked up by reconcile().
-     */
-    public function chargeSavedCard(FeeInvoice $invoice): void
-    {
-        $organisation = $invoice->organisation;
-        $code = $organisation->card_authorization;
-
-        if (blank($code) || blank($organisation->card_email)) {
-            $this->askToPay($invoice, null);
-
-            return;
-        }
-
-        $payment = Payment::create([
-            'organisation_id' => $organisation->id,
-            'fee_invoice_id' => $invoice->id,
-            'purpose' => PaymentPurpose::FeeInvoice,
-            'amount' => $invoice->amount,
-            'currency' => 'ZAR',
-            'status' => PaymentStatus::Pending,
-            'saved_card' => true,
-        ]);
-
-        try {
-            $result = $this->gateway->chargeSavedCard($payment, (string) $code, (string) $organisation->card_email);
-        } catch (PaymentFailed $e) {
-            $result = null;
-            $message = $e->getMessage();
-        }
-
-        if ($result?->succeeded()) {
-            $this->confirm($result);
-
-            return;
-        }
-
-        if ($result !== null && in_array($result->status, ['pending', 'processing', 'ongoing', 'queued'], true)) {
-            return;
-        }
-
-        $payment->update(['status' => PaymentStatus::Failed, 'gateway_message' => $result?->message ?? $message ?? null]);
-        $this->askToPay($invoice, $organisation->card_last4);
-    }
-
-    /**
      * Asks Paystack about card payments still open, and applies the ones
-     * that went through: a top-up whose customer never came back, or a
-     * saved-card charge that was still processing. New payments are checked
+     * that went through: a top-up whose customer never came back. New payments are checked
      * on every run, ones older than two hours on the first run of each hour,
      * and after two days an unpaid one is closed. Runs every five minutes.
      *
@@ -180,8 +109,8 @@ class PaymentService
     }
 
     /**
-     * Paystack says a charge succeeded: credit the top-up or mark the invoice
-     * paid, once. Returns false when the payment isn't ours or doesn't match.
+     * Paystack says a charge succeeded: credit the top-up, once. Returns
+     * false when the payment isn't ours or doesn't match.
      */
     public function confirm(ChargeResult $result): bool
     {
@@ -215,36 +144,15 @@ class PaymentService
 
             $payment->update(['status' => PaymentStatus::Success, 'paid_at' => now(), 'gateway_message' => $result->message]);
 
-            if ($payment->purpose === PaymentPurpose::TopUp) {
-                $this->wallet->credit(
-                    $payment->organisation,
-                    CreditKind::TopUp,
-                    $payment->amount,
-                    "payment:{$payment->reference}",
-                    'Card top-up',
-                    $payment,
-                    $payment->user,
-                );
-
-                return true;
-            }
-
-            $invoice = $payment->feeInvoice;
-
-            if ($invoice !== null && ! $invoice->isPaid()) {
-                $invoice->update(['status' => FeeStatus::Paid, 'paid_at' => now()]);
-            }
-
-            if ($result->card !== null) {
-                $payment->organisation->forceFill([
-                    'card_authorization' => $result->card->authorizationCode,
-                    'card_last4' => $result->card->last4,
-                    'card_brand' => $result->card->brand,
-                    'card_expiry' => $result->card->expiry,
-                    'card_email' => $result->card->email !== '' ? $result->card->email : $payment->user?->email,
-                    'card_saved_at' => now(),
-                ])->save();
-            }
+            $this->wallet->credit(
+                $payment->organisation,
+                CreditKind::TopUp,
+                $payment->amount,
+                "payment:{$payment->reference}",
+                'Card top-up',
+                $payment,
+                $payment->user,
+            );
 
             return true;
         });
@@ -262,21 +170,5 @@ class PaymentService
 
             throw $e;
         }
-    }
-
-    private function askToPay(FeeInvoice $invoice, ?string $failedCard): void
-    {
-        $this->mail->send($invoice->organisation, new CustomerNotice(
-            kind: 'invoice_due',
-            subject: 'Your '.$invoice->period_month?->format('F Y').' fee of '.Money::format($invoice->amount).' is due',
-            lines: [
-                $failedCard !== null
-                    ? "We couldn't charge your card ending {$failedCard} for this month's fee of ".Money::format($invoice->amount).'.'
-                    : "This month's fee of ".Money::format($invoice->amount).' is due.',
-                'Pay it by card in a minute. After that we charge the same card each month, and you can remove it in your settings.',
-            ],
-            actionText: 'Pay now',
-            actionUrl: route('credit.index'),
-        ));
     }
 }

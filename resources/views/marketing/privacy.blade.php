@@ -39,7 +39,7 @@
                     'The municipality, which receives your dispute by email, with the attachments you approve, once you have given us permission to send disputes for you.',
                     'Anthropic, which reads the bill and the municipality\'s replies for us when automatic reading is switched on. It receives the files and returns what they say.',
                     'Our email provider, which delivers the dispute emails and passes the municipality\'s replies back to us.',
-                    'Paystack, which takes card payments for top-ups and monthly fees. We never see or store your card number.',
+                    'Paystack, which takes card payments for top-ups. We never see or store your card number, and no card is kept on file.',
                     'Google, only if you choose to sign in with Google.',
                 ]],
                 ['How we keep it safe', [

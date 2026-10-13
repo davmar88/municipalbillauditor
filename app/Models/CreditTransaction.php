@@ -21,7 +21,6 @@ use Illuminate\Support\Carbon;
  * @property Job|null $job
  * @property string $amount
  * @property string $balance_after
- * @property bool $covered_by_plan
  * @property string|null $subject_type
  * @property int|null $subject_id
  * @property string $description
@@ -29,7 +28,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon $created_at
  */
 #[Fillable([
-    'organisation_id', 'user_id', 'kind', 'job', 'amount', 'balance_after', 'covered_by_plan',
+    'organisation_id', 'user_id', 'kind', 'job', 'amount', 'balance_after',
     'subject_type', 'subject_id', 'description', 'reference',
 ])]
 class CreditTransaction extends Model
@@ -41,7 +40,6 @@ class CreditTransaction extends Model
             'job' => Job::class,
             'amount' => 'decimal:2',
             'balance_after' => 'decimal:2',
-            'covered_by_plan' => 'boolean',
         ];
     }
 

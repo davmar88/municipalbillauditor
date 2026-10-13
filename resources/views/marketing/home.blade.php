@@ -137,42 +137,43 @@
     <section id="pricing" aria-labelledby="pricing-h" class="scroll-mt-4 bg-paper py-[clamp(64px,8vw,96px)]">
         <div class="mx-auto flex max-w-[1200px] flex-col gap-12 px-[clamp(16px,4vw,40px)]">
             <div class="flex max-w-[760px] flex-col gap-3.5">
-                <h2 id="pricing-h" class="text-[clamp(32px,4vw,48px)] leading-[1.08] font-extrabold tracking-tight text-balance">Pay per bill, or one flat monthly fee.</h2>
-                <p class="text-lg text-ink-2">One home, a rental portfolio or a business: the checks and the dispute work are the same. You always see the price before we start a job.</p>
+                <h2 id="pricing-h" class="text-[clamp(32px,4vw,48px)] leading-[1.08] font-extrabold tracking-tight text-balance">Pay as you go. No monthly or setup fees.</h2>
+                <p class="text-lg text-ink-2">One home, a rental portfolio or a business: you pay the same price per job, from prepaid credit. You always see the price before we start a job.</p>
             </div>
             <div class="grid grid-cols-[repeat(auto-fit,minmax(min(320px,100%),1fr))] gap-6">
                 <article class="flex flex-col gap-5 rounded-[10px] border-2 border-action bg-paper p-7">
-                    <h3 class="text-xl font-bold">Households</h3>
-                    <p class="flex flex-col"><span class="font-mono text-5xl leading-none font-semibold">{{ $prices['billCheck'] }}</span><span class="mt-2 text-base text-muted">a bill check · {{ $prices['dispute'] }} a dispute, from prepaid credit</span></p>
+                    <h3 class="text-xl font-bold">Bill check</h3>
+                    <p class="flex flex-col"><span class="font-mono text-5xl leading-none font-semibold">{{ $prices['billCheck'] }}</span><span class="mt-2 text-base text-muted">a bill, from prepaid credit</span></p>
                     <ul class="flex flex-1 flex-col gap-2 text-base">
-                        <li>Top up from {{ $prices['smallestTopUp'] }} by card. Credit doesn't expire.</li>
-                        <li>A dispute covers the letter, emailing your municipality, reading its replies, chasing and escalating</li>
+                        <li>We read every line and run all four checks</li>
+                        <li>You see what's wrong, what it's worth and your deadline</li>
                         <li>If we can't read your bill, the check is refunded</li>
-                        @if ($prices['welcome'])
-                            <li>{{ $prices['welcome'] }} of credit to start, on us</li>
-                        @endif
                     </ul>
                     <a href="{{ $checkUrl }}" class="flex h-12 items-center justify-center rounded-lg bg-action px-5 font-semibold text-ground no-underline hover:bg-action-ink hover:text-ground">{{ $checkLabel }}</a>
                 </article>
                 <article class="flex flex-col gap-5 rounded-[10px] border border-rule bg-well p-7">
-                    <h3 class="text-xl font-bold">Landlords and managing agents</h3>
-                    <p class="flex flex-col"><span class="font-mono text-5xl leading-none font-semibold">{{ $prices['agentMonth'] }}</span><span class="mt-2 text-base text-muted">a month, for the whole portfolio</span></p>
+                    <h3 class="text-xl font-bold">Dispute</h3>
+                    <p class="flex flex-col"><span class="font-mono text-5xl leading-none font-semibold">{{ $prices['dispute'] }}</span><span class="mt-2 text-base text-muted">a dispute, only when you want one</span></p>
                     <ul class="flex flex-1 flex-col gap-2 text-base">
-                        <li>{{ $prices['includedChecks'] }} bill checks a month and unlimited disputes</li>
-                        <li>Forward every unit's bill to one address</li>
-                        <li>Extra checks {{ $prices['billCheck'] }} each from prepaid credit</li>
+                        <li>The letter, written from your bill's evidence</li>
+                        <li>Emailed to your municipality, with its replies read for you</li>
+                        <li>Chased and escalated until the credit shows</li>
                     </ul>
-                    <a href="{{ route('register', ['type' => 'agent']) }}" class="font-semibold">Set up your portfolio</a>
                 </article>
                 <article class="flex flex-col gap-5 rounded-[10px] border border-rule bg-well p-7">
-                    <h3 class="text-xl font-bold">Businesses and body corporates</h3>
-                    <p class="flex flex-col"><span class="font-mono text-5xl leading-none font-semibold">{{ $prices['businessMonth'] }}</span><span class="mt-2 text-base text-muted">a month, for every account</span></p>
+                    <h3 class="text-xl font-bold">How paying works</h3>
                     <ul class="flex flex-1 flex-col gap-2 text-base">
-                        <li>{{ $prices['includedChecks'] }} bill checks a month and unlimited claims</li>
-                        <li>Every claim emailed, chased and escalated for you</li>
-                        <li>Monthly fee charged to your card, cancel the card any time</li>
+                        <li>Top up from {{ $prices['smallestTopUp'] }} by card. Credit doesn't expire.</li>
+                        <li>No monthly fees, no setup fees, nothing to cancel</li>
+                        <li>Landlords and businesses pay the same per bill: forward every unit's bill to one address</li>
+                        @if ($prices['welcome'])
+                            <li>{{ $prices['welcome'] }} of credit to start, on us</li>
+                        @endif
                     </ul>
-                    <a href="{{ route('register', ['type' => 'business']) }}" class="font-semibold">Set up your account</a>
+                    <p class="flex flex-wrap gap-x-5 gap-y-2">
+                        <a href="{{ route('register', ['type' => 'agent']) }}" class="font-semibold">For rental portfolios</a>
+                        <a href="{{ route('register', ['type' => 'business']) }}" class="font-semibold">For businesses</a>
+                    </p>
                 </article>
             </div>
         </div>

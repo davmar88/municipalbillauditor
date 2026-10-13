@@ -46,13 +46,10 @@ return [
     /*
     | Prices, in rand.
     |
-    | Households pay a fixed price per job from prepaid credit. A bill check
-    | reads the bill and runs the four checks; a dispute covers drafting it,
-    | emailing the municipality, reading its replies, chasing and
-    | escalating. Managing agents and businesses pay a flat monthly fee per
-    | organisation (or a negotiated one), which includes a number of bill
-    | checks a month and unlimited disputes. Checks beyond that come from
-    | prepaid credit at the household price.
+    | Pay as you go, for every account: a fixed price per job from prepaid
+    | credit, and no monthly or setup fees. A bill check reads the bill and
+    | runs the four checks; a dispute covers drafting it, emailing the
+    | municipality, reading its replies, chasing and escalating.
     */
     'prices' => [
         'jobs' => [
@@ -61,9 +58,6 @@ return [
         ],
         'top_ups' => array_values(array_filter(array_map('trim', explode(',', (string) env('TOP_UP_PACKS', '50,100,250,500'))))),
         'welcome_credit' => env('WELCOME_CREDIT', '0'),
-        'agent_month' => env('PRICE_AGENT_MONTH', '1500'),
-        'business_month' => env('PRICE_BUSINESS_MONTH', '2500'),
-        'included_bill_checks' => (int) env('INCLUDED_BILL_CHECKS_PER_MONTH', 100),
     ],
 
     /*

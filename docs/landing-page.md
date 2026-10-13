@@ -10,7 +10,7 @@ The copy explains the service in the order a customer worries about it:
 
 1. What goes wrong on bills (the four errors, each with a marked-up snippet).
 2. Exactly what happens after they send a bill (five steps, from the photo to the credit).
-3. What it costs: a price per job for households, a flat monthly fee for agents and businesses.
+3. What it costs: the same price per job for everyone, pay as you go, with no monthly or setup fees.
 4. Whether we cover their municipality (we cover all 257).
 5. Their remaining questions.
 
@@ -35,8 +35,8 @@ There is one H1, and every section opens with an H2 that names what a person wou
     - **H3** Estimated meter readings, Wrong tariff category, Charges during outages, Spikes against your history
 - **H2** How we fix a wrong municipal bill
     - **H3** One per step, plus three notes on deadlines, paying the undisputed amount and account credits
-- **H2** Pay per bill, or one flat monthly fee.
-    - **H3** Households, Landlords and managing agents, Businesses and body corporates
+- **H2** Pay as you go. No monthly or setup fees.
+    - **H3** Bill check, Dispute, How paying works
 - **H2** Every municipality in South Africa
     - **H3** Billing disputes in Johannesburg, Tshwane and eThekwini
 - **H2** Questions about disputing a municipal bill
@@ -102,4 +102,4 @@ Add JSON-LD to the page head:
 
 - **Verify the proof figures.** The three numbers in the dark band come from the README's research notes, which still need checking. Link each `[source]` to the original report, or remove the figure.
 - **Replace placeholders:** `[bills address]` and `[Company name]`.
-- **Check the prices.** The page quotes the job prices, top-up packs and monthly fees from `config/auditor.php`. There is no success-fee or "free check" wording unless `WELCOME_CREDIT` is set.
+- **Check the prices.** The page quotes the job prices and top-up packs from `config/auditor.php`. There is no success-fee or "free check" wording unless `WELCOME_CREDIT` is set.

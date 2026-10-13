@@ -54,20 +54,6 @@ class PaystackGateway implements PaymentGateway
         return ChargeResult::fromPaystack((array) $response->json('data'));
     }
 
-    public function chargeSavedCard(Payment $payment, string $authorizationCode, string $email): ChargeResult
-    {
-        $response = $this->send('post', '/transaction/charge_authorization', [
-            'authorization_code' => $authorizationCode,
-            'email' => $email,
-            'amount' => $payment->amountInCents(),
-            'currency' => $payment->currency,
-            'reference' => $payment->reference,
-            'metadata' => $this->metadata($payment),
-        ]);
-
-        return ChargeResult::fromPaystack((array) $response->json('data'));
-    }
-
     public function validSignature(string $payload, ?string $signature): bool
     {
         if ($this->secretKey === '' || blank($signature)) {

@@ -4,17 +4,15 @@ namespace App\Services\Billing;
 
 use App\Audit\Money;
 use App\Enums\CreditKind;
-use App\Enums\FeeStatus;
 use App\Models\ClaudeUsageRecord;
 use App\Models\CreditTransaction;
-use App\Models\FeeInvoice;
 use App\Models\Organisation;
 use Brick\Math\RoundingMode;
 use Carbon\CarbonImmutable;
 
 /**
- * One month's money in against what Claude cost us. Revenue is counted
- * when it is received: top-ups (by card or EFT) and monthly fees paid.
+ * One month's money in against what Claude cost us. Every account pays as
+ * it goes, so revenue is the top-ups received (by card or EFT).
  */
 class MarginReport
 {
@@ -32,15 +30,9 @@ class MarginReport
             ->pluck('amount')
             ->map(fn ($a) => Money::of($a)));
 
-        $fees = Money::sum(FeeInvoice::query()
-            ->where('status', FeeStatus::Paid)
-            ->whereBetween('paid_at', [$from, $to])
-            ->pluck('amount')
-            ->map(fn ($a) => Money::of($a)));
-
         $usage = ClaudeUsageRecord::query()->whereBetween('created_at', [$from, $to])->get();
         $cost = Money::sum($usage->pluck('cost_zar')->filter()->map(fn ($c) => Money::of($c)));
-        $revenue = $topUps->plus($fees);
+        $revenue = $topUps;
         $margin = $revenue->minus($cost);
 
         $byOrganisation = $usage->groupBy('organisation_id')
@@ -58,7 +50,6 @@ class MarginReport
             'month' => $from->format('Y-m'),
             'monthLabel' => $from->format('F Y'),
             'topUps' => Money::format($topUps),
-            'monthlyFees' => Money::format($fees),
             'revenue' => Money::format($revenue),
             'claudeCost' => Money::format(Money::money($cost)),
             'margin' => Money::format(Money::money($margin)),

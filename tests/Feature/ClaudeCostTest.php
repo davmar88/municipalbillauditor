@@ -3,8 +3,6 @@
 namespace Tests\Feature;
 
 use App\Enums\CreditKind;
-use App\Enums\FeeKind;
-use App\Enums\FeeStatus;
 use App\Enums\OrganisationKind;
 use App\Models\Bill;
 use App\Models\ClaudeUsageRecord;
@@ -103,10 +101,7 @@ class ClaudeCostTest extends TestCase
         $household = User::factory()->forKind(OrganisationKind::Household)->create();
         $agent = User::factory()->forKind(OrganisationKind::Agent)->create();
         app(Wallet::class)->credit($household->organisation, CreditKind::TopUp, '100', 'payment:a', 'Card top-up');
-        $agent->organisation->feeInvoices()->create([
-            'kind' => FeeKind::MonthlyFee, 'description' => 'Monthly fee', 'amount' => '1500.00',
-            'status' => FeeStatus::Paid, 'period_month' => now()->startOfMonth(), 'paid_at' => now(),
-        ]);
+        app(Wallet::class)->credit($agent->organisation, CreditKind::TopUp, '400', 'payment:b', 'Card top-up');
         app(ClaudeCosts::class)->record(new ClaudeUsage([new TokenCount('claude-opus-5-5', 1_000_000, 100_000)]), $household->organisation, null, 'bill_read');
         app(ClaudeCosts::class)->record(new ClaudeUsage([new TokenCount('mystery-model', 10, 10)]), $agent->organisation, null, 'reply_read');
 
@@ -114,13 +109,14 @@ class ClaudeCostTest extends TestCase
 
         $this->actingAs(User::factory()->staff()->create())->get(route('staff.margin'))->assertInertia(fn (Assert $page) => $page
             ->component('staff/margin')
-            ->where('report.topUps', 'R100.00')
-            ->where('report.monthlyFees', 'R1,500.00')
-            ->where('report.revenue', 'R1,600.00')
+            // Everyone pays as they go: top-ups are all the revenue.
+            ->where('report.topUps', 'R500.00')
+            ->where('report.revenue', 'R500.00')
+            ->missing('report.monthlyFees')
             // ($4 + 100,000 × $20 / 1m) × 18.50 = R111.00
             ->where('report.claudeCost', 'R111.00')
-            ->where('report.margin', 'R1,489.00')
-            ->where('report.marginPercent', '93.1%')
+            ->where('report.margin', 'R389.00')
+            ->where('report.marginPercent', '77.8%')
             ->where('report.unpricedCalls', 1)
             ->where('report.byOrganisation.0.name', $household->organisation->name),
         );

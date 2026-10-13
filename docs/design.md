@@ -17,7 +17,7 @@ These come from the risks in the [README](../README.md).
 
 ## Service flow
 
-One flow serves all three customers. Only how they pay changes: households pay per job from prepaid credit (a bill check and a dispute, R15 and R49 by default), and managing agents and businesses pay one flat monthly fee that includes 100 bill checks and unlimited disputes.
+One flow serves all three customers, and they all pay the same way: as they go, per job from prepaid credit (a bill check and a dispute, R15 and R49 by default), with no monthly or setup fees.
 
 | Step | Who          | What happens                                                                                                                                                            |
 | ---- | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -55,13 +55,13 @@ The web app uses a dark sidebar (232 px) and a fluid content area. On a phone th
 
 ### Businesses and body corporates (web)
 
-8. **Claim.** The amount claimed, a dated timeline, the tariff before and after the fix with the monthly saving, the emails, and the evidence on file. Claims are included in the monthly fee.
-9. **Credit and billing.** The monthly fee and how many of the month's included checks are used, the saved card, invoices with a pay button, prepaid credit for checks beyond the allowance, and the ledger.
+8. **Claim.** The amount claimed, a dated timeline, the tariff before and after the fix with the monthly saving, the emails, and the evidence on file. A claim is priced as a dispute.
+9. **Credit and billing.** The balance, what each job costs, top-ups by card, and the ledger.
 
 ### Staff (web)
 
 10. **Work queue.** Disputes approved but not sent (no address, no mandate, or a failed send), managed disputes that need the next step, municipal replies Claude couldn't read or that came from an unknown sender, bills waiting for their details, and EFT top-ups.
-11. **Margin.** Each month's top-ups and monthly fees received against what Claude cost us, from the token counts of every call.
+11. **Margin.** Each month's top-ups received against what Claude cost us, from the token counts of every call.
 12. **Reference data.** All 257 municipalities with their dispute rules, billing and escalation emails (and whether staff have verified them), outages and tariff rates.
 
 ### Landing page
@@ -87,7 +87,7 @@ The web app uses a dark sidebar (232 px) and a fluid content area. On a phone th
 
 ## Sample data
 
-Every figure in the mockups is illustrative. The mockups still show the earlier pricing (a R299 managed dispute and a 25% success fee); the app now uses prepaid jobs and monthly fees, set in `config/auditor.php`. Text in square brackets, such as `[Agency name]` and `[code]@bills.[domain]`, needs real values.
+Every figure in the mockups is illustrative. The mockups still show the earlier pricing (a R299 managed dispute and a 25% success fee); the app now uses pay-as-you-go prepaid jobs, set in `config/auditor.php`. Text in square brackets, such as `[Agency name]` and `[code]@bills.[domain]`, needs real values.
 
 ## Open questions
 

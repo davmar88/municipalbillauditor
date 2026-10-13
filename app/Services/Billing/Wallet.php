@@ -9,7 +9,6 @@ use App\Jobs\ResumeWaitingWork;
 use App\Models\CreditTransaction;
 use App\Models\Organisation;
 use App\Models\User;
-use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
@@ -35,19 +34,17 @@ class Wallet
     }
 
     /**
-     * What a job would cost this organisation right now: nothing when it is
-     * included in a monthly fee, otherwise the household price.
+     * What a job costs, and whether the organisation's credit covers it.
+     * Every account pays the same price per job.
      */
     public function quote(Organisation $organisation, Job $job): JobQuote
     {
-        $covered = $this->coveredByPlan($organisation, $job);
-        $price = $covered ? '0.00' : $job->price();
+        $price = $job->price();
         $balance = $this->balance($organisation);
 
         return new JobQuote(
             job: $job,
             price: $price,
-            coveredByPlan: $covered,
             balance: $balance,
             affordable: Money::of($balance)->isGreaterThanOrEqualTo($price),
         );
@@ -70,8 +67,7 @@ class Wallet
                 return $charges->last();
             }
 
-            $covered = $this->coveredByPlan($locked, $job);
-            $price = $covered ? Money::money(0) : Money::of($job->price());
+            $price = Money::of($job->price());
             $balance = Money::of($locked->credit_balance);
 
             if ($balance->isLessThan($price)) {
@@ -82,11 +78,10 @@ class Wallet
                 'kind' => CreditKind::Job,
                 'job' => $job,
                 'amount' => (string) $price->negated(),
-                'covered_by_plan' => $covered,
                 'subject_type' => $subject->getMorphClass(),
                 'subject_id' => $subject->getKey(),
                 'user_id' => $by?->id,
-                'description' => $job->label().($covered ? ', included in your monthly plan' : ''),
+                'description' => $job->label(),
                 'reference' => self::subjectReference($job, $subject).':'.($charges->count() + 1),
             ]);
         });
@@ -114,7 +109,6 @@ class Wallet
                 'kind' => CreditKind::Refund,
                 'job' => $job,
                 'amount' => (string) Money::of($charge->amount)->negated(),
-                'covered_by_plan' => $charge->covered_by_plan,
                 'subject_type' => $subject->getMorphClass(),
                 'subject_id' => $subject->getKey(),
                 'description' => $reason,
@@ -190,42 +184,6 @@ class Wallet
             ->where('subject_id', $subject->getKey());
 
         return (clone $rows)->where('kind', CreditKind::Job)->count() > (clone $rows)->where('kind', CreditKind::Refund)->count();
-    }
-
-    /**
-     * How many of this month's included bill checks are used. Null when the
-     * organisation has no monthly plan.
-     */
-    public function includedChecksUsed(Organisation $organisation, ?CarbonImmutable $month = null): ?int
-    {
-        if (! $organisation->paysMonthly()) {
-            return null;
-        }
-
-        $month ??= CarbonImmutable::now();
-        $rows = CreditTransaction::query()
-            ->where('organisation_id', $organisation->id)
-            ->where('job', Job::BillCheck)
-            ->where('covered_by_plan', true)
-            ->whereBetween('created_at', [$month->startOfMonth(), $month->endOfMonth()]);
-
-        return (clone $rows)->where('kind', CreditKind::Job)->count() - (clone $rows)->where('kind', CreditKind::Refund)->count();
-    }
-
-    public static function includedChecks(): int
-    {
-        return (int) config('auditor.prices.included_bill_checks');
-    }
-
-    private function coveredByPlan(Organisation $organisation, Job $job): bool
-    {
-        if (! $organisation->paysMonthly()) {
-            return false;
-        }
-
-        // Disputes are unlimited on a monthly plan; bill checks up to the
-        // month's allowance.
-        return $job === Job::Dispute || $this->includedChecksUsed($organisation) < self::includedChecks();
     }
 
     private function lock(Organisation $organisation): Organisation

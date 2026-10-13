@@ -150,24 +150,24 @@ class WalletTest extends TestCase
         $this->assertSame('100.00', $this->wallet->balance($organisation));
     }
 
-    public function test_monthly_plans_include_checks_then_charge_credit(): void
+    public function test_agents_and_businesses_pay_per_job_like_households(): void
     {
-        config(['auditor.prices.included_bill_checks' => 2]);
-        $agent = Organisation::factory()->agent()->create();
-        $this->wallet->credit($agent, CreditKind::TopUp, '20', 'seed', 'Top-up');
+        foreach ([Organisation::factory()->agent()->create(), Organisation::factory()->business()->create()] as $organisation) {
+            $this->wallet->credit($organisation, CreditKind::TopUp, '20', "seed:{$organisation->id}", 'Top-up');
 
-        $this->assertTrue($this->wallet->charge($agent, Job::BillCheck, $this->billFor($agent))->covered_by_plan);
-        $this->assertTrue($this->wallet->charge($agent, Job::BillCheck, $this->billFor($agent))->covered_by_plan);
-        $this->assertSame(2, $this->wallet->includedChecksUsed($agent));
+            $this->assertSame('R15.00', $this->wallet->quote($organisation, Job::BillCheck)->toArray()['price']);
+            $this->assertSame('-15.00', $this->wallet->charge($organisation, Job::BillCheck, $this->billFor($organisation))->amount);
+            $this->assertSame('5.00', $this->wallet->balance($organisation));
 
-        $third = $this->wallet->charge($agent, Job::BillCheck, $this->billFor($agent));
-        $this->assertFalse($third->covered_by_plan);
-        $this->assertSame('5.00', $this->wallet->balance($agent));
-
-        // Disputes are unlimited.
-        $dispute = $this->wallet->charge($agent, Job::Dispute, $this->billFor($agent));
-        $this->assertSame('0.00', $dispute->amount);
-        $this->assertSame('Included', $this->wallet->quote($agent, Job::Dispute)->toArray()['price']);
+            // No monthly allowance to fall back on.
+            $this->assertFalse($this->wallet->quote($organisation, Job::BillCheck)->affordable);
+            try {
+                $this->wallet->charge($organisation, Job::BillCheck, $this->billFor($organisation));
+                $this->fail('A check beyond the credit was charged.');
+            } catch (InsufficientCredit) {
+                $this->assertSame('5.00', $this->wallet->balance($organisation));
+            }
+        }
     }
 
     public function test_welcome_credit_is_given_once_when_configured(): void
