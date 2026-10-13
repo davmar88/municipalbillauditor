@@ -48,28 +48,28 @@ final class SiteContent
             [
                 'number' => '01',
                 'title' => 'Estimated meter readings',
-                'snippet' => ['left' => 'WATER 1,204 → 1,242', 'marked' => '(E) 38 kL', 'right' => 'usual: 16 kL'],
+                'snippet' => ['left' => 'WATER READING', 'marked' => '(E) estimated', 'right' => 'not read'],
                 'problem' => 'When nobody reads your meter, the municipality bills a guess. A guess can run far above what you really use, month after month.',
                 'fix' => 'We spot the "E" on your bill, compare the estimate with your real usage, and ask for a dated photo of your meter as proof.',
             ],
             [
                 'number' => '02',
                 'title' => 'Wrong tariff category',
-                'snippet' => ['left' => 'TARIFF CATEGORY', 'marked' => 'Business', 'right' => 'should be: Bulk residential'],
+                'snippet' => ['left' => 'TARIFF CATEGORY', 'marked' => 'Business', 'right' => 'should be: Residential'],
                 'problem' => 'A residential property billed as a business pays more for the same water and electricity, every month, until someone notices.',
                 'fix' => 'We check your tariff against your property type, then claim back what you overpaid and get the lower rate applied from now on.',
             ],
             [
                 'number' => '03',
                 'title' => 'Charges during outages',
-                'snippet' => ['left' => 'SUPPLY OFF 12–15 SEP', 'marked' => 'billed 30 of 30 days', 'right' => ''],
+                'snippet' => ['left' => 'SUPPLY OFF', 'marked' => 'billed in full', 'right' => ''],
                 'problem' => "If the water or the power was off, you shouldn't be billed as if you used it.",
                 'fix' => 'We match your billing period against outages reported in your suburb, and ask you to confirm the dates before we claim.',
             ],
             [
                 'number' => '04',
                 'title' => 'Spikes against your history',
-                'snippet' => ['left' => '', 'marked' => '2.4× your average', 'right' => ''],
+                'snippet' => ['left' => '', 'marked' => 'far above your usual', 'right' => ''],
                 'problem' => 'A bill far above your usual can mean a faulty meter, a misread or a leak on your side.',
                 'fix' => 'We compare the bill with your own past usage, and ask you what changed before we call it an error.',
             ],
@@ -82,7 +82,7 @@ final class SiteContent
     public static function steps(): array
     {
         return [
-            ['title' => 'You send your bill', 'text' => 'Take a photo, upload the PDF, or forward your e-bill to your own Bill Auditor address.'],
+            ['title' => 'You send your bill', 'text' => 'Take a photo, upload the PDF, or forward your e-bill to your own '.config('app.name').' address.'],
             ['title' => 'We check every line', 'text' => "Meter readings, tariff, outage dates and your past bills. You see each problem, what it's worth in rand, and the evidence behind it."],
             ['title' => 'We write your dispute', 'text' => 'With your meter photo and bill attached. You see the price first, and nothing is sent until you approve it.'],
             ['title' => 'We email it to your municipality', 'text' => "We find the right address for you, whichever of South Africa's 257 municipalities bills you, and copy you in. Their replies come to us and we tell you what they say."],

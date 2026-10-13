@@ -6,10 +6,10 @@ export default function AppLogo() {
             <AppLogoIcon className="size-7 shrink-0 text-sidebar-primary" />
             <div className="ml-1 flex flex-1 flex-col leading-none">
                 <span className="font-mono text-[10px] tracking-[0.12em] text-sidebar-foreground/80">
-                    MUNICIPAL
+                    PREPAID BILL CHECKS
                 </span>
                 <span className="mt-0.5 truncate text-lg font-bold tracking-tight">
-                    Bill Auditor
+                    Revenue<span className="text-sidebar-primary">Guard</span>
                 </span>
             </div>
         </>

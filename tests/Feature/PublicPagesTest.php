@@ -19,10 +19,10 @@ class PublicPagesTest extends TestCase
 
         $response->assertOk()
             ->assertSee('<html lang="en-ZA">', false)
-            ->assertSee('<title>Dispute a wrong municipal bill | Municipal Bill Auditor</title>', false)
+            ->assertSee('<title>Dispute a wrong municipal bill | '.config('app.name').'</title>', false)
             ->assertSee('<link rel="canonical" href="'.route('home').'">', false)
             ->assertSee('"@type":"FAQPage"', false)
-            ->assertSee('Wrong municipal bill? We find the error and get it fixed.')
+            ->assertSeeText('Wrong municipal bill? We find the error and get it fixed.')
             ->assertSee('Estimated meter readings')
             ->assertSee(route('metro.show', 'johannesburg'), false);
 
@@ -63,7 +63,7 @@ class PublicPagesTest extends TestCase
     {
         $this->get(route('metro.show', 'tshwane'))
             ->assertOk()
-            ->assertSee('Dispute a City of Tshwane bill')
+            ->assertSeeText('Dispute a City of Tshwane bill')
             ->assertSee('Billing queries, City of Tshwane')
             ->assertSee('I will keep paying the undisputed amount of R1,982.85')
             ->assertSee('"@type":"BreadcrumbList"', false);

@@ -6,7 +6,7 @@
     $contact = config('auditor.contact_email');
 @endphp
 
-@section('title', 'Privacy and POPIA | Municipal Bill Auditor')
+@section('title', 'Privacy and POPIA | '.config('app.name'))
 @section('description', 'What we collect when we check and dispute your municipal bill, why, who sees it, and how to have it deleted.')
 @section('canonical', route('privacy'))
 

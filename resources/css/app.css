@@ -61,7 +61,7 @@
     --color-sidebar-border: var(--sidebar-border);
     --color-sidebar-ring: var(--sidebar-ring);
 
-    /* Municipal Bill Auditor: orange means something is wrong or needs
+    /* RevenueGuard: orange means something is wrong or needs
        attention, violet means an action or progress. Never red and green.
        Night (the default) is Vite's night violet: vite.dev's colours. */
     --color-flag: var(--flag);

@@ -38,13 +38,22 @@
     <body>
         <a href="#main" class="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-10 focus:rounded-md focus:bg-paper focus:px-4 focus:py-2">Skip to content</a>
 
+        {{-- Prepaid, said up front, like vite.dev's announcement strip. --}}
+        <div class="bg-banner text-sm text-white">
+            <p class="mx-auto flex max-w-[1200px] flex-wrap items-center justify-center gap-x-2 gap-y-1 px-[clamp(16px,4vw,40px)] py-2 text-center">
+                <span class="rounded-full bg-white/15 px-2 py-0.5 font-mono text-[11px] font-semibold tracking-[0.12em]">PREPAID</span>
+                <span>Top up from {{ $sitePrices['smallestTopUp'] }}, then pay {{ $sitePrices['billCheck'] }} a bill check. No monthly or setup fees.</span>
+                <a href="{{ $section('pricing') }}" class="font-semibold text-white underline underline-offset-[3px] hover:text-white">See pricing</a>
+            </p>
+        </div>
+
         <header class="border-b border-rule">
             <div class="mx-auto flex max-w-[1200px] flex-wrap items-center justify-between gap-x-6 gap-y-3 px-[clamp(16px,4vw,40px)] py-3.5">
                 <a href="{{ route('home') }}" class="flex items-center gap-2.5 text-ink no-underline hover:text-ink" aria-label="{{ config('app.name') }} home">
                     @include('marketing.partials.logo', ['size' => 30, 'ground' => '#16171D', 'stroke' => '#FFFFFF'])
                     <span class="flex flex-col leading-none">
-                        <span class="font-mono text-[10px] tracking-[0.12em] text-muted">MUNICIPAL</span>
-                        <span class="mt-[3px] text-[19px] font-bold">Bill Auditor</span>
+                        <span class="font-mono text-[10px] tracking-[0.12em] text-muted">PREPAID BILL CHECKS</span>
+                        <span class="mt-[3px] text-[19px] font-bold">Revenue<span class="text-gradient">Guard</span></span>
                     </span>
                 </a>
                 <nav aria-label="Main" class="flex flex-wrap items-center gap-x-5 gap-y-1 text-[15px]">
@@ -55,7 +64,7 @@
                     @guest
                         <a href="{{ route('login') }}" class="py-2.5 text-ink no-underline hover:underline">Log in</a>
                     @endguest
-                    <a href="{{ $checkUrl }}" class="flex h-11 items-center rounded-md bg-ink px-4 font-semibold text-ground no-underline hover:bg-ink-2 hover:text-ground">Check my bill</a>
+                    <a href="{{ $checkUrl }}" class="glow flex h-11 items-center rounded-md bg-ink px-4 font-semibold text-ground no-underline hover:bg-ink-2 hover:text-ground">Check my bill</a>
                 </nav>
             </div>
         </header>
@@ -69,10 +78,10 @@
                 <div class="grid grid-cols-[repeat(auto-fit,minmax(min(180px,100%),1fr))] gap-8">
                     <div class="flex flex-col gap-2.5">
                         <span class="flex flex-col leading-none text-white">
-                            <span class="font-mono text-[10px] tracking-[0.12em] text-night-muted">MUNICIPAL</span>
-                            <span class="mt-[3px] text-[19px] font-bold">Bill Auditor</span>
+                            <span class="font-mono text-[10px] tracking-[0.12em] text-night-muted">PREPAID BILL CHECKS</span>
+                            <span class="mt-[3px] text-[19px] font-bold">Revenue<span class="text-gradient">Guard</span></span>
                         </span>
-                        <span class="text-sm text-night-muted">Checks and disputes for municipal bills in South Africa.</span>
+                        <span class="text-sm text-night-muted">Prepaid checks and disputes for municipal bills in South Africa. Pay as you go, no monthly or setup fees.</span>
                     </div>
                     <nav aria-label="Service" class="flex flex-col gap-1">
                         <span class="pb-1.5 text-[13px] font-bold tracking-[0.06em] text-white">SERVICE</span>

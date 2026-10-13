@@ -1,4 +1,4 @@
-import { Form, Head, Link } from '@inertiajs/react';
+import { Form, Head, Link, usePage } from '@inertiajs/react';
 import { CircleAlert, Paperclip, Pencil } from 'lucide-react';
 import { useState } from 'react';
 import { FlagNumber } from '@/components/audit/flag-number';
@@ -49,6 +49,7 @@ export default function DisputeCreate({
 }: Props) {
     const [body, setBody] = useState(dispute.letterBody);
     const [editing, setEditing] = useState(false);
+    const appName = usePage().props.name;
     return (
         <>
             <Head title="Your dispute" />
@@ -229,12 +230,12 @@ export default function DisputeCreate({
                                             className="mt-0.5 size-4 accent-primary"
                                         />
                                         <span>
-                                            I authorise Municipal Bill Auditor
-                                            to send disputes about my municipal
-                                            account to the municipality on my
-                                            behalf, and to follow them up and
-                                            escalate them. I can withdraw this
-                                            in my account settings.
+                                            I authorise {appName} to send
+                                            disputes about my municipal account
+                                            to the municipality on my behalf,
+                                            and to follow them up and escalate
+                                            them. I can withdraw this in my
+                                            account settings.
                                         </span>
                                     </label>
                                     <InputError message={errors.mandate} />
