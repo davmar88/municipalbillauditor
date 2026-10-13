@@ -76,6 +76,19 @@ class AuthenticationTest extends TestCase
         $this->assertGuest();
     }
 
+    public function test_logging_out_from_the_app_loads_the_home_page_in_full()
+    {
+        $user = User::factory()->create();
+
+        // The home page is Blade, not Inertia: a plain redirect would open it
+        // in Inertia's overlay on top of the app.
+        $this->actingAs($user)->post(route('logout'), [], ['X-Inertia' => 'true'])
+            ->assertStatus(409)
+            ->assertHeader('X-Inertia-Location', route('home'));
+
+        $this->assertGuest();
+    }
+
     public function test_users_are_rate_limited()
     {
         $user = User::factory()->create();

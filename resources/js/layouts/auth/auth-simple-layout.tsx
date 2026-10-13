@@ -1,4 +1,3 @@
-import { Link } from '@inertiajs/react';
 import AppLogoIcon from '@/components/app-logo-icon';
 import { home } from '@/routes';
 import type { AuthLayoutProps } from '@/types';
@@ -13,8 +12,10 @@ export default function AuthSimpleLayout({
             <div className="w-full max-w-sm">
                 <div className="flex flex-col gap-8">
                     <div className="flex flex-col items-center gap-4">
-                        <Link
-                            href={home()}
+                        {/* A plain link: the home page is Blade, not an
+                            Inertia page, so it needs a full page load. */}
+                        <a
+                            href={home().url}
                             className="flex flex-col items-center gap-2 font-medium"
                         >
                             <div className="mb-1 flex h-9 w-9 items-center justify-center rounded-md">
@@ -24,7 +25,7 @@ export default function AuthSimpleLayout({
                                 />
                             </div>
                             <span className="sr-only">{title}</span>
-                        </Link>
+                        </a>
 
                         <div className="space-y-2 text-center">
                             <h1 className="text-xl font-medium">{title}</h1>

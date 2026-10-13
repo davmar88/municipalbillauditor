@@ -79,6 +79,18 @@ class ProfileUpdateTest extends TestCase
         $this->assertNull($user->fresh());
     }
 
+    public function test_deleting_an_account_from_the_app_loads_the_home_page_in_full()
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->delete(route('profile.destroy'), ['password' => 'password'], ['X-Inertia' => 'true'])
+            ->assertStatus(409)
+            ->assertHeader('X-Inertia-Location', route('home'));
+
+        $this->assertNull($user->fresh());
+    }
+
     public function test_correct_password_must_be_provided_to_delete_account()
     {
         $user = User::factory()->create();
