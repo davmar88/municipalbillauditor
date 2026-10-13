@@ -8,14 +8,16 @@ use Database\Factories\OrganisationFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 
 /**
  * A customer account: one household, one managing agent, or one business or
- * body corporate. Users belong to one organisation. Every kind pays as it
- * goes, per job, from prepaid credit.
+ * body corporate. A person can belong to several and switch between them;
+ * each keeps its own credit, bills and forwarding address. Every kind pays
+ * as it goes, per job, from prepaid credit.
  *
  * @property int $id
  * @property OrganisationKind $kind
@@ -63,10 +65,15 @@ class Organisation extends Model
         ];
     }
 
-    /** @return HasMany<User, $this> */
-    public function users(): HasMany
+    /**
+     * Everyone on the account, whichever account they are working in now:
+     * they all get its emails and can answer its disputes.
+     *
+     * @return BelongsToMany<User, $this>
+     */
+    public function users(): BelongsToMany
     {
-        return $this->hasMany(User::class);
+        return $this->belongsToMany(User::class)->withTimestamps();
     }
 
     /** @return HasMany<Property, $this> */

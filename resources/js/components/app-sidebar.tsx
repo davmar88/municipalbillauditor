@@ -1,5 +1,6 @@
 import { Link, usePage } from '@inertiajs/react';
 import { Database, ShieldCheck } from 'lucide-react';
+import { AccountSwitcher } from '@/components/account-switcher';
 import AppLogo from '@/components/app-logo';
 import { CopyButton } from '@/components/copy-button';
 import { NavMain } from '@/components/nav-main';
@@ -39,16 +40,7 @@ export function AppSidebar() {
                         </SidebarMenuButton>
                     </SidebarMenuItem>
                 </SidebarMenu>
-                {organisation && (
-                    <div className="mt-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2 group-data-[collapsible=icon]:hidden">
-                        <p className="truncate text-sm leading-5 font-semibold text-sidebar-accent-foreground">
-                            {organisation.name}
-                        </p>
-                        <p className="text-xs leading-4 text-sidebar-foreground/80">
-                            {organisation.kindLabel}
-                        </p>
-                    </div>
-                )}
+                <AccountSwitcher />
             </SidebarHeader>
 
             <SidebarContent>

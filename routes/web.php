@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AccountController;
+use App\Http\Controllers\AccountsController;
 use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\BillController;
 use App\Http\Controllers\BillDetailsController;
@@ -81,6 +82,13 @@ Route::middleware(['auth', 'verified', 'organisation'])->group(function () {
     Route::patch('settings/account/disputes', [AccountController::class, 'updateDisputes'])->name('account.disputes.update');
     Route::patch('settings/account', [AccountController::class, 'update'])->name('account.update');
     Route::delete('settings/account/bills', [AccountController::class, 'destroyBills'])->name('account.bills.destroy');
+
+    // Several accounts per person: add, edit, switch, remove.
+    Route::get('settings/accounts', [AccountsController::class, 'index'])->name('accounts.index');
+    Route::post('settings/accounts', [AccountsController::class, 'store'])->middleware('throttle:20,1')->name('accounts.store');
+    Route::patch('settings/accounts/{organisation}', [AccountsController::class, 'update'])->name('accounts.update');
+    Route::post('settings/accounts/{organisation}/switch', [AccountsController::class, 'switch'])->name('accounts.switch');
+    Route::delete('settings/accounts/{organisation}', [AccountsController::class, 'destroy'])->name('accounts.destroy');
 });
 
 Route::middleware(['auth', 'verified', 'can:staff'])->prefix('staff')->name('staff.')->group(function () {

@@ -74,6 +74,22 @@ class GoogleSignInTest extends TestCase
         $this->assertSame('Acme Rentals', $organisation->name);
     }
 
+    public function test_several_account_types_picked_on_the_register_page_all_carry_through(): void
+    {
+        $this->googleSays('naledi@acme.co.za');
+
+        $this->get(route('google.redirect', [
+            'account_types' => ['business', 'household'],
+            'organisation_names' => ['business' => 'Protea Heights Body Corporate'],
+        ]));
+        $this->get(route('google.callback'));
+
+        $accounts = User::sole()->organisations;
+        $this->assertSame(['household', 'business'], $accounts->map(fn ($o) => $o->kind->value)->all());
+        $this->assertSame('Protea Heights Body Corporate', $accounts->last()->name);
+        $this->assertSame($accounts->first()->id, User::sole()->organisation_id);
+    }
+
     public function test_an_existing_account_is_linked_when_google_has_verified_the_email(): void
     {
         $user = User::factory()->create(['email' => 'thandi@gmail.com']);

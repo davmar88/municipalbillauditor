@@ -13,6 +13,7 @@ declare module '@inertiajs/core' {
             name: string;
             auth: Auth;
             organisation: Organisation | null;
+            organisations: { id: number; name: string; kindLabel: string }[];
             isStaff: boolean;
             sidebarOpen: boolean;
             [key: string]: unknown;

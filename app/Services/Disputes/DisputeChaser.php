@@ -141,7 +141,7 @@ class DisputeChaser
     {
         $organisation = $dispute->organisation;
         $sender = $organisation->kind === OrganisationKind::Household
-            ? ($dispute->bill->user?->name ?? $organisation->users()->orderBy('id')->value('name') ?? $organisation->name)
+            ? ($dispute->bill->user?->name ?? $organisation->users()->orderBy('users.id')->value('name') ?? $organisation->name)
             : $organisation->name;
 
         $letter = LetterWriter::publicProtector(

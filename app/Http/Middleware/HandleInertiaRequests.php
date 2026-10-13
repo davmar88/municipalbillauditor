@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Organisation;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -42,11 +43,18 @@ class HandleInertiaRequests extends Middleware
                 'user' => $request->user(),
             ],
             'organisation' => fn () => ($organisation = $request->user()?->organisation) ? [
+                'id' => $organisation->id,
                 'kind' => $organisation->kind->value,
                 'kindLabel' => $organisation->kind->label(),
                 'name' => $organisation->name,
                 'forwardingAddress' => $organisation->forwardingAddress(),
             ] : null,
+            // Every account they can switch to, for the switcher.
+            'organisations' => fn () => $request->user()?->organisations()->get()->map(fn (Organisation $o) => [
+                'id' => $o->id,
+                'name' => $o->name,
+                'kindLabel' => $o->kind->label(),
+            ])->values() ?? [],
             'isStaff' => fn () => (bool) $request->user()?->is_staff,
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];

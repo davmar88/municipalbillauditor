@@ -47,19 +47,35 @@ const accountTypes: {
 export default function Register({ passwordRules, googleAvailable }: Props) {
     const { url } = usePage();
     const requested = new URLSearchParams(url.split('?')[1] ?? '').get('type');
-    const [type, setType] = useState<OrganisationKind>(
+    // One or more: a home, rental units and a business can all be signed up
+    // for at once. Each becomes an account of its own to switch between.
+    const [types, setTypes] = useState<OrganisationKind[]>([
         accountTypes.find((t) => t.value === requested)?.value ?? 'household',
-    );
-    const selected = accountTypes.find((t) => t.value === type)!;
-    const [organisationName, setOrganisationName] = useState('');
+    ]);
+    const [names, setNames] = useState<
+        Partial<Record<OrganisationKind, string>>
+    >({});
+    const chosen = accountTypes.filter((t) => types.includes(t.value));
 
-    // Google sign-up carries the choices above to the new account.
+    const toggle = (value: OrganisationKind) =>
+        setTypes((current) =>
+            current.includes(value)
+                ? // Keep at least one.
+                  current.length > 1
+                    ? current.filter((v) => v !== value)
+                    : current
+                : [...current, value],
+        );
+
+    // Google sign-up carries the choices above to the new accounts.
     const googleHref = googleRedirect.url({
         query: {
-            account_type: type,
-            ...(selected.organisationLabel && organisationName
-                ? { organisation_name: organisationName }
-                : {}),
+            account_types: types,
+            organisation_names: Object.fromEntries(
+                chosen
+                    .filter((t) => t.organisationLabel && names[t.value])
+                    .map((t) => [t.value, names[t.value] as string]),
+            ),
         },
     });
 
@@ -76,65 +92,96 @@ export default function Register({ passwordRules, googleAvailable }: Props) {
                     <>
                         <div className="grid gap-6">
                             <fieldset className="grid gap-2">
-                                <legend className="mb-2 text-sm font-medium">
+                                <legend className="mb-1 text-sm font-medium">
                                     What are you checking bills for?
                                 </legend>
+                                <p className="mb-2 text-xs text-muted-foreground">
+                                    Pick all that apply. Each one gets its own
+                                    account, and you can switch between them or
+                                    add more later.
+                                </p>
                                 <div className="grid gap-2">
-                                    {accountTypes.map((option) => (
-                                        <label
-                                            key={option.value}
-                                            className={cn(
-                                                'flex min-h-14 cursor-pointer items-center gap-3 rounded-md border-2 bg-card px-3 has-[:focus-visible]:ring-[3px] has-[:focus-visible]:ring-ring/50',
-                                                type === option.value
-                                                    ? 'border-primary'
-                                                    : 'border-border',
-                                            )}
-                                        >
-                                            <input
-                                                type="radio"
-                                                name="account_type"
-                                                value={option.value}
-                                                checked={type === option.value}
-                                                onChange={() =>
-                                                    setType(option.value)
-                                                }
-                                                className="size-4 accent-primary"
-                                            />
-                                            <span className="flex flex-col">
-                                                <span className="text-sm font-semibold">
-                                                    {option.label}
+                                    {accountTypes.map((option) => {
+                                        const checked = types.includes(
+                                            option.value,
+                                        );
+
+                                        return (
+                                            <label
+                                                key={option.value}
+                                                className={cn(
+                                                    'flex min-h-14 cursor-pointer items-center gap-3 rounded-md border-2 bg-card px-3 has-[:focus-visible]:ring-[3px] has-[:focus-visible]:ring-ring/50',
+                                                    checked
+                                                        ? 'border-primary'
+                                                        : 'border-border',
+                                                )}
+                                            >
+                                                <input
+                                                    type="checkbox"
+                                                    name="account_types[]"
+                                                    value={option.value}
+                                                    checked={checked}
+                                                    onChange={() =>
+                                                        toggle(option.value)
+                                                    }
+                                                    className="size-4 accent-primary"
+                                                />
+                                                <span className="flex flex-col">
+                                                    <span className="text-sm font-semibold">
+                                                        {option.label}
+                                                    </span>
+                                                    <span className="text-xs text-muted-foreground">
+                                                        {option.hint}
+                                                    </span>
                                                 </span>
-                                                <span className="text-xs text-muted-foreground">
-                                                    {option.hint}
-                                                </span>
-                                            </span>
-                                        </label>
-                                    ))}
+                                            </label>
+                                        );
+                                    })}
                                 </div>
-                                <InputError message={errors.account_type} />
+                                <InputError
+                                    message={
+                                        errors.account_types ??
+                                        errors['account_types.0']
+                                    }
+                                />
                             </fieldset>
 
-                            {selected.organisationLabel && (
-                                <div className="grid gap-2">
-                                    <Label htmlFor="organisation_name">
-                                        {selected.organisationLabel}
-                                    </Label>
-                                    <Input
-                                        id="organisation_name"
-                                        type="text"
-                                        required
-                                        autoComplete="organization"
-                                        name="organisation_name"
-                                        value={organisationName}
-                                        onChange={(e) =>
-                                            setOrganisationName(e.target.value)
-                                        }
-                                    />
-                                    <InputError
-                                        message={errors.organisation_name}
-                                    />
-                                </div>
-                            )}
+                            {chosen
+                                .filter((option) => option.organisationLabel)
+                                .map((option) => (
+                                    <div
+                                        key={option.value}
+                                        className="grid gap-2"
+                                    >
+                                        <Label
+                                            htmlFor={`organisation_name_${option.value}`}
+                                        >
+                                            {option.organisationLabel}
+                                        </Label>
+                                        <Input
+                                            id={`organisation_name_${option.value}`}
+                                            type="text"
+                                            required
+                                            autoComplete="organization"
+                                            name={`organisation_names[${option.value}]`}
+                                            value={names[option.value] ?? ''}
+                                            onChange={(e) =>
+                                                setNames((current) => ({
+                                                    ...current,
+                                                    [option.value]:
+                                                        e.target.value,
+                                                }))
+                                            }
+                                        />
+                                        <InputError
+                                            message={
+                                                errors[
+                                                    `organisation_names.${option.value}`
+                                                ]
+                                            }
+                                        />
+                                    </div>
+                                ))}
 
                             {googleAvailable && (
                                 <>

@@ -244,7 +244,7 @@ class DisputeMailer
      */
     private function customerEmails(Dispute $dispute): array
     {
-        return $dispute->organisation->users()->whereNotNull('email_verified_at')->orderBy('id')->pluck('email')->all();
+        return $dispute->organisation->users()->whereNotNull('email_verified_at')->orderBy('users.id')->pluck('email')->all();
     }
 
     private function quoted(Dispute $dispute): string
@@ -260,7 +260,7 @@ class DisputeMailer
             return $organisation->name;
         }
 
-        return $dispute->bill?->user?->name ?? $organisation->users()->orderBy('id')->value('name') ?? $organisation->name;
+        return $dispute->bill?->user?->name ?? $organisation->users()->orderBy('users.id')->value('name') ?? $organisation->name;
     }
 
     private function accountNumber(Dispute $dispute): string

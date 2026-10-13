@@ -73,7 +73,7 @@ class DisputeApproval
             return null;
         }
 
-        $user = $bill->user ?? $organisation->users()->orderBy('id')->first();
+        $user = $bill->user ?? $organisation->users()->orderBy('users.id')->first();
 
         if ($user === null) {
             return null;

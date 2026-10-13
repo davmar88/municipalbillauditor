@@ -43,8 +43,13 @@ export function useCurrentUrl(): UseCurrentUrlReturn {
         const urlToCompare = currentUrl ?? currentUrlPath;
         const urlString = toUrl(urlToCheck);
 
+        // A parent matches at a path boundary: /settings/account is not a
+        // parent of /settings/accounts.
         const comparePath = (path: string): boolean =>
-            startsWith ? urlToCompare.startsWith(path) : path === urlToCompare;
+            startsWith
+                ? urlToCompare === path ||
+                  urlToCompare.startsWith(path.replace(/\/$/, '') + '/')
+                : path === urlToCompare;
 
         if (!urlString.startsWith('http')) {
             return comparePath(urlString);

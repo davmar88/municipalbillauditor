@@ -6,6 +6,7 @@
 export type OrganisationKind = 'household' | 'agent' | 'business';
 
 export type Organisation = {
+    id: number;
     kind: OrganisationKind;
     kindLabel: string;
     name: string;

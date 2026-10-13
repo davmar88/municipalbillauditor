@@ -29,15 +29,15 @@ type Props = {
 export default function Account({ account }: Props) {
     return (
         <>
-            <Head title="Account" />
+            <Head title="This account" />
 
             <h1 className="sr-only">Account settings</h1>
 
             <div className="space-y-6">
                 <Heading
                     variant="small"
-                    title="Account"
-                    description={account.kindLabel}
+                    title="This account"
+                    description={`${account.kindLabel}. You have your other accounts under Your accounts.`}
                 />
                 <Form
                     {...update.form()}
@@ -198,5 +198,5 @@ function Toggle({
 }
 
 Account.layout = {
-    breadcrumbs: [{ title: 'Account settings', href: edit() }],
+    breadcrumbs: [{ title: 'This account', href: edit() }],
 };

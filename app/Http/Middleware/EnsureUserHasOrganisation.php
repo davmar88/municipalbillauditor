@@ -9,8 +9,9 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Every customer works inside an organisation. Accounts created before that
- * (or by staff tools) get a household of their own on first visit.
+ * Every customer works inside an organisation. Without one (an account they
+ * worked in was removed, or staff tools made the user), they move to another
+ * of their accounts, or get a household of their own.
  */
 class EnsureUserHasOrganisation
 {
@@ -19,8 +20,8 @@ class EnsureUserHasOrganisation
         $user = $request->user();
 
         if ($user !== null && $user->organisation_id === null) {
-            $organisation = Organisation::create(['kind' => OrganisationKind::Household, 'name' => $user->name]);
-            $user->organisation()->associate($organisation)->save();
+            $user->switchTo($user->organisations()->first()
+                ?? Organisation::create(['kind' => OrganisationKind::Household, 'name' => $user->name]));
         }
 
         return $next($request);
