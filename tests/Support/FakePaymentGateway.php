@@ -23,6 +23,15 @@ class FakePaymentGateway implements PaymentGateway
     /** What a saved-card charge reports: success, failed... */
     public string $savedCardStatus = 'success';
 
+    /** @var list<string> References asked about. */
+    public array $verified = [];
+
+    /** What asking about a payment reports: success, abandoned... */
+    public string $verifyStatus = 'success';
+
+    /** The amount it reports, when not the payment's own. */
+    public ?int $verifyAmountInCents = null;
+
     public function checkout(Payment $payment, string $email, string $callbackUrl): string
     {
         $this->checkouts[] = ['payment' => $payment, 'email' => $email, 'callback' => $callbackUrl];
@@ -32,9 +41,10 @@ class FakePaymentGateway implements PaymentGateway
 
     public function verify(string $reference): ChargeResult
     {
+        $this->verified[] = $reference;
         $payment = Payment::query()->where('reference', $reference)->first();
 
-        return new ChargeResult($reference, 'success', $payment?->amountInCents() ?? 0, 'ZAR');
+        return new ChargeResult($reference, $this->verifyStatus, $this->verifyAmountInCents ?? $payment?->amountInCents() ?? 0, 'ZAR');
     }
 
     public function chargeSavedCard(Payment $payment, string $authorizationCode, string $email): ChargeResult

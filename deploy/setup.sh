@@ -208,8 +208,8 @@ App phase done. NOW, BY HAND, edit ${APP_DIR}/.env and fill in:
     ANTHROPIC_API_KEY=      (reads bills; without it every bill is typed in by hand)
     COMPANY_NAME=, INFORMATION_OFFICER=   (shown in the privacy notice, with CONTACT_EMAIL=${MAILBOX})
 
-and, if this version takes payments or reads e-mail, PAYSTACK_PUBLIC_KEY,
-PAYSTACK_SECRET_KEY and MAILGUN_WEBHOOK_SIGNING_KEY (see DEPLOY.md).
+For card payments, copy Cable Elite's Paystack keys across ("Card payments"
+in DEPLOY.md); for forwarded e-bills, MAILGUN_WEBHOOK_SIGNING_KEY.
 
 Then: ./deploy/setup.sh finish
 MSG

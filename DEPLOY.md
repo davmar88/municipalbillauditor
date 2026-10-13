@@ -188,21 +188,55 @@ Every phase can be run again safely. A failed nginx or PHP-FPM test puts the
 old file back, so Cable Elite's next reload never trips over a broken
 RevenueGuard file.
 
-## Card payments and forwarded e-bills (newer versions)
+## Card payments: Cable Elite's Paystack account
 
-Only once the deployed version has them:
+RevenueGuard takes card payments through the same Paystack account as Cable
+Elite. Every RevenueGuard payment stays in the main (Mzanzigo) account and
+settles to its bank account: RevenueGuard never sends Paystack a subaccount,
+a split, a transfer or a refund. In Paystack's dashboard its payments show
+**Site: revenueguard.co.za**, and their references start with `mba_`.
 
-- **Paystack:** set `PAYSTACK_PUBLIC_KEY` and `PAYSTACK_SECRET_KEY` in `.env`.
-  Set the webhook URL in the Paystack dashboard to
-  `https://revenueguard.co.za/webhooks/paystack`.
-- **Forwarded e-bills and municipal replies** arrive at
-  `…@bills.revenueguard.co.za`. Mail for that subdomain goes to an inbound
-  email service, not to Xneelo. For Mailgun:
-    1. Add `bills.revenueguard.co.za` as a receiving domain.
-    2. Add the MX records it gives you for `bills` in Xneelo's DNS. This
-       doesn't touch revenueguard.co.za's own mail.
-    3. Create a route that forwards to `https://revenueguard.co.za/inbound/email`.
-    4. Set `MAILGUN_WEBHOOK_SIGNING_KEY` in `.env`.
+Copy the keys from Cable Elite's `.env` on the server, so they never cross
+your screen:
+
+```bash
+cd /var/www/revenueguard
+for k in PAYSTACK_PUBLIC_KEY PAYSTACK_SECRET_KEY; do
+    sed -i "s|^$k=.*|$k=$(grep "^$k=" /var/www/crm/.env | cut -d= -f2-)|" .env
+done
+deploy/setup.sh permissions
+deploy/artisan config:cache
+```
+
+**Leave Paystack's webhook URL as it is.** An account has one, and Cable
+Elite's site uses it. Cable Elite ignores RevenueGuard's payments, and
+RevenueGuard finds out about them itself in three ways:
+
+- when the customer comes back from Paystack;
+- from Paystack's answer when it charges a saved card;
+- every five minutes, with `payments:reconcile`.
+
+**Lock the secret key to this server.** The same key can send money out of
+the account: Cable Elite pays suppliers with it, and OTP for transfers is
+off. Now that the server holds a second copy, turn on IP whitelisting:
+
+1. In Paystack, open Settings → API Keys & Webhooks and choose Add IP
+   address.
+2. Add 154.65.108.197. Both sites call Paystack from there.
+3. Test a Cable Elite checkout straight after. If it fails, remove the
+   address again.
+
+## Forwarded e-bills and municipal replies
+
+Customers forward e-bills, and municipalities reply to disputes, at
+`…@bills.revenueguard.co.za`. Mail for that subdomain goes to an inbound email
+service, not to Xneelo. For Mailgun:
+
+1. Add `bills.revenueguard.co.za` as a receiving domain.
+2. Add the MX records it gives you for `bills` in Xneelo's DNS. This doesn't
+   touch revenueguard.co.za's own mail.
+3. Create a route that forwards to `https://revenueguard.co.za/inbound/email`.
+4. Set `MAILGUN_WEBHOOK_SIGNING_KEY` in `.env`.
 
 After any change to `.env`:
 

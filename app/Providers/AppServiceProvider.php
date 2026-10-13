@@ -33,6 +33,7 @@ class AppServiceProvider extends ServiceProvider
             secretKey: (string) config('services.paystack.secret_key'),
             baseUrl: (string) config('services.paystack.base_url'),
             timeout: (int) config('services.paystack.timeout'),
+            site: (string) parse_url((string) config('app.url'), PHP_URL_HOST),
         ));
 
         // Bills are read by Claude when an API key is configured. Without

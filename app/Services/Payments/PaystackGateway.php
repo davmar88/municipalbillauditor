@@ -13,6 +13,9 @@ use Illuminate\Support\Facades\Log;
  * Paystack's transaction API: hosted checkout, verification, charging a
  * saved card, and webhook signatures (an HMAC-SHA512 of the raw body with
  * the secret key).
+ *
+ * Every payment stays in the account's main balance: no subaccount or split
+ * is ever sent, and nothing here can pay money out.
  */
 class PaystackGateway implements PaymentGateway
 {
@@ -20,6 +23,8 @@ class PaystackGateway implements PaymentGateway
         private readonly string $secretKey,
         private readonly string $baseUrl = 'https://api.paystack.co',
         private readonly int $timeout = 20,
+        /** This site's name on each payment in Paystack's dashboard. */
+        private readonly string $site = '',
     ) {}
 
     public function checkout(Payment $payment, string $email, string $callbackUrl): string
@@ -30,10 +35,7 @@ class PaystackGateway implements PaymentGateway
             'currency' => $payment->currency,
             'reference' => $payment->reference,
             'callback_url' => $callbackUrl,
-            'metadata' => [
-                'organisation_id' => $payment->organisation_id,
-                'payment_id' => $payment->id,
-            ],
+            'metadata' => $this->metadata($payment),
         ]);
 
         $url = $response->json('data.authorization_url');
@@ -60,6 +62,7 @@ class PaystackGateway implements PaymentGateway
             'amount' => $payment->amountInCents(),
             'currency' => $payment->currency,
             'reference' => $payment->reference,
+            'metadata' => $this->metadata($payment),
         ]);
 
         return ChargeResult::fromPaystack((array) $response->json('data'));
@@ -72,6 +75,20 @@ class PaystackGateway implements PaymentGateway
         }
 
         return hash_equals(hash_hmac('sha512', $payload, $this->secretKey), (string) $signature);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function metadata(Payment $payment): array
+    {
+        return [
+            'organisation_id' => $payment->organisation_id,
+            'payment_id' => $payment->id,
+            // Paystack's dashboard shows custom fields on the payment, which
+            // tells this site's payments apart in an account shared with another.
+            ...($this->site !== '' ? ['custom_fields' => [['display_name' => 'Site', 'variable_name' => 'site', 'value' => $this->site]]] : []),
+        ];
     }
 
     /**

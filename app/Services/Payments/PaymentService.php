@@ -14,16 +14,20 @@ use App\Models\User;
 use App\Notifications\CustomerNotice;
 use App\Services\Billing\Wallet;
 use App\Services\CustomerMail;
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 /**
  * Card payments: top-ups and monthly fees.
  *
- * The customer pays on Paystack's checkout page. Nothing is credited when
- * they come back: only Paystack's signed webhook credits a top-up or marks
- * an invoice paid, after checking the amount and currency against our own
- * payment row, and only once per payment.
+ * The customer pays on Paystack's checkout page. A payment is applied once,
+ * after its amount and currency are checked against our own payment row,
+ * by whichever hears from Paystack first: the customer coming back, the
+ * answer to a saved-card charge, reconcile() asking about payments still
+ * open, or Paystack's signed webhook. The webhook can't be relied on alone:
+ * a Paystack account has one, and an account shared with another site
+ * sends it there.
  */
 class PaymentService
 {
@@ -76,7 +80,8 @@ class PaymentService
     /**
      * Charge a monthly fee to the organisation's saved card. When there is
      * no card, or the charge fails, the customer gets a link to pay instead.
-     * A successful charge is confirmed by the webhook.
+     * A successful charge is applied straight away; one still processing is
+     * picked up by reconcile().
      */
     public function chargeSavedCard(FeeInvoice $invoice): void
     {
@@ -106,8 +111,13 @@ class PaymentService
             $message = $e->getMessage();
         }
 
-        if ($result !== null && in_array($result->status, ['success', 'pending', 'processing', 'ongoing', 'queued'], true)) {
-            // Paystack's webhook confirms it.
+        if ($result?->succeeded()) {
+            $this->confirm($result);
+
+            return;
+        }
+
+        if ($result !== null && in_array($result->status, ['pending', 'processing', 'ongoing', 'queued'], true)) {
             return;
         }
 
@@ -116,8 +126,62 @@ class PaymentService
     }
 
     /**
-     * A charge.success webhook: credit the top-up or mark the invoice paid,
-     * once. Returns false when the payment isn't ours or doesn't match.
+     * Asks Paystack about card payments still open, and applies the ones
+     * that went through: a top-up whose customer never came back, or a
+     * saved-card charge that was still processing. New payments are checked
+     * on every run, ones older than two hours on the first run of each hour,
+     * and after two days an unpaid one is closed. Runs every five minutes.
+     *
+     * @return array{applied: int, closed: int}
+     */
+    public function reconcile(): array
+    {
+        $now = CarbonImmutable::now();
+        $applied = 0;
+        $closed = 0;
+
+        $open = Payment::query()
+            ->where('status', PaymentStatus::Pending)
+            ->where('created_at', '<=', $now->subMinutes(2))
+            ->orderBy('id')
+            ->get();
+
+        foreach ($open as $payment) {
+            $expired = $payment->created_at->lte($now->subDays(2));
+
+            if (! $expired && $payment->created_at->lte($now->subHours(2)) && $now->minute >= 5) {
+                continue;
+            }
+
+            try {
+                $result = $this->gateway->verify($payment->reference);
+            } catch (PaymentFailed $e) {
+                if ($expired) {
+                    Log::warning('Closing a payment Paystack could not tell us about', ['reference' => $payment->reference, 'error' => $e->getMessage()]);
+                    $payment->update(['status' => PaymentStatus::Failed, 'gateway_message' => $e->getMessage()]);
+                    $closed++;
+                }
+
+                continue;
+            }
+
+            if ($result->succeeded() && $this->confirm($result)) {
+                $applied++;
+            } elseif ($expired) {
+                // Unpaid, or paid with an amount confirm() refused and logged.
+                $payment->update(['status' => PaymentStatus::Failed, 'gateway_message' => $result->succeeded()
+                    ? 'Paid, but not the amount or currency we asked for: see the log.'
+                    : ($result->message ?? 'No payment within two days.')]);
+                $closed++;
+            }
+        }
+
+        return ['applied' => $applied, 'closed' => $closed];
+    }
+
+    /**
+     * Paystack says a charge succeeded: credit the top-up or mark the invoice
+     * paid, once. Returns false when the payment isn't ours or doesn't match.
      */
     public function confirm(ChargeResult $result): bool
     {

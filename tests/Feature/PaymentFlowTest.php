@@ -174,17 +174,106 @@ class PaymentFlowTest extends TestCase
         $this->assertSame('4081', $organisation->card_last4);
         $this->assertNotSame('AUTH_agent', $organisation->getRawOriginal('card_authorization'), 'The code is stored encrypted.');
 
-        // Next month the saved card is charged, and the webhook confirms it.
+        // Next month the saved card is charged, and Paystack's answer pays the invoice.
         CarbonImmutable::setTestNow('2026-12-01 06:00:00');
         $this->artisan('fees:invoice')->assertSuccessful();
 
         $december = FeeInvoice::where('organisation_id', $agent->organisation_id)->whereDate('period_month', '2026-12-01')->sole();
         $this->assertSame('AUTH_agent', $this->gateway->savedCardCharges[0]['code']);
         $this->assertSame('accounts@agent.example', $this->gateway->savedCardCharges[0]['email']);
-        $this->assertSame(FeeStatus::Issued, $december->status);
+        $this->assertSame(FeeStatus::Paid, $december->status);
 
-        $this->webhook('charge.success', $this->success($this->gateway->savedCardCharges[0]['payment']))->assertOk();
+        // The webhook for the same charge changes nothing.
+        $charge = $this->gateway->savedCardCharges[0]['payment'];
+        $this->webhook('charge.success', $this->success($charge))->assertOk();
         $this->assertSame(FeeStatus::Paid, $december->refresh()->status);
+        $this->assertSame(PaymentStatus::Success, $charge->refresh()->status);
+    }
+
+    public function test_a_saved_card_charge_still_processing_is_settled_by_asking_paystack_later(): void
+    {
+        CarbonImmutable::setTestNow('2026-11-01 06:00:00');
+        $agent = User::factory()->forKind(OrganisationKind::Agent)->create();
+        $agent->organisation->forceFill(['card_authorization' => 'AUTH_old', 'card_last4' => '1111', 'card_email' => 'a@agent.example'])->save();
+        $this->gateway->savedCardStatus = 'pending';
+
+        $this->artisan('fees:invoice')->assertSuccessful();
+
+        $this->assertSame(PaymentStatus::Pending, Payment::sole()->status);
+        $this->assertSame(FeeStatus::Issued, FeeInvoice::sole()->status);
+        Notification::assertNotSentTo($agent, CustomerNotice::class);
+
+        CarbonImmutable::setTestNow('2026-11-01 06:05:00');
+        $this->artisan('payments:reconcile')->expectsOutput('1 applied, 0 closed.')->assertSuccessful();
+
+        $this->assertSame(FeeStatus::Paid, FeeInvoice::sole()->status);
+    }
+
+    public function test_a_paid_top_up_is_credited_without_the_webhook_or_the_customer_coming_back(): void
+    {
+        CarbonImmutable::setTestNow('2026-11-02 10:00:00');
+        $user = User::factory()->forKind(OrganisationKind::Household)->create();
+        $payment = Payment::create(['organisation_id' => $user->organisation_id, 'user_id' => $user->id, 'purpose' => 'top_up', 'amount' => '100.00', 'status' => 'pending']);
+
+        // Too new to ask about: the customer is still on Paystack's page.
+        CarbonImmutable::setTestNow('2026-11-02 10:01:00');
+        $this->artisan('payments:reconcile')->expectsOutput('0 applied, 0 closed.');
+        $this->assertSame([], $this->gateway->verified);
+
+        CarbonImmutable::setTestNow('2026-11-02 10:05:00');
+        $this->artisan('payments:reconcile')->expectsOutput('1 applied, 0 closed.');
+        $this->artisan('payments:reconcile')->expectsOutput('0 applied, 0 closed.');
+
+        $this->assertSame(PaymentStatus::Success, $payment->refresh()->status);
+        $this->assertSame('100.00', app(Wallet::class)->balance($user->organisation));
+        $this->assertSame([$payment->reference], $this->gateway->verified);
+    }
+
+    public function test_an_unpaid_checkout_is_asked_about_less_often_then_closed_after_two_days(): void
+    {
+        CarbonImmutable::setTestNow('2026-11-02 10:00:00');
+        $user = User::factory()->forKind(OrganisationKind::Household)->create();
+        $payment = Payment::create(['organisation_id' => $user->organisation_id, 'user_id' => $user->id, 'purpose' => 'top_up', 'amount' => '100.00', 'status' => 'pending']);
+        $this->gateway->verifyStatus = 'abandoned';
+
+        $runAt = function (string $time): void {
+            CarbonImmutable::setTestNow($time);
+            $this->artisan('payments:reconcile')->assertSuccessful();
+        };
+
+        $runAt('2026-11-02 10:30:00');    // under two hours old: every run
+        $runAt('2026-11-02 13:20:00');    // older: only the first run of the hour
+        $this->assertCount(1, $this->gateway->verified);
+
+        $runAt('2026-11-02 14:00:00');
+        $this->assertCount(2, $this->gateway->verified);
+        $this->assertSame(PaymentStatus::Pending, $payment->refresh()->status);
+
+        CarbonImmutable::setTestNow('2026-11-04 10:20:00');
+        $this->artisan('payments:reconcile')->expectsOutput('0 applied, 1 closed.');
+
+        $this->assertSame(PaymentStatus::Failed, $payment->refresh()->status);
+        $this->assertSame('0.00', app(Wallet::class)->balance($user->organisation));
+    }
+
+    public function test_a_payment_paid_with_the_wrong_amount_is_never_credited_and_is_closed_after_two_days(): void
+    {
+        CarbonImmutable::setTestNow('2026-11-02 10:00:00');
+        $user = User::factory()->forKind(OrganisationKind::Household)->create();
+        $payment = Payment::create(['organisation_id' => $user->organisation_id, 'user_id' => $user->id, 'purpose' => 'top_up', 'amount' => '100.00', 'status' => 'pending']);
+        $this->gateway->verifyAmountInCents = 100;
+
+        CarbonImmutable::setTestNow('2026-11-02 10:05:00');
+        $this->artisan('payments:reconcile')->expectsOutput('0 applied, 0 closed.');
+        $this->assertSame(PaymentStatus::Pending, $payment->refresh()->status);
+
+        CarbonImmutable::setTestNow('2026-11-04 10:05:00');
+        $this->artisan('payments:reconcile')->expectsOutput('0 applied, 1 closed.');
+        $this->artisan('payments:reconcile')->expectsOutput('0 applied, 0 closed.');
+
+        $this->assertSame(PaymentStatus::Failed, $payment->refresh()->status);
+        $this->assertStringContainsString('not the amount', $payment->gateway_message);
+        $this->assertSame('0.00', app(Wallet::class)->balance($user->organisation));
     }
 
     public function test_a_declined_saved_card_gets_a_link_to_pay(): void

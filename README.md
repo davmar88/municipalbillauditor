@@ -95,7 +95,18 @@ Replies from municipalities are read the same way (`ANTHROPIC_REPLY_MODEL`, defa
 
 ### Payments (Paystack)
 
-Set `PAYSTACK_PUBLIC_KEY` and `PAYSTACK_SECRET_KEY` (test keys put Paystack in test mode) and point Paystack's webhook at `POST /webhooks/paystack`. Top-ups and monthly fees go through Paystack's checkout; the signed webhook, or the customer's return to `/credit/callback`, credits the payment once. The first monthly fee paid by card saves the card, and `fees:invoice` charges it on the 1st of each month. Staff can record EFT top-ups from the work queue.
+Set `PAYSTACK_PUBLIC_KEY` and `PAYSTACK_SECRET_KEY` (test keys put Paystack in test mode). Top-ups and monthly fees go through Paystack's checkout. The first monthly fee paid by card saves the card, and `fees:invoice` charges it on the 1st of each month. Staff can record EFT top-ups from the work queue.
+
+A payment is applied once, by whichever of these hears from Paystack first:
+
+- the customer's return to `/credit/callback`
+- Paystack's answer to a saved-card charge
+- `payments:reconcile`, which asks about open payments every five minutes
+- the signed webhook at `POST /webhooks/paystack`
+
+A Paystack account has one webhook. If the account is the app's alone, point the webhook here. If it's shared with another site, leave the webhook where it is.
+
+Payments stay in the account's main balance: nothing is split off to a subaccount or paid out.
 
 ### Email
 

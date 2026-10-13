@@ -87,6 +87,27 @@ class PaystackGatewayTest extends TestCase
             && $request['reference'] === 'mba_test_1');
     }
 
+    public function test_payments_stay_in_the_main_account_and_name_the_site(): void
+    {
+        Http::fake([
+            'api.paystack.co/transaction/initialize' => Http::response(['status' => true, 'data' => ['authorization_url' => 'https://checkout.paystack.com/abc']]),
+            'api.paystack.co/transaction/charge_authorization' => Http::response(['status' => true, 'data' => ['reference' => 'mba_test_1', 'status' => 'success', 'amount' => 25000, 'currency' => 'ZAR']]),
+        ]);
+        $gateway = new PaystackGateway('sk_test_secret', site: 'revenueguard.co.za');
+
+        $gateway->checkout($this->payment(), 'thandi@example.com', 'https://app.test/cb');
+        $gateway->chargeSavedCard($this->payment(), 'AUTH_x1', 'accounts@agent.example');
+
+        $sent = Http::recorded();
+        $this->assertCount(2, $sent);
+
+        foreach ($sent as [$request]) {
+            // Nothing that would send part of a payment to a subaccount.
+            $this->assertSame([], array_intersect_key($request->data(), array_flip(['subaccount', 'split_code', 'split', 'bearer', 'transaction_charge'])));
+            $this->assertSame([['display_name' => 'Site', 'variable_name' => 'site', 'value' => 'revenueguard.co.za']], $request['metadata']['custom_fields']);
+        }
+    }
+
     public function test_a_refused_request_is_a_safe_failure(): void
     {
         Http::fake(['api.paystack.co/*' => Http::response(['status' => false, 'message' => 'Invalid key'], 401)]);

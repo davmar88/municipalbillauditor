@@ -17,13 +17,15 @@ interface PaymentGateway
     public function checkout(Payment $payment, string $email, string $callbackUrl): string;
 
     /**
-     * Ask the processor how a payment went. Used to show the customer the
-     * result when they come back; crediting waits for the webhook.
+     * Ask the processor how a payment went: when the customer comes back,
+     * and for payments still open.
+     *
+     * @throws PaymentFailed
      */
     public function verify(string $reference): ChargeResult;
 
     /**
-     * Charge a saved card. The webhook confirms a successful charge.
+     * Charge a saved card. The answer says whether it went through.
      *
      * @throws PaymentFailed
      */
