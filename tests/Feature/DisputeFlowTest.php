@@ -4,8 +4,6 @@ namespace Tests\Feature;
 
 use App\Audit\Enums\Service;
 use App\Enums\DisputeMode;
-use App\Enums\FeeKind;
-use App\Enums\FeeStatus;
 use App\Enums\FindingState;
 use App\Enums\OrganisationKind;
 use App\Models\Bill;
@@ -13,7 +11,9 @@ use App\Models\Dispute;
 use App\Models\Outage;
 use App\Models\User;
 use App\Services\AuditService;
+use App\Services\Billing\Wallet;
 use App\Services\BillIntake;
+use App\Services\DisputeService;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -41,68 +41,36 @@ class DisputeFlowTest extends TestCase
         return app(BillIntake::class)->createSample($user->organisation, $user);
     }
 
-    public function test_a_household_sends_its_own_dispute_for_free(): void
+    public function test_a_household_approves_a_dispute_and_pays_from_credit(): void
     {
-        $user = User::factory()->forKind(OrganisationKind::Household)->create();
+        $user = User::factory()->forKind(OrganisationKind::Household)->withCredit()->create();
+        $staff = User::factory()->staff()->create();
         $bill = $this->flaggedBill($user);
 
         $this->actingAs($user)->get(route('disputes.create', $bill))->assertInertia(fn (Assert $page) => $page
             ->component('disputes/create')
             ->where('dispute.disputedTotal', 'R924.00')
-            ->where('modes.0.value', 'self')
-            ->where('modes.1.price', 'R299.00')
+            ->where('quote.price', 'R49.00')
+            ->where('quote.affordable', true)
             ->has('dispute.findings', 1),
         );
 
-        $response = $this->post(route('disputes.store', $bill), [
-            'mode' => 'self',
-            'letter_body' => 'My edited letter.',
-        ]);
+        $response = $this->post(route('disputes.store', $bill), ['letter_body' => 'My edited letter.', 'mandate' => '1']);
 
         $dispute = Dispute::sole();
         $response->assertRedirect(route('disputes.show', $dispute));
-        $this->assertSame(DisputeMode::Self, $dispute->mode);
-        $this->assertTrue($dispute->lodged_on->isToday());
+        $this->assertSame(DisputeMode::Managed, $dispute->mode);
         $this->assertSame('My edited letter.', $dispute->letter_body);
-        $this->assertSame(0, $dispute->feeInvoices()->count());
-
-        $this->get(route('disputes.show', $dispute))->assertInertia(fn (Assert $page) => $page
-            ->component('disputes/show')
-            ->where('dispute.stage', 'awaiting_reply')
-            ->where('dispute.status.headline', 'Waiting for the municipality')
-            ->where('dispute.daysLeft', 21),
-        );
+        $this->assertSame('51.00', app(Wallet::class)->balance($user->organisation));
 
         // The bill is locked once its dispute is sent.
         $this->post(route('bills.recheck', $bill))->assertForbidden();
         $this->post(route('findings.dismiss', $bill->findings->first()))->assertForbidden();
-    }
-
-    public function test_a_managed_household_dispute_is_invoiced_and_lodged_by_our_team(): void
-    {
-        $user = User::factory()->forKind(OrganisationKind::Household)->create();
-        $staff = User::factory()->staff()->create();
-        $bill = $this->flaggedBill($user);
-
-        $this->actingAs($user)->post(route('disputes.store', $bill), ['mode' => 'managed', 'letter_body' => 'Letter']);
-
-        $dispute = Dispute::sole();
-        $this->assertNull($dispute->lodged_on);
-        $invoice = $dispute->feeInvoices()->sole();
-        $this->assertSame(FeeKind::ManagedDispute, $invoice->kind);
-        $this->assertSame(FeeStatus::Due, $invoice->status);
-        $this->assertSame('299.00', $invoice->amount);
 
         // Customers can't reach the staff queue.
         $this->get(route('staff.index'))->assertForbidden();
 
-        $this->actingAs($staff)->get(route('staff.index'))->assertInertia(fn (Assert $page) => $page
-            ->component('staff/index')
-            ->has('toLodge', 1)
-            ->where('toLodge.0.id', $dispute->id),
-        );
-
-        $this->post(route('staff.disputes.lodge', $dispute), [
+        $this->actingAs($staff)->post(route('staff.disputes.lodge', $dispute), [
             'lodged_on' => now()->toDateString(),
             'reference' => 'JHB-1001',
         ])->assertRedirect();
@@ -112,12 +80,28 @@ class DisputeFlowTest extends TestCase
         $this->assertSame('JHB-1001', $dispute->reference);
     }
 
-    public function test_customers_record_what_happened(): void
+    public function test_a_dispute_needs_enough_credit(): void
     {
         $user = User::factory()->forKind(OrganisationKind::Household)->create();
         $bill = $this->flaggedBill($user);
-        $this->actingAs($user)->post(route('disputes.store', $bill), ['mode' => 'self', 'letter_body' => 'Letter']);
+
+        $this->actingAs($user)->get(route('disputes.create', $bill))->assertInertia(fn (Assert $page) => $page
+            ->where('quote.affordable', false)
+            ->where('quote.shortfall', 'R49.00'),
+        );
+
+        $this->post(route('disputes.store', $bill), ['letter_body' => 'Letter', 'mandate' => '1'])->assertSessionHasErrors('credit');
+        $this->assertNull(Dispute::sole()->submitted_on);
+        $this->assertSame(0, $user->organisation->creditTransactions()->count());
+    }
+
+    public function test_customers_record_what_happened(): void
+    {
+        $user = User::factory()->forKind(OrganisationKind::Household)->withCredit()->create();
+        $bill = $this->flaggedBill($user);
+        $this->actingAs($user)->post(route('disputes.store', $bill), ['letter_body' => 'Letter', 'mandate' => '1']);
         $dispute = Dispute::sole();
+        app(DisputeService::class)->lodge($dispute, CarbonImmutable::today(), null, null);
 
         $this->post(route('disputes.events.store', $dispute), ['kind' => 'acknowledged', 'happened_on' => now()->toDateString()])
             ->assertSessionHasErrors('reference');
@@ -130,44 +114,37 @@ class DisputeFlowTest extends TestCase
         $this->assertSame('resolved', $dispute->refresh()->stage()->value);
         $this->assertSame('924.00', $dispute->credit_amount);
 
-        // Staff only record events on disputes our team manages.
-        $this->actingAs(User::factory()->staff()->create())
-            ->post(route('staff.disputes.events.store', $dispute), ['kind' => 'note', 'happened_on' => now()->toDateString()])
-            ->assertForbidden();
     }
 
-    public function test_a_self_sent_dispute_with_no_reply_gets_a_councillor_letter(): void
+    public function test_a_dispute_with_no_reply_gets_a_councillor_letter(): void
     {
-        $user = User::factory()->forKind(OrganisationKind::Household)->create();
+        $user = User::factory()->forKind(OrganisationKind::Household)->withCredit()->create();
         $bill = $this->flaggedBill($user);
-        $this->actingAs($user)->post(route('disputes.store', $bill), ['mode' => 'self', 'letter_body' => 'Letter']);
+        $this->actingAs($user)->post(route('disputes.store', $bill), ['letter_body' => 'Letter', 'mandate' => '1']);
         $dispute = Dispute::sole();
+        app(DisputeService::class)->lodge($dispute, CarbonImmutable::today(), null, null);
 
         CarbonImmutable::setTestNow(now()->addDays(25));
 
         $this->get(route('disputes.show', $dispute))->assertInertia(fn (Assert $page) => $page
             ->where('dispute.stage', 'reply_overdue')
-            ->where('councillorLetter.subject', fn (string $subject) => str_starts_with($subject, 'Unresolved billing dispute'))
-            ->where('dispute.actions', fn ($actions) => collect($actions)->contains('kind', 'escalated_councillor')),
+            ->where('councillorLetter.subject', fn (string $subject) => str_starts_with($subject, 'Unresolved billing dispute')),
         );
     }
 
-    public function test_businesses_can_only_run_success_fee_claims(): void
+    public function test_business_disputes_are_included_in_the_monthly_plan(): void
     {
         $user = User::factory()->forKind(OrganisationKind::Business)->create();
         $bill = $this->flaggedBill($user);
 
         $this->actingAs($user)->get(route('disputes.create', $bill))->assertInertia(fn (Assert $page) => $page
-            ->has('modes', 1)
-            ->where('modes.0.value', 'success_fee'),
+            ->where('quote.price', 'Included')
+            ->where('quote.coveredByPlan', true),
         );
 
-        $this->post(route('disputes.store', $bill), ['mode' => 'self', 'letter_body' => 'Letter'])
-            ->assertSessionHasErrors('mode');
-
-        $this->post(route('disputes.store', $bill), ['mode' => 'success_fee', 'letter_body' => 'Letter'])
-            ->assertSessionHasNoErrors();
-        $this->assertSame(DisputeMode::SuccessFee, Dispute::sole()->mode);
+        $this->post(route('disputes.store', $bill), ['letter_body' => 'Letter', 'mandate' => '1'])->assertSessionHasNoErrors();
+        $this->assertNotNull(Dispute::sole()->submitted_on);
+        $this->assertSame('0.00', app(Wallet::class)->balance($user->organisation));
     }
 
     public function test_questions_are_answered_before_they_go_in_a_dispute(): void
@@ -178,7 +155,7 @@ class DisputeFlowTest extends TestCase
         $month = $bill->period_start;
 
         Outage::create([
-            'metro_id' => $bill->property->metro_id,
+            'municipality_id' => $bill->property->municipality_id,
             'suburb' => 'melville',
             'service' => Service::Water,
             'starts_on' => $month->addDays(11),

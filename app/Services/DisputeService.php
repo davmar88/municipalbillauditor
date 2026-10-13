@@ -3,8 +3,6 @@
 namespace App\Services;
 
 use App\Audit\Deadlines\CaseClock;
-use App\Audit\Enums\CheckType;
-use App\Audit\Fees\Pricing;
 use App\Audit\Letters\Letter;
 use App\Audit\Letters\LetterInput;
 use App\Audit\Letters\LetterItem;
@@ -12,32 +10,34 @@ use App\Audit\Letters\LetterWriter;
 use App\Audit\Money;
 use App\Enums\DisputeEventKind;
 use App\Enums\DisputeMode;
-use App\Enums\FeeKind;
-use App\Enums\FeeStatus;
+use App\Enums\Job;
 use App\Enums\OrganisationKind;
 use App\Models\Bill;
 use App\Models\Dispute;
 use App\Models\DisputeEvent;
-use App\Models\FeeInvoice;
 use App\Models\Finding;
 use App\Models\User;
+use App\Services\Billing\InsufficientCredit;
+use App\Services\Billing\Wallet;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 /**
- * Drafting, lodging and tracking disputes, and the fees that follow them.
+ * Drafting, lodging and tracking disputes.
  */
 class DisputeService
 {
+    public function __construct(private readonly Wallet $wallet) {}
+
     /**
      * The draft dispute for a bill: its letter is rebuilt from the bill's
      * current findings and answers each time, until the customer submits it.
      */
     public function draft(Bill $bill, User $user): Dispute
     {
-        $bill->loadMissing(['property.metro', 'findings', 'organisation']);
+        $bill->loadMissing(['property.municipality', 'findings', 'organisation']);
         $findings = $bill->findings->filter(fn (Finding $f) => $f->disputable())->values();
 
         if ($findings->isEmpty()) {
@@ -47,7 +47,7 @@ class DisputeService
         $dispute = $bill->disputes()->whereNull('submitted_on')->latest('id')->first() ?? new Dispute([
             'bill_id' => $bill->id,
             'property_id' => $bill->property_id,
-            'mode' => $this->defaultMode($bill->organisation->kind),
+            'mode' => DisputeMode::Managed,
         ]);
 
         $letter = $this->letterFor($bill, $findings, $user);
@@ -58,9 +58,8 @@ class DisputeService
             'disputed_total' => (string) $letter->disputedTotal,
             'undisputed_amount' => $letter->undisputedAmount !== null ? (string) $letter->undisputedAmount : null,
             'dispute_deadline' => $bill->bill_date !== null
-                ? CaseClock::disputeDeadline($bill->bill_date, $bill->property->metro->rules())
+                ? CaseClock::disputeDeadline($bill->bill_date, $bill->property->rules())
                 : null,
-            'back_refund_claimed' => $this->backRefundClaimed($findings, $letter),
         ])->save();
 
         $dispute->findings()->sync($findings->pluck('id'));
@@ -69,61 +68,38 @@ class DisputeService
     }
 
     /**
-     * The customer approves the letter. Self-sent disputes are lodged at once;
-     * managed ones go to our team to lodge.
+     * The customer approves the letter, and pays for the dispute: R49 from a
+     * household's credit, included in a monthly plan. DisputeApproval then
+     * emails it.
      */
-    public function submit(Dispute $dispute, DisputeMode $mode, User $user, ?string $letterBody = null): Dispute
+    public function submit(Dispute $dispute, User $user, ?string $letterBody = null): Dispute
     {
         if ($dispute->submitted_on !== null) {
             throw ValidationException::withMessages(['dispute' => 'This dispute has already been sent.']);
         }
 
-        $kind = $dispute->organisation->kind;
-        $allowed = match ($kind) {
-            OrganisationKind::Household => [DisputeMode::Self, DisputeMode::Managed],
-            OrganisationKind::Agent => [DisputeMode::Self, DisputeMode::Managed],
-            OrganisationKind::Business => [DisputeMode::SuccessFee],
-        };
-
-        if (! in_array($mode, $allowed, true)) {
-            throw ValidationException::withMessages(['mode' => 'That way of sending isn\'t available on this account.']);
-        }
-
         $today = CarbonImmutable::today();
 
-        DB::transaction(function () use ($dispute, $mode, $user, $letterBody, $today, $kind) {
-            $dispute->fill([
-                'mode' => $mode,
-                'letter_body' => filled($letterBody) ? $letterBody : $dispute->letter_body,
-                'submitted_on' => $today,
-            ])->save();
+        try {
+            DB::transaction(function () use ($dispute, $user, $letterBody, $today) {
+                $this->wallet->charge($dispute->organisation, Job::Dispute, $dispute, $user);
 
-            if ($mode === DisputeMode::Self) {
-                $this->lodge($dispute, $today, null, $user, 'Sent by you');
+                $dispute->fill([
+                    'mode' => DisputeMode::Managed,
+                    'letter_body' => filled($letterBody) ? $letterBody : $dispute->letter_body,
+                    'submitted_on' => $today,
+                ])->save();
 
-                return;
-            }
-
-            if ($mode === DisputeMode::Managed && $kind === OrganisationKind::Household) {
-                $price = (string) config('auditor.prices.household_dispute');
-
-                FeeInvoice::create([
-                    'organisation_id' => $dispute->organisation_id,
-                    'dispute_id' => $dispute->id,
-                    'kind' => FeeKind::ManagedDispute,
-                    'description' => 'Managed dispute for the '.$dispute->bill->monthLabel().' bill',
-                    'amount' => (string) Money::money($price),
-                    'status' => FeeStatus::Due,
+                $dispute->events()->create([
+                    'user_id' => $user->id,
+                    'kind' => DisputeEventKind::Note,
+                    'happened_on' => $today,
+                    'note' => "Approved by {$user->name}.",
                 ]);
-            }
-
-            $dispute->events()->create([
-                'user_id' => $user->id,
-                'kind' => DisputeEventKind::Note,
-                'happened_on' => $today,
-                'note' => 'Handed to our team to lodge.',
-            ]);
-        });
+            });
+        } catch (InsufficientCredit $e) {
+            throw ValidationException::withMessages(['credit' => $e->getMessage()]);
+        }
 
         return $dispute->refresh();
     }
@@ -164,7 +140,18 @@ class DisputeService
                     'acknowledged_on' => $on,
                     'reference' => $details['reference'] ?? $dispute->reference,
                 ]),
-                DisputeEventKind::ReplyReceived => $dispute->reply_received_on = $on,
+                // An answer either way: the municipality has dealt with it.
+                DisputeEventKind::ReplyReceived, DisputeEventKind::Upheld, DisputeEventKind::Rejected => $dispute->reply_received_on ??= $on,
+                // A request for information is a sign of life: no follow-up
+                // needed, and no escalation while the customer owes an answer.
+                DisputeEventKind::InfoRequested => $dispute->fill([
+                    'acknowledged_on' => $dispute->acknowledged_on ?? $on,
+                    'info_requested_on' => $on,
+                    'info_reminded_on' => null,
+                    'info_answered_on' => null,
+                ]),
+                DisputeEventKind::FollowedUp => $dispute->followed_up_on = $on,
+                DisputeEventKind::EscalatedManager => $dispute->escalated_manager_on = $on,
                 DisputeEventKind::EscalatedCouncillor => $dispute->escalated_councillor_on = $on,
                 DisputeEventKind::EscalatedPublicProtector => $dispute->escalated_public_protector_on = $on,
                 DisputeEventKind::TariffFixed => $dispute->fill([
@@ -189,12 +176,29 @@ class DisputeService
                 'note' => $details['note'] ?? null,
             ]);
 
-            if ($dispute->mode === DisputeMode::SuccessFee) {
-                $this->invoiceSuccessFee($dispute, $kind, $amount, $details['period_month'] ?? $on);
+            // A dispute closed before it ever reached the municipality is
+            // given back.
+            if ($kind === DisputeEventKind::Closed && $dispute->lodged_on === null) {
+                $this->wallet->refund($dispute->organisation, Job::Dispute, $dispute, 'Dispute refunded: closed before it was sent');
             }
 
             return $event;
         });
+    }
+
+    /**
+     * The customer has sent the municipality what it asked for. The
+     * escalation clock starts again from today.
+     */
+    public function informationSent(Dispute $dispute, ?User $user, string $note): void
+    {
+        if (! $dispute->waitingOnCustomer()) {
+            return;
+        }
+
+        $today = CarbonImmutable::today();
+        $dispute->update(['info_answered_on' => $today]);
+        $this->record($dispute, DisputeEventKind::Note, $today, ['note' => $note], $user);
     }
 
     public function councillorLetter(Dispute $dispute, User $user): ?Letter
@@ -204,28 +208,19 @@ class DisputeService
         }
 
         $property = $dispute->property;
-        $metro = $property->metro;
+        $municipality = $property->municipality;
 
         return LetterWriter::councillor(
-            metroName: $metro->name,
+            municipalityName: $municipality?->name ?? 'the municipality',
             senderName: $this->senderName($dispute->organisation->kind, $user, $dispute->organisation->name),
             accountNumber: $dispute->bill->account_number ?? $property->account_number ?? '[account number]',
             propertyAddress: (string) $property->address,
             lodgedOn: $dispute->lodged_on,
-            replyDueOn: CaseClock::replyDue($dispute->lodged_on, $metro->rules()),
+            replyDueOn: CaseClock::replyDue($dispute->lodged_on, $property->rules()),
             reference: (string) $dispute->reference,
             disputedTotal: Money::of($dispute->disputed_total),
             letterDate: CarbonImmutable::today(),
         );
-    }
-
-    public function defaultMode(OrganisationKind $kind): DisputeMode
-    {
-        return match ($kind) {
-            OrganisationKind::Household => DisputeMode::Self,
-            OrganisationKind::Agent => DisputeMode::Managed,
-            OrganisationKind::Business => DisputeMode::SuccessFee,
-        };
     }
 
     /**
@@ -234,10 +229,10 @@ class DisputeService
     private function letterFor(Bill $bill, Collection $findings, User $user): Letter
     {
         $property = $bill->property;
-        $metro = $property->metro;
+        $municipality = $property->municipality;
 
         return LetterWriter::dispute(new LetterInput(
-            addressee: $metro->billing_addressee,
+            addressee: $municipality?->billing_addressee ?? 'Account queries',
             senderName: $this->senderName($bill->organisation->kind, $user, $bill->organisation->name),
             accountNumber: $bill->account_number ?? $property->account_number ?? '[account number]',
             propertyAddress: (string) $property->address,
@@ -254,75 +249,12 @@ class DisputeService
             letterDate: CarbonImmutable::today(),
             propertyType: $property->property_type,
             hasMeterPhoto: $bill->meter_photo_path !== null,
-            extraParagraph: (string) $metro->letter_paragraph,
+            extraParagraph: (string) $municipality?->letter_paragraph,
         ));
     }
 
     private function senderName(OrganisationKind $kind, User $user, string $organisationName): string
     {
         return $kind === OrganisationKind::Household ? $user->name : $organisationName;
-    }
-
-    /**
-     * What a business claims back: the tariff check's estimate of past
-     * overcharges where there is one, otherwise the amount disputed.
-     *
-     * @param  Collection<int, Finding>  $findings
-     */
-    private function backRefundClaimed(Collection $findings, Letter $letter): ?string
-    {
-        $tariff = $findings->first(fn (Finding $f) => $f->check_type === CheckType::WrongTariff && isset($f->data['back_refund_estimate']));
-
-        return $tariff !== null ? (string) $tariff->data['back_refund_estimate'] : (string) $letter->disputedTotal;
-    }
-
-    /**
-     * Success fees are only invoiced once money reaches the customer's
-     * municipal account: on the back-refund credit, and on each of the first
-     * 12 months of savings seen on a bill.
-     */
-    private function invoiceSuccessFee(Dispute $dispute, DisputeEventKind $kind, ?string $amount, CarbonImmutable $month): void
-    {
-        $rate = $dispute->organisation->successFeeRate();
-
-        if ($kind === DisputeEventKind::CreditReceived && $amount !== null) {
-            FeeInvoice::create([
-                'organisation_id' => $dispute->organisation_id,
-                'dispute_id' => $dispute->id,
-                'kind' => FeeKind::BackRefund,
-                'description' => 'Success fee on the back-refund credited',
-                'basis' => $amount,
-                'rate' => $rate,
-                'amount' => (string) Pricing::feeOn($amount, $rate),
-                'status' => FeeStatus::Due,
-            ]);
-
-            return;
-        }
-
-        $isSaving = $kind === DisputeEventKind::TariffFixed || $kind === DisputeEventKind::SavingSeen;
-
-        if (! $isSaving || $dispute->monthly_saving === null) {
-            return;
-        }
-
-        $periodMonth = $month->startOfMonth();
-        $savings = $dispute->feeInvoices()->where('kind', FeeKind::MonthlySaving);
-
-        if ((clone $savings)->count() >= Pricing::SAVING_MONTHS || (clone $savings)->whereDate('period_month', $periodMonth)->exists()) {
-            return;
-        }
-
-        FeeInvoice::create([
-            'organisation_id' => $dispute->organisation_id,
-            'dispute_id' => $dispute->id,
-            'kind' => FeeKind::MonthlySaving,
-            'description' => 'Success fee on the '.$month->format('F Y').' saving',
-            'basis' => $dispute->monthly_saving,
-            'rate' => $rate,
-            'amount' => (string) Pricing::feeOn($dispute->monthly_saving, $rate),
-            'status' => FeeStatus::Due,
-            'period_month' => $periodMonth,
-        ]);
     }
 }

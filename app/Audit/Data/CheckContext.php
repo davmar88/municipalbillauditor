@@ -17,6 +17,7 @@ final readonly class CheckContext
      * @param  string  $outageArea  The suburb outages were looked up for. Empty means we couldn't look.
      * @param  list<OutageWindow>  $outages  Outages reported for that area. The check finds the overlap.
      * @param  array<string, BigDecimal>  $tariffRates  Rate per unit, keyed "category:service".
+     * @param  bool  $outagesTracked  Whether we keep outage reports for this municipality at all.
      */
     public function __construct(
         public BillSnapshot $bill,
@@ -25,6 +26,7 @@ final readonly class CheckContext
         public string $outageArea = '',
         public array $outages = [],
         public array $tariffRates = [],
+        public bool $outagesTracked = true,
     ) {}
 
     public function rate(TariffCategory $category, Service $service): ?BigDecimal

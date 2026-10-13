@@ -8,24 +8,24 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 
 /**
- * A fee we are owed. Success fees are only created once the money shows on
- * the customer's municipal account.
+ * A fee we are owed: an agent's or business's monthly fee, raised on the
+ * 1st of each month, at most once per organisation per month.
  *
  * @property int $id
  * @property int $organisation_id
  * @property int|null $dispute_id
  * @property FeeKind $kind
  * @property string $description
- * @property string|null $basis
- * @property string|null $rate
  * @property string $amount
  * @property FeeStatus $status
  * @property CarbonImmutable|null $period_month
  * @property CarbonImmutable|null $issued_on
+ * @property Carbon|null $paid_at
  */
-#[Fillable(['organisation_id', 'dispute_id', 'kind', 'description', 'basis', 'rate', 'amount', 'status', 'period_month', 'issued_on'])]
+#[Fillable(['organisation_id', 'kind', 'description', 'amount', 'status', 'period_month', 'issued_on', 'paid_at'])]
 class FeeInvoice extends Model
 {
     protected function casts(): array
@@ -33,11 +33,10 @@ class FeeInvoice extends Model
         return [
             'kind' => FeeKind::class,
             'status' => FeeStatus::class,
-            'basis' => 'decimal:2',
-            'rate' => 'decimal:4',
             'amount' => 'decimal:2',
             'period_month' => 'immutable_date',
             'issued_on' => 'immutable_date',
+            'paid_at' => 'datetime',
         ];
     }
 
@@ -47,9 +46,8 @@ class FeeInvoice extends Model
         return $this->belongsTo(Organisation::class);
     }
 
-    /** @return BelongsTo<Dispute, $this> */
-    public function dispute(): BelongsTo
+    public function isPaid(): bool
     {
-        return $this->belongsTo(Dispute::class);
+        return $this->status === FeeStatus::Paid;
     }
 }

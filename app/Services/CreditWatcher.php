@@ -5,11 +5,8 @@ namespace App\Services;
 use App\Audit\Enums\CheckType;
 use App\Audit\Enums\Confidence;
 use App\Audit\Enums\TariffCategory;
-use App\Audit\Fees\Pricing;
 use App\Audit\Money;
 use App\Enums\DisputeEventKind;
-use App\Enums\DisputeMode;
-use App\Enums\FeeKind;
 use App\Models\Bill;
 use App\Models\Charge;
 use App\Models\Dispute;
@@ -21,12 +18,14 @@ use Illuminate\Database\Eloquent\Builder;
  * account, or a corrected tariff and the saving that follows.
  *
  * Refunds usually arrive as a credit on the municipal account rather than
- * cash, so this is how a dispute is seen to succeed, and when a success fee
- * becomes due.
+ * cash, so this is how the customer sees a dispute work.
  */
 class CreditWatcher
 {
-    public function __construct(private readonly DisputeService $disputes) {}
+    public function __construct(
+        private readonly DisputeService $disputes,
+        private readonly CustomerMail $mail,
+    ) {}
 
     public function inspect(Bill $bill): void
     {
@@ -39,7 +38,7 @@ class CreditWatcher
             ->whereNotNull('lodged_on')
             ->whereNull('closed_on')
             ->whereHas('bill', fn (Builder $q) => $q->where('bill_date', '<', $bill->bill_date))
-            ->with(['findings', 'organisation', 'feeInvoices'])
+            ->with(['findings', 'organisation', 'bill', 'property.municipality'])
             ->get();
 
         foreach ($open as $dispute) {
@@ -67,6 +66,8 @@ class CreditWatcher
             'credit_bill_id' => $bill->id,
             'note' => 'Found on the '.$bill->monthLabel().' bill. Not the refund? Tell us and we\'ll keep looking.',
         ]);
+
+        $this->mail->creditFound($dispute, (string) $total, $bill);
     }
 
     private function lookForTariffFix(Dispute $dispute, Bill $bill): void
@@ -81,34 +82,11 @@ class CreditWatcher
             return;
         }
 
-        $month = $bill->month() ?? $bill->bill_date;
-
         if ($dispute->tariff_fixed_on === null) {
             $this->disputes->record($dispute, DisputeEventKind::TariffFixed, $bill->bill_date, [
                 'amount' => $tariff->data['monthly_overcharge'] ?? null,
-                'period_month' => $month,
                 'note' => 'The '.$bill->monthLabel().' bill uses the '.strtolower($expected->label()).' tariff.',
             ]);
-
-            return;
         }
-
-        // After the fix, each new bill shows the saving. Only success-fee
-        // claims need it recorded, for the first 12 months.
-        if ($dispute->mode !== DisputeMode::SuccessFee) {
-            return;
-        }
-
-        $invoiced = $dispute->feeInvoices->where('kind', FeeKind::MonthlySaving);
-
-        if ($invoiced->count() >= Pricing::SAVING_MONTHS
-            || $invoiced->contains(fn ($invoice) => $invoice->period_month?->isSameMonth($month))) {
-            return;
-        }
-
-        $this->disputes->record($dispute, DisputeEventKind::SavingSeen, $bill->bill_date, [
-            'period_month' => $month,
-            'note' => 'Saving seen on the '.$bill->monthLabel().' bill.',
-        ]);
     }
 }

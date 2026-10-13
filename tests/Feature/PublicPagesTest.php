@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Models\Metro;
+use App\Models\Municipality;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -30,6 +30,24 @@ class PublicPagesTest extends TestCase
         $this->assertSame(1, substr_count($response->getContent(), '<h1'));
     }
 
+    public function test_the_home_page_quotes_prepaid_and_monthly_prices_and_every_municipality(): void
+    {
+        $this->get(route('home'))
+            ->assertSee('Every municipality in South Africa')
+            ->assertSee('R15')
+            ->assertSee('R49')
+            ->assertSee('R1,500')
+            ->assertSee('R2,500')
+            ->assertSee('Check my bill')
+            ->assertDontSee('Check my bill free')
+            ->assertDontSee('success fee')
+            ->assertDontSee('Free to check');
+
+        // "Free" only appears when there is welcome credit.
+        config(['auditor.prices.welcome_credit' => '30']);
+        $this->get(route('home'))->assertSee('Check my bill free')->assertSee('R30 of credit');
+    }
+
     public function test_unverified_figures_stay_off_the_public_page(): void
     {
         config(['auditor.show_unverified_claims' => false]);
@@ -48,7 +66,7 @@ class PublicPagesTest extends TestCase
             ->assertSee('I will keep paying the undisputed amount of R1,982.85')
             ->assertSee('"@type":"BreadcrumbList"', false);
 
-        Metro::where('slug', 'tshwane')->update(['live' => false]);
+        Municipality::where('slug', 'tshwane')->update(['live' => false]);
         $this->get(route('metro.show', 'tshwane'))->assertNotFound();
         $this->get(route('metro.show', 'nowhere'))->assertNotFound();
     }

@@ -10,25 +10,29 @@ These come from the risks in the [README](../README.md).
 - **The bill is the interface.** Findings are numbered, and the same numbers are marked in orange on the bill itself.
 - **The deadline is always visible.** Every flagged bill and open dispute shows the date and the days left.
 - **Ask only what we can't know.** The customer is asked about things like outage dates or a change in occupancy, never to re-type what is on the bill.
-- **Templates are per metro.** The dispute letter says which metro's template it uses.
+- **Rules are per municipality.** Every one of South Africa's 257 municipalities has its own dispute window and escalation dates. The customer never has to know which municipality bills them or where to send anything: we read it from the bill.
+- **The price comes before the job.** Households pay per job from prepaid credit, so every job shows what it costs and the balance before it runs.
+- **Email only.** Disputes go to the municipality by email, from us, on the customer's behalf. There is no WhatsApp anywhere in the flow.
 - **POPIA from the first screen.** The upload screen says the bill is used only to check and dispute it, and can be deleted at any time.
 
 ## Service flow
 
-One flow serves all three customers. Only who pays changes.
+One flow serves all three customers. Only how they pay changes: households pay per job from prepaid credit (a bill check and a dispute, R15 and R49 by default), and managing agents and businesses pay one flat monthly fee that includes 100 bill checks and unlimited disputes.
 
-| Step | Who          | What happens                                                                                                |
-| ---- | ------------ | ----------------------------------------------------------------------------------------------------------- |
-| 1    | Customer     | Sends the bill by photo, email forward or PDF                                                               |
-| 2    | Bill Auditor | Reads meter readings, tariff and charges                                                                    |
-| 3    | Bill Auditor | Runs the four checks: estimated readings, wrong tariff, outage charges, spikes against history              |
-| 4    | Customer     | No flags: gets an all-clear and the bill is kept as usage history. Flags: confirms the facts only they know |
-| 5    | Bill Auditor | Drafts the dispute from the metro's template and sets the deadline                                          |
-| 6    | Customer     | Approves the letter, or pays for a managed dispute                                                          |
-| 7    | Bill Auditor | Lodges it, records the reference number and tracks the reply date                                           |
-| 8    | Bill Auditor | No reply in time: escalates to the ward councillor, then the Public Protector                               |
-| 9    | Municipality | Corrects the bill and credits the account                                                                   |
-| 10   | Bill Auditor | Confirms the credit on the next bill, then invoices any success fee                                         |
+| Step | Who          | What happens                                                                                                                                                            |
+| ---- | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1    | Customer     | Sends the bill by photo, email forward or PDF                                                                                                                           |
+| 2    | Bill Auditor | Charges the bill check, or holds the bill as "Waiting for credit" until a top-up                                                                                        |
+| 3    | Bill Auditor | Reads meter readings, tariff, charges and the municipality's name and contact details. A failed read is refunded                                                        |
+| 4    | Bill Auditor | Matches the municipality to the directory of all 257 and runs the four checks                                                                                           |
+| 5    | Customer     | No flags: gets an all-clear. Flags: confirms the facts only they know                                                                                                   |
+| 6    | Bill Auditor | Drafts the dispute and sets the deadline from the municipality's rules                                                                                                  |
+| 7    | Customer     | Gives a one-time mandate and approves the dispute (or has switched on "send disputes for me")                                                                           |
+| 8    | Bill Auditor | Emails it to the best address we have, copying the customer in, with the bill and meter photo attached                                                                  |
+| 9    | Bill Auditor | Reads the municipality's replies with Claude and tells the customer what they say                                                                                       |
+| 10   | Bill Auditor | No acknowledgement: follows up on the thread. Still no answer: escalates to the municipal manager, then drafts the Public Protector complaint for the customer to lodge |
+| 11   | Municipality | Corrects the bill and credits the account                                                                                                                               |
+| 12   | Bill Auditor | Finds the credit on a later bill and tells the customer                                                                                                                 |
 
 ## Screens
 
@@ -36,25 +40,33 @@ One flow serves all three customers. Only who pays changes.
 
 1. **Check a bill.** The main action is photographing the bill, with PDF upload and an email forwarding address as alternatives. Below that are past bills with their status and a short list of the four checks.
 2. **Results.** A dark summary block gives the number of likely errors, the rand amount at stake and the dispute deadline. Below it, a compact copy of the bill shows the orange marks. Each finding card has its evidence (for example six months of usage with the estimated month hatched) and one action. A "Checked and fine" list shows what passed.
-3. **Dispute letter.** A step indicator, a letter preview in the metro's format, attachments, and a choice between sending it yourself (free) and a managed dispute (R299).
-4. **Case tracker.** A countdown to the reply date, the municipal reference number, a timeline from "Bill checked" to "Credit on your account" with escalation steps marked as "only if needed", and a reminder to keep paying the undisputed amount.
+3. **Dispute letter.** A step indicator, a letter preview, attachments, where it will be emailed, the price and the credit balance, and the one-time mandate checkbox. "Approve and send" emails it.
+4. **Case tracker.** A countdown to the reply date, the municipal reference number, a timeline from "Bill checked" to "Credit on your account" with escalation steps marked as "only if needed", every email sent and received with Claude's summary of each reply, a panel when the municipality needs something from the customer, and a reminder to keep paying the undisputed amount.
+5. **Credit and billing.** The balance, the price of each job, top-up packs paid by card through Paystack, and the ledger.
 
-Bottom tabs: Bills, Disputes, Property.
+Bottom tabs: Bills, Disputes, Property, Credit.
 
 ### Managing agents (web)
 
 The web app uses a dark sidebar (232 px) and a fluid content area. On a phone the sidebar stacks above the content.
 
-5. **Portfolio.** Four figures for the billing cycle (bills checked, open flags, deadlines in the next 7 days, credits won this year), a units table sorted by urgency with filter chips, a "Due this week" list, and open flags by type.
-6. **Bill audit workspace.** The bill is shown as a document on the left with orange marks. The findings panel is on the right, using the same numbers. Each finding shows its evidence and calculation. Findings that might be a false alarm ask a question first ("Did anything change at this unit in September?"). Twelve-month usage charts for water and electricity sit below.
+6. **Portfolio.** Four figures for the billing cycle (bills checked, open flags, deadlines in the next 7 days, credits won this year), a units table sorted by urgency with filter chips, a "Due this week" list, and open flags by type.
+7. **Bill audit workspace.** The bill is shown as a document on the left with orange marks. The findings panel is on the right, using the same numbers. Each finding shows its evidence and calculation. Findings that might be a false alarm ask a question first ("Did anything change at this unit in September?"). Twelve-month usage charts for water and electricity sit below.
 
 ### Businesses and body corporates (web)
 
-7. **Claim.** The back-refund claimed, the monthly saving since the fix and the fee rate, then a dated timeline, a table showing how the fee is calculated, the tariff before and after the fix, and the evidence on file. The fee table makes it clear that nothing is invoiced until money reaches the municipal account.
+8. **Claim.** The amount claimed, a dated timeline, the tariff before and after the fix with the monthly saving, the emails, and the evidence on file. Claims are included in the monthly fee.
+9. **Credit and billing.** The monthly fee and how many of the month's included checks are used, the saved card, invoices with a pay button, prepaid credit for checks beyond the allowance, and the ledger.
+
+### Staff (web)
+
+10. **Work queue.** Disputes approved but not sent (no address, no mandate, or a failed send), managed disputes that need the next step, municipal replies Claude couldn't read or that came from an unknown sender, bills waiting for their details, and EFT top-ups.
+11. **Margin.** Each month's top-ups and monthly fees received against what Claude cost us, from the token counts of every call.
+12. **Reference data.** All 257 municipalities with their dispute rules, billing and escalation emails (and whether staff have verified them), outages and tariff rates.
 
 ### Landing page
 
-8. **Landing page.** A hero with the marked-up bill, a dark band with three proof figures, the four errors (each with a marked-up snippet), five steps from photo to credit, pricing for all three customers, metro links and an FAQ. The search setup, heading outline and structured data are in [landing-page.md](landing-page.md).
+13. **Landing page.** A hero with the marked-up bill, a dark band with three proof figures, the four errors (each with a marked-up snippet), five steps from photo to credit, pricing for all three customers, a section on covering every municipality with the three metro pages, and an FAQ. The search setup, heading outline and structured data are in [landing-page.md](landing-page.md).
 
 ## Visual system
 
@@ -75,11 +87,11 @@ The web app uses a dark sidebar (232 px) and a fluid content area. On a phone th
 
 ## Sample data
 
-Every figure in the mockups is illustrative. The business claim uses the pricing model's example client: a R150,000 monthly bill, a back-refund of 5% of a year's bill (R90,000) and a 25% fee (R22,500). The R299 household fee is the model's Year 1 guess. Text in square brackets, such as `[Agency name]` and `[code]@bills.[domain]`, needs real values.
+Every figure in the mockups is illustrative. The mockups still show the earlier pricing (a R299 managed dispute and a 25% success fee); the app now uses prepaid jobs and monthly fees, set in `config/auditor.php`. Text in square brackets, such as `[Agency name]` and `[code]@bills.[domain]`, needs real values.
 
 ## Open questions
 
-- **Reply windows and escalation steps per metro.** The tracker dates are placeholders until each metro's rules are researched.
-- **Outage data.** The "billed while the water was off" finding assumes a source of outage notices per suburb.
-- **Forwarding addresses.** The format and domain for each customer's forwarding address.
-- **Managed dispute payment.** Whether households pay when the dispute is lodged or when it is resolved.
+- **Reply windows and escalation steps per municipality.** The tracker dates are placeholders until each municipality's rules are researched.
+- **Municipal addresses.** The directory's 186 billing emails are unverified and there are no municipal managers' addresses yet. Staff verify them in the reference data.
+- **Outage data.** The "billed while the water was off" finding assumes a source of outage notices per suburb. It stays silent where we hold none.
+- **Email provider.** Sending uses plain SMTP; inbound replies are built for Mailgun's route forwards, with a shared-secret header for other providers.

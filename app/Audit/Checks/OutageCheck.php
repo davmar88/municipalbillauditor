@@ -27,6 +27,12 @@ final class OutageCheck implements Check
         $bill = $ctx->bill;
         $area = $ctx->outageArea;
 
+        // Most municipalities have no outage reports with us: say nothing
+        // rather than claim there were none.
+        if (! $ctx->outagesTracked) {
+            return $report;
+        }
+
         if ($area === '') {
             $report->skipped[] = 'Add your suburb so we can check for outages.';
 

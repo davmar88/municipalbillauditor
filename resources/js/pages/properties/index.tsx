@@ -17,17 +17,18 @@ import { Label } from '@/components/ui/label';
 import { NativeSelect } from '@/components/ui/native-select';
 import { Spinner } from '@/components/ui/spinner';
 import { destroy, index, store, update } from '@/routes/properties';
-import type { MetroOption, Option, PropertyDetail } from '@/types';
+import { MunicipalityOptions } from '@/components/audit/municipality-options';
+import type { MunicipalityOption, Option, PropertyDetail } from '@/types';
 
 type Props = {
     properties: PropertyDetail[];
-    metros: MetroOption[];
+    municipalities: MunicipalityOption[];
     propertyTypes: Option[];
 };
 
 export default function PropertiesIndex({
     properties,
-    metros,
+    municipalities,
     propertyTypes,
 }: Props) {
     const { organisation } = usePage().props;
@@ -42,7 +43,7 @@ export default function PropertiesIndex({
                     description="The suburb is used to match reported outages, and the property type to check your tariff."
                     actions={
                         <PropertyDialog
-                            metros={metros}
+                            municipalities={municipalities}
                             propertyTypes={propertyTypes}
                             trigger={
                                 <Button>
@@ -74,7 +75,7 @@ export default function PropertiesIndex({
                                         {[
                                             property.address,
                                             property.suburb,
-                                            property.metro,
+                                            property.municipality,
                                         ]
                                             .filter(Boolean)
                                             .join(', ')}
@@ -99,7 +100,7 @@ export default function PropertiesIndex({
                                 <div className="flex flex-wrap gap-2">
                                     <PropertyDialog
                                         property={property}
-                                        metros={metros}
+                                        municipalities={municipalities}
                                         propertyTypes={propertyTypes}
                                         trigger={
                                             <Button variant="outline">
@@ -139,12 +140,12 @@ PropertiesIndex.layout = {
 
 function PropertyDialog({
     property,
-    metros,
+    municipalities,
     propertyTypes,
     trigger,
 }: {
     property?: PropertyDetail;
-    metros: MetroOption[];
+    municipalities: MunicipalityOption[];
     propertyTypes: Option[];
     trigger: React.ReactNode;
 }) {
@@ -213,24 +214,21 @@ function PropertyDialog({
                                 />
                             </Field>
                             <Field
-                                label="Metro"
-                                id="metro_id"
-                                error={errors.metro_id}
+                                label="Municipality"
+                                id="municipality_id"
+                                error={errors.municipality_id}
                             >
                                 <NativeSelect
-                                    id="metro_id"
-                                    name="metro_id"
-                                    required
-                                    defaultValue={property?.metroId ?? ''}
+                                    id="municipality_id"
+                                    name="municipality_id"
+                                    defaultValue={
+                                        property?.municipalityId ?? ''
+                                    }
                                 >
-                                    <option value="" disabled>
-                                        Choose a metro
-                                    </option>
-                                    {metros.map((metro) => (
-                                        <option key={metro.id} value={metro.id}>
-                                            {metro.name}
-                                        </option>
-                                    ))}
+                                    <MunicipalityOptions
+                                        municipalities={municipalities}
+                                        placeholder="Read it from the first bill"
+                                    />
                                 </NativeSelect>
                             </Field>
                             <Field

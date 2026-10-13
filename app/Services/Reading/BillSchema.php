@@ -29,6 +29,9 @@ final class BillSchema
           received and interest on arrears. Credits and adjustments are negative amounts.
         - tariff is the tariff or account category exactly as printed, such as Residential, Business or
           Bulk Residential.
+        - municipality is the issuing municipality's name as printed, such as City of Tshwane or Stellenbosch
+          Municipality. The municipality_* fields are the contact details the bill prints for account or billing
+          queries: copy them exactly, and use null for any that aren't printed. Never guess an email address.
         TEXT;
 
     /**
@@ -42,7 +45,10 @@ final class BillSchema
 
         return self::object([
             'is_municipal_bill' => ['type' => 'boolean', 'description' => 'False if this is not a municipal statement of account.'],
-            'municipality' => $string + ['description' => 'The municipality that issued the bill.'],
+            'municipality' => $string + ['description' => 'The municipality that issued the bill, as printed.'],
+            'municipality_email' => $string + ['description' => 'The email address printed for account or billing queries.'],
+            'municipality_postal_address' => $string + ['description' => "The municipality's postal address as printed."],
+            'municipality_phone' => $string + ['description' => 'The phone number printed for account queries.'],
             'account_number' => $string + ['description' => 'The municipal account number exactly as printed.'],
             'bill_date' => $date + ['description' => 'Statement or invoice date.'],
             'due_date' => $date,

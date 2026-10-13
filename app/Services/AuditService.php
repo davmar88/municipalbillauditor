@@ -79,8 +79,11 @@ class AuditService
             ->map(fn (Bill $past) => self::snapshot($past))
             ->all();
 
-        $outages = $area === '' ? [] : Outage::query()
-            ->where('metro_id', $property->metro_id)
+        $outagesTracked = $property->municipality_id !== null
+            && Outage::query()->where('municipality_id', $property->municipality_id)->exists();
+
+        $outages = $area === '' || ! $outagesTracked ? [] : Outage::query()
+            ->where('municipality_id', $property->municipality_id)
             ->whereRaw('LOWER(suburb) = ?', [mb_strtolower($area)])
             ->get()
             ->map(fn (Outage $o) => new OutageWindow($o->service, $o->starts_on, $o->ends_on, $o->suburb, (string) $o->source))
@@ -89,7 +92,7 @@ class AuditService
         $rates = [];
 
         TariffRate::query()
-            ->where('metro_id', $property->metro_id)
+            ->where('municipality_id', $property->municipality_id)
             ->when($bill->bill_date, fn (Builder $q) => $q->where(fn (Builder $q) => $q
                 ->whereNull('effective_from')
                 ->orWhere('effective_from', '<=', $bill->bill_date)))
@@ -108,6 +111,7 @@ class AuditService
             outageArea: $area,
             outages: $outages,
             tariffRates: $rates,
+            outagesTracked: $outagesTracked,
         );
     }
 
@@ -117,7 +121,7 @@ class AuditService
      */
     public function run(Bill $bill): CheckReport
     {
-        $bill->loadMissing(['readings', 'charges', 'property.metro', 'findings']);
+        $bill->loadMissing(['readings', 'charges', 'property.municipality', 'findings']);
         $report = $this->auditor->audit($this->context($bill));
 
         DB::transaction(function () use ($bill, $report) {

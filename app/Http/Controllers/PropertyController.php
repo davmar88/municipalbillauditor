@@ -4,8 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Audit\Enums\PropertyType;
 use App\Http\Presenters\PropertyPresenter;
-use App\Models\Metro;
+use App\Models\Municipality;
 use App\Models\Property;
+use App\Services\AuditService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -18,15 +19,14 @@ class PropertyController extends Controller
     {
         return Inertia::render('properties/index', [
             'properties' => $request->user()->organisation->properties()
-                ->with('metro')
+                ->with('municipality')
                 ->withCount('bills')
                 ->orderBy('name')
                 ->orderBy('unit')
                 ->get()
                 ->map(fn (Property $p) => PropertyPresenter::detail($p))
                 ->values(),
-            'metros' => Metro::query()->where('live', true)->orderBy('sort')->get()
-                ->map(fn (Metro $m) => ['id' => $m->id, 'name' => $m->displayName()])->values(),
+            'municipalities' => Municipality::options(),
             'propertyTypes' => array_map(fn (PropertyType $t) => ['value' => $t->value, 'label' => $t->label()], PropertyType::cases()),
         ]);
     }
@@ -44,6 +44,30 @@ class PropertyController extends Controller
         $this->authorize('update', $property);
         $property->update($this->validated($request));
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Property saved.']);
+
+        return back();
+    }
+
+    /**
+     * The customer tells us which municipality bills a property, when the
+     * bill didn't make it clear. Its latest bill is checked again with that
+     * municipality's tariffs and outages.
+     */
+    public function setMunicipality(Request $request, Property $property, AuditService $audit): RedirectResponse
+    {
+        $this->authorize('update', $property);
+
+        $property->update($request->validate([
+            'municipality_id' => ['required', Rule::exists('municipalities', 'id')->where('live', true)],
+        ]));
+
+        $bill = $property->latestBill;
+
+        if ($bill !== null && $bill->isChecked() && ! $bill->isLocked()) {
+            $audit->run($bill);
+        }
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Saved. Disputes for this property go to '.$property->municipality->short_name.'.']);
 
         return back();
     }
@@ -70,7 +94,8 @@ class PropertyController extends Controller
             'unit' => ['nullable', 'string', 'max:40'],
             'address' => ['nullable', 'string', 'max:255'],
             'suburb' => ['nullable', 'string', 'max:255'],
-            'metro_id' => ['required', Rule::exists('metros', 'id')],
+            // Optional: the first bill tells us.
+            'municipality_id' => ['nullable', Rule::exists('municipalities', 'id')],
             'property_type' => ['required', Rule::enum(PropertyType::class)],
             'account_number' => ['nullable', 'string', 'max:40'],
         ]);

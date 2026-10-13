@@ -5,7 +5,6 @@ namespace Tests\Unit\Audit;
 use App\Audit\Enums\CheckType;
 use App\Audit\Enums\PropertyType;
 use App\Audit\Enums\Service;
-use App\Audit\Fees\Pricing;
 use App\Audit\Letters\LetterInput;
 use App\Audit\Letters\LetterItem;
 use App\Audit\Letters\LetterWriter;
@@ -13,7 +12,7 @@ use Brick\Math\BigDecimal;
 use DateTimeImmutable;
 use PHPUnit\Framework\TestCase;
 
-class LetterAndFeesTest extends TestCase
+class LetterTest extends TestCase
 {
     private function householdLetter(string $outageAnswer = 'yes', bool $photo = true): LetterInput
     {
@@ -88,31 +87,5 @@ class LetterAndFeesTest extends TestCase
         $this->assertStringContainsString('- move the account to the bulk residential tariff and credit the overcharge on past bills', $letter->body);
         $this->assertNull($letter->undisputedAmount);
         $this->assertStringNotContainsString('Property:', $letter->body);
-    }
-
-    public function test_success_fee_matches_the_business_claim_screen(): void
-    {
-        $fee = Pricing::successFee('90000', '7500', '0.25');
-
-        $this->assertSame('22500.00', (string) $fee->backRefundFee);
-        $this->assertSame('1875.00', (string) $fee->monthlySavingFee);
-        $this->assertSame('22500.00', (string) $fee->savingsFeeTotal);
-        $this->assertSame('180000.00', (string) $fee->totalWon);
-        $this->assertSame('45000.00', (string) $fee->totalFee);
-    }
-
-    public function test_example_business_client_matches_the_pricing_model(): void
-    {
-        // Model tab rows 34-35 with the starting guesses: R150,000 a month,
-        // 5% of a year's bill back, 25% fee.
-        [$refund, $fee] = Pricing::exampleBusinessClient('150000', '0.05', '0.25');
-
-        $this->assertSame('90000.00', (string) $refund);
-        $this->assertSame('22500.00', (string) $fee);
-    }
-
-    public function test_subscription_is_per_unit_per_month(): void
-    {
-        $this->assertSame('13400.00', (string) Pricing::subscriptionFee(268, '50'));
     }
 }

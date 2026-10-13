@@ -3,7 +3,7 @@
 namespace Database\Factories;
 
 use App\Audit\Enums\PropertyType;
-use App\Models\Metro;
+use App\Models\Municipality;
 use App\Models\Organisation;
 use App\Models\Property;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -17,7 +17,7 @@ class PropertyFactory extends Factory
     {
         return [
             'organisation_id' => Organisation::factory(),
-            'metro_id' => fn () => Metro::query()->where('slug', 'johannesburg')->value('id'),
+            'municipality_id' => fn () => Municipality::query()->where('slug', 'johannesburg')->value('id'),
             'name' => 'Home',
             'address' => fake()->streetAddress(),
             'suburb' => 'Parkhurst',

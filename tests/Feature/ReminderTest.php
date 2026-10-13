@@ -27,7 +27,7 @@ class ReminderTest extends TestCase
         parent::setUp();
 
         Notification::fake();
-        $this->user = User::factory()->forKind(OrganisationKind::Household)->create();
+        $this->user = User::factory()->forKind(OrganisationKind::Household)->withCredit()->create();
         $this->bill = app(BillIntake::class)->createSample($this->user->organisation, $this->user);
     }
 
@@ -70,7 +70,7 @@ class ReminderTest extends TestCase
     public function test_a_disputed_bill_gets_no_window_reminder(): void
     {
         $disputes = app(DisputeService::class);
-        $disputes->submit($disputes->draft($this->bill, $this->user), DisputeMode::Managed, $this->user);
+        $disputes->submit($disputes->draft($this->bill, $this->user), $this->user);
 
         $this->on($this->bill->bill_date->addDays(23));
 
@@ -80,7 +80,11 @@ class ReminderTest extends TestCase
     public function test_a_self_sent_dispute_with_no_reply_is_escalated_by_its_owner(): void
     {
         $disputes = app(DisputeService::class);
-        $dispute = $disputes->submit($disputes->draft($this->bill, $this->user), DisputeMode::Self, $this->user);
+        // Sent by the customer before every dispute was emailed by us.
+        $dispute = $disputes->draft($this->bill, $this->user);
+        $dispute->update(['mode' => DisputeMode::Self, 'submitted_on' => today()]);
+        $disputes->lodge($dispute, CarbonImmutable::today(), null, $this->user, 'Sent by you');
+        $dispute->refresh();
 
         $this->on($dispute->lodged_on->addDays(21));
         Notification::assertNothingSent();

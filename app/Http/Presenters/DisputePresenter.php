@@ -7,15 +7,12 @@ use App\Audit\Deadlines\Stage;
 use App\Audit\Deadlines\TimelineStep;
 use App\Audit\Enums\CheckType;
 use App\Audit\Enums\TariffCategory;
-use App\Audit\Fees\Pricing;
 use App\Audit\Money;
 use App\Enums\DisputeEventKind;
-use App\Enums\DisputeMode;
-use App\Enums\FeeKind;
 use App\Models\Bill;
 use App\Models\Dispute;
 use App\Models\DisputeEvent;
-use App\Models\FeeInvoice;
+use App\Models\DisputeMessage;
 use App\Models\Finding;
 use Carbon\CarbonImmutable;
 
@@ -26,7 +23,7 @@ class DisputePresenter
      */
     public static function summary(Dispute $dispute): array
     {
-        $dispute->loadMissing(['property.metro', 'bill', 'findings']);
+        $dispute->loadMissing(['property.municipality', 'bill', 'findings']);
         $submitted = $dispute->submitted_on !== null;
         $stage = $submitted ? $dispute->stage() : Stage::Draft;
         $status = $submitted ? $dispute->status() : null;
@@ -41,7 +38,7 @@ class DisputePresenter
             'submitted' => $submitted,
             'awaitingLodging' => $submitted && $dispute->lodged_on === null,
             'stage' => $stage->value,
-            'stageLabel' => $submitted && $dispute->lodged_on === null ? 'With our team to lodge' : $stage->label(),
+            'stageLabel' => $submitted && $dispute->lodged_on === null ? 'Waiting to be sent' : $stage->label(),
             'needsAction' => $submitted && $stage->needsAction(),
             'isOpen' => $stage->isOpen(),
             'nextDate' => $status?->nextDate?->format('j M Y'),
@@ -49,7 +46,6 @@ class DisputePresenter
             'lodgedOn' => $dispute->lodged_on?->format('j M Y'),
             'reference' => $dispute->reference,
             'issues' => $dispute->findings->count(),
-            'backRefundClaimed' => $dispute->back_refund_claimed !== null ? Money::format($dispute->back_refund_claimed) : null,
         ];
     }
 
@@ -58,9 +54,9 @@ class DisputePresenter
      */
     public static function detail(Dispute $dispute): array
     {
-        $dispute->loadMissing(['property.metro', 'bill', 'findings', 'events', 'feeInvoices', 'organisation']);
+        $dispute->loadMissing(['property.municipality', 'bill', 'findings', 'events', 'organisation']);
         $today = CarbonImmutable::today();
-        $rules = $dispute->property->metro->rules();
+        $rules = $dispute->property->rules();
         $facts = $dispute->facts();
         $status = CaseClock::status($facts, $rules, $today);
         $stage = $status->stage;
@@ -68,8 +64,12 @@ class DisputePresenter
 
         $timeline = array_map(fn (TimelineStep $step) => [
             'key' => $step->key,
-            'title' => $awaitingLodging && $step->key === 'lodged' ? 'Our team is lodging it' : $step->title,
-            'detail' => $awaitingLodging && $step->key === 'lodged' ? 'Handed over '.$dispute->submitted_on->format('j M') : $step->detail,
+            'title' => $awaitingLodging && $step->key === 'lodged' ? 'Waiting to be sent' : $step->title,
+            'detail' => match (true) {
+                $awaitingLodging && $step->key === 'lodged' => 'Approved '.$dispute->submitted_on->format('j M'),
+                $step->key === 'lodged' && $dispute->sent_to !== null => "Emailed to {$dispute->sent_to}",
+                default => $step->detail,
+            },
             'on' => $step->on?->format('j M'),
             'state' => $step->state,
         ], CaseClock::timeline($facts, $rules, $today));
@@ -79,16 +79,40 @@ class DisputePresenter
             'letterSubject' => $dispute->letter_subject,
             'letterBody' => $dispute->letter_body,
             'undisputedAmount' => $dispute->undisputed_amount !== null ? Money::format($dispute->undisputed_amount) : null,
-            'metro' => $dispute->property->metro->name,
+            'municipality' => $dispute->property->municipality?->name,
             'status' => [
-                'headline' => $awaitingLodging ? 'With our team' : $status->headline,
+                'headline' => $awaitingLodging ? 'Waiting to be sent' : $status->headline,
                 'countdownLabel' => $awaitingLodging ? '' : $status->countdownLabel,
                 'daysLeft' => $awaitingLodging ? null : $status->daysLeft,
                 'progress' => $awaitingLodging ? null : $status->progress,
                 'note' => $awaitingLodging
-                    ? "We're lodging your dispute with {$dispute->property->metro->name}. We'll add the reference number when it arrives."
+                    ? match ($dispute->held_reason) {
+                        'no_mandate' => 'We need your permission to send disputes for you. Switch it on in your account settings.',
+                        'no_address' => "We don't have ".($dispute->property->municipality?->name ?? 'the municipality')."'s account queries email yet. Our team is finding it, and the dispute goes out as soon as they do.",
+                        'send_failed' => "Our email didn't go through, so our team is sending it. You don't need to do anything.",
+                        default => "We're emailing your dispute now. You'll be copied in.",
+                    }
                     : $status->note,
             ],
+            'sentTo' => $dispute->sent_to,
+            'infoRequest' => $dispute->waitingOnCustomer() ? [
+                'what' => $dispute->events->where('kind', DisputeEventKind::InfoRequested)->last()?->note,
+                'on' => $dispute->info_requested_on->format('j M Y'),
+            ] : null,
+            'messages' => $dispute->messages()->where('kind', '!=', 'customer')->get()->map(fn (DisputeMessage $m) => [
+                'id' => $m->id,
+                'direction' => $m->direction,
+                'kind' => $m->kind,
+                'subject' => $m->subject,
+                'on' => $m->created_at->format('j M Y'),
+                'who' => $m->direction === DisputeMessage::OUT ? "To {$m->to_address}" : "From {$m->from_address}",
+                'classification' => $m->classification?->label(),
+                'summary' => $m->classification?->matters() ? ($m->reading['summary'] ?? null) : null,
+                'files' => array_map(fn (int $i) => [
+                    'name' => $m->attachments[$i]['name'],
+                    'url' => route('disputes.messages.file', [$dispute, $m, $i]),
+                ], array_keys($m->attachments ?? [])),
+            ])->values(),
             'timeline' => $timeline,
             'events' => $dispute->events->map(fn (DisputeEvent $e) => [
                 'id' => $e->id,
@@ -104,14 +128,7 @@ class DisputePresenter
             ])->values(),
             'actions' => $dispute->lodged_on !== null ? self::actions($stage, $dispute->reference !== null, $dispute->mode->isManagedByUs()) : [],
             'creditAmount' => $dispute->credit_amount !== null ? Money::format($dispute->credit_amount) : null,
-            'fees' => $dispute->mode === DisputeMode::SuccessFee ? self::fees($dispute) : null,
             'tariff' => self::tariff($dispute),
-            'invoices' => $dispute->feeInvoices->map(fn (FeeInvoice $invoice) => [
-                'id' => $invoice->id,
-                'description' => $invoice->description,
-                'amount' => Money::format($invoice->amount),
-                'status' => $invoice->status->value,
-            ])->values(),
         ];
     }
 
@@ -145,36 +162,6 @@ class DisputePresenter
         $actions[] = ['kind' => DisputeEventKind::Closed->value, 'label' => 'Close this dispute', 'fields' => ['note']];
 
         return $actions;
-    }
-
-    /**
-     * The success fee as the business claim screen shows it.
-     *
-     * @return array<string, mixed>
-     */
-    private static function fees(Dispute $dispute): array
-    {
-        $rate = $dispute->organisation->successFeeRate();
-        $monthlySaving = $dispute->monthly_saving ?? self::expectedMonthlySaving($dispute);
-        $fee = Pricing::successFee($dispute->back_refund_claimed ?? $dispute->disputed_total, $monthlySaving, $rate);
-        $invoiced = Money::sum($dispute->feeInvoices->map(fn (FeeInvoice $i) => Money::of($i->amount)));
-        $savingsInvoiced = $dispute->feeInvoices->where('kind', FeeKind::MonthlySaving)->count();
-
-        return [
-            'rate' => rtrim(rtrim((string) Money::of($rate)->multipliedBy(100), '0'), '.').'%',
-            'backRefund' => Money::format($fee->backRefund),
-            'backRefundFee' => Money::format($fee->backRefundFee),
-            'backRefundInvoiced' => $dispute->feeInvoices->contains('kind', FeeKind::BackRefund),
-            'monthlySaving' => $monthlySaving !== null ? Money::format($fee->monthlySaving) : null,
-            'monthlySavingFee' => Money::format($fee->monthlySavingFee),
-            'savingsTotal' => Money::format($fee->savingsTotal),
-            'savingsFeeTotal' => Money::format($fee->savingsFeeTotal),
-            'savingsInvoiced' => $savingsInvoiced,
-            'savingMonths' => $fee->savingMonths,
-            'totalWon' => Money::format($fee->totalWon),
-            'totalFee' => Money::format($fee->totalFee),
-            'invoicedSoFar' => Money::format($invoiced),
-        ];
     }
 
     private static function expectedMonthlySaving(Dispute $dispute): ?string
@@ -219,7 +206,7 @@ class DisputePresenter
                 'total' => $after->total_due !== null ? Money::format($after->total_due) : null,
             ] : null,
             'expected' => $expected?->label(),
-            'monthlySaving' => $dispute->monthly_saving !== null ? Money::format($dispute->monthly_saving) : null,
+            'monthlySaving' => ($saving = $dispute->monthly_saving ?? self::expectedMonthlySaving($dispute)) !== null ? Money::format($saving) : null,
         ];
     }
 }

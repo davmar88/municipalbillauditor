@@ -12,6 +12,7 @@ use App\Models\Dispute;
 use App\Models\Finding;
 use App\Models\Reminder;
 use App\Notifications\DisputeReminder;
+use App\Services\Disputes\DisputeChaser;
 use Carbon\CarbonImmutable;
 use DateTimeInterface;
 use Illuminate\Console\Attributes\Description;
@@ -22,8 +23,9 @@ use Illuminate\Support\Facades\Notification;
 
 /**
  * Runs daily. Reminds customers before the dispute window closes on a
- * flagged bill, and when a dispute they sent themselves needs escalating.
- * Managed disputes are escalated by our team from the staff queue instead.
+ * flagged bill, chases the disputes we emailed (follow-up, escalation,
+ * Public Protector draft), and reminds customers whose older disputes
+ * they sent themselves when those need escalating.
  */
 #[Signature('disputes:remind')]
 #[Description('Email customers about dispute deadlines and overdue replies')]
@@ -32,10 +34,10 @@ class SendDisputeReminders extends Command
     /** Days before the dispute window closes that we remind, nearest first. */
     private const WINDOW_NOTICES = [2, 7];
 
-    public function handle(): int
+    public function handle(DisputeChaser $chaser): int
     {
         $today = CarbonImmutable::today();
-        $sent = $this->windowClosing($today) + $this->escalations($today);
+        $sent = $this->windowClosing($today) + $this->escalations($today) + $chaser->run($today);
 
         $this->info($sent === 1 ? '1 reminder sent.' : "{$sent} reminders sent.");
 
@@ -53,7 +55,7 @@ class SendDisputeReminders extends Command
             ->whereNotNull('property_id')
             ->whereDoesntHave('disputes', fn (Builder $q) => $q->whereNotNull('submitted_on'))
             ->whereHas('findings', fn (Builder $q) => $q->where('state', '!=', 'dismissed'))
-            ->with(['property.metro', 'findings', 'organisation.users'])
+            ->with(['property.municipality', 'findings', 'organisation.users'])
             ->get();
 
         foreach ($bills as $bill) {
@@ -63,7 +65,7 @@ class SendDisputeReminders extends Command
                 continue;
             }
 
-            $deadline = CaseClock::disputeDeadline($bill->bill_date, $bill->property->metro->rules());
+            $deadline = CaseClock::disputeDeadline($bill->bill_date, $bill->property->rules());
             $left = (int) $today->diffInDays($deadline, false);
             $notice = collect(self::WINDOW_NOTICES)->first(fn (int $days) => $left >= 0 && $left <= $days);
 
@@ -99,12 +101,12 @@ class SendDisputeReminders extends Command
             ->whereNotNull('lodged_on')
             ->whereNull('credit_on')
             ->whereNull('closed_on')
-            ->with(['property.metro', 'bill', 'organisation.users'])
+            ->with(['property.municipality', 'bill', 'organisation.users'])
             ->get();
 
         foreach ($disputes as $dispute) {
             $stage = $dispute->stage($today);
-            $rules = $dispute->property->metro->rules();
+            $rules = $dispute->property->rules();
 
             $reminder = match ($stage) {
                 Stage::ReplyOverdue => [

@@ -10,7 +10,7 @@ namespace App\Audit\Deadlines;
  * founder's notes, and the reply and councillor windows are guesses. Staff
  * set them per metro.
  */
-final readonly class MetroRules
+final readonly class MunicipalityRules
 {
     public function __construct(
         public int $disputeWindowDays = 30,

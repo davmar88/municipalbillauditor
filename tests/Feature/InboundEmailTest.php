@@ -9,6 +9,7 @@ use App\Models\Organisation;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 /**
@@ -56,6 +57,56 @@ class InboundEmailTest extends TestCase
             ->assertJson(['accepted' => 0]);
 
         $this->assertSame(0, Bill::count());
+    }
+
+    /**
+     * A Mailgun route forward, signed with the webhook signing key.
+     *
+     * @param  array<string, mixed>  $fields
+     */
+    private function mailgun(array $fields, ?int $timestamp = null, ?string $token = null, ?string $key = 'mailgun-signing-key')
+    {
+        $timestamp ??= now()->getTimestamp();
+        $token ??= Str::random(50);
+
+        return $this->post(route('inbound.email'), [
+            ...$fields,
+            'timestamp' => (string) $timestamp,
+            'token' => $token,
+            'signature' => hash_hmac('sha256', $timestamp.$token, (string) $key),
+        ]);
+    }
+
+    public function test_mailgun_forwards_are_verified_by_their_signature(): void
+    {
+        config(['services.mailgun.webhook_signing_key' => 'mailgun-signing-key']);
+        $organisation = Organisation::factory()->create();
+        $fields = fn () => [
+            'recipient' => "{$organisation->forwarding_code}@bills.example.com",
+            'sender' => 'thandi@example.com',
+            'subject' => 'Fwd: Your statement',
+            'body-plain' => 'See attached.',
+            'attachment-1' => UploadedFile::fake()->create('statement.pdf', 100, 'application/pdf'),
+        ];
+
+        $this->mailgun($fields())->assertStatus(202)->assertJson(['accepted' => 1]);
+        $this->assertSame(BillSource::Email, Bill::sole()->source);
+
+        // Wrong key, stale, from the future, or replayed: refused.
+        $this->mailgun($fields(), key: 'guessed')->assertNotFound();
+        $this->mailgun($fields(), timestamp: now()->subMinutes(10)->getTimestamp())->assertNotFound();
+        $this->mailgun($fields(), timestamp: now()->addMinutes(10)->getTimestamp())->assertNotFound();
+        $this->mailgun($fields(), token: 'same-token')->assertStatus(202);
+        $this->mailgun($fields(), token: 'same-token')->assertNotFound();
+
+        $this->assertSame(2, Bill::count());
+    }
+
+    public function test_without_a_signing_key_unsigned_posts_are_refused(): void
+    {
+        config(['services.mailgun.webhook_signing_key' => null]);
+
+        $this->mailgun(['recipient' => 'x@bills.example.com'])->assertNotFound();
     }
 
     public function test_a_wrong_secret_is_turned_away(): void

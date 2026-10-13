@@ -20,16 +20,18 @@ export type Option = {
 export type PropertyOption = {
     id: number;
     label: string;
-    metro: string | null;
+    municipality: string | null;
 };
 
-export type MetroOption = {
+export type MunicipalityOption = {
     id: number;
     name: string;
+    province: string | null;
 };
 
 export type BillStatus =
     | 'received'
+    | 'waiting_for_credit'
     | 'reading'
     | 'needs_entry'
     | 'needs_property'
@@ -132,7 +134,7 @@ export type BillDetail = BillSummary & {
     billDateLabel: string | null;
     dueDate: string | null;
     period: string | null;
-    metro: { name: string; shortName: string } | null;
+    municipality: { name: string; shortName: string } | null;
     readings: Reading[];
     charges: ChargeLine[];
     tariffFlags: number[];
@@ -149,7 +151,7 @@ export type BillDetail = BillSummary & {
     history: UsageSeries[];
 };
 
-export type DisputeMode = 'self' | 'managed' | 'success_fee';
+export type DisputeMode = 'self' | 'managed';
 
 export type DisputeSummary = {
     id: number;
@@ -169,7 +171,6 @@ export type DisputeSummary = {
     lodgedOn: string | null;
     reference: string | null;
     issues: number;
-    backRefundClaimed: string | null;
 };
 
 export type TimelineState = 'done' | 'current' | 'upcoming' | 'if_needed';
@@ -188,22 +189,6 @@ export type DisputeAction = {
     fields: ('reference' | 'note' | 'amount')[];
 };
 
-export type SuccessFee = {
-    rate: string;
-    backRefund: string;
-    backRefundFee: string;
-    backRefundInvoiced: boolean;
-    monthlySaving: string | null;
-    monthlySavingFee: string;
-    savingsTotal: string;
-    savingsFeeTotal: string;
-    savingsInvoiced: number;
-    savingMonths: number;
-    totalWon: string;
-    totalFee: string;
-    invoicedSoFar: string;
-};
-
 export type TariffSnapshot = {
     month: string;
     label: string | null;
@@ -214,7 +199,7 @@ export type DisputeDetail = DisputeSummary & {
     letterSubject: string;
     letterBody: string;
     undisputedAmount: string | null;
-    metro: string;
+    municipality: string | null;
     status: {
         headline: string;
         countdownLabel: string;
@@ -233,19 +218,25 @@ export type DisputeDetail = DisputeSummary & {
     findings: { number: number; title: string; amount: string | null }[];
     actions: DisputeAction[];
     creditAmount: string | null;
-    fees: SuccessFee | null;
+    sentTo: string | null;
+    infoRequest: { what: string | null; on: string } | null;
+    messages: {
+        id: number;
+        direction: 'out' | 'in';
+        kind: string;
+        subject: string | null;
+        on: string;
+        who: string;
+        classification: string | null;
+        summary: string | null;
+        files: { name: string; url: string }[];
+    }[];
     tariff: {
         before: TariffSnapshot;
         after: TariffSnapshot | null;
         expected: string | null;
         monthlySaving: string | null;
     } | null;
-    invoices: {
-        id: number;
-        description: string;
-        amount: string;
-        status: string;
-    }[];
 };
 
 export type PropertyDetail = {
@@ -255,8 +246,8 @@ export type PropertyDetail = {
     unit: string | null;
     address: string | null;
     suburb: string | null;
-    metroId: number;
-    metro: string | null;
+    municipalityId: number | null;
+    municipality: string | null;
     propertyType: string;
     propertyTypeLabel: string;
     accountNumber: string | null;
@@ -274,7 +265,7 @@ export type PortfolioState =
 export type PortfolioRow = {
     propertyId: number;
     label: string;
-    metro: string;
+    municipality: string | null;
     billTotal: string | null;
     billMonth: string | null;
     state: PortfolioState;
@@ -283,4 +274,13 @@ export type PortfolioRow = {
     atStake: string | null;
     deadlineLabel: string | null;
     href: string;
+};
+
+export type JobQuote = {
+    job: 'bill_check' | 'dispute';
+    price: string;
+    coveredByPlan: boolean;
+    balance: string;
+    affordable: boolean;
+    shortfall: string | null;
 };

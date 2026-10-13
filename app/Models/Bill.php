@@ -37,6 +37,10 @@ use Illuminate\Support\Facades\Storage;
  * @property CarbonImmutable|null $period_start
  * @property CarbonImmutable|null $period_end
  * @property string|null $account_number
+ * @property string|null $municipality_name
+ * @property string|null $municipality_email
+ * @property string|null $municipality_address
+ * @property string|null $municipality_phone
  * @property string|null $tariff_label
  * @property TariffCategory $tariff_category
  * @property string|null $total_due
@@ -46,13 +50,15 @@ use Illuminate\Support\Facades\Storage;
  * @property list<string>|null $skipped
  * @property string|null $meter_photo_path
  * @property Carbon|null $checked_at
+ * @property Carbon|null $waiting_since
  */
 #[Fillable([
     'property_id', 'user_id', 'source', 'status', 'needs_review', 'review_note',
     'file_path', 'file_name', 'file_mime', 'file_size',
     'bill_date', 'due_date', 'period_start', 'period_end', 'account_number',
+    'municipality_name', 'municipality_email', 'municipality_address', 'municipality_phone',
     'tariff_label', 'tariff_category', 'total_due', 'read_method', 'extraction',
-    'passed', 'skipped', 'meter_photo_path', 'checked_at',
+    'passed', 'skipped', 'meter_photo_path', 'checked_at', 'waiting_since',
 ])]
 class Bill extends Model
 {
@@ -68,6 +74,13 @@ class Bill extends Model
             foreach (array_filter([$bill->file_path, $bill->meter_photo_path]) as $path) {
                 $disk->delete($path);
             }
+
+            // And the letters municipalities attached to replies about it.
+            DisputeMessage::query()
+                ->whereIn('dispute_id', $bill->disputes()->select('id'))
+                ->whereNotNull('attachments')
+                ->get()
+                ->each(fn (DisputeMessage $message) => $disk->delete(array_column($message->attachments ?? [], 'path')));
         });
     }
 
@@ -87,6 +100,7 @@ class Bill extends Model
             'passed' => 'array',
             'skipped' => 'array',
             'checked_at' => 'datetime',
+            'waiting_since' => 'datetime',
         ];
     }
 

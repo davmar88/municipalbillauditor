@@ -1,5 +1,6 @@
 import { Form, Head, Link } from '@inertiajs/react';
 import { Download } from 'lucide-react';
+import { useState } from 'react';
 import { Chip } from '@/components/audit/chip';
 import { PageBody, PageHeader } from '@/components/audit/page-header';
 import { CopyButton } from '@/components/copy-button';
@@ -10,13 +11,17 @@ import { Label } from '@/components/ui/label';
 import { NativeSelect } from '@/components/ui/native-select';
 import { Spinner } from '@/components/ui/spinner';
 import { localToday } from '@/lib/dates';
-import { index, reference } from '@/routes/staff';
+import { index, margin, reference } from '@/routes/staff';
 import { file } from '@/routes/staff/bills';
-import { lodge } from '@/routes/staff/disputes';
+import { lodge, send } from '@/routes/staff/disputes';
+import { eft } from '@/routes/staff/organisations';
+import { record as recordReply } from '@/routes/staff/replies';
 import { store as recordEvent } from '@/routes/staff/disputes/events';
 import type { DisputeSummary, Option } from '@/types';
 
 type StaffDispute = DisputeSummary & {
+    heldReason?: string | null;
+    recipient?: string | null;
     organisation: string;
     letterSubject: string;
     letterBody: string;
@@ -36,6 +41,25 @@ type Props = {
         note: string | null;
         received: string;
     }[];
+    organisations: StaffOrganisation[];
+    replies: {
+        id: number;
+        organisation: string;
+        from: string | null;
+        subject: string | null;
+        excerpt: string;
+        received: string;
+        suggestion: string | null;
+        unknownSender: boolean;
+        files: { name: string; url: string }[];
+    }[];
+};
+
+type StaffOrganisation = {
+    id: number;
+    name: string;
+    kind: string;
+    balance: string;
 };
 
 export default function StaffIndex({
@@ -43,6 +67,8 @@ export default function StaffIndex({
     needsEscalation,
     eventKinds,
     bills,
+    organisations,
+    replies,
 }: Props) {
     return (
         <>
@@ -52,19 +78,53 @@ export default function StaffIndex({
                     title="Work queue"
                     description="Managed disputes to lodge, disputes that need the next step, and bills waiting for their details."
                     actions={
-                        <Button variant="outline" asChild>
-                            <Link href={reference()}>Reference data</Link>
-                        </Button>
+                        <>
+                            <Button variant="outline" asChild>
+                                <Link href={margin()}>Margin</Link>
+                            </Button>
+                            <Button variant="outline" asChild>
+                                <Link href={reference()}>Reference data</Link>
+                            </Button>
+                        </>
                     }
                 />
 
                 <Queue
-                    title="To lodge"
-                    empty="Nothing waiting to be lodged."
+                    title="Approved but not sent"
+                    empty="Every approved dispute has gone out."
                     count={toLodge.length}
                 >
                     {toLodge.map((dispute) => (
                         <DisputeItem key={dispute.id} dispute={dispute}>
+                            <p className="text-sm">
+                                {dispute.heldReason === 'no_mandate'
+                                    ? "Held: the customer hasn't given us their permission to send it."
+                                    : dispute.heldReason === 'send_failed'
+                                      ? `Held: emailing it to ${dispute.recipient ?? 'the municipality'} failed after several tries. Check the mail settings, then send it again.`
+                                      : dispute.recipient
+                                        ? `Ready to email to ${dispute.recipient}.`
+                                        : 'Held: we have no account queries email for this municipality. Add a verified one in the reference data, then send it.'}
+                            </p>
+                            {dispute.recipient &&
+                                dispute.heldReason !== 'no_mandate' && (
+                                    <Form
+                                        {...send.form(dispute.id)}
+                                        options={{ preserveScroll: true }}
+                                    >
+                                        {({ processing }) => (
+                                            <Button
+                                                type="submit"
+                                                disabled={processing}
+                                            >
+                                                {processing && <Spinner />}
+                                                Send it now
+                                            </Button>
+                                        )}
+                                    </Form>
+                                )}
+                            <p className="text-sm text-muted-foreground">
+                                Or, if it went out another way, record it:
+                            </p>
                             <Form
                                 {...lodge.form(dispute.id)}
                                 options={{ preserveScroll: true }}
@@ -264,6 +324,130 @@ export default function StaffIndex({
                         </li>
                     ))}
                 </Queue>
+
+                <Queue
+                    title="Replies we couldn't read"
+                    empty="Every municipal reply has been read."
+                    count={replies.length}
+                >
+                    {replies.map((reply) => (
+                        <li
+                            key={reply.id}
+                            className="flex flex-col gap-3 rounded-lg border bg-card p-4"
+                        >
+                            <span className="flex flex-col">
+                                <span className="font-semibold">
+                                    {reply.organisation} · {reply.subject}
+                                </span>
+                                <span className="text-sm [overflow-wrap:anywhere] text-muted-foreground">
+                                    {reply.from} · {reply.received}
+                                </span>
+                            </span>
+                            {reply.unknownSender && (
+                                <p className="text-sm text-flag-ink">
+                                    Not from the municipality's email domain, so
+                                    nothing was applied. Check who sent it.
+                                </p>
+                            )}
+                            <p className="text-sm whitespace-pre-wrap">
+                                {reply.excerpt}
+                            </p>
+                            {reply.suggestion && (
+                                <p className="text-sm text-muted-foreground">
+                                    Claude read it as: {reply.suggestion}
+                                </p>
+                            )}
+                            {reply.files.length > 0 && (
+                                <p className="flex flex-wrap gap-3 text-sm">
+                                    {reply.files.map((file) => (
+                                        <a
+                                            key={file.url}
+                                            href={file.url}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="font-semibold"
+                                        >
+                                            {file.name}
+                                        </a>
+                                    ))}
+                                </p>
+                            )}
+                            <Form
+                                {...recordReply.form(reply.id)}
+                                options={{ preserveScroll: true }}
+                                className="grid gap-3 sm:grid-cols-[12rem_10rem_1fr_auto] sm:items-end"
+                            >
+                                {({ processing, errors }) => (
+                                    <>
+                                        <div className="grid gap-1.5">
+                                            <Label
+                                                htmlFor={`outcome_${reply.id}`}
+                                            >
+                                                It says
+                                            </Label>
+                                            <NativeSelect
+                                                id={`outcome_${reply.id}`}
+                                                name="outcome"
+                                                defaultValue="acknowledgement"
+                                            >
+                                                <option value="acknowledgement">
+                                                    Acknowledged
+                                                </option>
+                                                <option value="more_information">
+                                                    Needs more information
+                                                </option>
+                                                <option value="upheld">
+                                                    Upheld
+                                                </option>
+                                                <option value="rejected">
+                                                    Rejected
+                                                </option>
+                                                <option value="unrelated">
+                                                    Nothing to record
+                                                </option>
+                                            </NativeSelect>
+                                            <InputError
+                                                message={errors.outcome}
+                                            />
+                                        </div>
+                                        <div className="grid gap-1.5">
+                                            <Label
+                                                htmlFor={`reply_ref_${reply.id}`}
+                                            >
+                                                Reference
+                                            </Label>
+                                            <Input
+                                                id={`reply_ref_${reply.id}`}
+                                                name="reference"
+                                                className="font-mono"
+                                            />
+                                        </div>
+                                        <div className="grid gap-1.5">
+                                            <Label
+                                                htmlFor={`reply_note_${reply.id}`}
+                                            >
+                                                Note
+                                            </Label>
+                                            <Input
+                                                id={`reply_note_${reply.id}`}
+                                                name="note"
+                                            />
+                                        </div>
+                                        <Button
+                                            type="submit"
+                                            disabled={processing}
+                                        >
+                                            {processing && <Spinner />}
+                                            Record
+                                        </Button>
+                                    </>
+                                )}
+                            </Form>
+                        </li>
+                    ))}
+                </Queue>
+
+                <EftForm organisations={organisations} />
             </PageBody>
         </>
     );
@@ -272,6 +456,84 @@ export default function StaffIndex({
 StaffIndex.layout = {
     breadcrumbs: [{ title: 'Work queue', href: index() }],
 };
+
+/**
+ * A customer paid by EFT. The bank reference is recorded once only, so
+ * sending the form twice doesn't credit twice.
+ */
+function EftForm({ organisations }: { organisations: StaffOrganisation[] }) {
+    const [organisationId, setOrganisationId] = useState<number | null>(null);
+    const chosen = organisations.find((o) => o.id === organisationId);
+
+    return (
+        <section className="flex flex-col gap-3">
+            <h2 className="text-lg font-bold">Record an EFT top-up</h2>
+            <div className="flex flex-col gap-3 rounded-lg border bg-card p-5">
+                <div className="grid max-w-md gap-1.5">
+                    <Label htmlFor="eft_organisation">Account</Label>
+                    <NativeSelect
+                        id="eft_organisation"
+                        value={organisationId ?? ''}
+                        onChange={(e) =>
+                            setOrganisationId(
+                                e.target.value ? Number(e.target.value) : null,
+                            )
+                        }
+                    >
+                        <option value="">Choose an account</option>
+                        {organisations.map((o) => (
+                            <option key={o.id} value={o.id}>
+                                {o.name} ({o.kind}, credit {o.balance})
+                            </option>
+                        ))}
+                    </NativeSelect>
+                </div>
+                {chosen && (
+                    <Form
+                        {...eft.form(chosen.id)}
+                        options={{ preserveScroll: true }}
+                        resetOnSuccess
+                        className="grid gap-3 sm:grid-cols-[10rem_1fr_auto] sm:items-end"
+                    >
+                        {({ processing, errors }) => (
+                            <>
+                                <div className="grid gap-1.5">
+                                    <Label htmlFor="eft_amount">
+                                        Amount (R)
+                                    </Label>
+                                    <Input
+                                        id="eft_amount"
+                                        name="amount"
+                                        inputMode="decimal"
+                                        required
+                                    />
+                                    <InputError message={errors.amount} />
+                                </div>
+                                <div className="grid gap-1.5">
+                                    <Label htmlFor="eft_reference">
+                                        Bank reference
+                                    </Label>
+                                    <Input
+                                        id="eft_reference"
+                                        name="bank_reference"
+                                        required
+                                    />
+                                    <InputError
+                                        message={errors.bank_reference}
+                                    />
+                                </div>
+                                <Button type="submit" disabled={processing}>
+                                    {processing && <Spinner />}
+                                    Add to {chosen.name}'s credit
+                                </Button>
+                            </>
+                        )}
+                    </Form>
+                )}
+            </div>
+        </section>
+    );
+}
 
 function Queue({
     title,

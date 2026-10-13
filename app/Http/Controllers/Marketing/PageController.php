@@ -10,9 +10,12 @@ use App\Audit\Letters\LetterInput;
 use App\Audit\Letters\LetterItem;
 use App\Audit\Letters\LetterWriter;
 use App\Audit\Money;
+use App\Enums\Job;
 use App\Http\Controllers\Controller;
-use App\Models\Metro;
+use App\Models\Municipality;
+use App\Services\Billing\Wallet;
 use App\Support\SiteContent;
+use Brick\Math\BigDecimal;
 use DateTimeImmutable;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Str;
@@ -26,18 +29,18 @@ class PageController extends Controller
     public function home(): View
     {
         return view('marketing.home', [
-            'metros' => Metro::query()->where('live', true)->orderBy('sort')->get(),
+            'metros' => Municipality::landingPages(),
             'proof' => SiteContent::visibleProof(),
             'checks' => SiteContent::checks(),
             'steps' => SiteContent::steps(),
             'faq' => SiteContent::faq(),
-            'prices' => $this->prices(),
+            'prices' => self::prices(),
         ]);
     }
 
-    public function metro(Metro $metro): View
+    public function metro(Municipality $metro): View
     {
-        abort_unless($metro->live, 404);
+        abort_unless($metro->live && $metro->has_landing_page, 404);
 
         return view('marketing.metro', [
             'metro' => $metro,
@@ -46,7 +49,7 @@ class PageController extends Controller
             'checks' => SiteContent::checks(),
             'steps' => SiteContent::steps(),
             'faq' => SiteContent::faq(),
-            'otherMetros' => Metro::query()->where('live', true)->whereKeyNot($metro->id)->orderBy('sort')->get(),
+            'otherMetros' => Municipality::landingPages()->reject(fn (Municipality $m) => $m->is($metro))->values(),
         ]);
     }
 
@@ -59,7 +62,7 @@ class PageController extends Controller
      * The letter a customer of this metro would get for the example bill on
      * the landing page: an estimated water reading and an outage.
      */
-    private function sampleLetter(Metro $metro): Letter
+    private function sampleLetter(Municipality $metro): Letter
     {
         return LetterWriter::dispute(new LetterInput(
             addressee: $metro->billing_addressee,
@@ -85,14 +88,26 @@ class PageController extends Controller
     }
 
     /**
-     * @return array{household: string, unit: string, successFee: string}
+     * The prices the public pages quote, from config.
+     *
+     * @return array{billCheck: string, billCheckAmount: string, dispute: string, agentMonth: string, businessMonth: string, includedChecks: int, smallestTopUp: string, welcome: ?string}
      */
-    private function prices(): array
+    public static function prices(): array
     {
+        $rand = fn (string $amount) => Str::replaceLast('.00', '', Money::format($amount));
+        $packs = array_map(fn (string $a) => Money::of($a), config('auditor.prices.top_ups'));
+        $welcome = Money::money((string) config('auditor.prices.welcome_credit'));
+
         return [
-            'household' => Str::replaceLast('.00', '', Money::format(config('auditor.prices.household_dispute'))),
-            'unit' => Str::replaceLast('.00', '', Money::format(config('auditor.prices.per_unit_month'))),
-            'successFee' => rtrim(rtrim((string) Money::of(config('auditor.prices.success_fee_rate'))->multipliedBy(100), '0'), '.').'%',
+            'billCheck' => $rand(Job::BillCheck->price()),
+            'billCheckAmount' => Job::BillCheck->price(),
+            'dispute' => $rand(Job::Dispute->price()),
+            'agentMonth' => $rand((string) config('auditor.prices.agent_month')),
+            'businessMonth' => $rand((string) config('auditor.prices.business_month')),
+            'includedChecks' => Wallet::includedChecks(),
+            'smallestTopUp' => $packs === [] ? $rand(Job::BillCheck->price()) : $rand((string) BigDecimal::min(...$packs)),
+            // Only mention free credit when there is some.
+            'welcome' => $welcome->isPositive() ? $rand((string) $welcome) : null,
         ];
     }
 }

@@ -305,7 +305,7 @@ function UnitsTable({ rows }: { rows: PortfolioRow[] }) {
                                 PROPERTY · UNIT
                             </th>
                             <th scope="col" className="px-3 py-2 font-medium">
-                                METRO
+                                MUNICIPALITY
                             </th>
                             <th
                                 scope="col"
@@ -344,7 +344,9 @@ function UnitsTable({ rows }: { rows: PortfolioRow[] }) {
                                         {row.label}
                                     </Link>
                                 </th>
-                                <td className="px-3 py-3">{row.metro}</td>
+                                <td className="px-3 py-3">
+                                    {row.municipality}
+                                </td>
                                 <td className="figures px-3 py-3 text-right">
                                     {row.billMonth && row.billTotal && (
                                         <span className="block font-sans text-xs text-muted-foreground">
@@ -390,7 +392,9 @@ function UnitsTable({ rows }: { rows: PortfolioRow[] }) {
                                 </Chip>
                             </span>
                             <span className="flex justify-between gap-2 text-sm text-muted-foreground">
-                                <span>{row.deadlineLabel ?? row.metro}</span>
+                                <span>
+                                    {row.deadlineLabel ?? row.municipality}
+                                </span>
                                 {row.atStake && (
                                     <span className="figures">
                                         {row.atStake}

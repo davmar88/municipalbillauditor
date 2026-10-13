@@ -7,7 +7,7 @@
 @endphp
 
 @section('title', "{$metro->short_name} billing disputes | Municipal Bill Auditor")
-@section('description', "Wrong {$metro->name} bill? We check it free for estimated readings, wrong tariffs and outage charges, then write your dispute and chase it to the credit.")
+@section('description', "Wrong {$metro->name} bill? We check it for estimated readings, wrong tariffs and outage charges, then write your dispute and chase it to the credit.")
 @section('canonical', route('metro.show', $metro))
 
 @include('marketing.partials.jsonld', ['data' => [
@@ -18,7 +18,7 @@
             'serviceType' => "Municipal bill disputes in {$metro->short_name}",
             'provider' => ['@type' => 'Organization', 'name' => config('app.name'), 'url' => route('home')],
             'areaServed' => ['@type' => 'City', 'name' => $metro->area_name ?? $metro->short_name],
-            'offers' => ['@type' => 'Offer', 'price' => '0', 'priceCurrency' => 'ZAR', 'description' => 'Free bill check'],
+            'offers' => ['@type' => 'Offer', 'price' => $sitePrices['billCheckAmount'], 'priceCurrency' => 'ZAR', 'description' => 'Bill check'],
         ],
         [
             '@type' => 'BreadcrumbList',
@@ -41,7 +41,7 @@
             <div class="flex flex-wrap gap-3">
                 <a href="{{ $checkUrl }}" class="flex h-14 items-center gap-2.5 rounded-lg bg-action px-6 text-lg font-semibold text-white no-underline hover:bg-action-ink hover:text-white">
                     @include('marketing.partials.camera')
-                    Check my bill free
+                    {{ $checkLabel }}
                 </a>
                 <a href="#letter" class="flex h-14 items-center rounded-lg border border-[#a9b1bb] bg-paper px-[22px] text-lg font-semibold text-ink no-underline hover:border-ink hover:text-ink">See a sample letter</a>
             </div>
@@ -64,8 +64,8 @@
                 </li>
                 <li class="flex flex-col gap-2 border-t-4 border-action pt-4">
                     <span class="font-mono text-sm font-semibold text-action">WHERE</span>
-                    <h3 class="text-xl font-bold">Lodged with billing queries</h3>
-                    <p class="text-base text-ink-2">The letter goes to {{ $metro->billing_addressee }}@if ($metro->billing_email) (<span class="font-mono text-sm">{{ $metro->billing_email }}</span>)@endif, with your bill and meter photo attached.</p>
+                    <h3 class="text-xl font-bold">Emailed to billing queries</h3>
+                    <p class="text-base text-ink-2">We email it to {{ $metro->billing_addressee }} for you, with your bill and meter photo attached and you copied in. Their replies come to us.</p>
                 </li>
                 <li class="flex flex-col gap-2 border-t-4 border-action pt-4">
                     <span class="font-mono text-sm font-semibold text-action">{{ $metro->reply_window_days }} DAYS</span>
@@ -74,8 +74,8 @@
                 </li>
                 <li class="flex flex-col gap-2 border-t-4 border-dashed border-[#a9b1bb] pt-4">
                     <span class="font-mono text-sm font-semibold text-muted">ONLY IF NEEDED</span>
-                    <h3 class="text-xl font-bold">Ward councillor, then the Public Protector</h3>
-                    <p class="text-base text-ink-2">No reply? We write to your ward councillor. If it's still not resolved {{ $metro->councillor_window_days }} days later, we take it to the Public Protector.</p>
+                    <h3 class="text-xl font-bold">Follow-up, municipal manager, Public Protector</h3>
+                    <p class="text-base text-ink-2">No reply? We follow up, then escalate to the municipal manager. If it's still not resolved, we write your Public Protector complaint for you to lodge.</p>
                 </li>
             </ol>
         </div>

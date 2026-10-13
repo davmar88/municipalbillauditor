@@ -3,19 +3,31 @@
 namespace App\Http\Controllers\Staff;
 
 use App\Audit\Deadlines\Stage;
+use App\Audit\Money;
 use App\Enums\BillStatus;
+use App\Enums\CreditKind;
 use App\Enums\DisputeEventKind;
 use App\Enums\DisputeMode;
+use App\Enums\ReplyClassification;
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\DisputeController;
 use App\Http\Presenters\DisputePresenter;
 use App\Http\Requests\RecordDisputeEventRequest;
+use App\Jobs\SendDispute;
 use App\Models\Bill;
 use App\Models\Dispute;
+use App\Models\DisputeMessage;
+use App\Models\Organisation;
+use App\Services\Billing\MarginReport;
+use App\Services\Billing\Wallet;
+use App\Services\Disputes\RecipientFinder;
 use App\Services\DisputeService;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -26,12 +38,12 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  */
 class StaffController extends Controller
 {
-    public function index(DisputeService $disputes): Response
+    public function index(DisputeService $disputes, RecipientFinder $recipients): Response
     {
         $toLodge = Dispute::query()
             ->whereNotNull('submitted_on')
             ->whereNull('lodged_on')
-            ->with(['property.metro', 'bill', 'findings', 'organisation'])
+            ->with(['property.municipality', 'bill', 'findings', 'organisation'])
             ->oldest('submitted_on')
             ->get();
 
@@ -40,7 +52,7 @@ class StaffController extends Controller
             ->whereNull('credit_on')
             ->whereNull('closed_on')
             ->where('mode', '!=', DisputeMode::Self)
-            ->with(['property.metro', 'bill.user', 'findings', 'organisation.users'])
+            ->with(['property.municipality', 'bill.user', 'findings', 'organisation.users'])
             ->get()
             ->filter(fn (Dispute $d) => $d->stage()->needsAction());
 
@@ -56,17 +68,47 @@ class StaffController extends Controller
             'organisation' => $d->organisation->name,
             'letterSubject' => $d->letter_subject,
             'letterBody' => $d->letter_body,
-            'billingEmail' => $d->property->metro->billing_email,
+            'billingEmail' => $d->property->municipality?->billing_email,
             'billUrl' => $d->bill->file_path ? route('staff.bills.file', $d->bill) : null,
         ];
 
         return Inertia::render('staff/index', [
-            'toLodge' => $toLodge->map($row)->values(),
+            'toLodge' => $toLodge->map(fn (Dispute $d) => [
+                ...$row($d),
+                'heldReason' => $d->held_reason,
+                'recipient' => $recipients->for($d)['email'] ?? null,
+            ])->values(),
             'needsEscalation' => $open->map(fn (Dispute $d) => [
                 ...$row($d),
                 'councillorLetter' => $this->councillorLetter($d, $disputes),
             ])->values(),
             'eventKinds' => RecordDisputeEventRequest::options(),
+            'replies' => DisputeMessage::query()
+                ->where('direction', DisputeMessage::IN)
+                ->where('classification', ReplyClassification::Unread)
+                ->with('dispute.organisation')
+                ->oldest()
+                ->limit(30)
+                ->get()
+                ->map(fn (DisputeMessage $m) => [
+                    'id' => $m->id,
+                    'organisation' => $m->dispute->organisation->name,
+                    'from' => $m->from_address,
+                    'subject' => $m->subject,
+                    'excerpt' => Str::limit((string) $m->body, 600),
+                    'suggestion' => isset($m->reading['suggested'])
+                        ? ReplyClassification::from($m->reading['suggested'])->label().': '.($m->reading['summary'] ?? '')
+                        : null,
+                    'unknownSender' => (bool) ($m->reading['unknown_sender'] ?? false),
+                    'files' => array_map(fn (int $i) => ['name' => $m->attachments[$i]['name'], 'url' => route('staff.replies.file', [$m, $i])], array_keys($m->attachments ?? [])),
+                    'received' => $m->created_at->format('j M Y'),
+                ])->values(),
+            'organisations' => Organisation::query()->orderBy('name')->get()->map(fn (Organisation $o) => [
+                'id' => $o->id,
+                'name' => $o->name,
+                'kind' => $o->kind->label(),
+                'balance' => Money::format($o->credit_balance),
+            ])->values(),
             'bills' => $bills->map(fn (Bill $b) => [
                 'id' => $b->id,
                 'organisation' => $b->organisation->name,
@@ -75,6 +117,73 @@ class StaffController extends Controller
                 'received' => $b->created_at->format('j M Y'),
             ])->values(),
         ]);
+    }
+
+    /**
+     * A file attached to a municipal reply.
+     */
+    public function replyFile(DisputeMessage $message, int $index): StreamedResponse
+    {
+        return DisputeController::streamAttachment($message, $index);
+    }
+
+    /**
+     * Our team reads a reply Claude couldn't, and records what it says.
+     */
+    public function recordReply(Request $request, DisputeMessage $message, DisputeService $disputes): RedirectResponse
+    {
+        abort_unless($message->direction === DisputeMessage::IN && $message->classification === ReplyClassification::Unread, 422, 'This reply has been dealt with.');
+
+        $data = $request->validate([
+            'outcome' => ['required', Rule::in(['acknowledgement', 'more_information', 'upheld', 'rejected', 'unrelated'])],
+            'reference' => ['nullable', 'string', 'max:60'],
+            'note' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $classification = ReplyClassification::from($data['outcome']);
+        $kind = match ($classification) {
+            ReplyClassification::Acknowledgement => DisputeEventKind::Acknowledged,
+            ReplyClassification::MoreInformation => DisputeEventKind::InfoRequested,
+            ReplyClassification::Upheld => DisputeEventKind::Upheld,
+            ReplyClassification::Rejected => DisputeEventKind::Rejected,
+            default => null,
+        };
+
+        if ($kind !== null && $message->dispute->lodged_on !== null) {
+            $disputes->record($message->dispute, $kind, CarbonImmutable::today(), [
+                'reference' => $data['reference'] ?? null,
+                'note' => $data['note'] ?? null,
+            ], $request->user());
+        }
+
+        $message->update([
+            'classification' => $classification,
+            'reading' => [...($message->reading ?? []), 'summary' => $data['note'] ?? $message->reading['summary'] ?? null, 'read_by_staff' => $request->user()->id],
+            'read_at' => now(),
+        ]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Recorded.']);
+
+        return back();
+    }
+
+    /**
+     * Send a held dispute, once the municipality's address is known.
+     */
+    public function send(Dispute $dispute): RedirectResponse
+    {
+        abort_if($dispute->submitted_on === null || $dispute->lodged_on !== null, 422, 'Only approved, unsent disputes can be sent.');
+
+        $dispute->update(['held_reason' => null]);
+        SendDispute::dispatch($dispute);
+        $dispute->refresh();
+
+        Inertia::flash('toast', match (true) {
+            $dispute->lodged_on !== null => ['type' => 'success', 'message' => "Sent to {$dispute->sent_to}."],
+            $dispute->held_reason !== null => ['type' => 'error', 'message' => 'Still held: there is no address or no permission from the customer.'],
+            default => ['type' => 'success', 'message' => 'Sending it now.'],
+        });
+
+        return back();
     }
 
     public function lodge(Request $request, Dispute $dispute, DisputeService $disputes): RedirectResponse
@@ -126,6 +235,50 @@ class StaffController extends Controller
             $request->user(),
         );
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Recorded.']);
+
+        return back();
+    }
+
+    /**
+     * The month's revenue against what Claude cost us.
+     */
+    public function margin(Request $request, MarginReport $report): Response
+    {
+        $month = $request->query('month');
+        $month = is_string($month) && preg_match('/^\d{4}-\d{2}$/', $month)
+            ? CarbonImmutable::createFromFormat('!Y-m', $month)
+            : CarbonImmutable::now();
+
+        return Inertia::render('staff/margin', [
+            'report' => $report->forMonth($month),
+            'months' => MarginReport::months(),
+        ]);
+    }
+
+    /**
+     * A customer paid by EFT: add it to their credit. The bank reference
+     * makes it count once, however often the form is sent.
+     */
+    public function recordEft(Request $request, Organisation $organisation, Wallet $wallet): RedirectResponse
+    {
+        $data = $request->validate([
+            'amount' => ['required', 'decimal:0,2', 'gt:0', 'max:100000'],
+            'bank_reference' => ['required', 'string', 'max:60'],
+        ]);
+
+        $reference = Str::of($data['bank_reference'])->lower()->replaceMatches('/\s+/', '')->limit(60, '')->value();
+        $transaction = $wallet->credit(
+            $organisation,
+            CreditKind::TopUp,
+            $data['amount'],
+            "eft:{$organisation->id}:{$reference}",
+            "EFT top-up, bank reference {$data['bank_reference']}",
+            by: $request->user(),
+        );
+
+        Inertia::flash('toast', $transaction->wasRecentlyCreated
+            ? ['type' => 'success', 'message' => Money::format($data['amount'])." added to {$organisation->name}'s credit."]
+            : ['type' => 'error', 'message' => 'That bank reference was already recorded for this account.']);
 
         return back();
     }

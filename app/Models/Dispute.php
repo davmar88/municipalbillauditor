@@ -36,25 +36,37 @@ use Illuminate\Support\Carbon;
  * @property CarbonImmutable|null $lodged_on
  * @property string|null $reference
  * @property CarbonImmutable|null $acknowledged_on
+ * @property CarbonImmutable|null $info_requested_on
+ * @property CarbonImmutable|null $info_reminded_on
+ * @property CarbonImmutable|null $info_answered_on
  * @property CarbonImmutable|null $reply_received_on
  * @property CarbonImmutable|null $escalated_councillor_on
  * @property CarbonImmutable|null $escalated_public_protector_on
  * @property CarbonImmutable|null $tariff_fixed_on
  * @property string|null $monthly_saving
- * @property string|null $back_refund_claimed
  * @property CarbonImmutable|null $credit_on
  * @property string|null $credit_amount
  * @property int|null $credit_bill_id
  * @property CarbonImmutable|null $closed_on
  * @property string|null $close_reason
+ * @property string|null $reply_token
+ * @property string|null $sent_to
+ * @property string|null $sent_to_source
+ * @property string|null $held_reason
+ * @property Carbon|null $held_since
+ * @property CarbonImmutable|null $followed_up_on
+ * @property CarbonImmutable|null $escalated_manager_on
+ * @property CarbonImmutable|null $public_protector_draft_on
  * @property Carbon $created_at
  */
 #[Fillable([
     'property_id', 'bill_id', 'mode', 'letter_subject', 'letter_body', 'disputed_total',
     'undisputed_amount', 'dispute_deadline', 'submitted_on', 'lodged_on', 'reference', 'acknowledged_on',
     'reply_received_on', 'escalated_councillor_on', 'escalated_public_protector_on',
-    'tariff_fixed_on', 'monthly_saving', 'back_refund_claimed', 'credit_on', 'credit_amount',
-    'credit_bill_id', 'closed_on', 'close_reason',
+    'tariff_fixed_on', 'monthly_saving', 'credit_on', 'credit_amount',
+    'credit_bill_id', 'closed_on', 'close_reason', 'reply_token', 'sent_to', 'sent_to_source',
+    'held_reason', 'held_since', 'followed_up_on', 'escalated_manager_on', 'public_protector_draft_on',
+    'info_requested_on', 'info_reminded_on', 'info_answered_on',
 ])]
 class Dispute extends Model
 {
@@ -76,10 +88,16 @@ class Dispute extends Model
             'escalated_public_protector_on' => 'immutable_date',
             'tariff_fixed_on' => 'immutable_date',
             'monthly_saving' => 'decimal:2',
-            'back_refund_claimed' => 'decimal:2',
             'credit_on' => 'immutable_date',
             'credit_amount' => 'decimal:2',
             'closed_on' => 'immutable_date',
+            'held_since' => 'datetime',
+            'info_requested_on' => 'immutable_date',
+            'info_reminded_on' => 'immutable_date',
+            'info_answered_on' => 'immutable_date',
+            'followed_up_on' => 'immutable_date',
+            'escalated_manager_on' => 'immutable_date',
+            'public_protector_draft_on' => 'immutable_date',
         ];
     }
 
@@ -113,10 +131,28 @@ class Dispute extends Model
         return $this->hasMany(DisputeEvent::class)->orderBy('happened_on')->orderBy('id');
     }
 
-    /** @return HasMany<FeeInvoice, $this> */
-    public function feeInvoices(): HasMany
+    /** @return HasMany<DisputeMessage, $this> */
+    public function messages(): HasMany
     {
-        return $this->hasMany(FeeInvoice::class);
+        return $this->hasMany(DisputeMessage::class)->orderBy('id');
+    }
+
+    /** The address the municipality replies to: d-<token>@<inbound domain>. */
+    public function replyAddress(): string
+    {
+        return 'd-'.$this->reply_token.'@'.config('auditor.inbound_email_domain');
+    }
+
+    /** The municipality asked the customer for something and is still waiting. */
+    public function waitingOnCustomer(): bool
+    {
+        return $this->info_requested_on !== null && $this->info_answered_on === null;
+    }
+
+    /** Emailed by us, so we read the replies and chase them. */
+    public function sentByEmail(): bool
+    {
+        return $this->sent_to !== null;
     }
 
     public function facts(): CaseFacts
@@ -144,12 +180,12 @@ class Dispute extends Model
 
     public function stage(?\DateTimeInterface $today = null): Stage
     {
-        return CaseClock::stage($this->facts(), $this->property->metro->rules(), $today ?? now());
+        return CaseClock::stage($this->facts(), $this->property->rules(), $today ?? now());
     }
 
     public function status(?\DateTimeInterface $today = null): CaseStatus
     {
-        return CaseClock::status($this->facts(), $this->property->metro->rules(), $today ?? now());
+        return CaseClock::status($this->facts(), $this->property->rules(), $today ?? now());
     }
 
     public function findingsSummary(): string

@@ -35,7 +35,7 @@ class PortfolioController extends Controller
         $today = CarbonImmutable::today();
 
         $properties = $organisation->properties()
-            ->with(['metro', 'latestBill.findings'])
+            ->with(['municipality', 'latestBill.findings'])
             ->orderBy('name')
             ->orderBy('unit')
             ->get();
@@ -44,7 +44,7 @@ class PortfolioController extends Controller
             ->whereNotNull('submitted_on')
             ->whereNull('credit_on')
             ->whereNull('closed_on')
-            ->with(['property.metro', 'bill', 'findings'])
+            ->with(['property.municipality', 'bill', 'findings'])
             ->latest('id')
             ->get()
             ->unique('property_id')
@@ -109,7 +109,7 @@ class PortfolioController extends Controller
         $row = [
             'propertyId' => $property->id,
             'label' => $property->label(),
-            'metro' => $property->metro->short_name,
+            'municipality' => $property->municipality?->short_name,
             'billTotal' => $bill?->total_due !== null ? Money::format($bill->total_due) : null,
             'billMonth' => $bill?->monthLabel(),
             'state' => 'clear',
@@ -159,7 +159,7 @@ class PortfolioController extends Controller
             return $row;
         }
 
-        $deadline = CaseClock::disputeDeadline($bill->bill_date, $property->metro->rules());
+        $deadline = CaseClock::disputeDeadline($bill->bill_date, $property->rules());
         $upTo = BillPresenter::totals($open)['upTo'];
 
         return [

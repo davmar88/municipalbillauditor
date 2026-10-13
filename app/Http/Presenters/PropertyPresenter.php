@@ -7,14 +7,14 @@ use App\Models\Property;
 class PropertyPresenter
 {
     /**
-     * @return array{id: int, label: string, metro: ?string}
+     * @return array{id: int, label: string, municipality: ?string}
      */
     public static function option(Property $property): array
     {
         return [
             'id' => $property->id,
             'label' => $property->label(),
-            'metro' => $property->relationLoaded('metro') ? $property->metro?->short_name : null,
+            'municipality' => $property->relationLoaded('municipality') ? $property->municipality?->short_name : null,
         ];
     }
 
@@ -30,8 +30,8 @@ class PropertyPresenter
             'unit' => $property->unit,
             'address' => $property->address,
             'suburb' => $property->suburb,
-            'metroId' => $property->metro_id,
-            'metro' => $property->metro?->short_name,
+            'municipalityId' => $property->municipality_id,
+            'municipality' => $property->municipality?->short_name,
             'propertyType' => $property->property_type->value,
             'propertyTypeLabel' => $property->property_type->label(),
             'accountNumber' => $property->account_number,

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Audit\Deadlines\MunicipalityRules;
 use App\Audit\Enums\PropertyType;
 use Database\Factories\PropertyFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -16,7 +17,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  *
  * @property int $id
  * @property int $organisation_id
- * @property int $metro_id
+ * @property int|null $municipality_id
  * @property string $name
  * @property string|null $unit
  * @property string|null $address
@@ -24,7 +25,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  * @property PropertyType $property_type
  * @property string|null $account_number
  */
-#[Fillable(['metro_id', 'name', 'unit', 'address', 'suburb', 'property_type', 'account_number'])]
+#[Fillable(['municipality_id', 'name', 'unit', 'address', 'suburb', 'property_type', 'account_number'])]
 class Property extends Model
 {
     /** @use HasFactory<PropertyFactory> */
@@ -41,10 +42,10 @@ class Property extends Model
         return $this->belongsTo(Organisation::class);
     }
 
-    /** @return BelongsTo<Metro, $this> */
-    public function metro(): BelongsTo
+    /** @return BelongsTo<Municipality, $this> */
+    public function municipality(): BelongsTo
     {
-        return $this->belongsTo(Metro::class);
+        return $this->belongsTo(Municipality::class);
     }
 
     /** @return HasMany<Bill, $this> */
@@ -63,6 +64,12 @@ class Property extends Model
     public function disputes(): HasMany
     {
         return $this->hasMany(Dispute::class);
+    }
+
+    /** The dispute rules that apply here: placeholders until we know the municipality. */
+    public function rules(): MunicipalityRules
+    {
+        return Municipality::rulesFor($this->municipality);
     }
 
     /** "Jacaranda Court · 12" */

@@ -4,10 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Audit\Enums\ReadingType;
 use App\Audit\Enums\Service;
+use App\Enums\Job;
 use App\Http\Presenters\PropertyPresenter;
 use App\Models\Bill;
 use App\Models\Property;
 use App\Services\AuditService;
+use App\Services\BillChecker;
+use App\Services\Billing\Wallet;
 use App\Services\BillWriter;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -67,7 +70,7 @@ class BillDetailsController extends Controller
         ]);
     }
 
-    public function update(Request $request, Bill $bill, BillWriter $writer, AuditService $audit): RedirectResponse
+    public function update(Request $request, Bill $bill, BillWriter $writer, AuditService $audit, BillChecker $checker, Wallet $wallet): RedirectResponse
     {
         $this->authorize('update', $bill);
         abort_if($bill->isLocked(), 403, 'This bill is already in a dispute.');
@@ -105,7 +108,19 @@ class BillDetailsController extends Controller
         }
 
         $writer->applyManual($bill, $data);
-        $audit->run($bill->refresh());
+        $bill->refresh();
+
+        // A correction to a bill already paid for is re-checked for free. A
+        // bill typed in after a failed read is a new check, and waits if
+        // there isn't enough credit.
+        if ($wallet->hasPaid(Job::BillCheck, $bill)) {
+            $audit->run($bill);
+        } elseif (! $checker->check($bill)) {
+            Inertia::flash('toast', ['type' => 'success', 'message' => "Saved. We'll check it as soon as you top up."]);
+
+            return to_route('bills.show', $bill);
+        }
+
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Saved and checked.']);
 
         return to_route('bills.show', $bill);

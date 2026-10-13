@@ -2,9 +2,11 @@
 
 namespace Database\Factories;
 
+use App\Enums\CreditKind;
 use App\Enums\OrganisationKind;
 use App\Models\Organisation;
 use App\Models\User;
+use App\Services\Billing\Wallet;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -47,6 +49,20 @@ class UserFactory extends Factory
         return $this->state(fn (array $attributes) => [
             'organisation_id' => Organisation::factory()->state(['kind' => $kind]),
         ]);
+    }
+
+    /**
+     * Prepaid credit on the user's account, added through the ledger.
+     */
+    public function withCredit(string $amount = '100'): static
+    {
+        return $this->afterCreating(fn (User $user) => app(Wallet::class)->credit(
+            $user->organisation,
+            CreditKind::TopUp,
+            $amount,
+            "test:{$user->organisation_id}:".Str::random(8),
+            'Test credit',
+        ));
     }
 
     public function staff(): static

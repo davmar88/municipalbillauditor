@@ -61,6 +61,7 @@ class DemoSmokeTest extends TestCase
         $this->get(route('disputes.create', $bill))->assertInertia(fn (Assert $page) => $page->component('disputes/create'));
         $this->get(route('properties.index'))->assertInertia(fn (Assert $page) => $page->component('properties/index')->has('properties', 1));
         $this->get(route('account.edit'))->assertInertia(fn (Assert $page) => $page->component('settings/account'));
+        $this->get(route('credit.index'))->assertInertia(fn (Assert $page) => $page->where('balance', 'R100.00')->where('plan', null));
     }
 
     public function test_the_agent_sees_the_portfolio_sorted_by_urgency(): void
@@ -86,7 +87,7 @@ class DemoSmokeTest extends TestCase
         }
     }
 
-    public function test_the_business_sees_its_claim_and_fee(): void
+    public function test_the_business_sees_its_claim_and_plan(): void
     {
         $user = $this->as('business@example.com');
         $claim = Dispute::where('organisation_id', $user->organisation_id)->sole();
@@ -95,10 +96,13 @@ class DemoSmokeTest extends TestCase
             ->component('disputes/show')
             ->where('isBusiness', true)
             ->where('dispute.stage', 'awaiting_credit')
-            ->where('dispute.fees.backRefund', 'R90,000.00')
-            ->where('dispute.fees.monthlySaving', 'R7,500.00')
-            ->where('dispute.fees.totalFee', 'R45,000.00')
+            ->where('dispute.tariff.monthlySaving', 'R7,500.00')
             ->where('dispute.tariff.after.label', 'Bulk residential'),
+        );
+        $this->get(route('credit.index'))->assertInertia(fn (Assert $page) => $page
+            ->component('credit/index')
+            ->where('plan.monthlyFee', 'R2,500.00')
+            ->where('plan.includedChecks', 100),
         );
     }
 
@@ -114,7 +118,7 @@ class DemoSmokeTest extends TestCase
         );
         $this->get(route('staff.reference'))->assertInertia(fn (Assert $page) => $page
             ->component('staff/reference')
-            ->has('metros', 3)
+            ->has('municipalities', 257)
             ->has('tariffs', 4),
         );
 
