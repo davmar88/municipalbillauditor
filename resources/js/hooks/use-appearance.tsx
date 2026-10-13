@@ -9,8 +9,12 @@ export type UseAppearanceReturn = {
     readonly updateAppearance: (mode: Appearance) => void;
 };
 
+// Night violet unless someone picks otherwise. Keep in step with
+// HandleAppearance and app.blade.php.
+const defaultAppearance: Appearance = 'dark';
+
 const listeners = new Set<() => void>();
-let currentAppearance: Appearance = 'system';
+let currentAppearance: Appearance = defaultAppearance;
 
 const prefersDark = (): boolean => {
     if (typeof window === 'undefined') {
@@ -31,10 +35,12 @@ const setCookie = (name: string, value: string, days = 365): void => {
 
 const getStoredAppearance = (): Appearance => {
     if (typeof window === 'undefined') {
-        return 'system';
+        return defaultAppearance;
     }
 
-    return (localStorage.getItem('appearance') as Appearance) || 'system';
+    return (
+        (localStorage.getItem('appearance') as Appearance) || defaultAppearance
+    );
 };
 
 const isDarkMode = (appearance: Appearance): boolean => {
@@ -76,8 +82,8 @@ export function initializeTheme(): void {
     }
 
     if (!localStorage.getItem('appearance')) {
-        localStorage.setItem('appearance', 'system');
-        setCookie('appearance', 'system');
+        localStorage.setItem('appearance', defaultAppearance);
+        setCookie('appearance', defaultAppearance);
     }
 
     currentAppearance = getStoredAppearance();
@@ -91,7 +97,7 @@ export function useAppearance(): UseAppearanceReturn {
     const appearance: Appearance = useSyncExternalStore(
         subscribe,
         () => currentAppearance,
-        () => 'system',
+        () => defaultAppearance,
     );
 
     const resolvedAppearance: ResolvedAppearance = isDarkMode(appearance)

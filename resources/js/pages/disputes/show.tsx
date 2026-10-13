@@ -323,7 +323,7 @@ function Status({ dispute }: { dispute: DisputeDetail }) {
                     className="h-2 overflow-hidden rounded-full bg-white/15"
                 >
                     <div
-                        className="h-full rounded-full bg-[#7ca2f5]"
+                        className="h-full rounded-full bg-[#b39aff]"
                         style={{
                             width: `${Math.min(100, status.progress * 100)}%`,
                         }}
