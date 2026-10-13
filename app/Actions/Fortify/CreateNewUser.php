@@ -42,17 +42,30 @@ class CreateNewUser implements CreatesNewUsers
                 : 'Enter the name of the business or body corporate.',
         ])->validate();
 
-        return DB::transaction(function () use ($input, $kind) {
+        return $this->createAccount($kind, $input['name'], $input['email'], $input['password'], $input['organisation_name'] ?? null);
+    }
+
+    /**
+     * The account and its first user. Google sign-ups come here too, with a
+     * random password (they can set one with "Forgot password") and the
+     * email Google has verified.
+     *
+     * @param  array<string, mixed>  $extra  Attributes set on the user directly.
+     */
+    public function createAccount(OrganisationKind $kind, string $name, string $email, string $password, ?string $organisationName = null, array $extra = []): User
+    {
+        return DB::transaction(function () use ($kind, $name, $email, $password, $organisationName, $extra) {
             $organisation = Organisation::create([
                 'kind' => $kind,
-                'name' => $kind === OrganisationKind::Household ? $input['name'] : $input['organisation_name'],
+                'name' => $kind === OrganisationKind::Household || blank($organisationName) ? $name : $organisationName,
             ]);
 
             $user = new User([
-                'name' => $input['name'],
-                'email' => $input['email'],
-                'password' => $input['password'],
+                'name' => $name,
+                'email' => $email,
+                'password' => $password,
             ]);
+            $user->forceFill($extra);
             $user->organisation()->associate($organisation);
             $user->save();
 

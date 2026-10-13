@@ -226,6 +226,33 @@ off. Now that the server holds a second copy, turn on IP whitelisting:
 3. Test a Cable Elite checkout straight after. If it fails, remove the
    address again.
 
+## Google sign-in: Cable Elite's Google client
+
+"Continue with Google" on the login and register pages uses the same Google
+sign-in client as Cable Elite. In Google Cloud, that client's authorised
+redirect URIs include `https://revenueguard.co.za/auth/google/callback`,
+alongside Cable Elite's. Copy its ID and secret across on the server; the
+loop adds the lines if `.env` doesn't have them yet:
+
+```bash
+cd /var/www/revenueguard
+for k in GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET; do
+    v=$(grep "^$k=" /var/www/crm/.env | cut -d= -f2-)
+    if grep -q "^$k=" .env; then sed -i "s|^$k=.*|$k=$v|" .env; else echo "$k=$v" >> .env; fi
+done
+deploy/setup.sh permissions
+deploy/artisan config:cache
+```
+
+The button only shows once `GOOGLE_CLIENT_ID` is set.
+
+- **Branding.** Google's sign-in screen shows the name and logo of the
+  Google Cloud project the client belongs to, so RevenueGuard customers see
+  Cable Elite's. To show RevenueGuard's, create a client in a project of its
+  own and put its ID and secret in `.env` instead.
+- **Authorised domains.** If Google's Branding page asks for them, add
+  `revenueguard.co.za`.
+
 ## Forwarded e-bills and municipal replies
 
 Customers forward e-bills, and municipalities reply to disputes, at

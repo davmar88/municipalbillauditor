@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AccountController;
+use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\BillController;
 use App\Http\Controllers\BillDetailsController;
 use App\Http\Controllers\CreditController;
@@ -30,6 +31,12 @@ Route::post('inbound/email', InboundEmailController::class)->middleware('throttl
 
 // Paystack's payment notices.
 Route::post('webhooks/paystack', PaystackWebhookController::class)->middleware('throttle:120,1')->name('webhooks.paystack');
+
+// "Continue with Google", for signing in and signing up.
+Route::middleware(['guest', 'throttle:20,1'])->group(function () {
+    Route::get('auth/google', [GoogleController::class, 'redirect'])->name('google.redirect');
+    Route::get('auth/google/callback', [GoogleController::class, 'callback'])->name('google.callback');
+});
 
 Route::middleware(['auth', 'verified', 'organisation'])->group(function () {
     Route::get('dashboard', DashboardController::class)->name('dashboard');

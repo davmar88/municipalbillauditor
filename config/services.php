@@ -14,6 +14,13 @@ return [
     |
     */
 
+    // "Continue with Google". The OAuth client must list this redirect URI.
+    'google' => [
+        'client_id' => env('GOOGLE_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_CLIENT_SECRET'),
+        'redirect' => env('GOOGLE_REDIRECT_URI', rtrim((string) env('APP_URL'), '/').'/auth/google/callback'),
+    ],
+
     // Inbound email: Mailgun's route forward signs each post with this key.
     'mailgun' => [
         'webhook_signing_key' => env('MAILGUN_WEBHOOK_SIGNING_KEY'),
