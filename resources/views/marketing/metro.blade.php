@@ -39,11 +39,11 @@
             <h1 id="hero-h" class="max-w-[900px] text-[clamp(36px,5vw,64px)] leading-[1.04] font-extrabold tracking-[-0.02em] text-balance">Dispute {{ $article }} {{ $metro->name }} bill</h1>
             <p class="max-w-[640px] text-[clamp(18px,1.6vw,20px)] text-ink-2">Send us your {{ $place }} municipal bill. We check it for estimated readings, wrong tariffs, outage charges and spikes, then write the dispute to {{ $metro->billing_addressee }} and follow it until the credit is on your account.</p>
             <div class="flex flex-wrap gap-3">
-                <a href="{{ $checkUrl }}" class="flex h-14 items-center gap-2.5 rounded-lg bg-action px-6 text-lg font-semibold text-white no-underline hover:bg-action-ink hover:text-white">
+                <a href="{{ $checkUrl }}" class="flex h-14 items-center gap-2.5 rounded-lg bg-action px-6 text-lg font-semibold text-ground no-underline hover:bg-action-ink hover:text-ground">
                     @include('marketing.partials.camera')
                     {{ $checkLabel }}
                 </a>
-                <a href="#letter" class="flex h-14 items-center rounded-lg border border-[#a9b1bb] bg-paper px-[22px] text-lg font-semibold text-ink no-underline hover:border-ink hover:text-ink">See a sample letter</a>
+                <a href="#letter" class="flex h-14 items-center rounded-lg border border-dots bg-paper px-[22px] text-lg font-semibold text-ink no-underline hover:border-ink hover:text-ink">See a sample letter</a>
             </div>
         </div>
     </section>
@@ -72,7 +72,7 @@
                     <h3 class="text-xl font-bold">We wait for a reply</h3>
                     <p class="text-base text-ink-2">We record the reference number and give {{ $metro->short_name }} {{ $metro->reply_window_days }} days to reply before we follow up.</p>
                 </li>
-                <li class="flex flex-col gap-2 border-t-4 border-dashed border-[#a9b1bb] pt-4">
+                <li class="flex flex-col gap-2 border-t-4 border-dashed border-dots pt-4">
                     <span class="font-mono text-sm font-semibold text-muted">ONLY IF NEEDED</span>
                     <h3 class="text-xl font-bold">Follow-up, municipal manager, Public Protector</h3>
                     <p class="text-base text-ink-2">No reply? We follow up, then escalate to the municipal manager. If it's still not resolved, we write your Public Protector complaint for you to lodge.</p>
@@ -89,7 +89,7 @@
                 <p class="text-base text-ink-2">It asks for the things that get a bill corrected: an actual reading, the outage days reversed, a corrected account and a reference number. It also says you'll keep paying the undisputed part.</p>
             </div>
             <figure class="m-0 flex flex-col gap-2">
-                <div class="rounded bg-paper p-6 font-mono text-[13px] leading-[1.6] whitespace-pre-wrap shadow-[0_1px_2px_rgba(18,22,28,.08),0_16px_36px_rgba(18,22,28,.10)] sm:p-8">{{ $letter->body }}</div>
+                <div class="rounded bg-paper p-6 font-mono text-[13px] leading-[1.6] whitespace-pre-wrap border border-rule shadow-[0_16px_36px_rgba(0,0,0,.45)] sm:p-8">{{ $letter->body }}</div>
                 <figcaption class="text-sm text-muted">Example figures. Square brackets show where your details go.</figcaption>
             </figure>
         </div>

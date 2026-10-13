@@ -44,16 +44,16 @@
                 <h1 id="hero-h" class="text-[clamp(38px,4.6vw,64px)] leading-[1.04] font-extrabold tracking-[-0.02em] text-balance">Wrong municipal bill? We find the error and get it fixed.</h1>
                 <p class="max-w-[560px] text-[clamp(18px,1.6vw,20px)] leading-[1.55] text-ink-2">Send us a photo of your bill. We check every line for estimated readings, wrong tariffs, outage charges and sudden spikes. Then we email the dispute to your municipality, read its replies and chase it until the credit is on your account. Every municipality in South Africa, by email.</p>
                 <div class="flex flex-wrap gap-3">
-                    <a href="{{ $checkUrl }}" class="flex h-14 items-center gap-2.5 rounded-lg bg-action px-6 text-lg font-semibold text-white no-underline hover:bg-action-ink hover:text-white">
+                    <a href="{{ $checkUrl }}" class="flex h-14 items-center gap-2.5 rounded-lg bg-action px-6 text-lg font-semibold text-ground no-underline hover:bg-action-ink hover:text-ground">
                         @include('marketing.partials.camera')
                         {{ $checkLabel }}
                     </a>
-                    <a href="#how" class="flex h-14 items-center rounded-lg border border-[#a9b1bb] bg-paper px-[22px] text-lg font-semibold text-ink no-underline hover:border-ink hover:text-ink">See how it works</a>
+                    <a href="#how" class="flex h-14 items-center rounded-lg border border-dots bg-paper px-[22px] text-lg font-semibold text-ink no-underline hover:border-ink hover:text-ink">See how it works</a>
                 </div>
                 <ul class="flex flex-wrap gap-x-5 gap-y-2 text-[15px] leading-[22px] text-ink-2">
                     @foreach ([$sitePrices['welcome'] ? "{$sitePrices['welcome']} of credit on us" : "{$sitePrices['billCheck']} a bill check", 'You approve every letter', 'Your data protected under POPIA'] as $tick)
                         <li class="flex items-center gap-1.5">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1D4ED8" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#B39AFF" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
                             {{ $tick }}
                         </li>
                     @endforeach
@@ -61,7 +61,7 @@
             </div>
 
             <div role="img" aria-label="An example municipal bill with the estimated water reading circled, the overcharge and the dispute deadline marked" class="flex flex-col items-center">
-                <div class="w-full max-w-[470px] -rotate-[1.5deg] rounded bg-paper px-7 pt-7 pb-10 font-mono text-sm leading-5 shadow-[0_1px_2px_rgba(18,22,28,.08),0_24px_48px_rgba(18,22,28,.12)]">
+                <div class="w-full max-w-[470px] -rotate-[1.5deg] rounded bg-paper px-7 pt-7 pb-10 font-mono text-sm leading-5 border border-rule shadow-[0_24px_48px_rgba(0,0,0,.45)]">
                     <div class="flex items-baseline justify-between border-b-2 border-ink pb-2.5">
                         <span class="font-sans text-[15px] font-extrabold tracking-[0.06em]">STATEMENT OF ACCOUNT</span>
                         <span class="text-xs text-muted">SEP 2026</span>
@@ -73,7 +73,7 @@
                     <div class="flex items-center justify-between gap-2 border-b border-dotted border-dots py-3">
                         <span class="flex items-center gap-2">Water 38 kL
                             <span class="relative inline-block px-1 font-semibold text-flag-ink">(E)<span class="absolute -inset-x-[7px] -inset-y-1.5 -rotate-[5deg] rounded-[50%] border-[2.5px] border-flag"></span></span>
-                            <span class="size-5 rounded-full bg-flag text-center font-sans text-xs leading-5 font-bold text-white">1</span>
+                            <span class="size-5 rounded-full bg-flag text-center font-sans text-xs leading-5 font-bold text-ground">1</span>
                         </span>
                         <span class="font-semibold text-flag-ink underline decoration-flag decoration-2 underline-offset-4">R1,596.00</span>
                     </div>
@@ -84,14 +84,14 @@
                     <div class="flex justify-between pt-3 font-semibold"><span>TOTAL DUE</span><span>R2,996.45</span></div>
                 </div>
                 <div class="relative -mt-6 flex w-full max-w-[470px] flex-col items-end gap-2.5">
-                    <div class="flex max-w-[340px] rotate-1 items-center gap-3 rounded-lg border-2 border-flag bg-paper px-4 py-3 shadow-[0_8px_20px_rgba(18,22,28,.10)]">
-                        <span class="size-6 flex-none rounded-full bg-flag text-center text-[13px] leading-6 font-bold text-white">1</span>
+                    <div class="flex max-w-[340px] rotate-1 items-center gap-3 rounded-lg border-2 border-flag bg-paper px-4 py-3 shadow-[0_8px_20px_rgba(0,0,0,.45)]">
+                        <span class="size-6 flex-none rounded-full bg-flag text-center text-[13px] leading-6 font-bold text-ground">1</span>
                         <span class="flex flex-col leading-[1.3]">
                             <span class="font-bold">Estimated, not read</span>
                             <span class="text-sm text-ink-2">38 kL billed, you usually use 16. <span class="font-mono font-semibold text-flag-ink">R924.00</span> too much.</span>
                         </span>
                     </div>
-                    <div class="flex -rotate-1 items-center gap-2.5 rounded-lg bg-ink px-4 py-2.5 text-[15px] text-white">
+                    <div class="flex -rotate-1 items-center gap-2.5 rounded-lg border border-rule bg-night px-4 py-2.5 text-[15px] text-white">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#F59E6B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
                         <span>Dispute by <b>2 Nov</b> · 22 days left</span>
                     </div>
@@ -152,7 +152,7 @@
                             <li>{{ $prices['welcome'] }} of credit to start, on us</li>
                         @endif
                     </ul>
-                    <a href="{{ $checkUrl }}" class="flex h-12 items-center justify-center rounded-lg bg-action px-5 font-semibold text-white no-underline hover:bg-action-ink hover:text-white">{{ $checkLabel }}</a>
+                    <a href="{{ $checkUrl }}" class="flex h-12 items-center justify-center rounded-lg bg-action px-5 font-semibold text-ground no-underline hover:bg-action-ink hover:text-ground">{{ $checkLabel }}</a>
                 </article>
                 <article class="flex flex-col gap-5 rounded-[10px] border border-rule bg-well p-7">
                     <h3 class="text-xl font-bold">Landlords and managing agents</h3>
@@ -192,7 +192,7 @@
                             <span class="text-xl font-bold">{{ $metro->short_name }}</span>
                             <span class="text-[15px] text-muted">Dispute {{ str_starts_with($metro->name, 'e') ? 'an' : 'a' }} {{ $metro->name }} bill{{ $metro->area_name ? " ({$metro->area_name})" : '' }}</span>
                         </span>
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1D4ED8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#B39AFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
                     </a>
                 @endforeach
             </div>

@@ -62,7 +62,8 @@
     --color-sidebar-ring: var(--sidebar-ring);
 
     /* Municipal Bill Auditor: orange means something is wrong or needs
-       attention, blue means an action or progress. Never red and green. */
+       attention, violet means an action or progress. Never red and green.
+       Night (the default) is Vite's night violet: vite.dev's colours. */
     --color-flag: var(--flag);
     --color-flag-foreground: var(--flag-foreground);
     --color-flag-soft: var(--flag-soft);
@@ -89,7 +90,7 @@
     --card-foreground: #12161c;
     --popover: #ffffff;
     --popover-foreground: #12161c;
-    --primary: #1d4ed8;
+    --primary: #5b3fd1;
     --primary-foreground: #ffffff;
     --secondary: #e9ecef;
     --secondary-foreground: #12161c;
@@ -101,31 +102,32 @@
     --destructive-foreground: #b42318;
     --border: #dce0e5;
     --input: #c9cfd6;
-    --ring: #1d4ed8;
+    --ring: #5b3fd1;
     --chart-1: #c2410c;
     --chart-2: #7b8591;
-    --chart-3: #1d4ed8;
+    --chart-3: #5b3fd1;
     --chart-4: #12161c;
     --chart-5: #9a3412;
     --radius: 0.5rem;
-    --sidebar: #12161c;
-    --sidebar-foreground: #d4d9df;
-    --sidebar-primary: #ffffff;
-    --sidebar-primary-foreground: #12161c;
-    --sidebar-accent: #2a313b;
-    --sidebar-accent-foreground: #ffffff;
-    --sidebar-border: #2a313b;
-    --sidebar-ring: #7ca2f5;
+    /* The sidebar stays night in light mode too. */
+    --sidebar: #14121a;
+    --sidebar-foreground: #b9b9bb;
+    --sidebar-primary: #b39aff;
+    --sidebar-primary-foreground: #14121a;
+    --sidebar-accent: #2a253a;
+    --sidebar-accent-foreground: #c8abfa;
+    --sidebar-border: #3b3440;
+    --sidebar-ring: #b39aff;
 
     --flag: #c2410c;
     --flag-foreground: #ffffff;
     --flag-soft: #fbe4d6;
     --flag-ink: #9a3412;
-    --action-soft: #dce5fb;
-    --action-ink: #1e3a8a;
-    --panel: #12161c;
+    --action-soft: #ebe8fa;
+    --action-ink: #4a2a9a;
+    --panel: #14121a;
     --panel-foreground: #ffffff;
-    --panel-muted: #b9c0c9;
+    --panel-muted: #b9b9bb;
     --paper: #ffffff;
     --rule: #e6e9ed;
     --chart-accent: #c2410c;
@@ -133,54 +135,56 @@
     --chart-ink: #12161c;
 }
 
+/* Night violet: vite.dev's page (#16171d), surfaces (#14121a), text and
+   violet (#b39aff). Violet fills take dark text: white on it fails AA. */
 .dark {
-    --background: #0f1216;
-    --foreground: #e6e9ed;
-    --card: #171b21;
-    --card-foreground: #e6e9ed;
-    --popover: #171b21;
-    --popover-foreground: #e6e9ed;
-    --primary: #7ca2f5;
-    --primary-foreground: #0f1216;
-    --secondary: #232931;
-    --secondary-foreground: #e6e9ed;
-    --muted: #1e232a;
-    --muted-foreground: #a3abb5;
-    --accent: #262c35;
-    --accent-foreground: #e6e9ed;
-    --destructive: #f2675a;
-    --destructive-foreground: #f2675a;
-    --border: #2a313b;
-    --input: #3a424d;
-    --ring: #7ca2f5;
+    --background: #16171d;
+    --foreground: #ffffff;
+    --card: #14121a;
+    --card-foreground: #ffffff;
+    --popover: #14121a;
+    --popover-foreground: #ffffff;
+    --primary: #b39aff;
+    --primary-foreground: #14121a;
+    --secondary: #32363f;
+    --secondary-foreground: #ffffff;
+    --muted: #23262e;
+    --muted-foreground: #98989f;
+    --accent: #2c293d;
+    --accent-foreground: #ffffff;
+    --destructive: #f66f81;
+    --destructive-foreground: #f66f81;
+    --border: #2e2e32;
+    --input: #3c3f44;
+    --ring: #b39aff;
     --chart-1: #dd6b30;
     --chart-2: #7e8792;
-    --chart-3: #7ca2f5;
-    --chart-4: #e6e9ed;
+    --chart-3: #b39aff;
+    --chart-4: #ffffff;
     --chart-5: #f5a27a;
-    --sidebar: #0b0e12;
-    --sidebar-foreground: #c9cfd6;
-    --sidebar-primary: #e6e9ed;
-    --sidebar-primary-foreground: #0b0e12;
-    --sidebar-accent: #1e232a;
-    --sidebar-accent-foreground: #ffffff;
-    --sidebar-border: #1e232a;
-    --sidebar-ring: #7ca2f5;
+    --sidebar: #14121a;
+    --sidebar-foreground: #b9b9bb;
+    --sidebar-primary: #b39aff;
+    --sidebar-primary-foreground: #14121a;
+    --sidebar-accent: #2a253a;
+    --sidebar-accent-foreground: #c8abfa;
+    --sidebar-border: #3b3440;
+    --sidebar-ring: #b39aff;
 
     --flag: #dd6b30;
-    --flag-foreground: #0f1216;
+    --flag-foreground: #14121a;
     --flag-soft: #3a2418;
     --flag-ink: #f5a27a;
-    --action-soft: #1b2a4a;
-    --action-ink: #a8c0ff;
-    --panel: #1e2530;
+    --action-soft: #2a253a;
+    --action-ink: #c8abfa;
+    --panel: #292738;
     --panel-foreground: #ffffff;
-    --panel-muted: #b9c0c9;
-    --paper: #171b21;
-    --rule: #2a313b;
+    --panel-muted: #b9b9bb;
+    --paper: #14121a;
+    --rule: #2e2e32;
     --chart-accent: #dd6b30;
     --chart-muted: #7e8792;
-    --chart-ink: #e6e9ed;
+    --chart-ink: #ffffff;
 }
 
 @layer base {

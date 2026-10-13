@@ -401,7 +401,7 @@ function Checked({ bill }: { bill: BillDetail }) {
             ) : (
                 <section className="flex items-start gap-3 rounded-lg bg-panel p-5 text-panel-foreground">
                     <Check
-                        className="mt-0.5 size-6 shrink-0 text-[#a8c0ff]"
+                        className="mt-0.5 size-6 shrink-0 text-[#c8abfa]"
                         aria-hidden
                     />
                     <div>

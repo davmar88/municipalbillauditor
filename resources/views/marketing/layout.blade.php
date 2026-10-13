@@ -24,7 +24,7 @@
         <meta property="og:image:height" content="630">
         <meta property="og:image:alt" content="A municipal bill with the estimated water reading circled in orange">
         <meta name="twitter:card" content="summary_large_image">
-        <meta name="theme-color" content="#12161C">
+        <meta name="theme-color" content="#16171D">
 
         <link rel="icon" href="/favicon.ico" sizes="any">
         <link rel="icon" href="/favicon.svg" type="image/svg+xml">
@@ -41,7 +41,7 @@
         <header class="border-b border-rule">
             <div class="mx-auto flex max-w-[1200px] flex-wrap items-center justify-between gap-x-6 gap-y-3 px-[clamp(16px,4vw,40px)] py-3.5">
                 <a href="{{ route('home') }}" class="flex items-center gap-2.5 text-ink no-underline hover:text-ink" aria-label="{{ config('app.name') }} home">
-                    @include('marketing.partials.logo', ['size' => 30, 'ground' => '#F3F4F6', 'stroke' => '#12161C'])
+                    @include('marketing.partials.logo', ['size' => 30, 'ground' => '#16171D', 'stroke' => '#FFFFFF'])
                     <span class="flex flex-col leading-none">
                         <span class="font-mono text-[10px] tracking-[0.12em] text-muted">MUNICIPAL</span>
                         <span class="mt-[3px] text-[19px] font-bold">Bill Auditor</span>
@@ -55,7 +55,7 @@
                     @guest
                         <a href="{{ route('login') }}" class="py-2.5 text-ink no-underline hover:underline">Log in</a>
                     @endguest
-                    <a href="{{ $checkUrl }}" class="flex h-11 items-center rounded-md bg-ink px-4 font-semibold text-white no-underline hover:bg-ink-2 hover:text-white">Check my bill</a>
+                    <a href="{{ $checkUrl }}" class="flex h-11 items-center rounded-md bg-ink px-4 font-semibold text-ground no-underline hover:bg-ink-2 hover:text-ground">Check my bill</a>
                 </nav>
             </div>
         </header>
@@ -64,7 +64,7 @@
             @yield('content')
         </main>
 
-        <footer class="bg-night py-14 text-[15px] text-night-text">
+        <footer class="border-t border-rule bg-night py-14 text-[15px] text-night-text">
             <div class="mx-auto flex max-w-[1200px] flex-col gap-10 px-[clamp(16px,4vw,40px)]">
                 <div class="grid grid-cols-[repeat(auto-fit,minmax(min(180px,100%),1fr))] gap-8">
                     <div class="flex flex-col gap-2.5">
