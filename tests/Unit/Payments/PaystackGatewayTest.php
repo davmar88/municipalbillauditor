@@ -48,15 +48,13 @@ class PaystackGatewayTest extends TestCase
             && $request['metadata'] === ['organisation_id' => 7, 'payment_id' => 42]);
     }
 
-    public function test_verify_reads_the_transaction_and_a_reusable_card(): void
+    public function test_verify_reads_the_transaction(): void
     {
         Http::fake(['api.paystack.co/transaction/verify/mba_test_1' => Http::response([
             'status' => true,
             'data' => [
                 'reference' => 'mba_test_1', 'status' => 'success', 'amount' => 25000, 'currency' => 'ZAR',
                 'gateway_response' => 'Approved',
-                'authorization' => ['authorization_code' => 'AUTH_x1', 'reusable' => true, 'last4' => '4081', 'card_type' => 'visa ', 'exp_month' => '12', 'exp_year' => '2030'],
-                'customer' => ['email' => 'accounts@agent.example'],
             ],
         ])]);
 
@@ -64,42 +62,21 @@ class PaystackGatewayTest extends TestCase
 
         $this->assertTrue($result->succeeded());
         $this->assertSame(25000, $result->amountInCents);
-        $this->assertSame('AUTH_x1', $result->card->authorizationCode);
-        $this->assertSame('4081', $result->card->last4);
-        $this->assertSame('12/2030', $result->card->expiry);
-        $this->assertSame('accounts@agent.example', $result->card->email);
-    }
-
-    public function test_a_saved_card_is_charged_with_its_authorization(): void
-    {
-        Http::fake(['api.paystack.co/transaction/charge_authorization' => Http::response([
-            'status' => true,
-            'data' => ['reference' => 'mba_test_1', 'status' => 'failed', 'amount' => 25000, 'currency' => 'ZAR', 'gateway_response' => 'Insufficient Funds'],
-        ])]);
-
-        $result = $this->gateway()->chargeSavedCard($this->payment(), 'AUTH_x1', 'accounts@agent.example');
-
-        $this->assertFalse($result->succeeded());
-        $this->assertSame('Insufficient Funds', $result->message);
-        Http::assertSent(fn (Request $request) => $request['authorization_code'] === 'AUTH_x1'
-            && $request['email'] === 'accounts@agent.example'
-            && $request['amount'] === 25000
-            && $request['reference'] === 'mba_test_1');
+        $this->assertSame('ZAR', $result->currency);
+        $this->assertSame('Approved', $result->message);
     }
 
     public function test_payments_stay_in_the_main_account_and_name_the_site(): void
     {
         Http::fake([
             'api.paystack.co/transaction/initialize' => Http::response(['status' => true, 'data' => ['authorization_url' => 'https://checkout.paystack.com/abc']]),
-            'api.paystack.co/transaction/charge_authorization' => Http::response(['status' => true, 'data' => ['reference' => 'mba_test_1', 'status' => 'success', 'amount' => 25000, 'currency' => 'ZAR']]),
         ]);
         $gateway = new PaystackGateway('sk_test_secret', site: 'revenueguard.co.za');
 
         $gateway->checkout($this->payment(), 'thandi@example.com', 'https://app.test/cb');
-        $gateway->chargeSavedCard($this->payment(), 'AUTH_x1', 'accounts@agent.example');
 
         $sent = Http::recorded();
-        $this->assertCount(2, $sent);
+        $this->assertCount(1, $sent);
 
         foreach ($sent as [$request]) {
             // Nothing that would send part of a payment to a subaccount.

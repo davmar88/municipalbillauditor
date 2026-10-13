@@ -75,11 +75,9 @@ Route::middleware(['auth', 'verified', 'organisation'])->group(function () {
 
     Route::get('credit', [CreditController::class, 'index'])->name('credit.index');
     Route::post('credit/top-up', [CreditController::class, 'topUp'])->middleware('throttle:20,1')->name('credit.top-up');
-    Route::post('credit/invoices/{invoice}/pay', [CreditController::class, 'payInvoice'])->middleware('throttle:20,1')->name('credit.invoices.pay');
     Route::get('credit/callback', [CreditController::class, 'callback'])->name('credit.callback');
 
     Route::get('settings/account', [AccountController::class, 'edit'])->name('account.edit');
-    Route::delete('settings/account/card', [AccountController::class, 'destroyCard'])->name('account.card.destroy');
     Route::patch('settings/account/disputes', [AccountController::class, 'updateDisputes'])->name('account.disputes.update');
     Route::patch('settings/account', [AccountController::class, 'update'])->name('account.update');
     Route::delete('settings/account/bills', [AccountController::class, 'destroyBills'])->name('account.bills.destroy');

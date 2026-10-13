@@ -13,7 +13,6 @@ use App\Audit\Money;
 use App\Enums\Job;
 use App\Http\Controllers\Controller;
 use App\Models\Municipality;
-use App\Services\Billing\Wallet;
 use App\Support\SiteContent;
 use Brick\Math\BigDecimal;
 use DateTimeImmutable;
@@ -90,7 +89,7 @@ class PageController extends Controller
     /**
      * The prices the public pages quote, from config.
      *
-     * @return array{billCheck: string, billCheckAmount: string, dispute: string, agentMonth: string, businessMonth: string, includedChecks: int, smallestTopUp: string, welcome: ?string}
+     * @return array{billCheck: string, billCheckAmount: string, dispute: string, smallestTopUp: string, welcome: ?string}
      */
     public static function prices(): array
     {
@@ -102,9 +101,6 @@ class PageController extends Controller
             'billCheck' => $rand(Job::BillCheck->price()),
             'billCheckAmount' => Job::BillCheck->price(),
             'dispute' => $rand(Job::Dispute->price()),
-            'agentMonth' => $rand((string) config('auditor.prices.agent_month')),
-            'businessMonth' => $rand((string) config('auditor.prices.business_month')),
-            'includedChecks' => Wallet::includedChecks(),
             'smallestTopUp' => $packs === [] ? $rand(Job::BillCheck->price()) : $rand((string) BigDecimal::min(...$packs)),
             // Only mention free credit when there is some.
             'welcome' => $welcome->isPositive() ? $rand((string) $welcome) : null,

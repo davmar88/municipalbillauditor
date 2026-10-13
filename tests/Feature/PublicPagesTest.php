@@ -30,14 +30,16 @@ class PublicPagesTest extends TestCase
         $this->assertSame(1, substr_count($response->getContent(), '<h1'));
     }
 
-    public function test_the_home_page_quotes_prepaid_and_monthly_prices_and_every_municipality(): void
+    public function test_the_home_page_quotes_pay_as_you_go_prices_and_every_municipality(): void
     {
         $this->get(route('home'))
             ->assertSee('Every municipality in South Africa')
             ->assertSee('R15')
             ->assertSee('R49')
-            ->assertSee('R1,500')
-            ->assertSee('R2,500')
+            ->assertSee('No monthly or setup fees.')
+            ->assertDontSee('R1,500')
+            ->assertDontSee('R2,500')
+            ->assertDontSee('flat monthly fee')
             ->assertSee('Check my bill')
             ->assertDontSee('Check my bill free')
             ->assertDontSee('success fee')

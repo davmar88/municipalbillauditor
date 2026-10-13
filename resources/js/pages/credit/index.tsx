@@ -1,23 +1,14 @@
 import { Form, Head } from '@inertiajs/react';
-import { CreditCard } from 'lucide-react';
-import { Chip } from '@/components/audit/chip';
 import { PageBody, PageHeader } from '@/components/audit/page-header';
 import { StatTile } from '@/components/audit/stat-tile';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { index, topUp } from '@/routes/credit';
-import { pay } from '@/routes/credit/invoices';
 
 type Props = {
     balance: string;
     prices: { billCheck: string; dispute: string };
-    plan: {
-        monthlyFee: string;
-        includedChecks: number;
-        usedChecks: number | null;
-        card: { last4: string; brand: string; expiry: string | null } | null;
-    } | null;
     packs: { value: string; label: string }[];
     cardPayments: boolean;
     transactions: {
@@ -28,24 +19,14 @@ type Props = {
         balance: string;
         kind: string;
     }[];
-    invoices: {
-        id: number;
-        description: string;
-        amount: string;
-        status: string;
-        paidOn: string | null;
-        payable: boolean;
-    }[];
 };
 
 export default function CreditIndex({
     balance,
     prices,
-    plan,
     packs,
     cardPayments,
     transactions,
-    invoices,
 }: Props) {
     return (
         <>
@@ -53,28 +34,16 @@ export default function CreditIndex({
             <PageBody className="max-w-4xl">
                 <PageHeader
                     title="Credit and billing"
-                    description={
-                        plan
-                            ? `Your plan is ${plan.monthlyFee} a month. Bill checks beyond the ${plan.includedChecks} included each month come from your prepaid credit.`
-                            : `You pay per job from prepaid credit: ${prices.billCheck} to check a bill, ${prices.dispute} for a dispute. We always show the price first.`
-                    }
+                    description={`You pay as you go from prepaid credit: ${prices.billCheck} to check a bill, ${prices.dispute} for a dispute. No monthly or setup fees, and we always show the price first.`}
                 />
 
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     <StatTile label="Your credit" value={balance} />
-                    {plan ? (
-                        <StatTile
-                            label="Bill checks this month"
-                            value={`${plan.usedChecks ?? 0} of ${plan.includedChecks}`}
-                            detail="Included in your plan. Disputes are unlimited."
-                        />
-                    ) : (
-                        <StatTile
-                            label="Prices"
-                            value={prices.billCheck}
-                            detail={`a bill check · ${prices.dispute} a dispute`}
-                        />
-                    )}
+                    <StatTile
+                        label="Prices"
+                        value={prices.billCheck}
+                        detail={`a bill check · ${prices.dispute} a dispute`}
+                    />
                 </div>
 
                 <section
@@ -127,78 +96,6 @@ export default function CreditIndex({
                         </p>
                     )}
                 </section>
-
-                {plan && (
-                    <section
-                        aria-labelledby="invoices-h"
-                        className="flex flex-col gap-4 rounded-lg border bg-card p-5 sm:p-6"
-                    >
-                        <div className="flex flex-col gap-1">
-                            <h2 id="invoices-h" className="text-lg font-bold">
-                                Monthly fees
-                            </h2>
-                            <p className="flex items-center gap-2 text-sm text-muted-foreground">
-                                <CreditCard className="size-4" aria-hidden />
-                                {plan.card
-                                    ? `Charged each month to your ${plan.card.brand} card ending ${plan.card.last4}. Change it by paying an invoice with another card, or remove it in your account settings.`
-                                    : 'Pay your first invoice by card and we charge the same card each month.'}
-                            </p>
-                        </div>
-                        {invoices.length === 0 ? (
-                            <p className="text-sm text-muted-foreground">
-                                Your first fee is raised on the 1st of the
-                                month.
-                            </p>
-                        ) : (
-                            <ul className="flex flex-col divide-y">
-                                {invoices.map((invoice) => (
-                                    <li
-                                        key={invoice.id}
-                                        className="flex flex-wrap items-center justify-between gap-3 py-3"
-                                    >
-                                        <span className="flex flex-col">
-                                            <span className="font-semibold">
-                                                {invoice.description}
-                                            </span>
-                                            <span className="figures text-sm text-muted-foreground">
-                                                {invoice.amount}
-                                            </span>
-                                        </span>
-                                        {invoice.payable ? (
-                                            cardPayments ? (
-                                                <Form {...pay.form(invoice.id)}>
-                                                    {({ processing }) => (
-                                                        <Button
-                                                            type="submit"
-                                                            disabled={
-                                                                processing
-                                                            }
-                                                        >
-                                                            {processing && (
-                                                                <Spinner />
-                                                            )}
-                                                            Pay now
-                                                        </Button>
-                                                    )}
-                                                </Form>
-                                            ) : (
-                                                <Chip tone="flag-outline">
-                                                    Due
-                                                </Chip>
-                                            )
-                                        ) : (
-                                            <Chip tone="neutral">
-                                                {invoice.paidOn
-                                                    ? `Paid ${invoice.paidOn}`
-                                                    : invoice.status}
-                                            </Chip>
-                                        )}
-                                    </li>
-                                ))}
-                            </ul>
-                        )}
-                    </section>
-                )}
 
                 <section
                     aria-labelledby="history-h"

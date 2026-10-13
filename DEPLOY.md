@@ -210,10 +210,9 @@ deploy/artisan config:cache
 
 **Leave Paystack's webhook URL as it is.** An account has one, and Cable
 Elite's site uses it. Cable Elite ignores RevenueGuard's payments, and
-RevenueGuard finds out about them itself in three ways:
+RevenueGuard finds out about them itself in two ways:
 
 - when the customer comes back from Paystack;
-- from Paystack's answer when it charges a saved card;
 - every five minutes, with `payments:reconcile`.
 
 **Lock the secret key to this server.** The same key can send money out of

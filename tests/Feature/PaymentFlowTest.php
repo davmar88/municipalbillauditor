@@ -2,13 +2,10 @@
 
 namespace Tests\Feature;
 
-use App\Enums\FeeStatus;
 use App\Enums\OrganisationKind;
 use App\Enums\PaymentStatus;
-use App\Models\FeeInvoice;
 use App\Models\Payment;
 use App\Models\User;
-use App\Notifications\CustomerNotice;
 use App\Services\Billing\Wallet;
 use App\Services\Payments\PaymentGateway;
 use Carbon\CarbonImmutable;
@@ -19,8 +16,8 @@ use Tests\Support\FakePaymentGateway;
 use Tests\TestCase;
 
 /**
- * Top-ups and monthly fees by card: checkout, Paystack's webhook, the
- * monthly invoice run, saved cards and EFT.
+ * Top-ups by card and EFT: checkout, Paystack's webhook and asking
+ * Paystack about payments still open. There are no fees to invoice.
  */
 class PaymentFlowTest extends TestCase
 {
@@ -140,75 +137,6 @@ class PaymentFlowTest extends TestCase
         $this->assertSame('0.00', app(Wallet::class)->balance($user->organisation));
     }
 
-    public function test_monthly_fees_are_raised_once_and_the_first_one_saves_the_card(): void
-    {
-        CarbonImmutable::setTestNow('2026-11-01 06:00:00');
-        $agent = User::factory()->forKind(OrganisationKind::Agent)->create();
-        $business = User::factory()->forKind(OrganisationKind::Business)->create();
-        $business->organisation->update(['monthly_fee' => '1999.00']);
-        User::factory()->forKind(OrganisationKind::Household)->create();
-
-        $this->artisan('fees:invoice')->expectsOutput('2 fees raised.')->assertSuccessful();
-        $this->artisan('fees:invoice')->expectsOutput('0 fees raised.')->assertSuccessful();
-
-        $invoice = FeeInvoice::where('organisation_id', $agent->organisation_id)->sole();
-        $this->assertSame('1500.00', $invoice->amount);
-        $this->assertSame('2026-11-01', $invoice->period_month->toDateString());
-        $this->assertSame('1999.00', FeeInvoice::where('organisation_id', $business->organisation_id)->sole()->amount);
-
-        // No card yet: they get a link to pay.
-        $this->assertSame([], $this->gateway->savedCardCharges);
-        Notification::assertSentTo($agent, CustomerNotice::class, fn (CustomerNotice $n) => $n->kind === 'invoice_due');
-
-        $this->actingAs($agent)->post(route('credit.invoices.pay', $invoice), [], ['X-Inertia' => 'true'])->assertStatus(409);
-        $payment = Payment::where('fee_invoice_id', $invoice->id)->sole();
-
-        $this->webhook('charge.success', $this->success($payment, [
-            'authorization' => ['authorization_code' => 'AUTH_agent', 'reusable' => true, 'last4' => '4081', 'card_type' => 'visa', 'exp_month' => '12', 'exp_year' => '2030'],
-            'customer' => ['email' => 'accounts@agent.example'],
-        ]))->assertOk();
-
-        $this->assertSame(FeeStatus::Paid, $invoice->refresh()->status);
-        $organisation = $agent->organisation->refresh();
-        $this->assertSame('AUTH_agent', $organisation->card_authorization);
-        $this->assertSame('4081', $organisation->card_last4);
-        $this->assertNotSame('AUTH_agent', $organisation->getRawOriginal('card_authorization'), 'The code is stored encrypted.');
-
-        // Next month the saved card is charged, and Paystack's answer pays the invoice.
-        CarbonImmutable::setTestNow('2026-12-01 06:00:00');
-        $this->artisan('fees:invoice')->assertSuccessful();
-
-        $december = FeeInvoice::where('organisation_id', $agent->organisation_id)->whereDate('period_month', '2026-12-01')->sole();
-        $this->assertSame('AUTH_agent', $this->gateway->savedCardCharges[0]['code']);
-        $this->assertSame('accounts@agent.example', $this->gateway->savedCardCharges[0]['email']);
-        $this->assertSame(FeeStatus::Paid, $december->status);
-
-        // The webhook for the same charge changes nothing.
-        $charge = $this->gateway->savedCardCharges[0]['payment'];
-        $this->webhook('charge.success', $this->success($charge))->assertOk();
-        $this->assertSame(FeeStatus::Paid, $december->refresh()->status);
-        $this->assertSame(PaymentStatus::Success, $charge->refresh()->status);
-    }
-
-    public function test_a_saved_card_charge_still_processing_is_settled_by_asking_paystack_later(): void
-    {
-        CarbonImmutable::setTestNow('2026-11-01 06:00:00');
-        $agent = User::factory()->forKind(OrganisationKind::Agent)->create();
-        $agent->organisation->forceFill(['card_authorization' => 'AUTH_old', 'card_last4' => '1111', 'card_email' => 'a@agent.example'])->save();
-        $this->gateway->savedCardStatus = 'pending';
-
-        $this->artisan('fees:invoice')->assertSuccessful();
-
-        $this->assertSame(PaymentStatus::Pending, Payment::sole()->status);
-        $this->assertSame(FeeStatus::Issued, FeeInvoice::sole()->status);
-        Notification::assertNotSentTo($agent, CustomerNotice::class);
-
-        CarbonImmutable::setTestNow('2026-11-01 06:05:00');
-        $this->artisan('payments:reconcile')->expectsOutput('1 applied, 0 closed.')->assertSuccessful();
-
-        $this->assertSame(FeeStatus::Paid, FeeInvoice::sole()->status);
-    }
-
     public function test_a_paid_top_up_is_credited_without_the_webhook_or_the_customer_coming_back(): void
     {
         CarbonImmutable::setTestNow('2026-11-02 10:00:00');
@@ -274,32 +202,6 @@ class PaymentFlowTest extends TestCase
         $this->assertSame(PaymentStatus::Failed, $payment->refresh()->status);
         $this->assertStringContainsString('not the amount', $payment->gateway_message);
         $this->assertSame('0.00', app(Wallet::class)->balance($user->organisation));
-    }
-
-    public function test_a_declined_saved_card_gets_a_link_to_pay(): void
-    {
-        $agent = User::factory()->forKind(OrganisationKind::Agent)->create();
-        $agent->organisation->forceFill(['card_authorization' => 'AUTH_old', 'card_last4' => '1111', 'card_email' => 'a@agent.example'])->save();
-        $this->gateway->savedCardStatus = 'failed';
-
-        $this->artisan('fees:invoice')->assertSuccessful();
-
-        $this->assertSame(PaymentStatus::Failed, Payment::sole()->status);
-        Notification::assertSentTo($agent, CustomerNotice::class, fn (CustomerNotice $n) => $n->kind === 'invoice_due'
-            && str_contains($n->lines[0], 'ending 1111'));
-        $this->assertSame(FeeStatus::Issued, FeeInvoice::sole()->status);
-    }
-
-    public function test_customers_can_remove_their_saved_card(): void
-    {
-        $agent = User::factory()->forKind(OrganisationKind::Agent)->create();
-        $agent->organisation->forceFill(['card_authorization' => 'AUTH_old', 'card_last4' => '1111', 'card_email' => 'a@agent.example'])->save();
-
-        $this->actingAs($agent)->get(route('account.edit'))->assertInertia(fn (Assert $page) => $page->where('account.card.last4', '1111'));
-        $this->delete(route('account.card.destroy'))->assertRedirect();
-
-        $this->assertNull($agent->organisation->refresh()->card_authorization);
-        $this->assertNull($agent->organisation->card_last4);
     }
 
     public function test_staff_record_an_eft_once(): void

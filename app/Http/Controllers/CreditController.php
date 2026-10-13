@@ -3,10 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Audit\Money;
-use App\Enums\FeeStatus;
 use App\Enums\Job;
 use App\Models\CreditTransaction;
-use App\Models\FeeInvoice;
 use App\Models\Payment;
 use App\Services\Billing\Wallet;
 use App\Services\Payments\PaymentFailed;
@@ -20,15 +18,14 @@ use Inertia\Response;
 use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
 /**
- * Prepaid credit and monthly fees: the balance, what each job costs, the
- * ledger, top-ups and invoices.
+ * Prepaid credit: the balance, what each job costs, the ledger and
+ * top-ups.
  */
 class CreditController extends Controller
 {
     public function index(Request $request, Wallet $wallet): Response
     {
         $organisation = $request->user()->organisation;
-        $used = $wallet->includedChecksUsed($organisation);
 
         return Inertia::render('credit/index', [
             'balance' => Money::format($wallet->balance($organisation)),
@@ -36,16 +33,6 @@ class CreditController extends Controller
                 'billCheck' => Money::format(Job::BillCheck->price()),
                 'dispute' => Money::format(Job::Dispute->price()),
             ],
-            'plan' => $organisation->paysMonthly() ? [
-                'monthlyFee' => Money::format((string) $organisation->monthlyFee()),
-                'includedChecks' => Wallet::includedChecks(),
-                'usedChecks' => $used,
-                'card' => $organisation->card_last4 !== null ? [
-                    'last4' => $organisation->card_last4,
-                    'brand' => Str::title((string) $organisation->card_brand),
-                    'expiry' => $organisation->card_expiry,
-                ] : null,
-            ] : null,
             'packs' => array_map(fn (string $amount) => [
                 'value' => (string) Money::money($amount),
                 'label' => Str::replaceLast('.00', '', Money::format($amount)),
@@ -59,14 +46,6 @@ class CreditController extends Controller
                 'balance' => Money::format($t->balance_after),
                 'kind' => $t->kind->value,
             ])->values(),
-            'invoices' => $organisation->feeInvoices()->latest('period_month')->latest('id')->limit(12)->get()->map(fn (FeeInvoice $i) => [
-                'id' => $i->id,
-                'description' => $i->description,
-                'amount' => Money::format($i->amount),
-                'status' => $i->status->value,
-                'paidOn' => $i->paid_at?->format('j M Y'),
-                'payable' => in_array($i->status, [FeeStatus::Due, FeeStatus::Issued], true),
-            ])->values(),
         ]);
     }
 
@@ -78,20 +57,6 @@ class CreditController extends Controller
 
         try {
             return Inertia::location($payments->startTopUp($request->user()->organisation, $request->user(), $amount));
-        } catch (PaymentFailed $e) {
-            Inertia::flash('toast', ['type' => 'error', 'message' => $e->getMessage()]);
-
-            return back();
-        }
-    }
-
-    public function payInvoice(Request $request, FeeInvoice $invoice, PaymentService $payments): SymfonyResponse
-    {
-        abort_unless($invoice->organisation_id === $request->user()->organisation_id, 404);
-        abort_if($invoice->isPaid(), 422, 'This invoice is already paid.');
-
-        try {
-            return Inertia::location($payments->startInvoicePayment($invoice, $request->user()));
         } catch (PaymentFailed $e) {
             Inertia::flash('toast', ['type' => 'error', 'message' => $e->getMessage()]);
 

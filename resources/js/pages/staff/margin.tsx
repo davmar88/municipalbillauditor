@@ -11,7 +11,6 @@ type Props = {
         month: string;
         monthLabel: string;
         topUps: string;
-        monthlyFees: string;
         revenue: string;
         claudeCost: string;
         margin: string;
@@ -41,7 +40,7 @@ export default function StaffMargin({ report, months }: Props) {
             <PageBody>
                 <PageHeader
                     title="Margin"
-                    description="Money received (top-ups and monthly fees paid) against what Claude cost us, from the real token counts of every call."
+                    description="Money received (top-ups, as everyone pays as they go) against what Claude cost us, from the real token counts of every call."
                     actions={
                         <Button variant="outline" asChild>
                             <Link href={index()}>Work queue</Link>
@@ -76,7 +75,7 @@ export default function StaffMargin({ report, months }: Props) {
                     <StatTile
                         label="Revenue"
                         value={report.revenue}
-                        detail={`${report.topUps} top-ups · ${report.monthlyFees} monthly fees`}
+                        detail="Top-ups received"
                     />
                     <StatTile
                         label="Claude cost"

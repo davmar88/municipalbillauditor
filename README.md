@@ -22,21 +22,15 @@ Today these errors are fixed one case at a time by councillors, ratepayer groups
 
 ## How it makes money
 
-Revenue comes from two places only: households' prepaid credit and a flat monthly fee from managing agents and businesses. There is no success fee: we take nothing from what a dispute wins.
-
-| Customer                       | What they pay                                                                                                                             |
-| ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| Households                     | A fixed price per job from prepaid credit: R15 to check a bill, R49 for a dispute. Top-ups of R50, R100, R250 or R500 by card (Paystack). |
-| Landlords and managing agents  | R1,500 a month per organisation, with 100 bill checks and unlimited disputes included. Extra checks at R15 each from prepaid credit.      |
-| Businesses and body corporates | R2,500 a month per organisation, on the same terms. Either can have a negotiated monthly fee.                                             |
+Pay as you go, for everyone. Households, landlords, managing agents and businesses all pay the same fixed price per job from prepaid credit: R15 to check a bill, R49 for a dispute. Top-ups of R50, R100, R250 or R500 by card (Paystack). There are no monthly fees, no setup fees and no success fee: we take nothing from what a dispute wins. Each job's real cost is what Claude charges us for it, so revenue follows usage.
 
 A bill check reads the bill and runs the four checks. A dispute covers drafting it, emailing the municipality, reading its replies, chasing and escalating. The customer always sees the price before a job runs. A bill that arrives without enough credit waits and is checked after the next top-up, and a bill that can't be read is refunded. Every price is set from env in `config/auditor.php`, and `WELCOME_CREDIT` (0 by default) gives new accounts some credit to start.
 
-Every Claude call is recorded with its model and token counts and costed in rand, and staff see each month's margin: top-ups and monthly fees received against what Claude cost.
+Every Claude call is recorded with its model and token counts and costed in rand, and staff see each month's margin: top-ups received against what Claude cost.
 
 ### Pricing model
 
-[`pricing/bill-auditor-pricing-model.xlsx`](pricing/bill-auditor-pricing-model.xlsx) is a three-year revenue and profit model. It still models the **old** pricing (success fees, a per-unit subscription and free household checks) and has not been updated for prepaid jobs and monthly fees.
+[`pricing/bill-auditor-pricing-model.xlsx`](pricing/bill-auditor-pricing-model.xlsx) is a three-year revenue and profit model. It still models the **old** pricing (success fees, a per-unit subscription and free household checks) and has not been updated for pay-as-you-go prepaid jobs.
 
 ## Known risks
 
@@ -57,7 +51,7 @@ Before launch, these still need real values or checking:
 - **Tariff rates.** The demo rates are illustrative. The wrong-tariff check needs each municipality's published rates to work out the overcharge.
 - **Proof figures.** The landing page hides the research-note figures in production until each has a source link (`app/Support/SiteContent.php`).
 - **Company details.** Company name, information officer and contact address for the privacy notice (`COMPANY_NAME`, `INFORMATION_OFFICER`, `CONTACT_EMAIL`).
-- **Prices.** The job prices, top-up packs and monthly fees are starting values (`PRICE_*`, `TOP_UP_PACKS`, `WELCOME_CREDIT`, `INCLUDED_BILL_CHECKS_PER_MONTH`), and `USD_ZAR_RATE` is a placeholder.
+- **Prices.** The job prices and top-up packs are starting values (`PRICE_JOB_*`, `TOP_UP_PACKS`, `WELCOME_CREDIT`), and `USD_ZAR_RATE` is a placeholder.
 - **Email and payments.** An SMTP provider for sending, an inbound route for replies, and Paystack keys.
 
 ## Running the app
@@ -95,12 +89,11 @@ Replies from municipalities are read the same way (`ANTHROPIC_REPLY_MODEL`, defa
 
 ### Payments (Paystack)
 
-Set `PAYSTACK_PUBLIC_KEY` and `PAYSTACK_SECRET_KEY` (test keys put Paystack in test mode). Top-ups and monthly fees go through Paystack's checkout. The first monthly fee paid by card saves the card, and `fees:invoice` charges it on the 1st of each month. Staff can record EFT top-ups from the work queue.
+Set `PAYSTACK_PUBLIC_KEY` and `PAYSTACK_SECRET_KEY` (test keys put Paystack in test mode). Top-ups go through Paystack's checkout, one payment at a time: no card is kept on file. Staff can record EFT top-ups from the work queue.
 
 A payment is applied once, by whichever of these hears from Paystack first:
 
 - the customer's return to `/credit/callback`
-- Paystack's answer to a saved-card charge
 - `payments:reconcile`, which asks about open payments every five minutes
 - the signed webhook at `POST /webhooks/paystack`
 
@@ -131,7 +124,6 @@ php artisan queue:work
 The scheduler runs:
 
 - deadline reminders and dispute chasing (follow-up, escalation to the municipal manager, the Public Protector draft for the customer), daily at 07:00 South African time
-- monthly fees, raised on the 1st
 - a check with Paystack on card payments still open, every five minutes
 
 Run the scheduler from cron:
@@ -166,7 +158,7 @@ CI runs all of these on every pull request, against MySQL 8.
 | `app/Audit`                       | The checks, deadlines and letters. Plain PHP with exact decimal money, and no Laravel.                                       |
 | `app/Services`                    | Reading bills and replies, the wallet and payments, Claude costs, the municipal directory, and emailing and chasing disputes |
 | `app/Http/Controllers`            | The app screens, the staff tools, the public pages and the inbound email and Paystack webhooks                               |
-| `app/Console/Commands`            | The daily reminder and chase run, monthly fees, payment checks, the municipality import and staff access                     |
+| `app/Console/Commands`            | The daily reminder and chase run, payment checks, the municipality import and staff access                                   |
 | `database/data`                   | The directory of all 257 municipalities                                                                                      |
 | `resources/js/pages`              | The React screens                                                                                                            |
 | `resources/views/marketing`       | The public pages, rendered on the server for search engines                                                                  |

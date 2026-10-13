@@ -146,6 +146,7 @@ class DemoSeeder extends Seeder
     private function agent(array $municipalities): void
     {
         $user = $this->user('agent@example.com', 'Pieter van Wyk', OrganisationKind::Agent, 'Jacaranda Property Management');
+        $this->credit($user, '500');
         $org = $user->organisation;
 
         // Water estimated three months running, and an electricity spike.
@@ -203,6 +204,7 @@ class DemoSeeder extends Seeder
     private function business(Municipality $municipality): void
     {
         $user = $this->user('business@example.com', 'Naledi Dlamini', OrganisationKind::Business, 'Protea Heights Body Corporate');
+        $this->credit($user, '500');
         $scheme = $this->property($user->organisation, $municipality, 'Protea Heights', null, 'Lynnwood', PropertyType::BulkResidential, '3008 7712 4410', '64 units, 12 Protea Road');
         $last = null;
 
@@ -218,7 +220,8 @@ class DemoSeeder extends Seeder
     }
 
     /**
-     * The demo household has some credit to try a check and a dispute with.
+     * Demo accounts pay as they go too, so each has some credit to try a
+     * check and a dispute with.
      */
     private function credit(User $user, string $amount): void
     {

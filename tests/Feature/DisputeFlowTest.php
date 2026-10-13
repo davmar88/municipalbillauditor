@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Audit\Enums\Service;
+use App\Enums\CreditKind;
 use App\Enums\DisputeMode;
 use App\Enums\FindingState;
 use App\Enums\OrganisationKind;
@@ -132,16 +133,20 @@ class DisputeFlowTest extends TestCase
         );
     }
 
-    public function test_business_disputes_are_included_in_the_monthly_plan(): void
+    public function test_businesses_pay_as_they_go_like_everyone_else(): void
     {
         $user = User::factory()->forKind(OrganisationKind::Business)->create();
         $bill = $this->flaggedBill($user);
 
+        // No plan to fall back on: without credit, the dispute waits.
         $this->actingAs($user)->get(route('disputes.create', $bill))->assertInertia(fn (Assert $page) => $page
-            ->where('quote.price', 'Included')
-            ->where('quote.coveredByPlan', true),
+            ->where('quote.price', 'R49.00')
+            ->where('quote.affordable', false)
+            ->missing('quote.coveredByPlan'),
         );
+        $this->post(route('disputes.store', $bill), ['letter_body' => 'Letter', 'mandate' => '1'])->assertSessionHasErrors('credit');
 
+        app(Wallet::class)->credit($user->organisation, CreditKind::TopUp, '49', 'test-top-up', 'Card top-up');
         $this->post(route('disputes.store', $bill), ['letter_body' => 'Letter', 'mandate' => '1'])->assertSessionHasNoErrors();
         $this->assertNotNull(Dispute::sole()->submitted_on);
         $this->assertSame('0.00', app(Wallet::class)->balance($user->organisation));

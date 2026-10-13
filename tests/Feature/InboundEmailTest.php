@@ -4,8 +4,10 @@ namespace Tests\Feature;
 
 use App\Enums\BillSource;
 use App\Enums\BillStatus;
+use App\Enums\CreditKind;
 use App\Models\Bill;
 use App\Models\Organisation;
+use App\Services\Billing\Wallet;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -34,7 +36,9 @@ class InboundEmailTest extends TestCase
 
     public function test_a_forwarded_bill_is_stored_and_read(): void
     {
+        // Agents pay as they go like everyone else: enough credit for one check.
         $organisation = Organisation::factory()->agent()->create();
+        app(Wallet::class)->credit($organisation, CreditKind::TopUp, '15', 'test-top-up', 'Card top-up');
 
         $response = $this->forward("Bills <{$organisation->forwarding_code}@bills.example.com>", [
             'attachment1' => UploadedFile::fake()->create('statement.pdf', 200, 'application/pdf'),

@@ -61,7 +61,7 @@ class DemoSmokeTest extends TestCase
         $this->get(route('disputes.create', $bill))->assertInertia(fn (Assert $page) => $page->component('disputes/create'));
         $this->get(route('properties.index'))->assertInertia(fn (Assert $page) => $page->component('properties/index')->has('properties', 1));
         $this->get(route('account.edit'))->assertInertia(fn (Assert $page) => $page->component('settings/account'));
-        $this->get(route('credit.index'))->assertInertia(fn (Assert $page) => $page->where('balance', 'R100.00')->where('plan', null));
+        $this->get(route('credit.index'))->assertInertia(fn (Assert $page) => $page->where('balance', 'R100.00')->missing('plan'));
     }
 
     public function test_the_agent_sees_the_portfolio_sorted_by_urgency(): void
@@ -87,7 +87,7 @@ class DemoSmokeTest extends TestCase
         }
     }
 
-    public function test_the_business_sees_its_claim_and_plan(): void
+    public function test_the_business_sees_its_claim_and_pays_as_it_goes(): void
     {
         $user = $this->as('business@example.com');
         $claim = Dispute::where('organisation_id', $user->organisation_id)->sole();
@@ -101,8 +101,10 @@ class DemoSmokeTest extends TestCase
         );
         $this->get(route('credit.index'))->assertInertia(fn (Assert $page) => $page
             ->component('credit/index')
-            ->where('plan.monthlyFee', 'R2,500.00')
-            ->where('plan.includedChecks', 100),
+            ->where('balance', 'R500.00')
+            ->where('prices.billCheck', 'R15.00')
+            ->missing('plan')
+            ->missing('invoices'),
         );
     }
 

@@ -9,7 +9,6 @@ import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { edit, update } from '@/routes/account';
 import { destroy as destroyBills } from '@/routes/account/bills';
-import { destroy as destroyCard } from '@/routes/account/card';
 import { update as updateDisputes } from '@/routes/account/disputes';
 import { index as credit } from '@/routes/credit';
 import { AddressText } from '@/components/address-text';
@@ -24,7 +23,6 @@ type Props = {
         mandateOn: string | null;
         autoSend: boolean;
         billCount: number;
-        card: { last4: string; brand: string; expiry: string | null } | null;
     };
 };
 
@@ -131,27 +129,6 @@ export default function Account({ account }: Props) {
                     Credit and billing
                 </Link>
             </div>
-
-            {account.card && (
-                <div className="space-y-3">
-                    <Heading
-                        variant="small"
-                        title="Saved card"
-                        description={`Your monthly fee is charged to your ${account.card.brand} card ending ${account.card.last4}${account.card.expiry ? `, expiring ${account.card.expiry}` : ''}. Paystack keeps the card details; we only keep a code to charge it.`}
-                    />
-                    <Form
-                        {...destroyCard.form()}
-                        options={{ preserveScroll: true }}
-                    >
-                        {({ processing }) => (
-                            <Button variant="outline" disabled={processing}>
-                                {processing && <Spinner />}
-                                Remove this card
-                            </Button>
-                        )}
-                    </Form>
-                </div>
-            )}
 
             <div className="space-y-4">
                 <Heading

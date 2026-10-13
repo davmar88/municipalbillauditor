@@ -28,7 +28,7 @@ const accountTypes: {
     {
         value: 'household',
         label: 'My home',
-        hint: 'Free bill checks',
+        hint: 'Homeowners and tenants',
     },
     {
         value: 'agent',

@@ -25,13 +25,6 @@ interface PaymentGateway
     public function verify(string $reference): ChargeResult;
 
     /**
-     * Charge a saved card. The answer says whether it went through.
-     *
-     * @throws PaymentFailed
-     */
-    public function chargeSavedCard(Payment $payment, string $authorizationCode, string $email): ChargeResult;
-
-    /**
      * Whether a webhook really came from the processor.
      */
     public function validSignature(string $payload, ?string $signature): bool;

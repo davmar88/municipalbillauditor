@@ -2,12 +2,10 @@
 
 namespace App\Models;
 
-use App\Audit\Money;
 use App\Enums\OrganisationKind;
 use App\Services\Billing\Wallet;
 use Database\Factories\OrganisationFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
-use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -16,26 +14,19 @@ use Illuminate\Support\Str;
 
 /**
  * A customer account: one household, one managing agent, or one business or
- * body corporate. Users belong to one organisation.
+ * body corporate. Users belong to one organisation. Every kind pays as it
+ * goes, per job, from prepaid credit.
  *
  * @property int $id
  * @property OrganisationKind $kind
  * @property string $name
  * @property string $forwarding_code
- * @property string|null $monthly_fee
  * @property string $credit_balance
- * @property string|null $card_authorization
- * @property string|null $card_last4
- * @property string|null $card_brand
- * @property string|null $card_expiry
- * @property string|null $card_email
- * @property Carbon|null $card_saved_at
  * @property Carbon|null $dispute_mandate_at
  * @property int|null $dispute_mandate_user_id
  * @property bool $auto_send_disputes
  */
-#[Fillable(['kind', 'name', 'forwarding_code', 'monthly_fee'])]
-#[Hidden(['card_authorization'])]
+#[Fillable(['kind', 'name', 'forwarding_code'])]
 class Organisation extends Model
 {
     /** @use HasFactory<OrganisationFactory> */
@@ -66,11 +57,7 @@ class Organisation extends Model
     {
         return [
             'kind' => OrganisationKind::class,
-            'monthly_fee' => 'decimal:2',
             'credit_balance' => 'decimal:2',
-            // A reusable Paystack authorization: enough to charge the card.
-            'card_authorization' => 'encrypted',
-            'card_saved_at' => 'datetime',
             'dispute_mandate_at' => 'datetime',
             'auto_send_disputes' => 'boolean',
         ];
@@ -98,12 +85,6 @@ class Organisation extends Model
     public function disputes(): HasMany
     {
         return $this->hasMany(Dispute::class);
-    }
-
-    /** @return HasMany<FeeInvoice, $this> */
-    public function feeInvoices(): HasMany
-    {
-        return $this->hasMany(FeeInvoice::class);
     }
 
     /** @return HasMany<Payment, $this> */
@@ -138,27 +119,5 @@ class Organisation extends Model
     public function hasMandate(): bool
     {
         return $this->dispute_mandate_at !== null;
-    }
-
-    /** Agents and businesses pay a monthly fee; households pay per job. */
-    public function paysMonthly(): bool
-    {
-        return $this->kind !== OrganisationKind::Household;
-    }
-
-    /**
-     * The monthly fee this organisation pays: negotiated, or the standard
-     * fee for its kind. Null for households.
-     */
-    public function monthlyFee(): ?string
-    {
-        if (! $this->paysMonthly()) {
-            return null;
-        }
-
-        return (string) Money::money($this->monthly_fee ?? match ($this->kind) {
-            OrganisationKind::Agent => (string) config('auditor.prices.agent_month'),
-            default => (string) config('auditor.prices.business_month'),
-        });
     }
 }
