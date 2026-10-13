@@ -120,7 +120,13 @@ Bills are read, disputes sent and replies read on the queue, so production needs
 php artisan queue:work
 ```
 
-Deadline reminders and dispute chasing (follow-up, escalation to the municipal manager, the Public Protector draft for the customer) run daily at 07:00 South African time, and monthly fees are raised on the 1st. Run the scheduler from cron:
+The scheduler runs:
+
+- deadline reminders and dispute chasing (follow-up, escalation to the municipal manager, the Public Protector draft for the customer), daily at 07:00 South African time
+- monthly fees, raised on the 1st
+- a check with Paystack on card payments still open, every five minutes
+
+Run the scheduler from cron:
 
 ```
 * * * * * cd /path/to/app && php artisan schedule:run >> /dev/null 2>&1
@@ -141,6 +147,10 @@ npm run types:check      # TypeScript
 
 CI runs all of these on every pull request, against MySQL 8.
 
+## Mobile app
+
+`mobile/` is the RevenueGuard phone app, built with Expo and linked to its EAS project. It has its own `package.json`, checks and CI job. `mobile/README.md` says how to run it and build it with EAS. It still shows Expo's starter screens. Its own screens need an API in this app for signing in, bills and credit.
+
 ## Where things are
 
 | Path                              | What it holds                                                                                                                |
@@ -148,8 +158,10 @@ CI runs all of these on every pull request, against MySQL 8.
 | `app/Audit`                       | The checks, deadlines and letters. Plain PHP with exact decimal money, and no Laravel.                                       |
 | `app/Services`                    | Reading bills and replies, the wallet and payments, Claude costs, the municipal directory, and emailing and chasing disputes |
 | `app/Http/Controllers`            | The app screens, the staff tools, the public pages and the inbound email and Paystack webhooks                               |
-| `app/Console/Commands`            | The daily reminder and chase run, monthly fees, and the municipality import                                                  |
+| `app/Console/Commands`            | The daily reminder and chase run, monthly fees, payment checks, the municipality import and staff access                     |
 | `database/data`                   | The directory of all 257 municipalities                                                                                      |
 | `resources/js/pages`              | The React screens                                                                                                            |
 | `resources/views/marketing`       | The public pages, rendered on the server for search engines                                                                  |
 | `database/seeders/DemoSeeder.php` | The demo accounts                                                                                                            |
+| `mobile`                          | The Expo phone app                                                                                                           |
+| `deploy`, `DEPLOY.md`             | Running it on the server next to Cable Elite                                                                                 |

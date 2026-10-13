@@ -50,6 +50,7 @@ export default defineConfig({
         ignorePatterns: [
             'vendor/**',
             'node_modules/**',
+            'mobile/**',
             'public/**',
             'bootstrap/ssr/**',
             'tailwind.config.js',
@@ -73,6 +74,7 @@ export default defineConfig({
         ignorePatterns: [
             '.github/**',
             'composer.json',
+            'mobile/**',
             'resources/js/components/ui/*',
             'resources/views/mail/*',
         ],
