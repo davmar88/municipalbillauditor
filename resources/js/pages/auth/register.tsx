@@ -11,9 +11,12 @@ import { login } from '@/routes';
 import { cn } from '@/lib/utils';
 import { store } from '@/routes/register';
 import type { OrganisationKind } from '@/types';
+import GoogleButton, { OrDivider } from '@/components/google-button';
+import { redirect as googleRedirect } from '@/routes/google';
 
 type Props = {
     passwordRules: string;
+    googleAvailable: boolean;
 };
 
 const accountTypes: {
@@ -41,13 +44,24 @@ const accountTypes: {
     },
 ];
 
-export default function Register({ passwordRules }: Props) {
+export default function Register({ passwordRules, googleAvailable }: Props) {
     const { url } = usePage();
     const requested = new URLSearchParams(url.split('?')[1] ?? '').get('type');
     const [type, setType] = useState<OrganisationKind>(
         accountTypes.find((t) => t.value === requested)?.value ?? 'household',
     );
     const selected = accountTypes.find((t) => t.value === type)!;
+    const [organisationName, setOrganisationName] = useState('');
+
+    // Google sign-up carries the choices above to the new account.
+    const googleHref = googleRedirect.url({
+        query: {
+            account_type: type,
+            ...(selected.organisationLabel && organisationName
+                ? { organisation_name: organisationName }
+                : {}),
+        },
+    });
 
     return (
         <>
@@ -111,11 +125,22 @@ export default function Register({ passwordRules }: Props) {
                                         required
                                         autoComplete="organization"
                                         name="organisation_name"
+                                        value={organisationName}
+                                        onChange={(e) =>
+                                            setOrganisationName(e.target.value)
+                                        }
                                     />
                                     <InputError
                                         message={errors.organisation_name}
                                     />
                                 </div>
+                            )}
+
+                            {googleAvailable && (
+                                <>
+                                    <GoogleButton href={googleHref} />
+                                    <OrDivider />
+                                </>
                             )}
 
                             <div className="grid gap-2">

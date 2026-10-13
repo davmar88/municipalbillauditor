@@ -11,13 +11,20 @@ import { register } from '@/routes';
 import { store } from '@/routes/login';
 import { request } from '@/routes/password';
 import PasskeyVerify from '@/components/passkey-verify';
+import GoogleButton, { OrDivider } from '@/components/google-button';
+import { redirect as googleRedirect } from '@/routes/google';
 
 type Props = {
     status?: string;
     canResetPassword: boolean;
+    googleAvailable: boolean;
 };
 
-export default function Login({ status, canResetPassword }: Props) {
+export default function Login({
+    status,
+    canResetPassword,
+    googleAvailable,
+}: Props) {
     return (
         <>
             <Head title="Log in" />
@@ -90,6 +97,13 @@ export default function Login({ status, canResetPassword }: Props) {
                                 {processing && <Spinner />}
                                 Log in
                             </Button>
+
+                            {googleAvailable && (
+                                <>
+                                    <OrDivider />
+                                    <GoogleButton href={googleRedirect.url()} />
+                                </>
+                            )}
                         </div>
 
                         <div className="text-center text-sm text-muted-foreground">

@@ -24,6 +24,7 @@
                 ]],
                 ['What we collect', [
                     'Your name, email address and password, to run your account.',
+                    'If you sign in with Google, Google tells us your name and email address, and that it has checked the email is yours. We get nothing else from your Google account, and never your Google password.',
                     'The bills you send us, and anything on them: your account number, address, meter readings, tariff and charges.',
                     'Meter photos you add, your answers to our questions, and the disputes we write for you.',
                     'For managing agents and businesses, the names, units and account numbers of the properties you add.',
@@ -39,6 +40,7 @@
                     'Anthropic, which reads the bill and the municipality\'s replies for us when automatic reading is switched on. It receives the files and returns what they say.',
                     'Our email provider, which delivers the dispute emails and passes the municipality\'s replies back to us.',
                     'Paystack, which takes card payments for top-ups and monthly fees. We never see or store your card number.',
+                    'Google, only if you choose to sign in with Google.',
                 ]],
                 ['How we keep it safe', [
                     'Bills and meter photos are stored privately, never at a public link, and are only shown to people signed in to your account.',

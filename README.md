@@ -108,6 +108,14 @@ A Paystack account has one webhook. If the account is the app's alone, point the
 
 Payments stay in the account's main balance: nothing is split off to a subaccount or paid out.
 
+### Google sign-in
+
+Set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`, and "Continue with Google" shows on the login and register pages. The client's redirect URI is `APP_URL/auth/google/callback`.
+
+- A new Google user gets a verified account of the type picked on the register page, or a household when they start from the login page.
+- An existing account is linked only when Google has verified its email.
+- Accounts with two-factor sign-in still get its challenge.
+
 ### Email
 
 Disputes are emailed from `MAIL_FROM_ADDRESS` over whatever `MAIL_MAILER` you configure (local development logs them), with replies going to `d-<token>@INBOUND_EMAIL_DOMAIN`. Nothing is sent without the customer's one-time mandate.
