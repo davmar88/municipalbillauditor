@@ -1,4 +1,6 @@
-# Municipal Bill Auditor
+# RevenueGuard
+
+Prepaid municipal bill checks and disputes (the app was first called Municipal Bill Auditor).
 
 People in South Africa photograph or forward their municipal bill. The app reads it with Claude and flags likely errors, then emails the dispute to the municipality on the customer's behalf, reads the replies, chases and escalates. It covers all 257 municipalities in South Africa, and it works by email only: there is no WhatsApp in the flow.
 

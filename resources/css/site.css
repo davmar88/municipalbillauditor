@@ -34,6 +34,114 @@
     --color-action-soft: #2a253a;
     --color-action-light: #c8abfa;
     --color-chart-muted: #7e8792;
+
+    /* Vite's wider palette, for colour around the violet: the logo's cyan
+       and magenta, its indigo, and a lighter orchid for text. Each passes
+       AA on night; magenta only for large text and decoration. Orange stays
+       the colour of problems. */
+    --color-cyan: #41d1ff;
+    --color-indigo: #a8b1ff;
+    --color-orchid: #d18cff;
+    --color-magenta: #bd34fe;
+}
+
+@layer components {
+    /* The Vite logo's sweep, cyan through violet to orchid. */
+    .text-gradient {
+        color: var(--color-action);
+    }
+
+    @supports (background-clip: text) or (-webkit-background-clip: text) {
+        .text-gradient {
+            background-image: linear-gradient(
+                110deg,
+                var(--color-cyan),
+                var(--color-action) 50%,
+                var(--color-orchid)
+            );
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+    }
+
+    /* Fills that carry dark text (text-ground): every stop passes AA. */
+    .bg-brand {
+        background-image: linear-gradient(
+            110deg,
+            var(--color-cyan),
+            var(--color-action) 50%,
+            var(--color-orchid)
+        );
+    }
+
+    /* A one-pixel gradient edge around a dark card. */
+    .border-brand {
+        border: 1px solid transparent;
+        background:
+            linear-gradient(var(--color-paper), var(--color-paper)) padding-box,
+            linear-gradient(
+                    135deg,
+                    var(--color-cyan),
+                    var(--color-action) 45%,
+                    var(--color-magenta)
+                )
+                border-box;
+    }
+
+    .glow {
+        box-shadow:
+            0 0 0 1px rgb(179 154 255 / 0.45),
+            0 0 36px rgb(179 154 255 / 0.3);
+    }
+
+    /* Violet and cyan light behind a section, as on vite.dev. */
+    .bg-glow {
+        background-image:
+            radial-gradient(
+                45% 55% at 78% 28%,
+                rgb(179 154 255 / 0.22),
+                transparent 70%
+            ),
+            radial-gradient(
+                35% 45% at 8% 0%,
+                rgb(65 209 255 / 0.12),
+                transparent 70%
+            );
+    }
+
+    .bg-glow-low {
+        background-image:
+            radial-gradient(
+                60% 70% at 50% 100%,
+                rgb(189 52 254 / 0.18),
+                transparent 70%
+            ),
+            radial-gradient(
+                40% 50% at 15% 0%,
+                rgb(65 209 255 / 0.1),
+                transparent 70%
+            );
+    }
+
+    /* Faint grid lines that fade out, like vite.dev's hero. */
+    .bg-grid {
+        background-image:
+            linear-gradient(var(--color-rule) 1px, transparent 1px),
+            linear-gradient(90deg, var(--color-rule) 1px, transparent 1px);
+        background-size: 56px 56px;
+        mask-image: radial-gradient(
+            70% 60% at 50% 30%,
+            #000 20%,
+            transparent 75%
+        );
+        opacity: 0.35;
+    }
+
+    /* The purple announcement strip at the top of vite.dev. */
+    .bg-banner {
+        background-image: linear-gradient(90deg, #2b1c55, #5b2fa8 50%, #2b1c55);
+    }
 }
 
 @layer base {

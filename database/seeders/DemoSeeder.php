@@ -230,7 +230,7 @@ class DemoSeeder extends Seeder
 
     private function staff(): void
     {
-        $user = $this->user('staff@example.com', 'Sipho Ndlovu', OrganisationKind::Household, 'Bill Auditor team');
+        $user = $this->user('staff@example.com', 'Sipho Ndlovu', OrganisationKind::Household, 'RevenueGuard team');
         $user->forceFill(['is_staff' => true])->save();
     }
 

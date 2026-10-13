@@ -1,9 +1,12 @@
-{{-- The four errors, each with a marked-up snippet of a bill. --}}
+{{-- The four errors, each with a marked-up snippet of a bill. Each card has
+     its own accent from the night violet palette; the marks stay orange. --}}
+@php($accents = ['text-cyan', 'text-indigo', 'text-orchid', 'text-action'])
 <div class="grid grid-cols-[repeat(auto-fit,minmax(min(500px,100%),1fr))] gap-6">
     @foreach ($checks as $check)
-        <article class="flex flex-col gap-4 rounded-[10px] border border-rule-soft bg-well p-7">
+        <article class="group relative flex flex-col gap-4 overflow-hidden rounded-[10px] border border-rule-soft bg-well p-7 transition-colors hover:border-rule">
+            <div aria-hidden="true" class="bg-brand absolute inset-x-0 top-0 h-0.5 opacity-70"></div>
             <div class="flex items-baseline gap-3">
-                <span class="font-mono text-sm font-semibold text-flag-ink">{{ $check['number'] }}</span>
+                <span class="font-mono text-sm font-semibold {{ $accents[$loop->index % 4] }}">{{ $check['number'] }}</span>
                 <h3 class="text-2xl leading-tight font-bold">{{ $check['title'] }}</h3>
             </div>
             <div aria-hidden="true" class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded border border-rule bg-paper px-4 py-3.5 font-mono text-sm">

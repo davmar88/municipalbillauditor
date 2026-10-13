@@ -6,7 +6,7 @@
     $place = $metro->area_name ? "{$metro->short_name} ({$metro->area_name})" : $metro->short_name;
 @endphp
 
-@section('title', "{$metro->short_name} billing disputes | Municipal Bill Auditor")
+@section('title', "{$metro->short_name} billing disputes | ".config('app.name'))
 @section('description', "Wrong {$metro->name} bill? We check it for estimated readings, wrong tariffs and outage charges, then write your dispute and chase it to the credit.")
 @section('canonical', route('metro.show', $metro))
 
@@ -31,15 +31,16 @@
 ]])
 
 @section('content')
-    <section aria-labelledby="hero-h" class="pt-[clamp(40px,6vw,72px)] pb-[clamp(48px,7vw,88px)]">
+    <section aria-labelledby="hero-h" class="relative isolate overflow-hidden pt-[clamp(40px,6vw,72px)] pb-[clamp(48px,7vw,88px)]">
+        <div aria-hidden="true" class="bg-glow absolute inset-0 -z-10"></div>
         <div class="mx-auto flex max-w-[1200px] flex-col gap-6 px-[clamp(16px,4vw,40px)]">
             <nav aria-label="Breadcrumb" class="text-sm text-muted">
                 <a href="{{ route('home') }}">Home</a> <span aria-hidden="true">/</span> {{ $metro->short_name }}
             </nav>
-            <h1 id="hero-h" class="max-w-[900px] text-[clamp(36px,5vw,64px)] leading-[1.04] font-extrabold tracking-[-0.02em] text-balance">Dispute {{ $article }} {{ $metro->name }} bill</h1>
+            <h1 id="hero-h" class="max-w-[900px] text-[clamp(36px,5vw,64px)] leading-[1.04] font-extrabold tracking-[-0.02em] text-balance">Dispute {{ $article }} <span class="text-gradient">{{ $metro->name }}</span> bill</h1>
             <p class="max-w-[640px] text-[clamp(18px,1.6vw,20px)] text-ink-2">Send us your {{ $place }} municipal bill. We check it for estimated readings, wrong tariffs, outage charges and spikes, then write the dispute to {{ $metro->billing_addressee }} and follow it until the credit is on your account.</p>
             <div class="flex flex-wrap gap-3">
-                <a href="{{ $checkUrl }}" class="flex h-14 items-center gap-2.5 rounded-lg bg-action px-6 text-lg font-semibold text-ground no-underline hover:bg-action-ink hover:text-ground">
+                <a href="{{ $checkUrl }}" class="glow flex h-14 items-center gap-2.5 rounded-lg bg-action px-6 text-lg font-semibold text-ground no-underline hover:bg-action-ink hover:text-ground">
                     @include('marketing.partials.camera')
                     {{ $checkLabel }}
                 </a>
