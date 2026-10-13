@@ -1,0 +1,200 @@
+@import 'tailwindcss';
+
+@import 'tw-animate-css';
+
+@source '../views';
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+    --font-sans:
+        'Archivo', ui-sans-serif, system-ui, -apple-system, 'Segoe UI',
+        sans-serif;
+    --font-mono:
+        'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+
+    --radius-lg: var(--radius);
+    --radius-md: calc(var(--radius) - 2px);
+    --radius-sm: calc(var(--radius) - 4px);
+
+    --color-background: var(--background);
+    --color-foreground: var(--foreground);
+
+    --color-card: var(--card);
+    --color-card-foreground: var(--card-foreground);
+
+    --color-popover: var(--popover);
+    --color-popover-foreground: var(--popover-foreground);
+
+    --color-primary: var(--primary);
+    --color-primary-foreground: var(--primary-foreground);
+
+    --color-secondary: var(--secondary);
+    --color-secondary-foreground: var(--secondary-foreground);
+
+    --color-muted: var(--muted);
+    --color-muted-foreground: var(--muted-foreground);
+
+    --color-accent: var(--accent);
+    --color-accent-foreground: var(--accent-foreground);
+
+    --color-destructive: var(--destructive);
+    --color-destructive-foreground: var(--destructive-foreground);
+
+    --color-border: var(--border);
+    --color-input: var(--input);
+    --color-ring: var(--ring);
+
+    --color-chart-1: var(--chart-1);
+    --color-chart-2: var(--chart-2);
+    --color-chart-3: var(--chart-3);
+    --color-chart-4: var(--chart-4);
+    --color-chart-5: var(--chart-5);
+
+    --color-sidebar: var(--sidebar);
+    --color-sidebar-foreground: var(--sidebar-foreground);
+    --color-sidebar-primary: var(--sidebar-primary);
+    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+    --color-sidebar-accent: var(--sidebar-accent);
+    --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+    --color-sidebar-border: var(--sidebar-border);
+    --color-sidebar-ring: var(--sidebar-ring);
+
+    /* Municipal Bill Auditor: orange means something is wrong or needs
+       attention, blue means an action or progress. Never red and green. */
+    --color-flag: var(--flag);
+    --color-flag-foreground: var(--flag-foreground);
+    --color-flag-soft: var(--flag-soft);
+    --color-flag-ink: var(--flag-ink);
+    --color-action-soft: var(--action-soft);
+    --color-action-ink: var(--action-ink);
+    --color-panel: var(--panel);
+    --color-panel-foreground: var(--panel-foreground);
+    --color-panel-muted: var(--panel-muted);
+    --color-paper: var(--paper);
+    --color-rule: var(--rule);
+
+    /* Charts: an emphasis palette (accent + recessive grey), validated for
+       colour-blind separation and 3:1 contrast on the card in both modes. */
+    --color-chart-accent: var(--chart-accent);
+    --color-chart-muted: var(--chart-muted);
+    --color-chart-ink: var(--chart-ink);
+}
+
+:root {
+    --background: #f3f4f6;
+    --foreground: #12161c;
+    --card: #ffffff;
+    --card-foreground: #12161c;
+    --popover: #ffffff;
+    --popover-foreground: #12161c;
+    --primary: #1d4ed8;
+    --primary-foreground: #ffffff;
+    --secondary: #e9ecef;
+    --secondary-foreground: #12161c;
+    --muted: #eef0f2;
+    --muted-foreground: #4a525c;
+    --accent: #e6e9ed;
+    --accent-foreground: #12161c;
+    --destructive: #b42318;
+    --destructive-foreground: #b42318;
+    --border: #dce0e5;
+    --input: #c9cfd6;
+    --ring: #1d4ed8;
+    --chart-1: #c2410c;
+    --chart-2: #7b8591;
+    --chart-3: #1d4ed8;
+    --chart-4: #12161c;
+    --chart-5: #9a3412;
+    --radius: 0.5rem;
+    --sidebar: #12161c;
+    --sidebar-foreground: #d4d9df;
+    --sidebar-primary: #ffffff;
+    --sidebar-primary-foreground: #12161c;
+    --sidebar-accent: #2a313b;
+    --sidebar-accent-foreground: #ffffff;
+    --sidebar-border: #2a313b;
+    --sidebar-ring: #7ca2f5;
+
+    --flag: #c2410c;
+    --flag-foreground: #ffffff;
+    --flag-soft: #fbe4d6;
+    --flag-ink: #9a3412;
+    --action-soft: #dce5fb;
+    --action-ink: #1e3a8a;
+    --panel: #12161c;
+    --panel-foreground: #ffffff;
+    --panel-muted: #b9c0c9;
+    --paper: #ffffff;
+    --rule: #e6e9ed;
+    --chart-accent: #c2410c;
+    --chart-muted: #7b8591;
+    --chart-ink: #12161c;
+}
+
+.dark {
+    --background: #0f1216;
+    --foreground: #e6e9ed;
+    --card: #171b21;
+    --card-foreground: #e6e9ed;
+    --popover: #171b21;
+    --popover-foreground: #e6e9ed;
+    --primary: #7ca2f5;
+    --primary-foreground: #0f1216;
+    --secondary: #232931;
+    --secondary-foreground: #e6e9ed;
+    --muted: #1e232a;
+    --muted-foreground: #a3abb5;
+    --accent: #262c35;
+    --accent-foreground: #e6e9ed;
+    --destructive: #f2675a;
+    --destructive-foreground: #f2675a;
+    --border: #2a313b;
+    --input: #3a424d;
+    --ring: #7ca2f5;
+    --chart-1: #dd6b30;
+    --chart-2: #7e8792;
+    --chart-3: #7ca2f5;
+    --chart-4: #e6e9ed;
+    --chart-5: #f5a27a;
+    --sidebar: #0b0e12;
+    --sidebar-foreground: #c9cfd6;
+    --sidebar-primary: #e6e9ed;
+    --sidebar-primary-foreground: #0b0e12;
+    --sidebar-accent: #1e232a;
+    --sidebar-accent-foreground: #ffffff;
+    --sidebar-border: #1e232a;
+    --sidebar-ring: #7ca2f5;
+
+    --flag: #dd6b30;
+    --flag-foreground: #0f1216;
+    --flag-soft: #3a2418;
+    --flag-ink: #f5a27a;
+    --action-soft: #1b2a4a;
+    --action-ink: #a8c0ff;
+    --panel: #1e2530;
+    --panel-foreground: #ffffff;
+    --panel-muted: #b9c0c9;
+    --paper: #171b21;
+    --rule: #2a313b;
+    --chart-accent: #dd6b30;
+    --chart-muted: #7e8792;
+    --chart-ink: #e6e9ed;
+}
+
+@layer base {
+    * {
+        @apply border-border;
+    }
+
+    body {
+        @apply bg-background text-foreground;
+    }
+
+    /* Money, readings and reference numbers line up in columns. */
+    .figures {
+        font-family: var(--font-mono);
+        font-variant-numeric: tabular-nums;
+    }
+}

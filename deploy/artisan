@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# Artisan as RevenueGuard's own user, so every file it writes belongs to the
+# account php-fpm and the queue worker run as:
+#
+#   deploy/artisan migrate --force
+#   deploy/artisan app:make-staff you@example.com
+exec sudo -u revenueguard HOME=/tmp php /var/www/revenueguard/artisan "$@"

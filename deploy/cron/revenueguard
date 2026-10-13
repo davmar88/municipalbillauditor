@@ -1,0 +1,4 @@
+# /etc/cron.d/revenueguard: RevenueGuard's scheduler, as its own user.
+# A cron.d file, not a crontab, so it never replaces Cable Elite's www-data
+# crontab (and Cable Elite's setup never replaces it).
+* * * * * revenueguard cd /var/www/revenueguard && HOME=/tmp php artisan schedule:run >> /dev/null 2>&1
