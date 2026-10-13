@@ -15,7 +15,7 @@ worker. Setting up RevenueGuard changes nothing of Cable Elite's.
 | Database     | `crm`                              | `revenueguard`, with a MySQL user that can only reach it    |
 | Queue worker | `cable-elite-queue`                | `revenueguard-queue`                                        |
 | Scheduler    | `www-data`'s crontab               | `/etc/cron.d/revenueguard`                                  |
-| Mail         | Xneelo, `noreply@cableelite.co.za` | Xneelo, `noreply@revenueguard.co.za`                        |
+| Mail         | Xneelo, `noreply@cableelite.co.za` | Xneelo, `info@revenueguard.co.za`                           |
 
 Shared: the server, nginx, the MySQL server, PHP, Node, the firewall,
 fail2ban, key-only SSH and Certbot's renewal timer.
@@ -37,9 +37,9 @@ worth making before RevenueGuard holds real customers' bills.
 1. **The code must be on `main`.** The server deploys `main`. Until the app
    is merged, deploy its branch instead: set `export BRANCH=<branch>` in
    step 1.
-2. **The mailbox.** In Xneelo's control panel, create
-   `noreply@revenueguard.co.za`. You need its password in step 2. Sign-up
-   emails can't be sent without it.
+2. **The mailbox.** The site sends its email from `info@revenueguard.co.za`
+   on Xneelo. You type its password in step 2. Sign-up emails can't be sent
+   without it.
 3. **An Anthropic API key** from console.anthropic.com, for reading bills.
    Without one, uploaded bills wait for someone to type them in.
 4. **Who answers for privacy.** The company name, the information officer and
@@ -76,15 +76,15 @@ nano /var/www/revenueguard/.env
 ```
 
 ```
-MAIL_PASSWORD=          # the noreply@revenueguard.co.za mailbox
+MAIL_PASSWORD=          # the info@revenueguard.co.za mailbox
 ANTHROPIC_API_KEY=      # reads bills
 COMPANY_NAME=
 INFORMATION_OFFICER=
-CONTACT_EMAIL=
 ```
 
 The script set everything else: `APP_KEY`, the database password, production
-mode, and the Xneelo mail server (`smtp.revenueguard.co.za`, port 465). Then:
+mode, the Xneelo mail server (`smtp.revenueguard.co.za`, port 465) and
+`info@revenueguard.co.za` as the sender and contact address. Then:
 
 ```bash
 ./deploy/setup.sh finish     # permissions, database, nginx site, scheduler, queue worker

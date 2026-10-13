@@ -26,6 +26,7 @@ BRANCH="${BRANCH:-main}"
 APP_DIR="/var/www/revenueguard"
 APP_USER="revenueguard"
 DOMAIN="revenueguard.co.za"
+MAILBOX="info@${DOMAIN}"    # the Xneelo mailbox the site sends from
 DB_NAME="revenueguard"
 DB_USER="revenueguard"
 DB_PASS_FILE="$HOME/.revenueguard-db-pass"
@@ -179,10 +180,13 @@ phase_app() {
     set_env MAIL_HOST "smtp.${DOMAIN}"
     set_env MAIL_PORT 465
     set_env MAIL_VERIFY_PEER false
-    set_env MAIL_USERNAME "noreply@${DOMAIN}"
-    set_env MAIL_FROM_ADDRESS "\"noreply@${DOMAIN}\""
+    set_env MAIL_USERNAME "$MAILBOX"
+    set_env MAIL_FROM_ADDRESS "\"${MAILBOX}\""
     if ! filled MAIL_PASSWORD; then
         set_env MAIL_PASSWORD ""    # blank, for you to fill in
+    fi
+    if ! filled CONTACT_EMAIL; then
+        set_env CONTACT_EMAIL "$MAILBOX"
     fi
     grep -qE '^APP_KEY=.+' .env || php artisan key:generate --force
     # Readable by the app's user and by you, by nobody else (not www-data).
@@ -200,9 +204,9 @@ phase_app() {
 
 App phase done. NOW, BY HAND, edit ${APP_DIR}/.env and fill in:
 
-    MAIL_PASSWORD=          (the noreply@${DOMAIN} mailbox, created in Xneelo's control panel)
+    MAIL_PASSWORD=          (the ${MAILBOX} mailbox's password)
     ANTHROPIC_API_KEY=      (reads bills; without it every bill is typed in by hand)
-    COMPANY_NAME=, INFORMATION_OFFICER=, CONTACT_EMAIL=   (shown in the privacy notice)
+    COMPANY_NAME=, INFORMATION_OFFICER=   (shown in the privacy notice, with CONTACT_EMAIL=${MAILBOX})
 
 and, if this version takes payments or reads e-mail, PAYSTACK_PUBLIC_KEY,
 PAYSTACK_SECRET_KEY and MAILGUN_WEBHOOK_SIGNING_KEY (see DEPLOY.md).
