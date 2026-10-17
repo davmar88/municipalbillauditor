@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Enums\OrganisationKind;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -45,7 +44,7 @@ class GoogleSignInTest extends TestCase
         $this->get(route('google.redirect'))->assertRedirect(route('login'))->assertSessionHasErrors('email');
     }
 
-    public function test_a_new_google_user_gets_a_verified_household_account(): void
+    public function test_a_new_google_user_gets_a_verified_account(): void
     {
         $this->googleSays();
 
@@ -57,21 +56,8 @@ class GoogleSignInTest extends TestCase
         $this->assertSame('thandi@gmail.com', $user->email);
         $this->assertSame('google-123', $user->google_id);
         $this->assertNotNull($user->email_verified_at);
-        $this->assertSame(OrganisationKind::Household, $user->organisation->kind);
-        $this->assertSame('Thandi Nkosi', $user->organisation->name);
-        $this->assertNotNull($user->organisation->forwarding_code);
-    }
-
-    public function test_the_account_type_picked_on_the_register_page_carries_through(): void
-    {
-        $this->googleSays('accounts@acme-rentals.co.za');
-
-        $this->get(route('google.redirect', ['account_type' => 'agent', 'organisation_name' => 'Acme Rentals']));
-        $this->get(route('google.callback'));
-
-        $organisation = User::sole()->organisation;
-        $this->assertSame(OrganisationKind::Agent, $organisation->kind);
-        $this->assertSame('Acme Rentals', $organisation->name);
+        $this->assertSame('Thandi Nkosi', $user->name);
+        $this->assertNull($user->player);
     }
 
     public function test_an_existing_account_is_linked_when_google_has_verified_the_email(): void

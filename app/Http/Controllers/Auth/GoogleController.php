@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Actions\Fortify\CreateNewUser;
-use App\Enums\OrganisationKind;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Auth\Events\Registered;
@@ -22,23 +21,17 @@ use Throwable;
  *
  * An account already linked to the Google account signs in. Otherwise an
  * account with the same email is linked, but only when Google says it has
- * verified that email. Otherwise a new account is made, of the type picked
- * on the register page, or a household from the login page. Accounts with
+ * verified that email. Otherwise a new account is made, and the player
+ * makes their animal on their first visit to the game. Accounts with
  * two-factor sign-in still get its challenge.
  */
 class GoogleController extends Controller
 {
-    public function redirect(Request $request): SymfonyRedirectResponse|RedirectResponse
+    public function redirect(): SymfonyRedirectResponse|RedirectResponse
     {
         if (! filled(config('services.google.client_id'))) {
             return to_route('login')->withErrors(['email' => 'Google sign-in is not set up yet.']);
         }
-
-        // What the register page had picked, should this be a new account.
-        $request->session()->put('google.signup', [
-            'kind' => (OrganisationKind::tryFrom((string) $request->query('account_type')) ?? OrganisationKind::Household)->value,
-            'organisation_name' => Str::limit(trim((string) $request->query('organisation_name')), 255, ''),
-        ]);
 
         return Socialite::driver('google')->scopes(['openid', 'profile', 'email'])->redirect();
     }
@@ -66,15 +59,12 @@ class GoogleController extends Controller
 
         $user = User::query()->where('google_id', $google->getId())->first()
             ?? User::query()->where('email', $email)->first();
-        $signup = (array) $request->session()->pull('google.signup', []);
 
         if ($user === null) {
             $user = $accounts->createAccount(
-                OrganisationKind::tryFrom((string) ($signup['kind'] ?? '')) ?? OrganisationKind::Household,
                 (string) ($google->getName() ?: Str::before($email, '@')),
                 $email,
                 Str::password(40),
-                $signup['organisation_name'] ?? null,
                 ['google_id' => $google->getId(), 'email_verified_at' => now()],
             );
             event(new Registered($user));

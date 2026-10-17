@@ -1,0 +1,116 @@
+<?php
+
+namespace App\Game;
+
+use App\Enums\Species;
+use App\Models\Player;
+use App\Models\User;
+use App\Models\Valley;
+use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\DB;
+
+/**
+ * Making a user's animal, and the small things that happen on each visit.
+ */
+final class Players
+{
+    public const LANGUAGES = [
+        'English', 'Afrikaans', 'isiZulu', 'isiXhosa', 'Sesotho', 'Setswana', 'Sepedi',
+        'Xitsonga', 'siSwati', 'Tshivenda', 'isiNdebele', 'Portuguese', 'French', 'Swahili',
+    ];
+
+    /**
+     * @throws GameException
+     */
+    public function start(User $user, Valley $valley, string $name, Species $species, bool $adult, string $language = 'English'): Player
+    {
+        $name = trim(preg_replace('/\s+/', ' ', $name) ?? '');
+
+        if ($user->player()->exists()) {
+            throw new GameException('You already have an animal in the valley.');
+        }
+
+        if (! $adult) {
+            throw new GameException('The test season is for adults only. Please confirm you are 18 or older.');
+        }
+
+        if (! in_array($species, Species::playable(), true)) {
+            throw new GameException("{$species->plural()} join the valley in a later season. Pick another animal.");
+        }
+
+        if (mb_strlen($name) < 2 || mb_strlen($name) > 20 || ! preg_match("/^[\pL][\pL '\-]*$/u", $name)) {
+            throw new GameException("Your animal's name needs 2 to 20 letters, and may use spaces, hyphens and apostrophes.");
+        }
+
+        if (Player::query()->where('valley_id', $valley->id)->where('name', $name)->exists()) {
+            throw new GameException("There is already an animal called {$name} in {$valley->name}. Pick another name.");
+        }
+
+        if (! in_array($language, self::LANGUAGES, true)) {
+            $language = 'English';
+        }
+
+        return DB::transaction(fn () => Player::create([
+            'user_id' => $user->id,
+            'valley_id' => $valley->id,
+            'name' => $name,
+            'species' => $species,
+            'language' => $language,
+            'materials' => array_fill_keys(Player::MATERIALS, 0),
+            'corn' => (int) config('game.starting_corn'),
+            'horseshoes' => Horseshoes::max(),
+            'horseshoes_at' => CarbonImmutable::now(),
+            'shield_until' => CarbonImmutable::now()->addDays((int) config('game.newcomer_shield_days')),
+            'adult_confirmed_at' => CarbonImmutable::now(),
+        ]));
+    }
+
+    /** Five Rosettes for the first visit of each day. */
+    public function visit(Player $player): void
+    {
+        $today = Clock::today();
+
+        if ($player->last_visit_on?->toDateString() === $today) {
+            return;
+        }
+
+        $player->forceFill(['last_visit_on' => $today])->save();
+        Rosettes::award($player, 5, 'First visit of the day', "visit:{$player->id}:{$today}", $player->valley->currentSeason());
+    }
+
+    public function setLanguage(Player $player, string $language): void
+    {
+        if (! in_array($language, self::LANGUAGES, true)) {
+            throw new GameException('Pick a language from the list.');
+        }
+
+        $player->forceFill(['language' => $language])->save();
+    }
+
+    /** Players who have been around in the last week. */
+    public static function activeCount(Valley $valley): int
+    {
+        return Player::query()
+            ->where('valley_id', $valley->id)
+            ->where('last_visit_on', '>=', Clock::now()->subDays(7)->toDateString())
+            ->count();
+    }
+
+    /**
+     * Lock and reload a player for a change that spends something.
+     */
+    public static function lock(Player $player): Player
+    {
+        return Player::query()->lockForUpdate()->findOrFail($player->id);
+    }
+
+    /**
+     * @throws GameException
+     */
+    public static function ensureFree(Player $player): void
+    {
+        if ($player->inPound()) {
+            throw new GameException('You are in the pound until '.Clock::local($player->pound_until)->format('H:i').'. You can act again after that.');
+        }
+    }
+}

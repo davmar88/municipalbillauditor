@@ -1,36 +1,29 @@
 <?php
 
-use App\Http\Controllers\AccountController;
 use App\Http\Controllers\Auth\GoogleController;
-use App\Http\Controllers\BillController;
-use App\Http\Controllers\BillDetailsController;
-use App\Http\Controllers\CreditController;
-use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\DisputeController;
-use App\Http\Controllers\DisputeEventController;
-use App\Http\Controllers\FindingController;
-use App\Http\Controllers\InboundEmailController;
-use App\Http\Controllers\Marketing\PageController;
-use App\Http\Controllers\Marketing\SitemapController;
-use App\Http\Controllers\PaystackWebhookController;
-use App\Http\Controllers\PortfolioController;
-use App\Http\Controllers\PropertyController;
-use App\Http\Controllers\Staff\ReferenceDataController;
-use App\Http\Controllers\Staff\StaffController;
+use App\Http\Controllers\Game\BattleController;
+use App\Http\Controllers\Game\ChatController;
+use App\Http\Controllers\Game\CrimeController;
+use App\Http\Controllers\Game\FactionController;
+use App\Http\Controllers\Game\MapController;
+use App\Http\Controllers\Game\MarketController;
+use App\Http\Controllers\Game\ProfileController;
+use App\Http\Controllers\Game\StartController;
+use App\Http\Controllers\Game\WallController;
+use App\Http\Controllers\PageController;
+use App\Http\Controllers\PuzzleController;
+use App\Http\Controllers\Staff\DesignController;
 use Illuminate\Support\Facades\Route;
 
 // Public pages, server-rendered for search engines.
 Route::get('/', [PageController::class, 'home'])->name('home');
-Route::get('municipal-bill-dispute/{metro}', [PageController::class, 'metro'])->name('metro.show');
 Route::get('privacy', [PageController::class, 'privacy'])->name('privacy');
-Route::get('sitemap.xml', [SitemapController::class, 'sitemap'])->name('sitemap');
-Route::get('robots.txt', [SitemapController::class, 'robots'])->name('robots');
+Route::get('sitemap.xml', [PageController::class, 'sitemap'])->name('sitemap');
+Route::get('robots.txt', [PageController::class, 'robots'])->name('robots');
 
-// Forwarded e-bills from the email provider's inbound webhook.
-Route::post('inbound/email', InboundEmailController::class)->middleware('throttle:120,1')->name('inbound.email');
-
-// Paystack's payment notices.
-Route::post('webhooks/paystack', PaystackWebhookController::class)->middleware('throttle:120,1')->name('webhooks.paystack');
+// Spot the Edit: anyone can play; players earn Rosettes for solving it.
+Route::get('spot-the-edit', [PuzzleController::class, 'show'])->name('puzzle');
+Route::post('spot-the-edit', [PuzzleController::class, 'solve'])->middleware(['auth', 'verified', 'player', 'throttle:10,1'])->name('puzzle.solve');
 
 // "Continue with Google", for signing in and signing up.
 Route::middleware(['guest', 'throttle:20,1'])->group(function () {
@@ -38,67 +31,59 @@ Route::middleware(['guest', 'throttle:20,1'])->group(function () {
     Route::get('auth/google/callback', [GoogleController::class, 'callback'])->name('google.callback');
 });
 
-Route::middleware(['auth', 'verified', 'organisation'])->group(function () {
-    Route::get('dashboard', DashboardController::class)->name('dashboard');
-
-    Route::get('bills', [BillController::class, 'index'])->name('bills.index');
-    Route::post('bills', [BillController::class, 'store'])->middleware('throttle:30,1')->name('bills.store');
-    Route::post('bills/sample', [BillController::class, 'sample'])->middleware('throttle:10,1')->name('bills.sample');
-    Route::get('bills/{bill}', [BillController::class, 'show'])->name('bills.show');
-    Route::delete('bills/{bill}', [BillController::class, 'destroy'])->name('bills.destroy');
-    Route::get('bills/{bill}/file', [BillController::class, 'file'])->name('bills.file');
-    Route::get('bills/{bill}/meter-photo', [BillController::class, 'meterPhotoFile'])->name('bills.meter-photo.show');
-    Route::post('bills/{bill}/meter-photo', [BillController::class, 'meterPhoto'])->name('bills.meter-photo');
-    Route::post('bills/{bill}/recheck', [BillController::class, 'recheck'])->name('bills.recheck');
-    Route::patch('bills/{bill}/property', [BillController::class, 'assignProperty'])->name('bills.property');
-    Route::get('bills/{bill}/details', [BillDetailsController::class, 'edit'])->name('bills.details.edit');
-    Route::put('bills/{bill}/details', [BillDetailsController::class, 'update'])->name('bills.details.update');
-
-    Route::post('findings/{finding}/answer', [FindingController::class, 'answer'])->name('findings.answer');
-    Route::post('findings/{finding}/dismiss', [FindingController::class, 'dismiss'])->name('findings.dismiss');
-    Route::post('findings/{finding}/restore', [FindingController::class, 'restore'])->name('findings.restore');
-
-    Route::get('bills/{bill}/dispute', [DisputeController::class, 'create'])->name('disputes.create');
-    Route::post('bills/{bill}/dispute', [DisputeController::class, 'store'])->name('disputes.store');
-    Route::get('disputes', [DisputeController::class, 'index'])->name('disputes.index');
-    Route::get('disputes/{dispute}', [DisputeController::class, 'show'])->name('disputes.show');
-    Route::get('disputes/{dispute}/messages/{message}/files/{index}', [DisputeController::class, 'messageFile'])->whereNumber('index')->name('disputes.messages.file');
-    Route::post('disputes/{dispute}/events', [DisputeEventController::class, 'store'])->name('disputes.events.store');
-    Route::post('disputes/{dispute}/information-sent', [DisputeController::class, 'informationSent'])->name('disputes.information-sent');
-
-    Route::get('portfolio', PortfolioController::class)->name('portfolio');
-    Route::get('properties', [PropertyController::class, 'index'])->name('properties.index');
-    Route::post('properties', [PropertyController::class, 'store'])->name('properties.store');
-    Route::put('properties/{property}', [PropertyController::class, 'update'])->name('properties.update');
-    Route::patch('properties/{property}/municipality', [PropertyController::class, 'setMunicipality'])->name('properties.municipality');
-    Route::delete('properties/{property}', [PropertyController::class, 'destroy'])->name('properties.destroy');
-
-    Route::get('credit', [CreditController::class, 'index'])->name('credit.index');
-    Route::post('credit/top-up', [CreditController::class, 'topUp'])->middleware('throttle:20,1')->name('credit.top-up');
-    Route::get('credit/callback', [CreditController::class, 'callback'])->name('credit.callback');
-
-    Route::get('settings/account', [AccountController::class, 'edit'])->name('account.edit');
-    Route::patch('settings/account/disputes', [AccountController::class, 'updateDisputes'])->name('account.disputes.update');
-    Route::patch('settings/account', [AccountController::class, 'update'])->name('account.update');
-    Route::delete('settings/account/bills', [AccountController::class, 'destroyBills'])->name('account.bills.destroy');
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('play/start', [StartController::class, 'create'])->name('play.start');
+    Route::post('play/start', [StartController::class, 'store'])->middleware('throttle:10,1')->name('play.start.store');
 });
 
-Route::middleware(['auth', 'verified', 'can:staff'])->prefix('staff')->name('staff.')->group(function () {
-    Route::get('/', [StaffController::class, 'index'])->name('index');
-    Route::post('disputes/{dispute}/lodge', [StaffController::class, 'lodge'])->name('disputes.lodge');
-    Route::post('disputes/{dispute}/send', [StaffController::class, 'send'])->name('disputes.send');
-    Route::post('replies/{message}', [StaffController::class, 'recordReply'])->name('replies.record');
-    Route::get('replies/{message}/files/{index}', [StaffController::class, 'replyFile'])->whereNumber('index')->name('replies.file');
-    Route::post('disputes/{dispute}/events', [StaffController::class, 'record'])->name('disputes.events.store');
-    Route::get('bills/{bill}/file', [StaffController::class, 'billFile'])->name('bills.file');
-    Route::post('organisations/{organisation}/eft', [StaffController::class, 'recordEft'])->name('organisations.eft');
-    Route::get('margin', [StaffController::class, 'margin'])->name('margin');
-    Route::get('reference', [ReferenceDataController::class, 'index'])->name('reference');
-    Route::put('municipalities/{municipality:id}', [ReferenceDataController::class, 'updateMunicipality'])->name('municipalities.update');
-    Route::post('outages', [ReferenceDataController::class, 'storeOutage'])->name('outages.store');
-    Route::delete('outages/{outage}', [ReferenceDataController::class, 'destroyOutage'])->name('outages.destroy');
-    Route::post('tariffs', [ReferenceDataController::class, 'storeTariff'])->name('tariffs.store');
-    Route::delete('tariffs/{tariffRate}', [ReferenceDataController::class, 'destroyTariff'])->name('tariffs.destroy');
+Route::middleware(['auth', 'verified', 'player', 'throttle:120,1'])->prefix('play')->group(function () {
+    Route::get('/', [MapController::class, 'index'])->name('play');
+    Route::post('regions/{region}/gather', [MapController::class, 'gather'])->name('play.gather');
+    Route::post('regions/{region}/attack', [BattleController::class, 'launch'])->name('play.attack');
+    Route::post('attacks/{attack}/commit', [BattleController::class, 'commit'])->name('play.commit');
+    Route::post('gate', [BattleController::class, 'gate'])->name('play.gate');
+
+    Route::get('wall', [WallController::class, 'index'])->name('play.wall');
+    Route::post('wall/laws', [WallController::class, 'setLaw'])->name('play.wall.law');
+    Route::post('wall/secret', [WallController::class, 'secretEdit'])->name('play.wall.secret');
+    Route::post('wall/remember', [WallController::class, 'remember'])->name('play.wall.remember');
+    Route::post('wall/expose', [WallController::class, 'expose'])->name('play.wall.expose');
+    Route::post('wall/festival', [WallController::class, 'festival'])->name('play.wall.festival');
+    Route::post('wall/chant', [WallController::class, 'chant'])->name('play.wall.chant');
+    Route::post('uprisings', [WallController::class, 'callUprising'])->name('play.uprising.call');
+    Route::post('uprisings/{uprising}/pledge', [WallController::class, 'pledge'])->name('play.uprising.pledge');
+
+    Route::get('faction', [FactionController::class, 'index'])->name('play.faction');
+    Route::post('factions', [FactionController::class, 'store'])->name('play.faction.store');
+    Route::post('factions/{faction}/join', [FactionController::class, 'join'])->name('play.faction.join');
+    Route::post('faction/requests/{joinRequest}/answer', [FactionController::class, 'answer'])->name('play.faction.answer');
+    Route::post('faction/leave', [FactionController::class, 'leave'])->name('play.faction.leave');
+    Route::put('faction/rules', [FactionController::class, 'rules'])->name('play.faction.rules');
+    Route::put('faction/members/{member}/role', [FactionController::class, 'role'])->name('play.faction.role');
+    Route::delete('faction/members/{member}', [FactionController::class, 'remove'])->name('play.faction.remove');
+
+    Route::post('crimes', [CrimeController::class, 'store'])->name('play.crime');
+    Route::post('home/rebuild', [CrimeController::class, 'rebuild'])->name('play.rebuild');
+
+    Route::get('chat', [ChatController::class, 'index'])->name('play.chat');
+    Route::post('chat', [ChatController::class, 'store'])->middleware('throttle:20,1')->name('play.chat.store');
+    Route::post('chat/{message}/translate', [ChatController::class, 'translate'])->middleware('throttle:30,1')->name('play.chat.translate');
+
+    Route::get('market', [MarketController::class, 'index'])->name('play.market');
+    Route::post('designs', [MarketController::class, 'design'])->name('play.design');
+    Route::post('designs/{design}/craft', [MarketController::class, 'craft'])->name('play.craft');
+    Route::post('items/{item}/list', [MarketController::class, 'list'])->name('play.list');
+    Route::delete('listings/{listing}', [MarketController::class, 'unlist'])->name('play.unlist');
+    Route::post('listings/{listing}/buy', [MarketController::class, 'buy'])->name('play.buy');
+
+    Route::get('me', [ProfileController::class, 'show'])->name('play.me');
+    Route::put('me/language', [ProfileController::class, 'language'])->name('play.me.language');
+});
+
+Route::middleware(['auth', 'verified', 'can:staff'])->prefix('staff')->group(function () {
+    Route::get('designs', [DesignController::class, 'index'])->name('staff.designs');
+    Route::post('designs/{design}/approve', [DesignController::class, 'approve'])->name('staff.designs.approve');
+    Route::post('designs/{design}/reject', [DesignController::class, 'reject'])->name('staff.designs.reject');
 });
 
 require __DIR__.'/settings.php';

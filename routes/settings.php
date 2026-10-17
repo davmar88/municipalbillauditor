@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth'])->group(function () {
     // GET only: Route::redirect() answers every verb, which typed routes can't express.
-    Route::get('settings', RedirectController::class)->defaults('destination', '/settings/account')->defaults('status', 302);
+    Route::get('settings', RedirectController::class)->defaults('destination', '/settings/profile')->defaults('status', 302);
 
     Route::get('settings/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('settings/profile', [ProfileController::class, 'update'])->name('profile.update');

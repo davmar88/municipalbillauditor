@@ -1,0 +1,72 @@
+<?php
+
+namespace App\Game;
+
+use App\Models\Player;
+use Carbon\CarbonImmutable;
+
+/**
+ * Every action costs horseshoes. A player holds up to ten, and one comes
+ * back every 45 minutes. They are worked out when read, so nothing has to
+ * run on a timer.
+ */
+final class Horseshoes
+{
+    public static function max(): int
+    {
+        return (int) config('game.horseshoes.max');
+    }
+
+    private static function minutes(): int
+    {
+        return (int) config('game.horseshoes.refill_minutes');
+    }
+
+    /** @return array{0: int, 1: CarbonImmutable} The count now, and the clock the next one runs from. */
+    private static function settle(Player $player): array
+    {
+        $now = CarbonImmutable::now();
+        $at = CarbonImmutable::instance($player->horseshoes_at);
+        $gained = intdiv(max(0, (int) $at->diffInMinutes($now)), self::minutes());
+        $count = min(self::max(), $player->horseshoes + $gained);
+
+        return [$count, $count >= self::max() ? $now : $at->addMinutes($gained * self::minutes())];
+    }
+
+    public static function current(Player $player): int
+    {
+        return self::settle($player)[0];
+    }
+
+    /** Seconds until the next horseshoe, or null when the player is full. */
+    public static function nextIn(Player $player): ?int
+    {
+        [$count, $clock] = self::settle($player);
+
+        if ($count >= self::max()) {
+            return null;
+        }
+
+        return max(0, (int) CarbonImmutable::now()->diffInSeconds($clock->addMinutes(self::minutes())));
+    }
+
+    /**
+     * Take horseshoes from a player whose row is already locked.
+     *
+     * @throws GameException
+     */
+    public static function spend(Player $player, int $count): void
+    {
+        [$current, $clock] = self::settle($player);
+
+        if ($current < $count) {
+            throw new GameException($count === 1
+                ? 'You have no horseshoes left. One comes back every 45 minutes.'
+                : "That needs {$count} horseshoes and you have {$current}. One comes back every 45 minutes.");
+        }
+
+        $player->horseshoes = $current - $count;
+        $player->horseshoes_at = $current >= self::max() ? CarbonImmutable::now() : $clock;
+        $player->save();
+    }
+}

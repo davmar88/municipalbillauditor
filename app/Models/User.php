@@ -7,7 +7,7 @@ use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
@@ -17,9 +17,8 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
 
 /**
  * @property int $id
- * @property int|null $organisation_id
  * @property bool $is_staff
- * @property Organisation|null $organisation
+ * @property Player|null $player
  * @property string $name
  * @property string $email
  * @property string|null $google_id
@@ -39,19 +38,6 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable, PasskeyAuthenticatable, TwoFactorAuthenticatable;
 
-    protected static function booted(): void
-    {
-        // POPIA: when the last person on an account deletes their profile,
-        // the account's bills, files and disputes go with it.
-        static::deleted(function (User $user) {
-            $organisation = Organisation::find($user->organisation_id);
-
-            if ($organisation !== null && ! $organisation->users()->exists()) {
-                $organisation->purge();
-            }
-        });
-    }
-
     /**
      * Get the attributes that should be cast.
      *
@@ -67,9 +53,13 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
         ];
     }
 
-    /** @return BelongsTo<Organisation, $this> */
-    public function organisation(): BelongsTo
+    /**
+     * The user's animal in the game, once they have made one.
+     *
+     * @return HasOne<Player, $this>
+     */
+    public function player(): HasOne
     {
-        return $this->belongsTo(Organisation::class);
+        return $this->hasOne(Player::class);
     }
 }

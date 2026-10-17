@@ -3,7 +3,7 @@
    app.css. Violet fills take dark text (text-ground): white on it fails AA. */
 @import 'tailwindcss' source(none);
 
-@source '../views/marketing';
+@source '../views/site';
 
 @theme {
     --font-sans:

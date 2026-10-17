@@ -2,6 +2,8 @@
 
 namespace App\Http\Middleware;
 
+use App\Game\Horseshoes;
+use App\Game\Levels;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -41,12 +43,40 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $request->user(),
             ],
-            'organisation' => fn () => ($organisation = $request->user()?->organisation) ? [
-                'kind' => $organisation->kind->value,
-                'kindLabel' => $organisation->kind->label(),
-                'name' => $organisation->name,
-                'forwardingAddress' => $organisation->forwardingAddress(),
-            ] : null,
+            // The bar along the top of every game screen.
+            'player' => function () use ($request) {
+                $player = $request->user()?->player?->fresh(['faction']);
+
+                if ($player === null) {
+                    return null;
+                }
+
+                $level = $player->level();
+
+                return [
+                    'id' => $player->id,
+                    'name' => $player->name,
+                    'species' => $player->species->value,
+                    'level' => $level,
+                    'rosettes' => $player->rosettes,
+                    'nextLevelAt' => Levels::threshold($level + 1),
+                    'horseshoes' => Horseshoes::current($player),
+                    'maxHorseshoes' => Horseshoes::max(),
+                    'nextHorseshoeIn' => Horseshoes::nextIn($player),
+                    'corn' => $player->corn,
+                    'materials' => $player->materials,
+                    'language' => $player->language,
+                    'faction' => $player->faction ? [
+                        'id' => $player->faction->id,
+                        'name' => $player->faction->name,
+                        'colour' => $player->faction->colour,
+                        'role' => $player->faction_role?->value,
+                    ] : null,
+                    'inPoundUntil' => $player->inPound() ? $player->pound_until->toIso8601String() : null,
+                    'homeClosedUntil' => $player->homeIsClosed() ? $player->home_closed_until->toIso8601String() : null,
+                    'shieldUntil' => $player->isShielded() ? $player->shield_until->toIso8601String() : null,
+                ];
+            },
             'isStaff' => fn () => (bool) $request->user()?->is_staff,
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];

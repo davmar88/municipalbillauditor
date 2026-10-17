@@ -1,0 +1,166 @@
+<?php
+
+namespace Tests\Feature\Game;
+
+use App\Enums\Species;
+use App\Game\Gathering;
+use App\Game\Horseshoes;
+use App\Game\LawTemplate;
+use App\Game\Wall;
+use App\Models\Law;
+use App\Models\Player;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Inertia\Testing\AssertableInertia as Assert;
+use Tests\TestCase;
+
+/**
+ * Making an animal, the map, horseshoes and gathering.
+ */
+class StartAndMapTest extends TestCase
+{
+    use MakesPlayers, RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->makeValley();
+    }
+
+    public function test_a_new_user_is_sent_to_make_their_animal(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->get(route('play'))->assertRedirect(route('play.start'));
+        $this->actingAs($user)->get(route('play.start'))->assertInertia(fn (Assert $page) => $page
+            ->component('game/start')
+            ->has('species', count(Species::playable())));
+    }
+
+    public function test_making_an_animal_needs_an_adult_and_a_playable_species(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->post(route('play.start.store'), ['name' => 'Sipho', 'species' => 'donkey', 'adult' => '1']);
+        $this->assertNull($user->fresh()->player, 'Donkeys join in a later season.');
+
+        $this->actingAs($user)->post(route('play.start.store'), ['name' => 'Sipho', 'species' => 'goat'])->assertSessionHasErrors('adult');
+        $this->assertNull($user->fresh()->player);
+
+        $this->actingAs($user)->post(route('play.start.store'), ['name' => 'Sipho', 'species' => 'goat', 'adult' => '1'])->assertRedirect(route('play'));
+
+        $player = $user->fresh()->player;
+        $this->assertSame('Sipho', $player->name);
+        $this->assertSame(Species::Goat, $player->species);
+        $this->assertSame(10, Horseshoes::current($player));
+        $this->assertSame(100, $player->corn);
+        $this->assertTrue($player->isShielded());
+    }
+
+    public function test_names_are_unique_in_the_valley(): void
+    {
+        $this->player(attributes: ['name' => 'Thandi']);
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->post(route('play.start.store'), ['name' => 'Thandi', 'species' => 'dog', 'adult' => '1']);
+
+        $this->assertNull($user->fresh()->player);
+    }
+
+    public function test_the_map_shows_the_sixteen_regions_and_the_first_visit_earns_rosettes(): void
+    {
+        $player = $this->player(attributes: ['last_visit_on' => null]);
+
+        $this->actingAs($player->user)->get(route('play'))->assertInertia(fn (Assert $page) => $page
+            ->component('game/map')
+            ->has('regions', 16)
+            ->where('player.name', $player->name));
+
+        $this->assertSame(5, $player->fresh()->rosettes);
+
+        $this->actingAs($player->user)->get(route('play'));
+        $this->assertSame(5, $player->fresh()->rosettes, 'Only the first visit of the day pays.');
+    }
+
+    public function test_horseshoes_come_back_every_45_minutes_up_to_ten(): void
+    {
+        $player = $this->player();
+
+        Horseshoes::spend($player, 3);
+        $this->assertSame(7, Horseshoes::current($player->fresh()));
+
+        $this->travel(46)->minutes();
+        $this->assertSame(8, Horseshoes::current($player->fresh()));
+
+        $this->travel(10)->hours();
+        $this->assertSame(10, Horseshoes::current($player->fresh()));
+    }
+
+    public function test_gathering_corn_pays_the_houses_grain_tax(): void
+    {
+        $farmer = $this->player(Species::Pig);
+        $ruler = $this->player();
+        $house = $this->faction('The House', $ruler);
+        $this->hold($house, 'farmhouse');
+        Law::create(['season_id' => $this->season()->id, 'slot' => 1, 'template' => LawTemplate::GrainTax, 'value' => 10]);
+
+        $this->actingAs($farmer->user)->post(route('play.gather', $this->region('hayfield')))->assertRedirect();
+
+        $this->assertSame(100 + Gathering::CORN - 2, $farmer->fresh()->corn);
+        $this->assertSame(2, $house->fresh()->treasury);
+        $this->assertSame(2, $this->season()->fresh()->tax_collected);
+        $this->assertSame(9, Horseshoes::current($farmer->fresh()));
+    }
+
+    public function test_materials_gather_faster_on_your_own_land_and_dogs_gather_less(): void
+    {
+        $dog = $this->player(Species::Dog);
+        $sheep = $this->player(Species::Sheep);
+        $faction = $this->faction('Wool Co', $sheep);
+        $this->hold($faction, 'sheepfold');
+
+        app(Gathering::class)->gather($sheep, $this->region('sheepfold'));
+        app(Gathering::class)->gather($dog, $this->region('sheepfold'));
+
+        $this->assertSame(7, $sheep->fresh()->material('wool'), '5 wool, half again on your own land.');
+        $this->assertSame(3, $dog->fresh()->material('wool'), 'Dogs gather a quarter less.');
+    }
+
+    public function test_nothing_grows_at_the_farmhouse(): void
+    {
+        $player = $this->player();
+
+        $this->actingAs($player->user)->post(route('play.gather', $this->region('farmhouse')))->assertRedirect();
+
+        $this->assertSame(10, Horseshoes::current($player->fresh()));
+    }
+
+    public function test_unrest_counts_each_law_and_a_house_that_keeps_all_its_tax(): void
+    {
+        $ruler = $this->player();
+        $house = $this->faction('The House', $ruler);
+        $season = $this->season();
+
+        $this->assertSame(0, Wall::unrest($season));
+
+        $this->hold($house, 'farmhouse');
+        $this->assertSame(15, Wall::unrest($season->fresh()), 'No rations law: the House keeps everything.');
+
+        Law::create(['season_id' => $season->id, 'slot' => 1, 'template' => LawTemplate::GrainTax, 'value' => 15]);
+        Law::create(['season_id' => $season->id, 'slot' => 2, 'template' => LawTemplate::MarketLevy, 'value' => 5]);
+        Law::create(['season_id' => $season->id, 'slot' => 3, 'template' => LawTemplate::Rations, 'value' => 30, 'target' => 'pig']);
+
+        $this->assertSame(15 + 10 + 10, Wall::unrest($season->fresh()));
+    }
+
+    public function test_a_player_without_horseshoes_cannot_gather(): void
+    {
+        $player = $this->player(attributes: ['horseshoes' => 0, 'horseshoes_at' => now()]);
+
+        $this->actingAs($player->user)
+            ->post(route('play.gather', $this->region('hayfield')))
+            ->assertRedirect();
+
+        $this->assertSame(100, Player::find($player->id)->corn);
+    }
+}
