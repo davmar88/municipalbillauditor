@@ -60,7 +60,7 @@ final class Wall
      *
      * @throws GameException
      */
-    public function setLaw(Player $player, int $slot, ?LawTemplate $template, ?int $value = null, ?string $target = null): Law|null
+    public function setLaw(Player $player, int $slot, ?LawTemplate $template, ?int $value = null, ?string $target = null): ?Law
     {
         $season = $this->seasonFor($player);
         $this->ensureHouseDecider($player, $season);

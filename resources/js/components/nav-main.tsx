@@ -16,7 +16,7 @@ export function NavMain({
     items: NavItem[];
     label?: string;
 }) {
-    const { isCurrentOrParentUrl } = useCurrentUrl();
+    const { isCurrentUrl, isCurrentOrParentUrl } = useCurrentUrl();
 
     return (
         <SidebarGroup className="px-2 py-0">
@@ -27,7 +27,12 @@ export function NavMain({
                         <SidebarMenuButton
                             asChild
                             className="h-11 text-[15px] [&>svg]:size-5"
-                            isActive={isCurrentOrParentUrl(item.href)}
+                            isActive={
+                                item.isActive ??
+                                (item.title === 'Map'
+                                    ? isCurrentUrl(item.href)
+                                    : isCurrentOrParentUrl(item.href))
+                            }
                             tooltip={{ children: item.title }}
                         >
                             <Link href={item.href} prefetch>

@@ -1,4 +1,4 @@
-import type { Organisation } from '@/types/auditor';
+import type { PlayerSummary } from '@/types/game';
 import type { Auth } from '@/types/auth';
 
 declare module 'react' {
@@ -12,7 +12,7 @@ declare module '@inertiajs/core' {
         sharedPageProps: {
             name: string;
             auth: Auth;
-            organisation: Organisation | null;
+            player: PlayerSummary | null;
             isStaff: boolean;
             sidebarOpen: boolean;
             [key: string]: unknown;

@@ -1,11 +1,8 @@
 import type { SVGAttributes } from 'react';
 
-/**
- * A bill with an orange check mark circled on it. The circle is filled with
- * the surface colour so the bill's corner doesn't show through.
- */
+/** A barn under a crown: who holds the Farmhouse rules the valley. */
 export default function AppLogoIcon({
-    ground = 'var(--sidebar)',
+    ground: _ground,
     ...props
 }: SVGAttributes<SVGElement> & { ground?: string }) {
     return (
@@ -15,30 +12,20 @@ export default function AppLogoIcon({
             aria-hidden="true"
             {...props}
         >
-            <rect
-                x="5"
-                y="3"
-                width="16"
-                height="22"
-                rx="2"
+            <path d="M8 7l2.5 2.5L14 5l3.5 4.5L20 7v4H8z" fill="currentColor" />
+            <path
+                d="M5 25V15l9-4 9 4v10z"
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="2"
+                strokeLinejoin="round"
             />
             <path
-                d="M9 9h8M9 13h5"
+                d="M11 25v-6h6v6"
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="2"
-                strokeLinecap="round"
-            />
-            <circle
-                cx="18.5"
-                cy="19.5"
-                r="5.5"
-                fill={ground}
-                stroke="#F07A3E"
-                strokeWidth="2.2"
+                strokeLinejoin="round"
             />
         </svg>
     );

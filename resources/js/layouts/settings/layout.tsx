@@ -5,18 +5,12 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { useCurrentUrl } from '@/hooks/use-current-url';
 import { cn, toUrl } from '@/lib/utils';
-import { edit as editAccount } from '@/routes/account';
 import { edit as editAppearance } from '@/routes/appearance';
 import { edit } from '@/routes/profile';
 import { edit as editSecurity } from '@/routes/security';
 import type { NavItem } from '@/types';
 
 const sidebarNavItems: NavItem[] = [
-    {
-        title: 'Account',
-        href: editAccount(),
-        icon: null,
-    },
     {
         title: 'Profile',
         href: edit(),
@@ -41,7 +35,7 @@ export default function SettingsLayout({ children }: PropsWithChildren) {
         <div className="px-4 py-6">
             <Heading
                 title="Settings"
-                description="Your account, profile and sign-in"
+                description="Your profile, sign-in and appearance"
             />
 
             <div className="flex flex-col lg:flex-row lg:space-x-12">

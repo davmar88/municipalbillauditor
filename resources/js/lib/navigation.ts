@@ -1,47 +1,15 @@
-import {
-    Building2,
-    FileText,
-    House,
-    LayoutGrid,
-    ReceiptText,
-    Scale,
-    Wallet,
-} from 'lucide-react';
-import { index as bills } from '@/routes/bills';
-import { index as credit } from '@/routes/credit';
-import { index as disputes } from '@/routes/disputes';
-import { index as properties } from '@/routes/properties';
-import { portfolio } from '@/routes';
-import type { NavItem, OrganisationKind } from '@/types';
+import { Coins, Flag, Map, ScrollText, UserRound } from 'lucide-react';
+import { play } from '@/routes';
+import { faction, market, me, wall } from '@/routes/play';
+import type { NavItem } from '@/types';
 
-/**
- * Each kind of customer gets the screens in the order they use them:
- * households start at their bills, agents at the portfolio and businesses
- * at their claims.
- */
-export function mainNavigation(kind: OrganisationKind | undefined): NavItem[] {
-    switch (kind) {
-        case 'agent':
-            return [
-                { title: 'Portfolio', href: portfolio(), icon: LayoutGrid },
-                { title: 'Bills', href: bills(), icon: ReceiptText },
-                { title: 'Disputes', href: disputes(), icon: FileText },
-                { title: 'Properties', href: properties(), icon: Building2 },
-                { title: 'Credit', href: credit(), icon: Wallet },
-            ];
-        case 'business':
-            return [
-                { title: 'Claims', href: disputes(), icon: Scale },
-                { title: 'Bills', href: bills(), icon: ReceiptText },
-                { title: 'Properties', href: properties(), icon: Building2 },
-                { title: 'Credit', href: credit(), icon: Wallet },
-            ];
-        default:
-            return [
-                { title: 'Bills', href: bills(), icon: ReceiptText },
-                { title: 'Disputes', href: disputes(), icon: FileText },
-                { title: 'Property', href: properties(), icon: House },
-                { title: 'Credit', href: credit(), icon: Wallet },
-            ];
-    }
+/** The game's five screens, in the order a visit usually goes. */
+export function mainNavigation(): NavItem[] {
+    return [
+        { title: 'Map', href: play(), icon: Map },
+        { title: 'Wall', href: wall(), icon: ScrollText },
+        { title: 'Market', href: market(), icon: Coins },
+        { title: 'Faction', href: faction(), icon: Flag },
+        { title: 'Me', href: me(), icon: UserRound },
+    ];
 }

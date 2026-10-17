@@ -1,0 +1,38 @@
+import { router } from '@inertiajs/react';
+import type { RequestPayload } from '@inertiajs/core';
+
+/** "14:05", in the valley's own time. */
+export function clockTime(iso: string): string {
+    return new Intl.DateTimeFormat('en-ZA', {
+        hour: '2-digit',
+        minute: '2-digit',
+        timeZone: 'Africa/Johannesburg',
+    }).format(new Date(iso));
+}
+
+/** "in 2 h 5 min", "in 12 min", "now". */
+export function fromNow(iso: string, now: number = Date.now()): string {
+    const minutes = Math.round((new Date(iso).getTime() - now) / 60000);
+
+    if (minutes <= 0) {
+        return 'now';
+    }
+
+    const hours = Math.floor(minutes / 60);
+    const rest = minutes % 60;
+
+    return hours > 0 ? `in ${hours} h ${rest} min` : `in ${rest} min`;
+}
+
+export function capitalise(text: string): string {
+    return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+/** Post a game action and stay where you are on the page. */
+export function act(
+    url: string,
+    data: RequestPayload = {},
+    method: 'post' | 'put' | 'delete' = 'post',
+): void {
+    router.visit(url, { method, data, preserveScroll: true });
+}

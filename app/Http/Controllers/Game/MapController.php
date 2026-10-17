@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Game;
 
 use App\Game\Clock;
-use App\Game\Gathering;
 use App\Game\GateNight;
+use App\Game\Gathering;
 use App\Game\Wall;
 use App\Http\Controllers\Controller;
 use App\Models\Attack;
