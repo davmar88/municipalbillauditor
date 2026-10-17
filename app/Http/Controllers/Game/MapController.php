@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Game;
 
+use App\Enums\BuildingKind;
+use App\Game\Bases;
 use App\Game\Clock;
 use App\Game\GateNight;
 use App\Game\Gathering;
@@ -30,7 +32,7 @@ class MapController extends Controller
         $season = $valley->currentSeason();
         $house = $valley->house();
 
-        $regions = $valley->regions()->with(['faction:id,name,colour', 'neighbours:id'])->orderBy('row')->orderBy('col')->get();
+        $regions = $valley->regions()->with(['faction:id,name,colour', 'neighbours:id', 'building'])->orderBy('row')->orderBy('col')->get();
         $open = $season?->attacks()->with(['faction:id,name,colour'])->whereNull('resolved_at')->get() ?? collect();
         $mine = $open->filter(fn (Attack $attack) => $player->faction_id !== null
             && ($attack->faction_id === $player->faction_id || $regions->firstWhere('id', $attack->region_id)?->faction_id === $player->faction_id));
@@ -72,6 +74,10 @@ class MapController extends Controller
                     'from' => $regions->first(fn (Region $other) => $region->neighbours->contains('id', $other->id) && $other->faction_id === $attack->faction_id)?->id
                         ?? ($region->neighbours->contains('id', $paddock?->id) ? $paddock?->id : null),
                 ]),
+                // A building stands only while its faction holds the land.
+                'building' => $region->building && $region->building->faction_id === $region->faction_id
+                    ? $region->building->summary()
+                    : null,
                 'animals' => [
                     'count' => ($animals->get($region->id) ?? collect())->count(),
                     'sample' => ($animals->get($region->id) ?? collect())->take(12)->map(fn (Player $animal) => [
@@ -83,6 +89,13 @@ class MapController extends Controller
                 ],
             ]),
             'here' => $player->region_id ?? $paddock?->id,
+            'base' => $player->faction ? [
+                'canBuild' => $player->decides(),
+                'hasDen' => Bases::den($player->faction) !== null,
+                'treasury' => $player->faction->treasury,
+                'materials' => (object) ($player->faction->materials ?? []),
+            ] : null,
+            'buildingKinds' => array_map(fn (BuildingKind $kind) => $kind->card(), BuildingKind::cases()),
             'laws' => $season ? Wall::laws($season)->map(fn (Law $law) => [
                 'label' => $law->template->label(),
                 'wording' => $law->wording(),

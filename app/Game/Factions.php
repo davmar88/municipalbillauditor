@@ -254,7 +254,7 @@ final class Factions
             throw new GameException('That faction is in another valley.');
         }
 
-        if ($faction->members()->count() >= (int) config('game.faction.max_members')) {
+        if ($faction->members()->count() >= Bases::memberCap($faction)) {
             throw new GameException("{$faction->name} is full.");
         }
 

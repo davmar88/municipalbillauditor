@@ -2,6 +2,7 @@ import { Link, usePage } from '@inertiajs/react';
 import {
     Crown,
     Footprints,
+    Hammer,
     ScrollText,
     Shield,
     Store,
@@ -9,6 +10,7 @@ import {
     X,
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import { BuildingDetails, BuildOptions } from '@/components/game/faction-base';
 import { Horseshoe } from '@/components/game/game-bar';
 import { HorseshoePicker } from '@/components/game/horseshoe-picker';
 import { Button } from '@/components/ui/button';
@@ -24,7 +26,13 @@ import {
     walk,
     wall,
 } from '@/routes/play';
-import type { FactionRef, MapBattle, MapRegion } from '@/types/game';
+import type {
+    BuildingKindCard,
+    FactionRef,
+    FactionStore,
+    MapBattle,
+    MapRegion,
+} from '@/types/game';
 
 const RINGS: Record<MapRegion['ring'], string> = {
     seat: 'Seat of power',
@@ -42,6 +50,8 @@ type Props = {
     battles: MapBattle[];
     yields: { corn: number; material: number };
     gateNight: { open: boolean; defended: boolean };
+    base: FactionStore | null;
+    buildingKinds: BuildingKindCard[];
     onClose: () => void;
 };
 
@@ -58,6 +68,8 @@ export function RegionPanel({
     battles,
     yields,
     gateNight,
+    base,
+    buildingKinds,
     onClose,
 }: Props) {
     const { player } = usePage().props;
@@ -86,6 +98,11 @@ export function RegionPanel({
     const others = region.animals.sample.filter((animal) => !animal.me);
     const battleFor = new Map(battles.map((battle) => [battle.id, battle]));
     const isHouse = house !== null && region.faction?.id === house.id;
+    const buildable =
+        holds(region) &&
+        region.ring !== 'safe' &&
+        region.key !== 'farmhouse' &&
+        region.building === null;
 
     return (
         <section
@@ -367,6 +384,62 @@ export function RegionPanel({
                     <p className="text-muted-foreground">
                         Join a faction to raid. Lone wolves loot and burn
                         instead, from the{' '}
+                        <Link
+                            href={factionPage()}
+                            className="font-semibold text-primary"
+                        >
+                            Faction
+                        </Link>{' '}
+                        tab.
+                    </p>
+                )}
+
+                {region.building && region.faction && (
+                    <div className="flex flex-col gap-2 rounded-lg border p-3">
+                        <p className="flex items-center gap-2 font-semibold">
+                            <Hammer
+                                className="size-4"
+                                style={{ color: region.faction.colour }}
+                                aria-hidden
+                            />
+                            {region.faction.name}'s {region.building.label}
+                        </p>
+                        <BuildingDetails
+                            building={region.building}
+                            kind={buildingKinds.find(
+                                (kind) => kind.value === region.building?.kind,
+                            )}
+                            store={holds(region) ? base : null}
+                            canBuild={
+                                holds(region) && (base?.canBuild ?? false)
+                            }
+                            hasDen={base?.hasDen ?? false}
+                        />
+                    </div>
+                )}
+
+                {buildable && base?.canBuild && (
+                    <div className="flex flex-col gap-2 rounded-lg border p-3">
+                        <p className="flex items-center gap-2 font-semibold">
+                            <Hammer
+                                className="size-4 text-primary"
+                                aria-hidden
+                            />
+                            Build here
+                        </p>
+                        <BuildOptions
+                            regionId={region.id}
+                            kinds={buildingKinds}
+                            store={base}
+                            hasDen={base.hasDen}
+                        />
+                    </div>
+                )}
+
+                {buildable && base && !base.canBuild && (
+                    <p className="text-muted-foreground">
+                        Your leader and council can raise a building here. Give
+                        materials to the store from the{' '}
                         <Link
                             href={factionPage()}
                             className="font-semibold text-primary"

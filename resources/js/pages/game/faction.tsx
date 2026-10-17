@@ -1,6 +1,7 @@
 import { Head, Link } from '@inertiajs/react';
 import { Crown, Flame, MessagesSquare, Skull } from 'lucide-react';
 import { useState } from 'react';
+import { FactionBase } from '@/components/game/faction-base';
 import { GameBar } from '@/components/game/game-bar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,6 +19,7 @@ import {
     rules as rulesRoute,
     store,
 } from '@/routes/play/faction';
+import type { BuildingKindCard, MapBuilding } from '@/types/game';
 
 type Rules = {
     entryMode: 'open' | 'approval' | 'invite';
@@ -40,6 +42,15 @@ type Props = {
     faction:
         | (FactionSummary & {
               treasury: number;
+              base: {
+                  canBuild: boolean;
+                  materials: Record<string, number>;
+                  memberCap: number;
+                  buildings: (MapBuilding & {
+                      region: { id: number; name: string };
+                  })[];
+                  plots: { id: number; name: string }[];
+              };
               members: {
                   id: number;
                   name: string;
@@ -59,6 +70,7 @@ type Props = {
           })
         | null;
     myRole: string | null;
+    buildingKinds: BuildingKindCard[];
     factions: (FactionSummary & {
         members: number;
         regions: number;
@@ -117,6 +129,7 @@ function MyFaction({
     myRole,
     species,
     entryModes,
+    buildingKinds,
 }: Props & { faction: NonNullable<Props['faction']> }) {
     const decides = myRole === 'leader' || myRole === 'council';
     const leader = myRole === 'leader';
@@ -167,6 +180,12 @@ function MyFaction({
                 {faction.isHouse &&
                     ' · You rule the valley from the Farmhouse.'}
             </p>
+
+            <FactionBase
+                treasury={faction.treasury}
+                base={faction.base}
+                kinds={buildingKinds}
+            />
 
             <section className="flex flex-col gap-2">
                 <h2 className="text-lg font-bold">Members</h2>

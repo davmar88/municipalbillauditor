@@ -348,6 +348,32 @@ const HUBS: Record<string, Point> = {
     paddock: [0, 6],
 };
 
+/** Where a faction's building goes in each region, as a nudge from its middle. */
+const PLOTS: Record<string, Point> = {
+    wildwood: [-62, -8],
+    orchard: [-72, -12],
+    big_barn: [-96, 52],
+    hayfield: [62, -36],
+    quarry: [-84, -30],
+    sheepfold: [-44, 52],
+    granary: [72, 40],
+    windmill_hill: [-86, 20],
+    ironfield_gate: [54, 56],
+    duck_pond: [76, -52],
+    henhouse: [82, -14],
+    market_square: [0, 80],
+    stables: [64, 58],
+    old_well: [-66, -34],
+};
+
+/** The spot where a faction builds in a region. */
+export function plot(key: string): Point {
+    const shape = SHAPES[key];
+    const [dx, dy] = PLOTS[key] ?? [60, 40];
+
+    return shape ? [shape.centre[0] + dx, shape.centre[1] + dy] : hub(key);
+}
+
 /** The spot in a region where its lanes meet and animals gather. */
 export function hub(key: string): Point {
     const shape = SHAPES[key];

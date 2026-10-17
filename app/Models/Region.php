@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Carbon;
 
 /**
@@ -24,6 +25,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $held_since
  * @property Carbon|null $settled_until
  * @property Faction|null $faction
+ * @property Building|null $building
  */
 #[Fillable(['valley_id', 'key', 'name', 'ring', 'produces', 'col', 'row'])]
 class Region extends Model
@@ -46,6 +48,12 @@ class Region extends Model
     public function faction(): BelongsTo
     {
         return $this->belongsTo(Faction::class);
+    }
+
+    /** @return HasOne<Building, $this> */
+    public function building(): HasOne
+    {
+        return $this->hasOne(Building::class);
     }
 
     /** @return BelongsToMany<Region, $this> */

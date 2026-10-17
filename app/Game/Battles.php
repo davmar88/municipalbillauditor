@@ -156,6 +156,10 @@ final class Battles
                 ->filter(fn (BattleCommitment $c) => $c->player->faction_id === $region->faction_id)
                 ->sum(fn (BattleCommitment $c) => $c->horseshoes * $c->player->species->defence()) * $region->ground() * 1.2;
 
+            // A Den or Watchtower makes its region harder to take; a Drill Yard next door hits harder.
+            $defenceStrength *= Bases::defence($region);
+            $attackStrength *= Bases::attack($attack->faction_id, $region);
+
             $attackStrength *= Dice::roll($attack->seed, 'attack', 0.9, 1.1);
             $defenceStrength *= Dice::roll($attack->seed, 'defence', 0.9, 1.1);
             $won = $attackStrength > $defenceStrength;
@@ -191,6 +195,8 @@ final class Battles
     /** A faction takes a region, and with the Farmhouse, the valley. */
     public function take(Season $season, Region $region, ?int $factionId): void
     {
+        app(Bases::class)->fall($region, $factionId);
+
         $region->forceFill([
             'faction_id' => $factionId,
             'held_since' => $factionId ? CarbonImmutable::now() : null,

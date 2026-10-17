@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Auth\GoogleController;
+use App\Http\Controllers\Game\BaseController;
 use App\Http\Controllers\Game\BattleController;
 use App\Http\Controllers\Game\ChatController;
 use App\Http\Controllers\Game\CrimeController;
@@ -62,6 +63,10 @@ Route::middleware(['auth', 'verified', 'player', 'throttle:120,1'])->prefix('pla
     Route::put('faction/rules', [FactionController::class, 'rules'])->name('play.faction.rules');
     Route::put('faction/members/{member}/role', [FactionController::class, 'role'])->name('play.faction.role');
     Route::delete('faction/members/{member}', [FactionController::class, 'remove'])->name('play.faction.remove');
+
+    Route::post('faction/give', [BaseController::class, 'give'])->name('play.give');
+    Route::post('regions/{region}/build', [BaseController::class, 'build'])->name('play.build');
+    Route::post('buildings/{building}/upgrade', [BaseController::class, 'upgrade'])->name('play.upgrade');
 
     Route::post('crimes', [CrimeController::class, 'store'])->name('play.crime');
     Route::post('home/rebuild', [CrimeController::class, 'rebuild'])->name('play.rebuild');

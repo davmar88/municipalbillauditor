@@ -2,13 +2,16 @@
 
 namespace App\Http\Controllers\Game;
 
+use App\Enums\BuildingKind;
 use App\Enums\CrimeKind;
 use App\Enums\EntryMode;
 use App\Enums\FactionRole;
 use App\Enums\Species;
+use App\Game\Bases;
 use App\Game\Clock;
 use App\Game\Factions;
 use App\Http\Controllers\Controller;
+use App\Models\Building;
 use App\Models\Crime;
 use App\Models\Faction;
 use App\Models\FactionJoinRequest;
@@ -43,6 +46,23 @@ class FactionController extends Controller
             'faction' => $faction ? [
                 ...$this->summary($faction, $house?->id),
                 'treasury' => $faction->treasury,
+                'base' => [
+                    'canBuild' => $player->decides(),
+                    'materials' => (object) ($faction->materials ?? []),
+                    'memberCap' => Bases::memberCap($faction),
+                    'buildings' => Bases::standing($faction)
+                        ->sortBy(fn (Building $building) => [$building->kind === BuildingKind::Den ? 0 : 1, $building->region->name])
+                        ->values()
+                        ->map(fn (Building $building) => [
+                            ...$building->summary(),
+                            'region' => ['id' => $building->region->id, 'name' => $building->region->name],
+                        ]),
+                    'plots' => $faction->regions()
+                        ->whereNotIn('key', ['farmhouse', 'paddock'])
+                        ->whereDoesntHave('building', fn ($query) => $query->where('faction_id', $faction->id))
+                        ->orderBy('name')
+                        ->get(['id', 'name']),
+                ],
                 'members' => $faction->members()->orderByRaw("case faction_role when 'leader' then 0 when 'council' then 1 when 'member' then 2 else 3 end")->orderBy('name')->get()
                     ->map(fn (Player $member) => [
                         'id' => $member->id,
@@ -63,6 +83,7 @@ class FactionController extends Controller
                     ]) : [],
             ] : null,
             'myRole' => $player->faction_role?->value,
+            'buildingKinds' => array_map(fn (BuildingKind $kind) => $kind->card(), BuildingKind::cases()),
             'factions' => $factions->map(fn (Faction $other) => [
                 ...$this->summary($other, $house?->id),
                 'members' => $other->members_count,

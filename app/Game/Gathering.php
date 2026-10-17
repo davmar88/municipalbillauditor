@@ -38,7 +38,8 @@ final class Gathering
 
             $base = $region->produces === 'corn' ? self::CORN : self::MATERIAL;
             $own = $player->faction_id !== null && $region->faction_id === $player->faction_id;
-            $amount = (int) floor($base * $player->species->gathering() * ($own ? 1.5 : 1.0));
+            $workshop = $region->produces === 'corn' ? 1.0 : Bases::gathering($player, $region);
+            $amount = (int) floor($base * $player->species->gathering() * ($own ? 1.5 : 1.0) * $workshop);
             $tax = 0;
 
             if ($region->produces === 'corn') {

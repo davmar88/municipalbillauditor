@@ -29,6 +29,7 @@ final class Tick
         private readonly GateNight $gateNight,
         private readonly Factions $factions,
         private readonly Seasons $seasons,
+        private readonly Bases $bases,
     ) {}
 
     public function run(Valley $valley): void
@@ -56,6 +57,9 @@ final class Tick
 
         $this->handOutRations($season->fresh());
         $this->seasons->endIfDue($valley);
+
+        // Buildings fall with land lost this tick: to raids, upkeep, Gate Night or a new season.
+        $this->bases->clearRuins($valley);
     }
 
     /** Whether this half hour hasn't been run yet. */

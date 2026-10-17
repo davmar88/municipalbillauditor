@@ -55,6 +55,43 @@ export type MapAnimal = {
     me: boolean;
 };
 
+export type BuildingKindValue =
+    | 'den'
+    | 'watchtower'
+    | 'drill_yard'
+    | 'storehouse'
+    | 'workshop';
+
+/** What a building costs and does at each level. */
+export type BuildingKindCard = {
+    value: BuildingKindValue;
+    label: string;
+    levels: {
+        level: number;
+        does: string;
+        corn: number;
+        materials: Record<string, number>;
+        minutes: number;
+    }[];
+};
+
+export type MapBuilding = {
+    id: number;
+    kind: BuildingKindValue;
+    label: string;
+    level: number;
+    readyAt: string | null;
+    does: string | null;
+};
+
+/** Your faction's store and whether you may build from it. */
+export type FactionStore = {
+    canBuild: boolean;
+    hasDen: boolean;
+    treasury: number;
+    materials: Record<string, number>;
+};
+
 export type MapRegion = {
     id: number;
     key: string;
@@ -72,6 +109,7 @@ export type MapRegion = {
         landsAt: string;
         from: number | null;
     }[];
+    building: MapBuilding | null;
     animals: { count: number; sample: MapAnimal[] };
 };
 

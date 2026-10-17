@@ -2,6 +2,7 @@
 
 namespace App\Game;
 
+use App\Models\Building;
 use App\Models\Faction;
 use App\Models\Player;
 use App\Models\Region;
@@ -41,8 +42,11 @@ final class Seasons
             $season->laws()->delete();
             $season->forceFill(['ended_at' => $now])->save();
 
+            Building::query()->whereIn('region_id', $valley->regions()->select('id'))->delete();
             Region::query()->where('valley_id', $valley->id)->update(['faction_id' => null, 'held_since' => null, 'settled_until' => null]);
             Faction::query()->where('valley_id', $valley->id)->update(['treasury' => DB::raw('FLOOR(treasury / 10)')]);
+            Faction::query()->where('valley_id', $valley->id)->whereNotNull('materials')->get()->each(fn (Faction $faction) => $faction
+                ->forceFill(['materials' => array_map(fn (int $amount) => intdiv($amount, 10), $faction->materials)])->save());
             Player::query()->where('valley_id', $valley->id)->update(['corn' => DB::raw('FLOOR(corn / 5)')]);
 
             return $this->builder->startSeason($valley, $season->number + 1);

@@ -11,13 +11,19 @@ import {
     WORLD,
     anchor,
     hub,
+    plot,
     shapeOf,
     smoothPath,
     toPath,
     walkPath,
 } from '@/lib/hollowmere';
 import { cn } from '@/lib/utils';
-import type { FactionRef, MapRegion, Species } from '@/types/game';
+import type {
+    BuildingKindValue,
+    FactionRef,
+    MapRegion,
+    Species,
+} from '@/types/game';
 
 type View = { x: number; y: number; k: number };
 type Size = { width: number; height: number };
@@ -1183,6 +1189,83 @@ const Crowd = memo(function Crowd({
     );
 });
 
+const BUILDING_GLYPH: Record<BuildingKindValue, string> = {
+    den: '🏠',
+    watchtower: '🗼',
+    drill_yard: '⚔️',
+    storehouse: '📦',
+    workshop: '🔨',
+};
+
+/** Faction buildings, a badge in the holder's colour on each plot. */
+const Bases = memo(function Bases({
+    regions,
+    k,
+}: {
+    regions: MapRegion[];
+    k: number;
+}) {
+    return (
+        <g pointerEvents="none">
+            {regions.map((region) => {
+                const building = region.building;
+
+                if (!building || !region.faction) {
+                    return null;
+                }
+
+                const [x, y] = plot(region.key);
+                const goingUp = building.readyAt !== null;
+
+                return (
+                    <g
+                        key={region.id}
+                        transform={`translate(${x.toFixed(1)} ${y.toFixed(1)}) scale(${(1 / Math.max(k, 0.6)).toFixed(3)})`}
+                        opacity={goingUp ? 0.75 : 1}
+                    >
+                        <rect
+                            x={-17}
+                            y={-17}
+                            width={34}
+                            height={34}
+                            rx={building.kind === 'den' ? 17 : 8}
+                            fill="#14121a"
+                            stroke={region.faction.colour}
+                            strokeWidth={building.kind === 'den' ? 3.5 : 2.5}
+                            strokeDasharray={goingUp ? '5 4' : undefined}
+                        />
+                        <text
+                            textAnchor="middle"
+                            dominantBaseline="central"
+                            fontSize={17}
+                            y={0.5}
+                        >
+                            {BUILDING_GLYPH[building.kind]}
+                        </text>
+                        <g transform="translate(13 13)">
+                            <circle
+                                r={8}
+                                fill={region.faction.colour}
+                                stroke="#14121a"
+                                strokeWidth={1.5}
+                            />
+                            <text
+                                textAnchor="middle"
+                                dominantBaseline="central"
+                                fontSize={10}
+                                fontWeight={900}
+                                fill="#14121a"
+                            >
+                                {building.level}
+                            </text>
+                        </g>
+                    </g>
+                );
+            })}
+        </g>
+    );
+});
+
 /** Your animal. It walks to its new region when you move. */
 function Me({ at, species, k }: { at: Point; species: Species; k: number }) {
     return (
@@ -1456,6 +1539,7 @@ export function WorldMap({
                             houseId={house?.id ?? null}
                             gateNight={gateNight}
                         />
+                        <Bases regions={regions} k={k} />
                         <Crowd regions={regions} k={k} />
                         {herePoint && species && (
                             <Me at={herePoint} species={species} k={k} />

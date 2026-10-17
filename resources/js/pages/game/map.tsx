@@ -9,7 +9,14 @@ import { WorldMap } from '@/components/game/world-map';
 import { Button } from '@/components/ui/button';
 import { act, clockTime, fromNow } from '@/lib/game';
 import { commit, gate } from '@/routes/play';
-import type { FactionRef, MapBattle, MapLaw, MapRegion } from '@/types/game';
+import type {
+    BuildingKindCard,
+    FactionRef,
+    FactionStore,
+    MapBattle,
+    MapLaw,
+    MapRegion,
+} from '@/types/game';
 
 type Props = {
     valley: string;
@@ -22,6 +29,8 @@ type Props = {
     recent: { id: number; text: string; at: string }[];
     gate: { open: boolean; defended: boolean };
     yields: { corn: number; material: number };
+    base: FactionStore | null;
+    buildingKinds: BuildingKindCard[];
 };
 
 export default function MapPage({
@@ -35,6 +44,8 @@ export default function MapPage({
     recent,
     gate: gateNight,
     yields,
+    base,
+    buildingKinds,
 }: Props) {
     const { player } = usePage().props;
     const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -75,6 +86,8 @@ export default function MapPage({
                             battles={battles}
                             yields={yields}
                             gateNight={gateNight}
+                            base={base}
+                            buildingKinds={buildingKinds}
                             onClose={() => setSelectedId(null)}
                         />
                     )}

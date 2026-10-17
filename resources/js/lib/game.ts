@@ -13,6 +13,17 @@ const EMOJI: Record<Species, string> = {
     raven: '🐦',
 };
 
+/** The materials animals gather, and where. */
+export const MATERIALS: { name: string; from: string }[] = [
+    { name: 'wood', from: 'Wildwood' },
+    { name: 'straw', from: 'Big Barn, Stables' },
+    { name: 'stone', from: 'Quarry' },
+    { name: 'clay', from: 'Duck Pond, Old Well' },
+    { name: 'wool', from: 'Sheepfold' },
+    { name: 'dye', from: 'Orchard' },
+    { name: 'eggs', from: 'Henhouse' },
+];
+
 /** The face an animal wears on the map. */
 export function speciesEmoji(species: Species): string {
     return EMOJI[species] ?? '🐾';

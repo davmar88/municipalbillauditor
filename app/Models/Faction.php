@@ -19,6 +19,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string $colour
  * @property string|null $motto
  * @property int $treasury
+ * @property array<string, int>|null $materials
  * @property EntryMode $entry_mode
  * @property int $min_level
  * @property array<int, string>|null $species
@@ -37,6 +38,7 @@ class Faction extends Model
             'entry_mode' => EntryMode::class,
             'species' => 'array',
             'accepts_criminals' => 'boolean',
+            'materials' => 'array',
         ];
     }
 
@@ -58,6 +60,12 @@ class Faction extends Model
         return $this->hasMany(Region::class);
     }
 
+    /** @return HasMany<Building, $this> */
+    public function buildings(): HasMany
+    {
+        return $this->hasMany(Building::class);
+    }
+
     /** @return HasMany<FactionJoinRequest, $this> */
     public function joinRequests(): HasMany
     {
@@ -67,6 +75,12 @@ class Faction extends Model
     public function leader(): ?Player
     {
         return $this->members()->where('faction_role', FactionRole::Leader)->first();
+    }
+
+    /** How much of a material the faction's store holds. */
+    public function material(string $name): int
+    {
+        return (int) ($this->materials[$name] ?? 0);
     }
 
     public function isHouse(): bool

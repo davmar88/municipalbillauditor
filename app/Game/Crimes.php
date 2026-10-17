@@ -116,7 +116,7 @@ final class Crimes
                 $faction = Faction::query()->lockForUpdate()->find($crime->target_faction_id);
 
                 if ($faction !== null) {
-                    $loot = (int) floor($faction->treasury * self::LOOT_SHARE);
+                    $loot = (int) floor($faction->treasury * Bases::lootShare($faction));
                     $faction->decrement('treasury', $loot);
                     $criminal->increment('corn', $loot);
                 }
