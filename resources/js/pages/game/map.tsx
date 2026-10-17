@@ -113,7 +113,7 @@ export default function MapPage({
 
                 <div className="overflow-x-auto rounded-xl border bg-card p-2">
                     <svg
-                        viewBox="0 0 760 380"
+                        viewBox="0 0 760 330"
                         className="w-full min-w-[560px]"
                         role="img"
                         aria-label={`Map of ${valley}`}

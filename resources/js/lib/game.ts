@@ -18,8 +18,13 @@ export function fromNow(iso: string, now: number = Date.now()): string {
         return 'now';
     }
 
-    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(minutes / 1440);
+    const hours = Math.floor((minutes % 1440) / 60);
     const rest = minutes % 60;
+
+    if (days > 0) {
+        return `in ${days} ${days === 1 ? 'day' : 'days'}${hours > 0 ? ` ${hours} h` : ''}`;
+    }
 
     return hours > 0 ? `in ${hours} h ${rest} min` : `in ${rest} min`;
 }
@@ -34,5 +39,10 @@ export function act(
     data: RequestPayload = {},
     method: 'post' | 'put' | 'delete' = 'post',
 ): void {
-    router.visit(url, { method, data, preserveScroll: true });
+    router.visit(url, {
+        method,
+        data,
+        preserveScroll: true,
+        preserveState: true,
+    });
 }
