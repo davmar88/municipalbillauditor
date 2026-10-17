@@ -1,0 +1,1564 @@
+import { LocateFixed, Minus, Plus, Scan } from 'lucide-react';
+import type { ReactNode } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { MapFeatures, MapGround } from '@/components/game/map-terrain';
+import { clockTime, speciesEmoji } from '@/lib/game';
+import type { Point } from '@/lib/hollowmere';
+import {
+    BROOK,
+    FARM,
+    ROADS,
+    WORLD,
+    anchor,
+    hub,
+    shapeOf,
+    smoothPath,
+    toPath,
+    walkPath,
+} from '@/lib/hollowmere';
+import { cn } from '@/lib/utils';
+import type { FactionRef, MapRegion, Species } from '@/types/game';
+
+type View = { x: number; y: number; k: number };
+type Size = { width: number; height: number };
+
+const MAX_ZOOM = 3;
+const LABEL = '#efecf7';
+const HALO = '#0b0a0f';
+const VIOLET = '#b39aff';
+const FLAG = '#dd6b30';
+
+/** Desktop puts the region card on the left; phones slide it up from the bottom. */
+const PANEL_WIDTH = 384;
+
+function shapeFor(region: MapRegion) {
+    return shapeOf(region.key, region.col, region.row, region.ring === 'safe');
+}
+
+function zoomLimits(size: Size) {
+    const fit = Math.min(size.width / FARM.width, size.height / FARM.height);
+
+    return { fit, min: fit * 0.92, max: MAX_ZOOM };
+}
+
+function clampView(view: View, size: Size | null): View {
+    if (!size) {
+        return view;
+    }
+
+    const { min, max } = zoomLimits(size);
+    const k = Math.min(max, Math.max(min, view.k));
+    const width = WORLD.width * k;
+    const height = WORLD.height * k;
+
+    return {
+        k,
+        x:
+            width <= size.width
+                ? (size.width - width) / 2
+                : Math.min(0, Math.max(size.width - width, view.x)),
+        y:
+            height <= size.height
+                ? (size.height - height) / 2
+                : Math.min(0, Math.max(size.height - height, view.y)),
+    };
+}
+
+function firstView(size: Size, focus: Point | null): View {
+    const { fit } = zoomLimits(size);
+    // Phones start close enough to read, on the animal, below the corner card;
+    // wide screens see the whole farm.
+    const k =
+        size.width < 720
+            ? Math.max(fit, Math.min(0.72, size.width / 640))
+            : fit;
+
+    if (k > fit * 1.05 && focus) {
+        return {
+            k,
+            x: size.width / 2 - focus[0] * k,
+            y: size.height * 0.58 - focus[1] * k,
+        };
+    }
+
+    return {
+        k,
+        x: size.width / 2 - (FARM.x + FARM.width / 2) * k,
+        y: size.height / 2 - (FARM.y + FARM.height / 2) * k,
+    };
+}
+
+/** Where on screen a region should sit so the region card doesn't cover it. */
+function openArea(size: Size, panelOpen: boolean) {
+    if (!panelOpen) {
+        return {
+            left: 40,
+            top: 40,
+            right: size.width - 40,
+            bottom: size.height - 40,
+        };
+    }
+
+    if (size.width >= 768) {
+        return {
+            left: PANEL_WIDTH + 40,
+            top: 40,
+            right: size.width - 70,
+            bottom: size.height - 40,
+        };
+    }
+
+    return {
+        left: 30,
+        top: 70,
+        right: size.width - 30,
+        bottom: size.height * 0.42,
+    };
+}
+
+function distance(a: Point, b: Point): number {
+    return Math.hypot(a[0] - b[0], a[1] - b[1]);
+}
+
+function middle(a: Point, b: Point): Point {
+    return [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+}
+
+type Gesture = {
+    kind: 'pan' | 'pinch';
+    start: View;
+    origin: Point;
+    spread: number;
+    moved: number;
+    target: Element | null;
+    velocity: Point;
+    last: { point: Point; at: number };
+};
+
+/**
+ * Dragging, flicking, pinching and wheel zoom, like a street map. The view
+ * maps the world onto the screen: screen = world × k + (x, y).
+ */
+function useCamera(
+    container: React.RefObject<HTMLDivElement | null>,
+    svg: React.RefObject<SVGSVGElement | null>,
+    focus: Point | null,
+    onTap: (target: Element | null) => void,
+) {
+    const [view, setView] = useState<View>({ x: 0, y: 0, k: 0 });
+    const [size, setSize] = useState<Size | null>(null);
+    const [dragging, setDragging] = useState(false);
+    const viewRef = useRef(view);
+    const sizeRef = useRef<Size | null>(null);
+    const frame = useRef<number | null>(null);
+    const pointers = useRef(new Map<number, Point>());
+    const gesture = useRef<Gesture | null>(null);
+    const lastTap = useRef<{ at: number; point: Point } | null>(null);
+    const focusRef = useRef(focus);
+    const tapRef = useRef(onTap);
+
+    useEffect(() => {
+        focusRef.current = focus;
+        tapRef.current = onTap;
+    });
+
+    const apply = useCallback((next: View) => {
+        const clamped = clampView(next, sizeRef.current);
+        viewRef.current = clamped;
+        setView(clamped);
+    }, []);
+
+    const stop = useCallback(() => {
+        if (frame.current !== null) {
+            cancelAnimationFrame(frame.current);
+            frame.current = null;
+        }
+    }, []);
+
+    const fly = useCallback(
+        (target: View, duration = 480) => {
+            stop();
+            const from = viewRef.current;
+            const to = clampView(target, sizeRef.current);
+            const started = performance.now();
+
+            const step = (now: number) => {
+                const t = Math.min(1, (now - started) / duration);
+                const ease =
+                    t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2;
+                apply({
+                    x: from.x + (to.x - from.x) * ease,
+                    y: from.y + (to.y - from.y) * ease,
+                    k: from.k + (to.k - from.k) * ease,
+                });
+                frame.current = t < 1 ? requestAnimationFrame(step) : null;
+            };
+
+            frame.current = requestAnimationFrame(step);
+        },
+        [apply, stop],
+    );
+
+    const glide = useCallback(
+        (velocity: Point) => {
+            stop();
+            let last = performance.now();
+            let [vx, vy] = velocity;
+
+            const step = (now: number) => {
+                const dt = Math.min(40, now - last);
+                last = now;
+                const current = viewRef.current;
+                apply({
+                    k: current.k,
+                    x: current.x + vx * dt,
+                    y: current.y + vy * dt,
+                });
+                const decay = 0.993 ** dt;
+                vx *= decay;
+                vy *= decay;
+                frame.current =
+                    Math.hypot(vx, vy) > 0.02
+                        ? requestAnimationFrame(step)
+                        : null;
+            };
+
+            frame.current = requestAnimationFrame(step);
+        },
+        [apply, stop],
+    );
+
+    const zoomAt = useCallback(
+        (point: Point, factor: number, animate = false) => {
+            const size = sizeRef.current;
+
+            if (!size) {
+                return;
+            }
+
+            const current = viewRef.current;
+            const { min, max } = zoomLimits(size);
+            const k = Math.min(max, Math.max(min, current.k * factor));
+            const wx = (point[0] - current.x) / current.k;
+            const wy = (point[1] - current.y) / current.k;
+            const next = { k, x: point[0] - wx * k, y: point[1] - wy * k };
+
+            if (animate) {
+                fly(next, 280);
+            } else {
+                stop();
+                apply(next);
+            }
+        },
+        [apply, fly, stop],
+    );
+
+    /** Glide so a world point lands at a spot on screen (the middle by default). */
+    const lookAt = useCallback(
+        (point: Point, k?: number, spot?: Point) => {
+            const size = sizeRef.current;
+
+            if (!size) {
+                return;
+            }
+
+            const zoom = k ?? viewRef.current.k;
+            const [sx, sy] = spot ?? [size.width / 2, size.height / 2];
+            fly({ k: zoom, x: sx - point[0] * zoom, y: sy - point[1] * zoom });
+        },
+        [fly],
+    );
+
+    const fit = useCallback(() => {
+        const size = sizeRef.current;
+
+        if (!size) {
+            return;
+        }
+
+        const { fit: k } = zoomLimits(size);
+        lookAt([FARM.x + FARM.width / 2, FARM.y + FARM.height / 2], k);
+    }, [lookAt]);
+
+    useEffect(() => {
+        const element = container.current;
+
+        if (!element) {
+            return;
+        }
+
+        const observer = new ResizeObserver(([entry]) => {
+            const { width, height } = entry.contentRect;
+            const old = sizeRef.current;
+            sizeRef.current = { width, height };
+            setSize({ width, height });
+
+            if (!old || viewRef.current.k === 0) {
+                apply(firstView({ width, height }, focusRef.current));
+
+                return;
+            }
+
+            // Keep the same spot of the farm in the middle.
+            const current = viewRef.current;
+            const cx = (old.width / 2 - current.x) / current.k;
+            const cy = (old.height / 2 - current.y) / current.k;
+            apply({
+                k: current.k,
+                x: width / 2 - cx * current.k,
+                y: height / 2 - cy * current.k,
+            });
+        });
+
+        observer.observe(element);
+
+        return () => observer.disconnect();
+    }, [apply, container]);
+
+    useEffect(() => {
+        const element = svg.current;
+
+        if (!element) {
+            return;
+        }
+
+        // A native listener, so the page doesn't scroll while the map zooms.
+        const onWheel = (event: WheelEvent) => {
+            event.preventDefault();
+            const rect = element.getBoundingClientRect();
+            const unit =
+                event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? 400 : 1;
+            const factor = Math.exp(
+                -event.deltaY * unit * (event.ctrlKey ? 0.01 : 0.0016),
+            );
+            zoomAt(
+                [event.clientX - rect.left, event.clientY - rect.top],
+                factor,
+            );
+        };
+
+        element.addEventListener('wheel', onWheel, { passive: false });
+
+        return () => element.removeEventListener('wheel', onWheel);
+    }, [svg, zoomAt]);
+
+    useEffect(() => stop, [stop]);
+
+    const local = (event: { clientX: number; clientY: number }): Point => {
+        const rect = svg.current!.getBoundingClientRect();
+
+        return [event.clientX - rect.left, event.clientY - rect.top];
+    };
+
+    const onPointerDown = (event: React.PointerEvent<SVGSVGElement>) => {
+        if (event.pointerType === 'mouse' && event.button !== 0) {
+            return;
+        }
+
+        stop();
+        const point = local(event);
+        const now = performance.now();
+        pointers.current.set(event.pointerId, point);
+        event.currentTarget.setPointerCapture(event.pointerId);
+
+        if (pointers.current.size === 1) {
+            gesture.current = {
+                kind: 'pan',
+                start: viewRef.current,
+                origin: point,
+                spread: 0,
+                moved: 0,
+                target: (event.target as Element).closest('[data-region]'),
+                velocity: [0, 0],
+                last: { point, at: now },
+            };
+        } else if (pointers.current.size === 2) {
+            const [a, b] = [...pointers.current.values()];
+            gesture.current = {
+                kind: 'pinch',
+                start: viewRef.current,
+                origin: middle(a, b),
+                spread: Math.max(1, distance(a, b)),
+                moved: Infinity,
+                target: null,
+                velocity: [0, 0],
+                last: { point: middle(a, b), at: now },
+            };
+        }
+    };
+
+    const onPointerMove = (event: React.PointerEvent<SVGSVGElement>) => {
+        if (!pointers.current.has(event.pointerId)) {
+            return;
+        }
+
+        const point = local(event);
+        pointers.current.set(event.pointerId, point);
+        const current = gesture.current;
+
+        if (!current) {
+            return;
+        }
+
+        if (current.kind === 'pan') {
+            const dx = point[0] - current.origin[0];
+            const dy = point[1] - current.origin[1];
+            current.moved = Math.max(current.moved, Math.hypot(dx, dy));
+
+            if (current.moved < 5) {
+                return;
+            }
+
+            setDragging(true);
+            const now = performance.now();
+            const dt = Math.max(1, now - current.last.at);
+            current.velocity = [
+                ((point[0] - current.last.point[0]) / dt) * 0.8 +
+                    current.velocity[0] * 0.2,
+                ((point[1] - current.last.point[1]) / dt) * 0.8 +
+                    current.velocity[1] * 0.2,
+            ];
+            current.last = { point, at: now };
+            apply({
+                k: current.start.k,
+                x: current.start.x + dx,
+                y: current.start.y + dy,
+            });
+
+            return;
+        }
+
+        if (pointers.current.size >= 2 && sizeRef.current) {
+            const [a, b] = [...pointers.current.values()];
+            const centre = middle(a, b);
+            const { min, max } = zoomLimits(sizeRef.current);
+            const k = Math.min(
+                max,
+                Math.max(
+                    min,
+                    (current.start.k * distance(a, b)) / current.spread,
+                ),
+            );
+            const wx = (current.origin[0] - current.start.x) / current.start.k;
+            const wy = (current.origin[1] - current.start.y) / current.start.k;
+            apply({ k, x: centre[0] - wx * k, y: centre[1] - wy * k });
+        }
+    };
+
+    const onPointerUp = (event: React.PointerEvent<SVGSVGElement>) => {
+        if (!pointers.current.has(event.pointerId)) {
+            return;
+        }
+
+        pointers.current.delete(event.pointerId);
+        const current = gesture.current;
+
+        if (current?.kind === 'pinch' && pointers.current.size === 1) {
+            // Lifting one finger of a pinch carries on as a drag.
+            const [point] = [...pointers.current.values()];
+            gesture.current = {
+                ...current,
+                kind: 'pan',
+                start: viewRef.current,
+                origin: point,
+                last: { point, at: performance.now() },
+            };
+
+            return;
+        }
+
+        if (pointers.current.size > 0) {
+            return;
+        }
+
+        gesture.current = null;
+        setDragging(false);
+
+        if (!current || event.type !== 'pointerup') {
+            return;
+        }
+
+        if (current.kind === 'pan' && current.moved < 5) {
+            const point = local(event);
+            const now = performance.now();
+
+            if (
+                lastTap.current &&
+                now - lastTap.current.at < 320 &&
+                distance(point, lastTap.current.point) < 28
+            ) {
+                lastTap.current = null;
+                zoomAt(point, 1.8, true);
+
+                return;
+            }
+
+            lastTap.current = { at: now, point };
+            tapRef.current(current.target);
+
+            return;
+        }
+
+        if (
+            current.kind === 'pan' &&
+            performance.now() - current.last.at < 90 &&
+            Math.hypot(...current.velocity) > 0.25
+        ) {
+            glide(current.velocity);
+        }
+    };
+
+    const onKeyDown = (event: React.KeyboardEvent<SVGSVGElement>) => {
+        const size = sizeRef.current;
+
+        if (!size || event.target !== event.currentTarget) {
+            return;
+        }
+
+        const current = viewRef.current;
+        const step = 90;
+        const moves: Record<string, Point> = {
+            ArrowLeft: [step, 0],
+            ArrowRight: [-step, 0],
+            ArrowUp: [0, step],
+            ArrowDown: [0, -step],
+        };
+
+        if (moves[event.key]) {
+            event.preventDefault();
+            fly(
+                {
+                    k: current.k,
+                    x: current.x + moves[event.key][0],
+                    y: current.y + moves[event.key][1],
+                },
+                200,
+            );
+        } else if (event.key === '+' || event.key === '=') {
+            zoomAt([size.width / 2, size.height / 2], 1.4, true);
+        } else if (event.key === '-' || event.key === '_') {
+            zoomAt([size.width / 2, size.height / 2], 1 / 1.4, true);
+        }
+    };
+
+    const current = useCallback(() => viewRef.current, []);
+
+    return {
+        view,
+        size,
+        dragging,
+        current,
+        lookAt,
+        zoomAt,
+        fit,
+        handlers: {
+            onPointerDown,
+            onPointerMove,
+            onPointerUp,
+            onPointerCancel: onPointerUp,
+            onKeyDown,
+        },
+    };
+}
+
+/** Faction colour washed over the land each faction holds. */
+const Territory = memo(function Territory({
+    regions,
+}: {
+    regions: MapRegion[];
+}) {
+    return (
+        <g pointerEvents="none">
+            {regions.map((region) => {
+                const d = toPath(shapeFor(region).polygon);
+
+                if (region.ring === 'safe') {
+                    return (
+                        <path
+                            key={region.id}
+                            d={d}
+                            fill="#41d1ff"
+                            fillOpacity={0.05}
+                        />
+                    );
+                }
+
+                return region.faction ? (
+                    <path
+                        key={region.id}
+                        d={d}
+                        fill={region.faction.colour}
+                        fillOpacity={0.13}
+                    />
+                ) : null;
+            })}
+        </g>
+    );
+});
+
+/** Borders: faction edges, the House's gradient, raids, and what's selected. */
+const Borders = memo(function Borders({
+    regions,
+    houseId,
+    houseColour,
+    selectedId,
+}: {
+    regions: MapRegion[];
+    houseId: number | null;
+    houseColour: string | null;
+    selectedId: number | null;
+}) {
+    const selected = regions.find((region) => region.id === selectedId);
+    const [fx, fy] = (() => {
+        const farmhouse = regions.find((region) => region.key === 'farmhouse');
+
+        return farmhouse ? shapeFor(farmhouse).centre : [0, 0];
+    })();
+
+    return (
+        <g pointerEvents="none">
+            {regions.map((region) => {
+                const d = toPath(shapeFor(region).polygon);
+                const clip = `url(#clip-${region.key})`;
+
+                return (
+                    <g key={region.id}>
+                        {region.faction && (
+                            <path
+                                d={d}
+                                fill="none"
+                                stroke={
+                                    region.faction.id === houseId
+                                        ? 'url(#house-edge)'
+                                        : region.faction.colour
+                                }
+                                strokeWidth={
+                                    region.faction.id === houseId ? 10 : 7
+                                }
+                                vectorEffect="non-scaling-stroke"
+                                clipPath={clip}
+                            />
+                        )}
+                        {region.ring === 'safe' && (
+                            <path
+                                d={d}
+                                fill="none"
+                                stroke="#41d1ff"
+                                strokeOpacity={0.5}
+                                strokeWidth={6}
+                                vectorEffect="non-scaling-stroke"
+                                clipPath={clip}
+                            />
+                        )}
+                        {region.incoming.length > 0 && (
+                            <path
+                                d={d}
+                                fill={FLAG}
+                                fillOpacity={0.08}
+                                stroke={FLAG}
+                                strokeWidth={7}
+                                vectorEffect="non-scaling-stroke"
+                                clipPath={clip}
+                                className="animate-pulse"
+                            />
+                        )}
+                    </g>
+                );
+            })}
+            {/* The House's flag over the Farmhouse. */}
+            <g
+                transform={`translate(${(fx + 58).toFixed(1)} ${(fy - 40).toFixed(1)})`}
+            >
+                <circle r={3} fill="#cfc8dd" />
+                <line
+                    x1={0}
+                    y1={0}
+                    x2={0}
+                    y2={-38}
+                    stroke="#cfc8dd"
+                    strokeWidth={2.2}
+                />
+                <path
+                    d="M1 -38 L28 -31 L1 -23 Z"
+                    fill={houseColour ?? '#6a6479'}
+                    stroke={HALO}
+                    strokeWidth={1}
+                />
+            </g>
+            {selected && (
+                <>
+                    <path
+                        d={toPath(shapeFor(selected).polygon)}
+                        fill="none"
+                        stroke="#ffffff"
+                        strokeOpacity={0.25}
+                        strokeWidth={9}
+                        vectorEffect="non-scaling-stroke"
+                    />
+                    <path
+                        d={toPath(shapeFor(selected).polygon)}
+                        fill="none"
+                        stroke="#ffffff"
+                        strokeWidth={2.5}
+                        vectorEffect="non-scaling-stroke"
+                    />
+                </>
+            )}
+        </g>
+    );
+});
+
+/** Dotted trails from your animal to the regions it can walk to. */
+const Trails = memo(function Trails({
+    from,
+    to,
+    selected,
+}: {
+    from: string;
+    to: string[];
+    selected: string | null;
+}) {
+    return (
+        <g pointerEvents="none">
+            {to.map((key) => (
+                <path
+                    key={key}
+                    d={smoothPath(walkPath(from, key))}
+                    fill="none"
+                    stroke={VIOLET}
+                    strokeOpacity={key === selected ? 1 : 0.65}
+                    strokeWidth={key === selected ? 4 : 2.6}
+                    strokeDasharray="2 7"
+                    strokeLinecap="round"
+                    vectorEffect="non-scaling-stroke"
+                    className="map-march"
+                />
+            ))}
+        </g>
+    );
+});
+
+function quadAt(a: Point, c: Point, b: Point, t: number): Point {
+    const u = 1 - t;
+
+    return [
+        u * u * a[0] + 2 * u * t * c[0] + t * t * b[0],
+        u * u * a[1] + 2 * u * t * c[1] + t * t * b[1],
+    ];
+}
+
+function March({
+    from,
+    to,
+    colour,
+    k,
+}: {
+    from: Point;
+    to: Point;
+    colour: string;
+    k: number;
+}) {
+    const dx = to[0] - from[0];
+    const dy = to[1] - from[1];
+    const length = Math.hypot(dx, dy) || 1;
+    const bend = length * 0.2;
+    const control: Point = [
+        (from[0] + to[0]) / 2 + (-dy / length) * bend,
+        (from[1] + to[1]) / 2 + (dx / length) * bend,
+    ];
+    // Stop short of the target, on the same curve.
+    const t = 1 - Math.min(0.3, 40 / length);
+    const end = quadAt(from, control, to, t);
+    const split: Point = [
+        from[0] + (control[0] - from[0]) * t,
+        from[1] + (control[1] - from[1]) * t,
+    ];
+    const angle =
+        (Math.atan2(end[1] - split[1], end[0] - split[0]) * 180) / Math.PI;
+    const d = `M${from[0].toFixed(1)} ${from[1].toFixed(1)}Q${split[0].toFixed(1)} ${split[1].toFixed(1)} ${end[0].toFixed(1)} ${end[1].toFixed(1)}`;
+
+    return (
+        <g>
+            <path
+                d={d}
+                fill="none"
+                stroke={colour}
+                strokeOpacity={0.25}
+                strokeWidth={12}
+                strokeLinecap="round"
+                vectorEffect="non-scaling-stroke"
+            />
+            <path
+                d={d}
+                fill="none"
+                stroke={colour}
+                strokeWidth={4}
+                strokeDasharray="10 8"
+                strokeLinecap="round"
+                vectorEffect="non-scaling-stroke"
+                className="map-march"
+            />
+            <g
+                transform={`translate(${end[0].toFixed(1)} ${end[1].toFixed(1)}) rotate(${angle.toFixed(1)}) scale(${1 / k})`}
+            >
+                <path
+                    d="M6 0L-12 -9L-7 0L-12 9Z"
+                    fill={colour}
+                    stroke={HALO}
+                    strokeWidth={1}
+                />
+            </g>
+        </g>
+    );
+}
+
+/** Raids on the march, drawn as arrows from the attackers' land. */
+const Marches = memo(function Marches({
+    regions,
+    k,
+    gateNight,
+}: {
+    regions: MapRegion[];
+    k: number;
+    gateNight: boolean;
+}) {
+    const byId = new Map(regions.map((region) => [region.id, region]));
+
+    return (
+        <g pointerEvents="none">
+            {regions.flatMap((target) =>
+                target.incoming.map((attack) => {
+                    const from =
+                        attack.from !== null
+                            ? byId.get(attack.from)
+                            : undefined;
+
+                    return from ? (
+                        <March
+                            key={attack.id}
+                            from={anchor(from.key, target.key)}
+                            to={anchor(target.key, from.key)}
+                            colour={attack.faction.colour}
+                            k={k}
+                        />
+                    ) : null;
+                }),
+            )}
+            {gateNight && (
+                <March
+                    from={[1640, 486]}
+                    to={hub('ironfield_gate')}
+                    colour={FLAG}
+                    k={k}
+                />
+            )}
+        </g>
+    );
+});
+
+/** Label size in screen pixels: grows a little as you zoom in. */
+function labelPixels(k: number): number {
+    return 11.5 * (k / 0.6) ** 0.25;
+}
+
+function subtitle(
+    region: MapRegion,
+    houseId: number | null,
+    gateNight: boolean,
+): { text: string; colour: string } | null {
+    if (region.incoming.length > 0) {
+        const first = [...region.incoming].sort((a, b) =>
+            a.landsAt.localeCompare(b.landsAt),
+        )[0];
+
+        return {
+            text: `⚔ Raid lands ${clockTime(first.landsAt)}`,
+            colour: '#f5a27a',
+        };
+    }
+
+    if (gateNight && region.key === 'ironfield_gate') {
+        return { text: '⚔ Ironfield raids at 19:00', colour: '#f5a27a' };
+    }
+
+    if (region.settledUntil) {
+        return {
+            text: `🛡 Settled till ${clockTime(region.settledUntil)}`,
+            colour: '#c8c3d4',
+        };
+    }
+
+    if (region.faction) {
+        return {
+            text: `${region.faction.id === houseId ? '👑 ' : ''}${region.faction.name}`,
+            colour: region.faction.colour,
+        };
+    }
+
+    if (region.ring === 'safe') {
+        return {
+            text: 'Safe ground · newcomers start here',
+            colour: '#8fe3ff',
+        };
+    }
+
+    if (region.key === 'farmhouse') {
+        return { text: 'Seat of power · nobody rules', colour: '#c8c3d4' };
+    }
+
+    return region.produces
+        ? {
+              text:
+                  region.produces === 'corn'
+                      ? 'Corn'
+                      : region.produces.charAt(0).toUpperCase() +
+                        region.produces.slice(1),
+              colour: '#a29db2',
+          }
+        : null;
+}
+
+function labelPoint(region: MapRegion): Point {
+    const shape = shapeFor(region);
+
+    if (region.ring === 'safe') {
+        return [650, shape.centre[1] - 14];
+    }
+
+    return [shape.centre[0], shape.centre[1] - 72];
+}
+
+/** Region names and lane names, the same size on screen at any zoom. */
+const Labels = memo(function Labels({
+    regions,
+    k,
+    houseId,
+    gateNight,
+}: {
+    regions: MapRegion[];
+    k: number;
+    houseId: number | null;
+    gateNight: boolean;
+}) {
+    const pixels = labelPixels(k);
+    const lanes = k >= 0.5;
+
+    return (
+        <g pointerEvents="none" fontFamily="inherit">
+            <defs>
+                {ROADS.map((road, i) => {
+                    const [a, b] = road.labelBetween;
+                    const points = walkPath(a, b);
+                    const ordered =
+                        Math.abs(points[2][0] - points[0][0]) >
+                        Math.abs(points[2][1] - points[0][1])
+                            ? points[0][0] <= points[2][0]
+                                ? points
+                                : [...points].reverse()
+                            : points[0][1] <= points[2][1]
+                              ? points
+                              : [...points].reverse();
+
+                    return (
+                        <path
+                            key={road.name}
+                            id={`lane-${i}`}
+                            d={smoothPath(ordered)}
+                        />
+                    );
+                })}
+                <path id="brook-label" d={smoothPath(BROOK.slice(1, 5))} />
+            </defs>
+            {lanes &&
+                ROADS.map((road, i) => (
+                    <text
+                        key={road.name}
+                        fontSize={9.5 / k}
+                        fontStyle="italic"
+                        fontWeight={600}
+                        fill="#b5afc4"
+                        stroke={HALO}
+                        strokeWidth={3 / k}
+                        paintOrder="stroke"
+                        strokeLinejoin="round"
+                        dy={3.2 / k}
+                    >
+                        <textPath
+                            href={`#lane-${i}`}
+                            startOffset="50%"
+                            textAnchor="middle"
+                        >
+                            {road.name}
+                        </textPath>
+                    </text>
+                ))}
+            {lanes && (
+                <text
+                    fontSize={10 / k}
+                    fontStyle="italic"
+                    fill="#7fb2df"
+                    stroke={HALO}
+                    strokeWidth={3 / k}
+                    paintOrder="stroke"
+                    dy={-16 / k}
+                >
+                    <textPath
+                        href="#brook-label"
+                        startOffset="50%"
+                        textAnchor="middle"
+                    >
+                        Hollow Brook
+                    </textPath>
+                </text>
+            )}
+            {(
+                [
+                    ['THE RIDGE', [800, 54], 0],
+                    ['IRONFIELD', [1546, 560], 90],
+                ] as const
+            ).map(([text, [x, y], angle]) => (
+                <text
+                    key={text}
+                    transform={`translate(${x} ${y}) rotate(${angle})`}
+                    textAnchor="middle"
+                    fontSize={Math.min(pixels / k, 26)}
+                    fontWeight={800}
+                    letterSpacing={(Math.min(pixels / k, 26) * 0.3).toFixed(1)}
+                    fill={text === 'IRONFIELD' ? '#f5a27a' : '#6f6a7d'}
+                    fillOpacity={0.8}
+                    stroke={HALO}
+                    strokeWidth={3 / k}
+                    paintOrder="stroke"
+                >
+                    {text}
+                </text>
+            ))}
+            {regions.map((region) => {
+                const shape = shapeFor(region);
+                const [x, y] = labelPoint(region);
+                const name = region.name.toUpperCase();
+                const room =
+                    region.ring === 'safe' ? 420 : shape.box.width * 0.8;
+                const font = Math.min(pixels / k, room / (name.length * 0.72));
+                const sub = subtitle(region, houseId, gateNight);
+
+                return (
+                    <g
+                        key={region.id}
+                        transform={`translate(${x.toFixed(1)} ${y.toFixed(1)})`}
+                    >
+                        <text
+                            textAnchor="middle"
+                            fontSize={font}
+                            fontWeight={800}
+                            letterSpacing={(font * 0.09).toFixed(2)}
+                            fill={LABEL}
+                            stroke={HALO}
+                            strokeWidth={font * 0.3}
+                            paintOrder="stroke"
+                            strokeLinejoin="round"
+                        >
+                            {name}
+                        </text>
+                        {sub && (
+                            <text
+                                y={font * 1.2}
+                                textAnchor="middle"
+                                fontSize={font * 0.82}
+                                fontWeight={700}
+                                fill={sub.colour}
+                                stroke={HALO}
+                                strokeWidth={font * 0.26}
+                                paintOrder="stroke"
+                                strokeLinejoin="round"
+                            >
+                                {sub.text}
+                            </text>
+                        )}
+                    </g>
+                );
+            })}
+        </g>
+    );
+});
+
+/** Spots round a region's hub for the animals standing there, in screen pixels. */
+const SPOTS: Point[] = [
+    ...Array.from(
+        { length: 6 },
+        (_, i) =>
+            [
+                Math.cos((i / 6) * Math.PI * 2 + 0.3) * 36,
+                Math.sin((i / 6) * Math.PI * 2 + 0.3) * 30,
+            ] as Point,
+    ),
+    ...Array.from(
+        { length: 10 },
+        (_, i) =>
+            [
+                Math.cos((i / 10) * Math.PI * 2) * 62,
+                Math.sin((i / 10) * Math.PI * 2) * 48,
+            ] as Point,
+    ),
+];
+
+/** The other animals in the valley, standing where they are. */
+const Crowd = memo(function Crowd({
+    regions,
+    k,
+}: {
+    regions: MapRegion[];
+    k: number;
+}) {
+    const room = k < 0.55 ? 3 : k < 0.9 ? 6 : 12;
+
+    return (
+        <g pointerEvents="none">
+            {regions.map((region) => {
+                const others = region.animals.sample.filter(
+                    (animal) => !animal.me,
+                );
+                const shown = others.slice(0, room);
+                const extra =
+                    region.animals.count -
+                    region.animals.sample.filter((animal) => animal.me).length -
+                    shown.length;
+                const [hx, hy] = hub(region.key);
+
+                return (
+                    <g key={region.id}>
+                        {shown.map((animal, i) => {
+                            const [sx, sy] = SPOTS[i];
+
+                            return (
+                                <g
+                                    key={`${animal.name}-${i}`}
+                                    transform={`translate(${(hx + sx / k).toFixed(1)} ${(hy + sy / k).toFixed(1)}) scale(${1 / k})`}
+                                >
+                                    <circle
+                                        r={11.5}
+                                        fill="#14121a"
+                                        stroke={animal.colour ?? '#8a8399'}
+                                        strokeWidth={2.2}
+                                    />
+                                    <text
+                                        textAnchor="middle"
+                                        dominantBaseline="central"
+                                        fontSize={13}
+                                        y={0.5}
+                                    >
+                                        {speciesEmoji(animal.species)}
+                                    </text>
+                                </g>
+                            );
+                        })}
+                        {extra > 0 && (
+                            <g
+                                transform={`translate(${(hx + SPOTS[Math.min(shown.length, SPOTS.length - 1)][0] / k).toFixed(1)} ${(hy + SPOTS[Math.min(shown.length, SPOTS.length - 1)][1] / k).toFixed(1)}) scale(${1 / k})`}
+                            >
+                                <rect
+                                    x={-15}
+                                    y={-10}
+                                    width={30}
+                                    height={20}
+                                    rx={10}
+                                    fill="#2a253a"
+                                    stroke="#4f4860"
+                                />
+                                <text
+                                    textAnchor="middle"
+                                    dominantBaseline="central"
+                                    fontSize={10.5}
+                                    fontWeight={800}
+                                    fill="#ffffff"
+                                >
+                                    +{extra}
+                                </text>
+                            </g>
+                        )}
+                    </g>
+                );
+            })}
+        </g>
+    );
+});
+
+/** Your animal. It walks to its new region when you move. */
+function Me({ at, species, k }: { at: Point; species: Species; k: number }) {
+    return (
+        <g
+            pointerEvents="none"
+            style={{
+                transform: `translate(${at[0].toFixed(1)}px, ${at[1].toFixed(1)}px)`,
+                transition: 'transform 1s cubic-bezier(0.45, 0, 0.2, 1)',
+            }}
+        >
+            <g transform={`scale(${1 / k})`}>
+                <circle r={20} fill={VIOLET} className="map-ping" />
+                <circle cx={1.5} cy={3} r={20} fill={HALO} opacity={0.6} />
+                <circle r={20} fill={VIOLET} />
+                <circle r={16.5} fill="#14121a" />
+                <text
+                    textAnchor="middle"
+                    dominantBaseline="central"
+                    fontSize={19}
+                    y={0.5}
+                >
+                    {speciesEmoji(species)}
+                </text>
+                <g transform="translate(0 31)">
+                    <rect
+                        x={-18}
+                        y={-8.5}
+                        width={36}
+                        height={17}
+                        rx={8.5}
+                        fill={VIOLET}
+                        stroke={HALO}
+                        strokeWidth={1.2}
+                    />
+                    <text
+                        textAnchor="middle"
+                        dominantBaseline="central"
+                        fontSize={10}
+                        fontWeight={900}
+                        fill="#14121a"
+                        letterSpacing={0.8}
+                    >
+                        YOU
+                    </text>
+                </g>
+            </g>
+        </g>
+    );
+}
+
+/** See-through shapes over each region that take taps, hovers and the keyboard. */
+const HitAreas = memo(function HitAreas({
+    regions,
+    selectedId,
+    onPick,
+}: {
+    regions: MapRegion[];
+    selectedId: number | null;
+    onPick: (id: number) => void;
+}) {
+    return (
+        <g>
+            {regions.map((region) => (
+                <path
+                    key={region.id}
+                    d={toPath(shapeFor(region).polygon)}
+                    data-region={region.id}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`${region.name}${region.faction ? `, held by ${region.faction.name}` : ''}`}
+                    aria-pressed={region.id === selectedId}
+                    pointerEvents="all"
+                    onKeyDown={(event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault();
+                            onPick(region.id);
+                        }
+                    }}
+                    className="cursor-pointer fill-white/0 transition-[fill] duration-150 outline-none hover:fill-white/[0.06] focus-visible:fill-white/10"
+                />
+            ))}
+        </g>
+    );
+});
+
+function Compass() {
+    return (
+        <svg viewBox="-20 -27 40 47" className="h-12 w-10" aria-hidden>
+            <circle r={17} fill="#14121a" fillOpacity={0.85} stroke="#4f4860" />
+            <path d="M0 -13 L4.5 0 L0 2.5 L-4.5 0 Z" fill={VIOLET} />
+            <path d="M0 13 L4.5 0 L0 -2.5 L-4.5 0 Z" fill="#6f6881" />
+            <text
+                y={-20}
+                textAnchor="middle"
+                fontSize={8.5}
+                fontWeight={800}
+                fill="#efecf7"
+            >
+                N
+            </text>
+        </svg>
+    );
+}
+
+type Props = {
+    valley: string;
+    regions: MapRegion[];
+    here: number | null;
+    house: FactionRef | null;
+    species: Species | null;
+    selectedId: number | null;
+    onSelect: (id: number | null) => void;
+    gateNight: boolean;
+    children?: ReactNode;
+};
+
+/**
+ * Hollowmere as a street map you can drag, zoom and tap: who holds what,
+ * where every animal stands, what is marching where, and you.
+ */
+export function WorldMap({
+    valley,
+    regions,
+    here,
+    house,
+    species,
+    selectedId,
+    onSelect,
+    gateNight,
+    children,
+}: Props) {
+    const containerRef = useRef<HTMLDivElement>(null);
+    const svgRef = useRef<SVGSVGElement>(null);
+    const byId = useMemo(
+        () => new Map(regions.map((region) => [region.id, region])),
+        [regions],
+    );
+    const hereRegion = here !== null ? (byId.get(here) ?? null) : null;
+    const selected =
+        selectedId !== null ? (byId.get(selectedId) ?? null) : null;
+    const herePoint = hereRegion ? hub(hereRegion.key) : null;
+
+    const onTap = useCallback(
+        (target: Element | null) => {
+            const id = Number(target?.getAttribute('data-region'));
+            onSelect(Number.isFinite(id) && id > 0 ? id : null);
+        },
+        [onSelect],
+    );
+
+    const camera = useCamera(containerRef, svgRef, herePoint, onTap);
+    const { view, size, lookAt, current } = camera;
+    const ready = size !== null && view.k > 0;
+
+    // Bring a newly picked region, or your animal after a walk, out from under the card.
+    const bringIntoView = useCallback(
+        (point: Point | null, panelOpen: boolean) => {
+            if (!point || !size) {
+                return;
+            }
+
+            const area = openArea(size, panelOpen);
+            const { x, y, k: zoom } = current();
+            const sx = point[0] * zoom + x;
+            const sy = point[1] * zoom + y;
+
+            if (
+                sx < area.left ||
+                sx > area.right ||
+                sy < area.top ||
+                sy > area.bottom
+            ) {
+                lookAt(point, zoom, [
+                    (area.left + area.right) / 2,
+                    (area.top + area.bottom) / 2,
+                ]);
+            }
+        },
+        [size, lookAt, current],
+    );
+
+    useEffect(() => {
+        if (selected) {
+            bringIntoView(shapeFor(selected).centre, true);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectedId]);
+
+    useEffect(() => {
+        if (herePoint) {
+            bringIntoView(herePoint, selected !== null);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [here]);
+
+    const trailsTo = useMemo(
+        () =>
+            hereRegion
+                ? hereRegion.neighbours
+                      .map((id) => byId.get(id)?.key)
+                      .filter((key): key is string => key !== undefined)
+                : [],
+        [hereRegion, byId],
+    );
+
+    const pick = useCallback((id: number) => onSelect(id), [onSelect]);
+    const k = view.k || 1;
+    const scale = (() => {
+        // A scale bar of a round number of paces, about 90 pixels long.
+        const paces = [25, 50, 100, 200, 400].find((p) => p * k >= 70) ?? 400;
+
+        return { paces, width: paces * k };
+    })();
+
+    return (
+        <div
+            ref={containerRef}
+            className="dark relative h-[calc(100svh-15rem)] min-h-[400px] w-full overflow-hidden rounded-2xl border border-[#2e2e32] bg-[#13151a] text-foreground md:h-[calc(100svh-10.5rem)] md:min-h-[520px]"
+        >
+            <svg
+                ref={svgRef}
+                className={cn(
+                    'absolute inset-0 size-full touch-none outline-none select-none',
+                    camera.dragging ? 'cursor-grabbing' : 'cursor-grab',
+                )}
+                role="group"
+                aria-label={`Map of ${valley}. Drag to look around, scroll or pinch to zoom, and tap a region.`}
+                tabIndex={0}
+                {...camera.handlers}
+            >
+                <defs>
+                    <linearGradient id="house-edge" x1="0" y1="0" x2="1" y2="1">
+                        <stop offset="0" stopColor="#41d1ff" />
+                        <stop offset="0.5" stopColor="#b39aff" />
+                        <stop offset="1" stopColor="#d18cff" />
+                    </linearGradient>
+                </defs>
+                {ready && (
+                    <g
+                        transform={`translate(${view.x.toFixed(2)} ${view.y.toFixed(2)}) scale(${view.k.toFixed(4)})`}
+                    >
+                        <MapGround />
+                        <Territory regions={regions} />
+                        <MapFeatures />
+                        <Borders
+                            regions={regions}
+                            houseId={house?.id ?? null}
+                            houseColour={house?.colour ?? null}
+                            selectedId={selectedId}
+                        />
+                        {hereRegion && (
+                            <Trails
+                                from={hereRegion.key}
+                                to={trailsTo}
+                                selected={selected?.key ?? null}
+                            />
+                        )}
+                        <HitAreas
+                            regions={regions}
+                            selectedId={selectedId}
+                            onPick={pick}
+                        />
+                        <Marches
+                            regions={regions}
+                            k={k}
+                            gateNight={gateNight}
+                        />
+                        <Labels
+                            regions={regions}
+                            k={k}
+                            houseId={house?.id ?? null}
+                            gateNight={gateNight}
+                        />
+                        <Crowd regions={regions} k={k} />
+                        {herePoint && species && (
+                            <Me at={herePoint} species={species} k={k} />
+                        )}
+                    </g>
+                )}
+            </svg>
+
+            <div className="pointer-events-none absolute top-3 right-3 flex flex-col gap-2">
+                <div className="pointer-events-auto flex flex-col overflow-hidden rounded-xl border bg-card/90 shadow-lg backdrop-blur">
+                    <MapButton
+                        label="Zoom in"
+                        onClick={() =>
+                            size &&
+                            camera.zoomAt(
+                                [size.width / 2, size.height / 2],
+                                1.5,
+                                true,
+                            )
+                        }
+                    >
+                        <Plus className="size-4" />
+                    </MapButton>
+                    <MapButton
+                        label="Zoom out"
+                        onClick={() =>
+                            size &&
+                            camera.zoomAt(
+                                [size.width / 2, size.height / 2],
+                                1 / 1.5,
+                                true,
+                            )
+                        }
+                        divided
+                    >
+                        <Minus className="size-4" />
+                    </MapButton>
+                </div>
+                <div className="pointer-events-auto flex flex-col overflow-hidden rounded-xl border bg-card/90 shadow-lg backdrop-blur">
+                    {herePoint && (
+                        <MapButton
+                            label="Find my animal"
+                            onClick={() =>
+                                lookAt(herePoint, Math.max(view.k, 0.95))
+                            }
+                        >
+                            <LocateFixed className="size-4" />
+                        </MapButton>
+                    )}
+                    <MapButton
+                        label="See the whole farm"
+                        onClick={camera.fit}
+                        divided={herePoint !== null}
+                    >
+                        <Scan className="size-4" />
+                    </MapButton>
+                </div>
+            </div>
+
+            <div
+                className={cn(
+                    'pointer-events-none absolute right-3 bottom-3 flex items-end gap-2',
+                    selected && 'max-md:hidden',
+                )}
+            >
+                <div className="flex flex-col items-center gap-0.5 rounded-lg bg-card/80 px-2 py-1 text-[10px] font-semibold text-muted-foreground backdrop-blur">
+                    <span>{scale.paces} paces</span>
+                    <span
+                        className="h-1.5 border-x-2 border-b-2 border-muted-foreground"
+                        style={{ width: scale.width }}
+                    />
+                </div>
+                <Compass />
+            </div>
+
+            {children}
+        </div>
+    );
+}
+
+function MapButton({
+    label,
+    onClick,
+    divided = false,
+    children,
+}: {
+    label: string;
+    onClick: () => void;
+    divided?: boolean;
+    children: ReactNode;
+}) {
+    return (
+        <button
+            type="button"
+            aria-label={label}
+            title={label}
+            onClick={onClick}
+            className={cn(
+                'flex size-10 items-center justify-center text-foreground transition-colors hover:bg-accent',
+                divided && 'border-t',
+            )}
+        >
+            {children}
+        </button>
+    );
+}

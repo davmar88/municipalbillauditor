@@ -54,6 +54,7 @@ final class Battles
         }
 
         $this->checkReach($faction, $target);
+        $this->checkFrontLine($player, $target);
         $this->checkCurfew($season, $target);
 
         return DB::transaction(function () use ($player, $season, $faction, $target, $horseshoes) {
@@ -250,6 +251,19 @@ final class Battles
 
         if ($held === 0 && ! $fromPaddock) {
             throw new GameException("You can only attack a region next to one your faction holds. Factions without land start from the Paddock's neighbours.");
+        }
+    }
+
+    /**
+     * Raids start from the front line: the animal launching one must stand
+     * in a region next to the target.
+     *
+     * @throws GameException
+     */
+    private function checkFrontLine(Player $player, Region $target): void
+    {
+        if (! $target->neighbours()->whereKey($player->location()->id)->exists()) {
+            throw new GameException("Walk to a region next to {$target->name} first: raids start from the front line.");
         }
     }
 

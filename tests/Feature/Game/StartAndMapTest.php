@@ -6,6 +6,7 @@ use App\Enums\Species;
 use App\Game\Gathering;
 use App\Game\Horseshoes;
 use App\Game\LawTemplate;
+use App\Game\Movement;
 use App\Game\Wall;
 use App\Models\Law;
 use App\Models\Player;
@@ -103,6 +104,7 @@ class StartAndMapTest extends TestCase
         $house = $this->faction('The House', $ruler);
         $this->hold($house, 'farmhouse');
         Law::create(['season_id' => $this->season()->id, 'slot' => 1, 'template' => LawTemplate::GrainTax, 'value' => 10]);
+        $this->stand($farmer, 'hayfield');
 
         $this->actingAs($farmer->user)->post(route('play.gather', $this->region('hayfield')))->assertRedirect();
 
@@ -118,6 +120,8 @@ class StartAndMapTest extends TestCase
         $sheep = $this->player(Species::Sheep);
         $faction = $this->faction('Wool Co', $sheep);
         $this->hold($faction, 'sheepfold');
+        $this->stand($sheep, 'sheepfold');
+        $this->stand($dog, 'sheepfold');
 
         app(Gathering::class)->gather($sheep, $this->region('sheepfold'));
         app(Gathering::class)->gather($dog, $this->region('sheepfold'));
@@ -133,6 +137,61 @@ class StartAndMapTest extends TestCase
         $this->actingAs($player->user)->post(route('play.gather', $this->region('farmhouse')))->assertRedirect();
 
         $this->assertSame(10, Horseshoes::current($player->fresh()));
+    }
+
+    public function test_animals_start_in_the_paddock_and_walk_one_region_at_a_time(): void
+    {
+        $player = $this->player();
+        $this->assertSame('paddock', $player->location()->key);
+
+        $this->actingAs($player->user)->post(route('play.walk', $this->region('farmhouse')))->assertRedirect();
+        $this->assertSame('paddock', $player->fresh()->location()->key, 'The Farmhouse is not next to the Paddock.');
+
+        $this->actingAs($player->user)->post(route('play.walk', $this->region('market_square')))->assertRedirect();
+        $this->assertSame('market_square', $player->fresh()->location()->key);
+        $this->assertSame(9, Horseshoes::current($player->fresh()));
+    }
+
+    public function test_walking_inside_your_factions_land_is_free(): void
+    {
+        $player = $this->player();
+        $faction = $this->faction('Walkers', $player);
+        $this->hold($faction, 'market_square', 'farmhouse');
+        $this->stand($player, 'market_square');
+
+        app(Movement::class)->walk($player->fresh(), $this->region('farmhouse'));
+
+        $this->assertSame(10, Horseshoes::current($player->fresh()));
+    }
+
+    public function test_you_gather_where_you_stand(): void
+    {
+        $player = $this->player();
+
+        $this->expectExceptionMessage('Walk to Hayfield first');
+        app(Gathering::class)->gather($player, $this->region('hayfield'));
+    }
+
+    public function test_the_map_shows_where_animals_stand(): void
+    {
+        $player = $this->player();
+        $this->stand($this->player(), 'henhouse');
+
+        $this->actingAs($player->user)->get(route('play'))->assertInertia(fn (Assert $page) => $page
+            ->where('here', $this->region('paddock')->id)
+            ->where('regions.11.key', 'henhouse')
+            ->where('regions.11.animals.count', 1));
+    }
+
+    public function test_the_map_shows_the_laws_on_the_barn_wall(): void
+    {
+        $player = $this->player();
+        Law::create(['season_id' => $this->season()->id, 'slot' => 1, 'template' => LawTemplate::Curfew, 'value' => 3]);
+
+        $this->actingAs($player->user)->get(route('play'))->assertInertia(fn (Assert $page) => $page
+            ->has('laws', 1)
+            ->where('laws.0.label', 'Curfew')
+            ->where('laws.0.wording', 'No raids on House land for 3 hours after 22:00.'));
     }
 
     public function test_unrest_counts_each_law_and_a_house_that_keeps_all_its_tax(): void
@@ -156,6 +215,7 @@ class StartAndMapTest extends TestCase
     public function test_a_player_without_horseshoes_cannot_gather(): void
     {
         $player = $this->player(attributes: ['horseshoes' => 0, 'horseshoes_at' => now()]);
+        $this->stand($player, 'hayfield');
 
         $this->actingAs($player->user)
             ->post(route('play.gather', $this->region('hayfield')))

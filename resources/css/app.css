@@ -202,3 +202,62 @@
         font-variant-numeric: tabular-nums;
     }
 }
+
+/* The map's small movements: marching raids, the windmill, the brook. */
+@keyframes map-march {
+    to {
+        stroke-dashoffset: -36;
+    }
+}
+
+@keyframes map-shimmer {
+    to {
+        stroke-dashoffset: -84;
+    }
+}
+
+@keyframes map-turn {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes map-ping {
+    0% {
+        transform: scale(0.8);
+        opacity: 0.6;
+    }
+
+    80%,
+    100% {
+        transform: scale(1.9);
+        opacity: 0;
+    }
+}
+
+.map-march {
+    animation: map-march 1.2s linear infinite;
+}
+
+.map-shimmer {
+    animation: map-shimmer 7s linear infinite;
+}
+
+.map-sails {
+    transform-origin: 0 0;
+    animation: map-turn 18s linear infinite;
+}
+
+.map-ping {
+    transform-origin: 0 0;
+    animation: map-ping 2.2s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .map-march,
+    .map-shimmer,
+    .map-sails,
+    .map-ping {
+        animation: none;
+    }
+}

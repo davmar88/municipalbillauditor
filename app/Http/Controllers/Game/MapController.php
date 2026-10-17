@@ -5,11 +5,13 @@ namespace App\Http\Controllers\Game;
 use App\Game\Clock;
 use App\Game\GateNight;
 use App\Game\Gathering;
+use App\Game\Movement;
 use App\Game\Wall;
 use App\Http\Controllers\Controller;
 use App\Models\Attack;
 use App\Models\BattleCommitment;
 use App\Models\GateDefence;
+use App\Models\Law;
 use App\Models\Player;
 use App\Models\Region;
 use Illuminate\Http\RedirectResponse;
@@ -33,6 +35,15 @@ class MapController extends Controller
         $mine = $open->filter(fn (Attack $attack) => $player->faction_id !== null
             && ($attack->faction_id === $player->faction_id || $regions->firstWhere('id', $attack->region_id)?->faction_id === $player->faction_id));
         $committed = BattleCommitment::query()->where('player_id', $player->id)->whereIn('attack_id', $open->pluck('id'))->pluck('attack_id')->all();
+        $paddock = $regions->firstWhere('key', 'paddock');
+
+        // Who stands where. Animals without a region are in the Paddock.
+        $animals = Player::query()
+            ->with('faction:id,colour')
+            ->where('valley_id', $valley->id)
+            ->where('last_visit_on', '>=', Clock::now()->subDays(7)->toDateString())
+            ->get(['id', 'name', 'species', 'faction_id', 'region_id'])
+            ->groupBy(fn (Player $animal) => $animal->region_id ?? $paddock?->id);
 
         return Inertia::render('game/map', [
             'valley' => $valley->name,
@@ -57,8 +68,25 @@ class MapController extends Controller
                     'id' => $attack->id,
                     'faction' => ['name' => $attack->faction->name, 'colour' => $attack->faction->colour],
                     'landsAt' => $attack->lands_at->toIso8601String(),
+                    // Where the arrow on the map starts: land the attackers hold next door, or the Paddock.
+                    'from' => $regions->first(fn (Region $other) => $region->neighbours->contains('id', $other->id) && $other->faction_id === $attack->faction_id)?->id
+                        ?? ($region->neighbours->contains('id', $paddock?->id) ? $paddock?->id : null),
                 ]),
+                'animals' => [
+                    'count' => ($animals->get($region->id) ?? collect())->count(),
+                    'sample' => ($animals->get($region->id) ?? collect())->take(12)->map(fn (Player $animal) => [
+                        'name' => $animal->name,
+                        'species' => $animal->species->value,
+                        'colour' => $animal->faction?->colour,
+                        'me' => $animal->id === $player->id,
+                    ])->values(),
+                ],
             ]),
+            'here' => $player->region_id ?? $paddock?->id,
+            'laws' => $season ? Wall::laws($season)->map(fn (Law $law) => [
+                'label' => $law->template->label(),
+                'wording' => $law->wording(),
+            ])->values() : [],
             'battles' => $mine->values()->map(fn (Attack $attack) => [
                 'id' => $attack->id,
                 'region' => $regions->firstWhere('id', $attack->region_id)?->name,
@@ -84,6 +112,18 @@ class MapController extends Controller
             ],
             'yields' => ['corn' => Gathering::CORN, 'material' => Gathering::MATERIAL],
         ]);
+    }
+
+    public function walk(Request $request, Region $region, Movement $movement): RedirectResponse
+    {
+        $player = $request->user()->player;
+        abort_unless($region->valley_id === $player->valley_id, 404);
+
+        $cost = $movement->walk($player, $region);
+
+        return $this->told($cost === 0
+            ? "You walked to {$region->name} through your faction's land."
+            : "You walked to {$region->name}.");
     }
 
     public function gather(Request $request, Region $region, Gathering $gathering): RedirectResponse

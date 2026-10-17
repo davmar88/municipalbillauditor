@@ -78,6 +78,11 @@ trait MakesPlayers
         }
     }
 
+    protected function stand(Player $player, string $key): void
+    {
+        $player->forceFill(['region_id' => $this->region($key)->id])->save();
+    }
+
     private function letters(int $count): string
     {
         $out = '';

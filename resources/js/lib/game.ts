@@ -1,5 +1,22 @@
 import { router } from '@inertiajs/react';
 import type { RequestPayload } from '@inertiajs/core';
+import type { Species } from '@/types/game';
+
+const EMOJI: Record<Species, string> = {
+    pig: '🐷',
+    dog: '🐶',
+    horse: '🐴',
+    sheep: '🐑',
+    goat: '🐐',
+    hen: '🐔',
+    donkey: '🫏',
+    raven: '🐦',
+};
+
+/** The face an animal wears on the map. */
+export function speciesEmoji(species: Species): string {
+    return EMOJI[species] ?? '🐾';
+}
 
 /** "14:05", in the valley's own time. */
 export function clockTime(iso: string): string {

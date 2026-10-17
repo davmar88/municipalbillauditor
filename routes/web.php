@@ -38,6 +38,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
 Route::middleware(['auth', 'verified', 'player', 'throttle:120,1'])->prefix('play')->group(function () {
     Route::get('/', [MapController::class, 'index'])->name('play');
+    Route::post('regions/{region}/walk', [MapController::class, 'walk'])->name('play.walk');
     Route::post('regions/{region}/gather', [MapController::class, 'gather'])->name('play.gather');
     Route::post('regions/{region}/attack', [BattleController::class, 'launch'])->name('play.attack');
     Route::post('attacks/{attack}/commit', [BattleController::class, 'commit'])->name('play.commit');

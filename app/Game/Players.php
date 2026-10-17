@@ -53,6 +53,7 @@ final class Players
         return DB::transaction(fn () => Player::create([
             'user_id' => $user->id,
             'valley_id' => $valley->id,
+            'region_id' => $valley->region('paddock')->id,
             'name' => $name,
             'species' => $species,
             'language' => $language,

@@ -9,9 +9,9 @@ use App\Models\Season;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Working a region for Corn or materials. One horseshoe a trip. Land your
- * own faction holds yields half as much again, and the House takes its
- * grain tax from every bushel of Corn.
+ * Working the region you stand in for Corn or materials. One horseshoe a
+ * trip. Land your own faction holds yields half as much again, and the
+ * House takes its grain tax from every bushel of Corn.
  */
 final class Gathering
 {
@@ -33,6 +33,7 @@ final class Gathering
         return DB::transaction(function () use ($player, $region) {
             $player = Players::lock($player);
             Players::ensureFree($player);
+            Movement::ensureStandingIn($player, $region, 'gather');
             Horseshoes::spend($player, 1);
 
             $base = $region->produces === 'corn' ? self::CORN : self::MATERIAL;

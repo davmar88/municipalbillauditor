@@ -64,7 +64,8 @@ class BattlesTest extends TestCase
         }
 
         $this->hold($this->redHooves, 'granary');
-        $attack = $this->battles->launch($this->red[0], $this->region('farmhouse'), 1);
+        $this->stand($this->red[0], 'granary');
+        $attack = $this->battles->launch($this->red[0]->fresh(), $this->region('farmhouse'), 1);
 
         $this->assertEqualsWithDelta(120, $attack->created_at->diffInMinutes($attack->lands_at), 1, 'The Farmhouse march takes two hours.');
     }
@@ -110,7 +111,8 @@ class BattlesTest extends TestCase
     public function test_taking_the_farmhouse_makes_a_new_house_with_extra_law_changes(): void
     {
         $this->hold($this->redHooves, 'market_square', 'granary');
-        $attack = $this->battles->launch($this->red[0], $this->region('farmhouse'), 3);
+        $this->stand($this->red[0], 'market_square');
+        $attack = $this->battles->launch($this->red[0]->fresh(), $this->region('farmhouse'), 3);
         $this->battles->commit($this->red[1], $attack, 3);
 
         $this->travel(121)->minutes();
@@ -144,6 +146,15 @@ class BattlesTest extends TestCase
 
         $this->assertNull($this->region('sheepfold')->faction_id, 'The newest region is lost when upkeep cannot be paid.');
         $this->assertSame(4, $this->redHooves->regions()->count());
+    }
+
+    public function test_raids_start_from_the_front_line(): void
+    {
+        $this->hold($this->redHooves, 'granary');
+        $this->stand($this->red[0], 'stables');
+
+        $this->expectExceptionMessage('raids start from the front line');
+        $this->battles->launch($this->red[0]->fresh(), $this->region('orchard'), 1);
     }
 
     public function test_nobody_can_attack_the_paddock(): void

@@ -8,7 +8,8 @@ The site was a municipal bill checker until October 2026; that code lives on in 
 
 ## What is in the test season
 
-- **The valley:** Hollowmere, 16 regions on a 5 by 3 grid with the Paddock for newcomers (`app/Game/ValleyBuilder.php`).
+- **The valley:** Hollowmere, 16 regions on a 5 by 3 grid with the Paddock for newcomers (`app/Game/ValleyBuilder.php`), drawn as a street map you drag and zoom, with fields, woods, Hollow Brook, buildings and named lanes (`resources/js/components/game/world-map.tsx`, shapes in `resources/js/lib/hollowmere.ts`).
+- **Walking:** every animal stands in one region and walks to a neighbour for a horseshoe, free inside its faction's land. You gather where you stand, and raids start from a region next to the target (`app/Game/Movement.php`).
 - **Animals:** pig, dog, horse, sheep and goat, each with a talent and a weak spot (`app/Enums/Species.php`).
 - **Horseshoes:** up to 10, one back every 45 minutes; every action costs some.
 - **Factions:** founded by a player, with their own joining rules (open or by approval, minimum level, species, entry fee, criminals or not).

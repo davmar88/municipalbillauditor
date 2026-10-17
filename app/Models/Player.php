@@ -17,6 +17,7 @@ use Illuminate\Support\Carbon;
  * @property int $id
  * @property int $user_id
  * @property int $valley_id
+ * @property int|null $region_id Where the animal stands; null means the Paddock.
  * @property string $name
  * @property Species $species
  * @property string $language
@@ -38,8 +39,9 @@ use Illuminate\Support\Carbon;
  * @property User $user
  * @property Valley $valley
  * @property Faction|null $faction
+ * @property Region|null $region
  */
-#[Fillable(['user_id', 'valley_id', 'name', 'species', 'language', 'materials', 'corn', 'horseshoes', 'horseshoes_at', 'shield_until', 'adult_confirmed_at'])]
+#[Fillable(['user_id', 'valley_id', 'region_id', 'name', 'species', 'language', 'materials', 'corn', 'horseshoes', 'horseshoes_at', 'shield_until', 'adult_confirmed_at'])]
 class Player extends Model
 {
     public const MATERIALS = ['straw', 'wool', 'wood', 'clay', 'dye', 'stone', 'eggs'];
@@ -71,6 +73,18 @@ class Player extends Model
     public function valley(): BelongsTo
     {
         return $this->belongsTo(Valley::class);
+    }
+
+    /** @return BelongsTo<Region, $this> */
+    public function region(): BelongsTo
+    {
+        return $this->belongsTo(Region::class);
+    }
+
+    /** Where the animal stands: its region, or the Paddock it started in. */
+    public function location(): Region
+    {
+        return $this->region ?? $this->valley->region('paddock');
     }
 
     /** @return BelongsTo<Faction, $this> */

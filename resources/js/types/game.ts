@@ -45,3 +45,44 @@ export type DesignCard = {
     made: number;
     status: 'pending' | 'approved' | 'rejected';
 };
+
+export type FactionRef = { id: number; name: string; colour: string };
+
+export type MapAnimal = {
+    name: string;
+    species: Species;
+    colour: string | null;
+    me: boolean;
+};
+
+export type MapRegion = {
+    id: number;
+    key: string;
+    name: string;
+    ring: 'seat' | 'inner' | 'middle' | 'outer' | 'safe';
+    produces: string | null;
+    col: number;
+    row: number;
+    faction: FactionRef | null;
+    settledUntil: string | null;
+    neighbours: number[];
+    incoming: {
+        id: number;
+        faction: { name: string; colour: string };
+        landsAt: string;
+        from: number | null;
+    }[];
+    animals: { count: number; sample: MapAnimal[] };
+};
+
+export type MapBattle = {
+    id: number;
+    region: string;
+    attacker: string;
+    side: 'attack' | 'defence';
+    landsAt: string;
+    ourHorseshoes: number;
+    joined: boolean;
+};
+
+export type MapLaw = { label: string; wording: string };
