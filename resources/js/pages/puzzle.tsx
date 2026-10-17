@@ -72,12 +72,14 @@ export default function Puzzle({ puzzle, player, solvedToday }: Props) {
             <Head title={`Spot the Edit #${puzzle.number}`} />
             <div className="mx-auto flex max-w-2xl flex-col gap-6 px-4 py-10">
                 <header className="flex flex-col gap-2">
-                    <Link
-                        href={home()}
+                    {/* A plain link: the home page is Blade, not an
+                        Inertia page, so it needs a full page load. */}
+                    <a
+                        href={home().url}
                         className="font-mono text-xs tracking-[0.14em] text-primary no-underline"
                     >
                         REVENUEGUARD
-                    </Link>
+                    </a>
                     <h1 className="text-3xl font-extrabold tracking-tight">
                         Spot the Edit #{puzzle.number}
                     </h1>
