@@ -22,13 +22,13 @@ fail2ban, key-only SSH and Certbot's renewal timer.
 
 **One limit to know about.** RevenueGuard's PHP can't read Cable Elite's
 files or reach its PHP. Cable Elite's PHP can't read RevenueGuard's `.env` or
-the bills customers upload. But nginx runs as `www-data`, and so does Cable
+its storage. But nginx runs as `www-data`, and so does Cable
 Elite's PHP. nginx needs RevenueGuard's PHP socket, so code running inside a
 hacked Cable Elite could use that socket to run code as RevenueGuard. (FastCGI
 lets the caller override PHP settings such as `open_basedir`, so that doesn't
 stop it.) The fix is to run Cable Elite's PHP as its own user too, leaving
 `www-data` to nginx alone. That is a change to Cable Elite's deployment, and
-worth making before RevenueGuard holds real customers' bills.
+worth making before the game takes real money.
 
 ---
 
@@ -40,8 +40,8 @@ worth making before RevenueGuard holds real customers' bills.
 2. **The mailbox.** The site sends its email from `info@revenueguard.co.za`
    on Xneelo. You type its password in step 2. Sign-up emails can't be sent
    without it.
-3. **An Anthropic API key** from console.anthropic.com, for reading bills.
-   Without one, uploaded bills wait for someone to type them in.
+3. **An Anthropic API key** from console.anthropic.com, for translating chat.
+   Without one, the Translate button is off.
 4. **Who answers for privacy.** The company name, the information officer and
    a contact address appear in the privacy notice (POPIA).
 5. **Memory.** On the server, `free -h`. Below 2 GB, add swap first, or the
@@ -77,7 +77,7 @@ nano /var/www/revenueguard/.env
 
 ```
 MAIL_PASSWORD=          # the info@revenueguard.co.za mailbox
-ANTHROPIC_API_KEY=      # reads bills
+ANTHROPIC_API_KEY=      # translates chat
 COMPANY_NAME=
 INFORMATION_OFFICER=
 ```
@@ -146,8 +146,8 @@ the certificate together with Cable Elite's.
 
 ## 6. Your staff login
 
-Staff see every customer's bills and disputes, so the only way to become staff
-is from the server. Register on https://revenueguard.co.za with your own
+Staff decide which players' item designs go on sale, so the only way to
+become staff is from the server. Register on https://revenueguard.co.za with your own
 address and open the verification email, then:
 
 ```bash
@@ -188,43 +188,6 @@ Every phase can be run again safely. A failed nginx or PHP-FPM test puts the
 old file back, so Cable Elite's next reload never trips over a broken
 RevenueGuard file.
 
-## Card payments: Cable Elite's Paystack account
-
-RevenueGuard takes card payments through the same Paystack account as Cable
-Elite. Every RevenueGuard payment stays in the main (Mzanzigo) account and
-settles to its bank account: RevenueGuard never sends Paystack a subaccount,
-a split, a transfer or a refund. In Paystack's dashboard its payments show
-**Site: revenueguard.co.za**, and their references start with `mba_`.
-
-Copy the keys from Cable Elite's `.env` on the server, so they never cross
-your screen:
-
-```bash
-cd /var/www/revenueguard
-for k in PAYSTACK_PUBLIC_KEY PAYSTACK_SECRET_KEY; do
-    sed -i "s|^$k=.*|$k=$(grep "^$k=" /var/www/crm/.env | cut -d= -f2-)|" .env
-done
-deploy/setup.sh permissions
-deploy/artisan config:cache
-```
-
-**Leave Paystack's webhook URL as it is.** An account has one, and Cable
-Elite's site uses it. Cable Elite ignores RevenueGuard's payments, and
-RevenueGuard finds out about them itself in two ways:
-
-- when the customer comes back from Paystack;
-- every five minutes, with `payments:reconcile`.
-
-**Lock the secret key to this server.** The same key can send money out of
-the account: Cable Elite pays suppliers with it, and OTP for transfers is
-off. Now that the server holds a second copy, turn on IP whitelisting:
-
-1. In Paystack, open Settings → API Keys & Webhooks and choose Add IP
-   address.
-2. Add 154.65.108.197. Both sites call Paystack from there.
-3. Test a Cable Elite checkout straight after. If it fails, remove the
-   address again.
-
 ## Google sign-in: Cable Elite's Google client
 
 "Continue with Google" on the login and register pages uses the same Google
@@ -246,25 +209,13 @@ deploy/artisan config:cache
 The button only shows once `GOOGLE_CLIENT_ID` is set.
 
 - **Branding.** Google's sign-in screen shows the name and logo of the
-  Google Cloud project the client belongs to, so RevenueGuard customers see
+  Google Cloud project the client belongs to, so RevenueGuard players see
   Cable Elite's. To show RevenueGuard's, create a client in a project of its
   own and put its ID and secret in `.env` instead.
 - **Authorised domains.** If Google's Branding page asks for them, add
   `revenueguard.co.za`.
 
-## Forwarded e-bills and municipal replies
-
-Customers forward e-bills, and municipalities reply to disputes, at
-`…@bills.revenueguard.co.za`. Mail for that subdomain goes to an inbound email
-service, not to Xneelo. For Mailgun:
-
-1. Add `bills.revenueguard.co.za` as a receiving domain.
-2. Add the MX records it gives you for `bills` in Xneelo's DNS. This doesn't
-   touch revenueguard.co.za's own mail.
-3. Create a route that forwards to `https://revenueguard.co.za/inbound/email`.
-4. Set `MAILGUN_WEBHOOK_SIGNING_KEY` in `.env`.
-
-After any change to `.env`:
+## After changing `.env`
 
 ```bash
 /var/www/revenueguard/deploy/artisan config:cache
@@ -277,7 +228,7 @@ sudo systemctl restart revenueguard-queue
 | ----------------------------- | ------------------------------------------------------------------------------------------------ |
 | A 500 with nothing in the log | Permissions: `/var/www/revenueguard/deploy/setup.sh permissions`                                 |
 | Any error                     | `/var/www/revenueguard/storage/logs/laravel-<date>.log`, `/var/log/nginx/revenueguard.error.log` |
-| Bills stay "reading"          | `sudo systemctl status revenueguard-queue` and `journalctl -u revenueguard-queue`                |
+| Raids never settle            | The scheduler: `/etc/cron.d/revenueguard`, then `deploy/artisan schedule:list`                   |
 | A `.env` change does nothing  | `deploy/artisan config:cache`, then restart the worker                                           |
 | Sign-up fails                 | `MAIL_PASSWORD`, and that the mailbox exists                                                     |
 
@@ -305,7 +256,7 @@ phase with `REPO=` set to that address.
 
 Nothing above backs anything up. Copy a nightly `mysqldump` of the
 `revenueguard` database and the `storage/app/private` folder off the server.
-Keep the copies as private as the server: they hold customers' bills.
+Keep the copies as private as the server: they hold players' accounts and chat.
 
 ## Never
 

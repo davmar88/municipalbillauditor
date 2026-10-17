@@ -1,12 +1,12 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "municipal-bill-auditor/app",
+    "name": "revenueguard/app",
     "type": "project",
-    "description": "Checks South African municipal bills for errors, drafts disputes and tracks them to a credit.",
+    "description": "RevenueGuard: an online strategy game set on a farm the humans left behind.",
     "keywords": [
         "laravel",
-        "municipal",
-        "billing",
+        "game",
+        "strategy",
         "south-africa"
     ],
     "license": "proprietary",

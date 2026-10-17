@@ -18,7 +18,7 @@ jobs:
         image: mysql:8.0
         env:
           MYSQL_ROOT_PASSWORD: password
-          MYSQL_DATABASE: municipal_bill_auditor
+          MYSQL_DATABASE: revenueguard
         ports:
           - 3306:3306
         options: >-
@@ -54,7 +54,7 @@ jobs:
           node-version: '22'
 
       - name: Create test database
-        run: mysql --host 127.0.0.1 --user root --password=password --execute "CREATE DATABASE IF NOT EXISTS municipal_bill_auditor_test CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
+        run: mysql --host 127.0.0.1 --user root --password=password --execute "CREATE DATABASE IF NOT EXISTS revenueguard_test CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
 
       - name: Setup Application
         run: composer setup

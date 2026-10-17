@@ -9,8 +9,8 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Str;
 
 /**
- * Staff see every customer's bills and disputes, so the only way to become
- * staff is from the server. The account must already exist and have
+ * Staff decide which players' item designs go on sale, so the only way to
+ * become staff is from the server. The account must already exist and have
  * verified its email: otherwise whoever registered first with someone
  * else's address would get the access.
  */

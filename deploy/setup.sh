@@ -172,7 +172,6 @@ phase_app() {
     set_env SESSION_SECURE_COOKIE true
     set_env QUEUE_CONNECTION database
     set_env DB_QUEUE_RETRY_AFTER 330
-    set_env INBOUND_EMAIL_DOMAIN "bills.${DOMAIN}"
     # Xneelo mail, as for Cable Elite. Their shared mail server presents a
     # certificate for its own host name, so the name check is skipped; the
     # connection is still encrypted.
@@ -208,16 +207,13 @@ App phase done. NOW, BY HAND, edit ${APP_DIR}/.env and fill in:
     ANTHROPIC_API_KEY=      (translates chat; without it the Translate button is off)
     COMPANY_NAME=, INFORMATION_OFFICER=   (shown in the privacy notice, with CONTACT_EMAIL=${MAILBOX})
 
-For card payments, copy Cable Elite's Paystack keys across ("Card payments"
-in DEPLOY.md); for forwarded e-bills, MAILGUN_WEBHOOK_SIGNING_KEY.
-
 Then: ./deploy/setup.sh finish
 MSG
 }
 
 # ---------------------------------------------------------------------------
 fix_permissions() {
-    log "Permissions: only the app's user (and you) can touch storage, bills and caches"
+    log "Permissions: only the app's user (and you) can touch storage and caches"
     cd "$APP_DIR" || die "app not installed: run the app phase first"
     sudo mkdir -p storage/tmp storage/app/private
     sudo chown -R ubuntu:"$APP_USER" storage bootstrap/cache

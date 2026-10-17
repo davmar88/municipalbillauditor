@@ -6,8 +6,8 @@ After=network.target mysql.service
 User=revenueguard
 Group=revenueguard
 WorkingDirectory=/var/www/revenueguard
-# Reading a bill can take a few minutes; DB_QUEUE_RETRY_AFTER in .env is
-# longer than this timeout so a slow job is never picked up twice.
+# DB_QUEUE_RETRY_AFTER in .env is longer than this timeout, so a slow job is
+# never picked up twice.
 ExecStart=/usr/bin/php /var/www/revenueguard/artisan queue:work --sleep=3 --tries=3 --timeout=300 --max-time=3600
 Restart=always
 RestartSec=5

@@ -4,8 +4,6 @@ An online strategy game for the phone's browser, set on a farm the humans left b
 
 The design, and the decisions behind it, are in the game design document: https://claude.ai/code/artifact/84371daa-165d-4285-a438-94da064ddd77
 
-The site was a municipal bill checker until October 2026; that code lives on in git history.
-
 ## What is in the test season
 
 - **The valley:** Hollowmere, 16 regions on a 5 by 3 grid with the Paddock for newcomers (`app/Game/ValleyBuilder.php`), drawn as a street map you drag and zoom, with fields, woods, Hollow Brook, buildings and named lanes (`resources/js/components/game/world-map.tsx`, shapes in `resources/js/lib/hollowmere.ts`).

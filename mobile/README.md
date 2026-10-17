@@ -46,4 +46,4 @@ CI runs the lint and the type check on every pull request that touches `mobile/`
 
 ## Next
 
-The screens are still Expo's starter screens. RevenueGuard's own screens need an API in the Laravel app for signing in, bills and credit.
+The screens are still Expo's starter screens. RevenueGuard's own screens need an API in the Laravel app for signing in and playing.
