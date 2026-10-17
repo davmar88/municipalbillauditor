@@ -35,9 +35,8 @@ main() {
 
     echo "==> Database"
     deploy/artisan migrate --force
-    if grep -q '^municipalities:import' <<< "$(deploy/artisan list --raw)"; then
-        deploy/artisan municipalities:import
-    fi
+    # Lays out Hollowmere on the first deploy; adds only what is missing after.
+    deploy/artisan game:setup
 
     echo "==> Caches, worker and PHP"
     deploy/artisan config:cache

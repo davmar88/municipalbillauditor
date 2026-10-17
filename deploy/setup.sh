@@ -205,7 +205,7 @@ phase_app() {
 App phase done. NOW, BY HAND, edit ${APP_DIR}/.env and fill in:
 
     MAIL_PASSWORD=          (the ${MAILBOX} mailbox's password)
-    ANTHROPIC_API_KEY=      (reads bills; without it every bill is typed in by hand)
+    ANTHROPIC_API_KEY=      (translates chat; without it the Translate button is off)
     COMPANY_NAME=, INFORMATION_OFFICER=   (shown in the privacy notice, with CONTACT_EMAIL=${MAILBOX})
 
 For card payments, copy Cable Elite's Paystack keys across ("Card payments"
@@ -244,10 +244,8 @@ phase_finish() {
 
     log "Database"
     artisan migrate --force
-    # Newer versions load every municipality; safe to run on every deploy.
-    if grep -q '^municipalities:import' <<< "$(artisan list --raw)"; then
-        artisan municipalities:import
-    fi
+    # Lays out the game's valley; safe to run on every deploy.
+    artisan game:setup
 
     log "Production caches"
     artisan config:cache

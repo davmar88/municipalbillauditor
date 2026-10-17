@@ -48,14 +48,9 @@ check /sitemap.xml      200 "<loc>"
 check /robots.txt       200 "User-agent"
 check /login            200
 check /register         200
-check /bills            302          # signs you in first
+check /spot-the-edit    200
+check /play             302          # signs you in first
 check /nope-not-a-page  404
-
-# The municipality pages the sitemap advertises must render.
-sitemap=$(curl -sS --max-time 20 "${resolve[@]}" "${BASE}/sitemap.xml" 2>/dev/null)
-while read -r path; do
-    [ -n "$path" ] && check "$path" 200
-done < <(grep -o '/municipal-bill-dispute/[a-z0-9-]*' <<< "$sitemap" | sort -u | head -3)
 
 # On the server itself.
 if [ -d "$APP_DIR" ] && id revenueguard >/dev/null 2>&1; then
@@ -72,7 +67,7 @@ if [ -d "$APP_DIR" ] && id revenueguard >/dev/null 2>&1; then
     done
 
     # Cable Elite's PHP runs as www-data: it must not be able to read
-    # RevenueGuard's secrets or customers' bills.
+    # RevenueGuard's secrets or players' files.
     if sudo -u www-data test -r "${APP_DIR}/.env"; then
         echo "  FAIL www-data can read .env: ${APP_DIR}/deploy/setup.sh permissions"
         FAIL=1
@@ -80,7 +75,7 @@ if [ -d "$APP_DIR" ] && id revenueguard >/dev/null 2>&1; then
         echo "  ok   www-data cannot read .env"
     fi
     if sudo -u www-data test -x "${APP_DIR}/storage"; then
-        echo "  FAIL www-data can open storage/ (customers' bills): ${APP_DIR}/deploy/setup.sh permissions"
+        echo "  FAIL www-data can open storage/ (players' files): ${APP_DIR}/deploy/setup.sh permissions"
         FAIL=1
     else
         echo "  ok   www-data cannot open storage/"

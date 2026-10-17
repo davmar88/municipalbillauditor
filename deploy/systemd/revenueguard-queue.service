@@ -1,5 +1,5 @@
 [Unit]
-Description=RevenueGuard queue worker (reading bills, sending disputes, reading replies)
+Description=RevenueGuard queue worker
 After=network.target mysql.service
 
 [Service]
