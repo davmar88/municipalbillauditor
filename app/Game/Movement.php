@@ -8,23 +8,21 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * Walking the map. An animal stands in one region and walks to a
- * neighbouring one for a horseshoe. Walking inside your own faction's land
- * is free, so holding land joined up pays.
+ * neighbouring one, one region at a time. Walking is free: gathering and
+ * raids are what cost horseshoes.
  */
 final class Movement
 {
     /**
-     * @return int What the walk cost in horseshoes.
-     *
      * @throws GameException
      */
-    public function walk(Player $player, Region $target): int
+    public function walk(Player $player, Region $target): void
     {
         if ($target->valley_id !== $player->valley_id) {
             throw new GameException('That region is in another valley.');
         }
 
-        return DB::transaction(function () use ($player, $target) {
+        DB::transaction(function () use ($player, $target) {
             $player = Players::lock($player);
             Players::ensureFree($player);
             $here = $player->location();
@@ -37,18 +35,7 @@ final class Movement
                 throw new GameException("{$target->name} isn't next to {$here->name}. Walk one region at a time.");
             }
 
-            $ownLand = $player->faction_id !== null
-                && $here->faction_id === $player->faction_id
-                && $target->faction_id === $player->faction_id;
-            $cost = $ownLand ? 0 : 1;
-
-            if ($cost > 0) {
-                Horseshoes::spend($player, $cost);
-            }
-
             $player->forceFill(['region_id' => $target->id])->save();
-
-            return $cost;
         });
     }
 

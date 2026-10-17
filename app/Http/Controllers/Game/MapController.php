@@ -132,11 +132,9 @@ class MapController extends Controller
         $player = $request->user()->player;
         abort_unless($region->valley_id === $player->valley_id, 404);
 
-        $cost = $movement->walk($player, $region);
+        $movement->walk($player, $region);
 
-        return $this->told($cost === 0
-            ? "You walked to {$region->name} through your faction's land."
-            : "You walked to {$region->name}.");
+        return $this->told("You walked to {$region->name}.");
     }
 
     public function gather(Request $request, Region $region, Gathering $gathering): RedirectResponse

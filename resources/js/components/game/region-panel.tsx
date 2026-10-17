@@ -86,12 +86,10 @@ export function RegionPanel({
     const myFaction = player?.faction ?? null;
     const holds = (other?: MapRegion) =>
         myFaction !== null && other?.faction?.id === myFaction.id;
-    const hereRegion = here !== null ? byId.get(here) : undefined;
     const isHere = region.id === here;
     const path =
         here !== null && !isHere ? route(here, region.id, graph) : null;
     const next = path && path.length > 1 ? byId.get(path[1]) : undefined;
-    const walkIsFree = holds(hereRegion) && holds(next);
     const frontLine = here !== null && region.neighbours.includes(here);
     const raidable =
         myFaction !== null && region.ring !== 'safe' && !holds(region);
@@ -316,15 +314,7 @@ export function RegionPanel({
                                 {path.length === 2
                                     ? 'Walk here'
                                     : `Walk to ${next.name}`}
-                                <span className="ml-auto flex items-center gap-1 opacity-80">
-                                    {walkIsFree ? (
-                                        'free on your land'
-                                    ) : (
-                                        <>
-                                            <Horseshoe className="size-4" />1
-                                        </>
-                                    )}
-                                </span>
+                                <span className="ml-auto opacity-80">free</span>
                             </Button>
                         </div>
                     )

@@ -149,19 +149,18 @@ class StartAndMapTest extends TestCase
 
         $this->actingAs($player->user)->post(route('play.walk', $this->region('market_square')))->assertRedirect();
         $this->assertSame('market_square', $player->fresh()->location()->key);
-        $this->assertSame(9, Horseshoes::current($player->fresh()));
+        $this->assertSame(10, Horseshoes::current($player->fresh()), 'Walking is free.');
     }
 
-    public function test_walking_inside_your_factions_land_is_free(): void
+    public function test_walking_is_free_even_with_no_horseshoes_left(): void
     {
         $player = $this->player();
-        $faction = $this->faction('Walkers', $player);
-        $this->hold($faction, 'market_square', 'farmhouse');
-        $this->stand($player, 'market_square');
+        Horseshoes::spend($player, Horseshoes::current($player));
 
-        app(Movement::class)->walk($player->fresh(), $this->region('farmhouse'));
+        app(Movement::class)->walk($player->fresh(), $this->region('market_square'));
 
-        $this->assertSame(10, Horseshoes::current($player->fresh()));
+        $this->assertSame('market_square', $player->fresh()->location()->key);
+        $this->assertSame(0, Horseshoes::current($player->fresh()));
     }
 
     public function test_you_gather_where_you_stand(): void
