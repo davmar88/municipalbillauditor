@@ -321,6 +321,10 @@ export default function MapPage({
                         />
                     )}
                 </WorldMap>
+                <p className="-mt-2 text-xs text-muted-foreground">
+                    Click or tap a spot to walk there. Right-click, or press and
+                    hold on a phone, to see what's there.
+                </p>
 
                 {recent.length > 0 && (
                     <section className="flex flex-col gap-2">

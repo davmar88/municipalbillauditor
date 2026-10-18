@@ -148,17 +148,24 @@ type Gesture = {
     target: Element | null;
     velocity: Point;
     last: { point: Point; at: number };
+    /** A long press already opened the card, so letting go doesn't walk. */
+    held?: boolean;
 };
+
+/** How long a press is held before it opens the card instead of walking. */
+const LONG_PRESS_MS = 500;
 
 /**
  * Dragging, flicking, pinching and wheel zoom, like a street map. The view
- * maps the world onto the screen: screen = world × k + (x, y).
+ * maps the world onto the screen: screen = world × k + (x, y). A quick tap
+ * or a left click walks; a long press or a right click asks what is there.
  */
 function useCamera(
     container: React.RefObject<HTMLDivElement | null>,
     svg: React.RefObject<SVGSVGElement | null>,
     focus: Point | null,
     onTap: (target: Element | null, world: Point) => void,
+    onInfo: (target: Element | null) => void,
 ) {
     const [view, setView] = useState<View>({ x: 0, y: 0, k: 0 });
     const [size, setSize] = useState<Size | null>(null);
@@ -171,11 +178,21 @@ function useCamera(
     const lastTap = useRef<{ at: number; point: Point } | null>(null);
     const focusRef = useRef(focus);
     const tapRef = useRef(onTap);
+    const infoRef = useRef(onInfo);
+    const press = useRef<number | null>(null);
 
     useEffect(() => {
         focusRef.current = focus;
         tapRef.current = onTap;
+        infoRef.current = onInfo;
     });
+
+    const cancelPress = () => {
+        if (press.current !== null) {
+            window.clearTimeout(press.current);
+            press.current = null;
+        }
+    };
 
     const apply = useCallback((next: View) => {
         const clamped = clampView(next, sizeRef.current);
@@ -366,6 +383,13 @@ function useCamera(
     };
 
     const onPointerDown = (event: React.PointerEvent<SVGSVGElement>) => {
+        // A right click asks what is there.
+        if (event.pointerType === 'mouse' && event.button === 2) {
+            infoRef.current((event.target as Element).closest('[data-region]'));
+
+            return;
+        }
+
         if (event.pointerType === 'mouse' && event.button !== 0) {
             return;
         }
@@ -377,17 +401,31 @@ function useCamera(
         event.currentTarget.setPointerCapture(event.pointerId);
 
         if (pointers.current.size === 1) {
+            const target = (event.target as Element).closest('[data-region]');
             gesture.current = {
                 kind: 'pan',
                 start: viewRef.current,
                 origin: point,
                 spread: 0,
                 moved: 0,
-                target: (event.target as Element).closest('[data-region]'),
+                target,
                 velocity: [0, 0],
                 last: { point, at: now },
             };
+
+            // Held still long enough, a press asks what is there.
+            cancelPress();
+            press.current = window.setTimeout(() => {
+                press.current = null;
+                const held = gesture.current;
+
+                if (held?.kind === 'pan' && held.moved < 5) {
+                    held.held = true;
+                    infoRef.current(target);
+                }
+            }, LONG_PRESS_MS);
         } else if (pointers.current.size === 2) {
+            cancelPress();
             const [a, b] = [...pointers.current.values()];
             gesture.current = {
                 kind: 'pinch',
@@ -423,6 +461,8 @@ function useCamera(
             if (current.moved < 5) {
                 return;
             }
+
+            cancelPress();
 
             setDragging(true);
             const now = performance.now();
@@ -465,6 +505,8 @@ function useCamera(
             return;
         }
 
+        cancelPress();
+
         pointers.current.delete(event.pointerId);
         const current = gesture.current;
 
@@ -490,6 +532,10 @@ function useCamera(
         setDragging(false);
 
         if (!current || event.type !== 'pointerup') {
+            return;
+        }
+
+        if (current.kind === 'pan' && current.held) {
             return;
         }
 
@@ -576,6 +622,8 @@ function useCamera(
             onPointerUp,
             onPointerCancel: onPointerUp,
             onKeyDown,
+            // The right click is for asking what is there, not the browser's menu.
+            onContextMenu: (event: React.MouseEvent) => event.preventDefault(),
         },
     };
 }
@@ -1523,20 +1571,28 @@ export function WorldMap({
           ? hub(hereRegion.key)
           : null;
 
+    // A quick tap on land sets off straight for that spot.
     const onTap = useCallback(
         (target: Element | null, world: Point) => {
             const id = Number(target?.getAttribute('data-region'));
-            onSelect(Number.isFinite(id) && id > 0 ? id : null);
 
-            // Tapping land sets off straight for that spot.
             if (onWalk && Number.isFinite(id) && id > 0) {
                 onWalk(world);
             }
         },
-        [onSelect, onWalk],
+        [onWalk],
     );
 
-    const camera = useCamera(containerRef, svgRef, herePoint, onTap);
+    // A long press or a right click opens the card for what is there.
+    const onInfo = useCallback(
+        (target: Element | null) => {
+            const id = Number(target?.getAttribute('data-region'));
+            onSelect(Number.isFinite(id) && id > 0 ? id : null);
+        },
+        [onSelect],
+    );
+
+    const camera = useCamera(containerRef, svgRef, herePoint, onTap, onInfo);
     const { view, size, lookAt, current } = camera;
     const ready = size !== null && view.k > 0;
 
@@ -1598,11 +1654,11 @@ export function WorldMap({
             <svg
                 ref={svgRef}
                 className={cn(
-                    'absolute inset-0 size-full touch-none outline-none select-none',
+                    'absolute inset-0 size-full touch-none outline-none select-none [-webkit-touch-callout:none]',
                     camera.dragging ? 'cursor-grabbing' : 'cursor-grab',
                 )}
                 role="group"
-                aria-label={`Map of ${valley}. Drag to look around, scroll or pinch to zoom, and tap a region.`}
+                aria-label={`Map of ${valley}. Drag to look around, scroll or pinch to zoom, tap a spot to walk there, and press and hold or right-click to see what's there.`}
                 tabIndex={0}
                 {...camera.handlers}
             >
