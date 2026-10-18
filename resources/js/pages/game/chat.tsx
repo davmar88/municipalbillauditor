@@ -3,13 +3,13 @@ import { Languages, Send } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { OrchardBadge } from '@/components/game/orchard-badge';
+import { ProfileLink } from '@/components/game/profile-link';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { capitalise, clockTime, fetchTranslation } from '@/lib/game';
 import { cn } from '@/lib/utils';
 import { chat } from '@/routes/play';
 import { store, translate } from '@/routes/play/chat';
-import { show as conversation } from '@/routes/play/messages';
 
 type Message = {
     id: number;
@@ -130,9 +130,9 @@ export default function ChatPage({
                                             {message.from.name}
                                         </span>
                                     ) : (
-                                        <Link
-                                            href={conversation(message.from.id)}
-                                            className="font-semibold no-underline hover:underline"
+                                        <ProfileLink
+                                            animal={message.from}
+                                            className="font-semibold"
                                             style={
                                                 message.from.colour
                                                     ? {
@@ -141,10 +141,7 @@ export default function ChatPage({
                                                       }
                                                     : undefined
                                             }
-                                            title={`Write to ${message.from.name}`}
-                                        >
-                                            {message.from.name}
-                                        </Link>
+                                        />
                                     )}
                                     <OrchardBadge
                                         member={message.from.orchard}

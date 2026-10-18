@@ -2,6 +2,7 @@ import { Head, Link } from '@inertiajs/react';
 import { Crosshair, Footprints, Gavel, Siren } from 'lucide-react';
 import { useState } from 'react';
 import { GameBar } from '@/components/game/game-bar';
+import { ProfileLink } from '@/components/game/profile-link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { act, clockTime, fromNow, speciesEmoji } from '@/lib/game';
@@ -150,7 +151,11 @@ function WarrantCard({
                         Wanted
                     </p>
                     <p className="truncate text-lg font-extrabold">
-                        {warrant.animal.name}
+                        {warrant.mine ? (
+                            warrant.animal.name
+                        ) : (
+                            <ProfileLink animal={warrant.animal} />
+                        )}
                     </p>
                     {warrant.animal.faction && (
                         <p
@@ -308,9 +313,10 @@ function Suspects({
                                     {speciesEmoji(suspect.animal.species)}
                                 </span>
                                 <span className="min-w-0 flex-1">
-                                    <span className="font-semibold">
-                                        {suspect.animal.name}
-                                    </span>{' '}
+                                    <ProfileLink
+                                        animal={suspect.animal}
+                                        className="font-semibold"
+                                    />{' '}
                                     <span className="text-muted-foreground">
                                         {suspect.deed},{' '}
                                         {fromNow(suspect.at) === 'now'

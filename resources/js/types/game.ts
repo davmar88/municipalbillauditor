@@ -83,6 +83,9 @@ export type DesignCard = {
 
 export type FactionRef = { id: number; name: string; colour: string };
 
+/** What a shop prices an item in: Corn from play, or Apples. */
+export type Currency = 'corn' | 'apples';
+
 /** An animal you can write to, as Messages shows it. */
 export type MessageAnimal = {
     id: number;

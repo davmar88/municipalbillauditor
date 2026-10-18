@@ -136,6 +136,7 @@ Route::middleware(['auth', 'verified', 'player', 'throttle:120,1'])->prefix('pla
 
     Route::get('me', [ProfileController::class, 'show'])->name('play.me');
     Route::put('me/language', [ProfileController::class, 'language'])->name('play.me.language');
+    Route::get('animals/{player}', [ProfileController::class, 'animal'])->name('play.animal');
 
     // The bell, and the pulse every screen checks for pop-ups.
     Route::get('pulse', [NoticeController::class, 'pulse'])->name('play.pulse');

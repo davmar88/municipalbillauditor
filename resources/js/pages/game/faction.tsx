@@ -5,6 +5,7 @@ import { FactionBase } from '@/components/game/faction-base';
 import { FactionStudyList } from '@/components/game/faction-studies';
 import { GameBar } from '@/components/game/game-bar';
 import { OrchardBadge } from '@/components/game/orchard-badge';
+import { ProfileLink } from '@/components/game/profile-link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -72,6 +73,8 @@ type Props = {
               }[];
               requests: {
                   id: number;
+                  /** The animal asking, for its profile. */
+                  playerId: number;
                   name: string;
                   species: string;
                   level: number;
@@ -214,10 +217,20 @@ function MyFaction({
                             className="flex flex-wrap items-center gap-3 px-4 py-3"
                         >
                             <span className="flex-1">
-                                <span className="font-semibold">
-                                    {member.name}
-                                    <OrchardBadge member={member.orchard} />
-                                </span>{' '}
+                                {member.me ? (
+                                    <span className="font-semibold">
+                                        {member.name}
+                                        <OrchardBadge member={member.orchard} />
+                                    </span>
+                                ) : (
+                                    <ProfileLink
+                                        animal={member}
+                                        className="font-semibold"
+                                    >
+                                        {member.name}
+                                        <OrchardBadge member={member.orchard} />
+                                    </ProfileLink>
+                                )}{' '}
                                 <span className="text-sm text-muted-foreground">
                                     {capitalise(member.species)} · level{' '}
                                     {member.level}
@@ -285,9 +298,13 @@ function MyFaction({
                                 className="flex flex-wrap items-center gap-3 px-4 py-3"
                             >
                                 <span className="flex-1">
-                                    <span className="font-semibold">
-                                        {request.name}
-                                    </span>{' '}
+                                    <ProfileLink
+                                        animal={{
+                                            id: request.playerId,
+                                            name: request.name,
+                                        }}
+                                        className="font-semibold"
+                                    />{' '}
                                     <span className="text-sm text-muted-foreground">
                                         {capitalise(request.species)} · level{' '}
                                         {request.level}

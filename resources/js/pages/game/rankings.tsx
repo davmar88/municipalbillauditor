@@ -3,6 +3,7 @@ import { Award, Coins, Palette, Trophy } from 'lucide-react';
 import { GameBar } from '@/components/game/game-bar';
 import { SkillMeter } from '@/components/game/missions';
 import { OrchardBadge } from '@/components/game/orchard-badge';
+import { ProfileLink } from '@/components/game/profile-link';
 import { speciesEmoji } from '@/lib/game';
 import { cn } from '@/lib/utils';
 import { rankings } from '@/routes/play';
@@ -78,7 +79,11 @@ function RankRow({ row }: { row: Row }) {
             </span>
             <span className="min-w-0 flex-1">
                 <span className="block truncate font-semibold">
-                    {row.name}
+                    {row.me ? (
+                        row.name
+                    ) : (
+                        <ProfileLink animal={row}>{row.name}</ProfileLink>
+                    )}
                     <OrchardBadge member={row.orchard} />
                     {row.me && (
                         <span className="ml-1.5 text-xs font-bold text-primary">

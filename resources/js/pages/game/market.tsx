@@ -4,24 +4,27 @@ import { useState } from 'react';
 import { GameBar } from '@/components/game/game-bar';
 import { ItemPreview } from '@/components/game/item-preview';
 import { OrchardBadge } from '@/components/game/orchard-badge';
+import { ProfileLink } from '@/components/game/profile-link';
+import {
+    BuyButton,
+    ListingPrice,
+    PowerLine,
+} from '@/components/game/shop-listing';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { NativeSelect } from '@/components/ui/native-select';
-import { act, capitalise } from '@/lib/game';
+import { act, capitalise, money } from '@/lib/game';
 import { cn } from '@/lib/utils';
 import {
     apples,
-    buy,
     craft,
     design as designRoute,
     list,
     unlist,
     use as useItem,
 } from '@/routes/play';
-import { show as conversation } from '@/routes/play/messages';
 import type { DesignCard } from '@/types';
-
-type Currency = 'corn' | 'apples';
+import type { Currency } from '@/types/game';
 
 type Props = {
     listings: {
@@ -77,15 +80,6 @@ type Props = {
         royalty: number;
     };
 };
-
-/** "12 Corn", "1 Apple", "30 Apples". */
-function money(amount: number, currency: Currency): string {
-    if (currency === 'corn') {
-        return `${amount.toLocaleString('en-ZA')} Corn`;
-    }
-
-    return `${amount.toLocaleString('en-ZA')} ${amount === 1 ? 'Apple' : 'Apples'}`;
-}
 
 const tabs = [
     { key: 'browse', label: 'Market Square', icon: ShoppingBasket },
@@ -145,12 +139,6 @@ function Browse({
     levy,
     onWorkshop,
 }: Props & { onWorkshop: () => void }) {
-    const { player } = usePage().props;
-    const held: Record<Currency, number> = {
-        corn: player?.corn ?? 0,
-        apples: player?.apples ?? 0,
-    };
-
     if (listings.length === 0) {
         return (
             <div className="flex flex-col items-start gap-3 rounded-xl border border-dashed p-6">
@@ -196,41 +184,25 @@ function Browse({
                                     />
                                 </span>
                             ) : (
-                                <Link
-                                    href={conversation(listing.seller.id)}
-                                    className="no-underline hover:underline"
+                                <ProfileLink
+                                    animal={listing.seller}
                                     style={
                                         listing.seller.colour
                                             ? { color: listing.seller.colour }
                                             : undefined
                                     }
-                                    title={`Write to ${listing.seller.name}`}
                                 >
                                     {listing.seller.name}
                                     <OrchardBadge
                                         member={listing.seller.orchard}
                                     />
-                                </Link>
+                                </ProfileLink>
                             )}
                         </p>
                         {listing.design.power && (
                             <PowerLine design={listing.design} />
                         )}
-                        <p className="text-sm font-semibold">
-                            {listing.currency === 'apples' && (
-                                <span aria-hidden>🍎 </span>
-                            )}
-                            {money(listing.price, listing.currency)}
-                            {listing.currency === 'corn' && levy > 0 && (
-                                <span className="font-normal text-muted-foreground">
-                                    {' '}
-                                    + {Math.floor(
-                                        (listing.price * levy) / 100,
-                                    )}{' '}
-                                    levy
-                                </span>
-                            )}
-                        </p>
+                        <ListingPrice listing={listing} levy={levy} />
                         {listing.mine ? (
                             <span className="text-xs text-primary">
                                 Your listing
@@ -240,52 +212,7 @@ function Browse({
                                 Shop closed while the home is rebuilt
                             </span>
                         ) : (
-                            (() => {
-                                const total =
-                                    listing.currency === 'apples'
-                                        ? listing.price
-                                        : listing.price +
-                                          Math.floor(
-                                              (listing.price * levy) / 100,
-                                          );
-                                const short = total - held[listing.currency];
-
-                                if (
-                                    short > 0 &&
-                                    listing.currency === 'apples'
-                                ) {
-                                    return (
-                                        <Button
-                                            asChild
-                                            size="sm"
-                                            variant="secondary"
-                                            className="mt-auto self-start"
-                                        >
-                                            <Link href={apples()}>
-                                                Get {money(short, 'apples')}
-                                            </Link>
-                                        </Button>
-                                    );
-                                }
-
-                                return (
-                                    <Button
-                                        size="sm"
-                                        className="mt-auto self-start"
-                                        disabled={short > 0}
-                                        title={
-                                            short > 0
-                                                ? `You need ${short} more Corn`
-                                                : undefined
-                                        }
-                                        onClick={() => act(buy.url(listing.id))}
-                                    >
-                                        {short > 0
-                                            ? `Need ${short} more Corn`
-                                            : 'Buy'}
-                                    </Button>
-                                );
-                            })()
+                            <BuyButton listing={listing} levy={levy} />
                         )}
                     </div>
                 </li>
@@ -726,16 +653,3 @@ function Workshop({ designs, workshop }: Props) {
 }
 
 /** What a powered item does, and who for. */
-function PowerLine({ design }: { design: DesignCard }) {
-    return (
-        <p className="flex items-start gap-1.5 text-xs text-primary">
-            <Sparkles className="mt-0.5 size-3.5 shrink-0" aria-hidden />
-            <span>
-                {design.for === 'faction' && (
-                    <span className="font-semibold">For a faction: </span>
-                )}
-                {design.power}
-            </span>
-        </p>
-    );
-}
