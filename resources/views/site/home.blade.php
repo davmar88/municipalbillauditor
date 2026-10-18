@@ -9,17 +9,42 @@
 @section('canonical', route('home'))
 
 @section('content')
+    {{-- The poster --}}
+    <section class="relative isolate flex min-h-[680px] items-start overflow-hidden bg-[#0f0b17] md:min-h-[640px] lg:h-[min(86vh,820px)]">
+        {{-- On a phone the scene sits under the words; on a wider screen the words sit over the sky. --}}
+        <div class="absolute inset-x-0 bottom-0 h-[52%] md:inset-0 md:h-full">
+            @include('site.partials.poster')
+        </div>
+        <div class="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-transparent md:bg-gradient-to-br md:from-black/70 md:via-black/20" aria-hidden="true"></div>
+        <div class="relative mx-auto flex w-full max-w-[1200px] flex-col gap-5 px-[clamp(16px,4vw,40px)] pt-[clamp(40px,7vw,88px)] pb-12">
+            <h1 class="text-[clamp(56px,8.5vw,108px)] leading-[0.9] font-black tracking-tight text-[#f3e6c4] uppercase [text-shadow:0_3px_0_rgba(0,0,0,0.45),0_0_40px_rgba(0,0,0,0.5)]"><span class="block">Revenue</span><span class="block">Guard</span></h1>
+            <p class="flex max-w-[520px] items-center gap-4 font-mono text-[clamp(12px,1.4vw,15px)] tracking-[0.32em] text-[#f3e6c4]/90">
+                <span class="h-px flex-1 bg-[#f3e6c4]/60" aria-hidden="true"></span>
+                HOLLOWMERE · SEASON ONE
+                <span class="h-px flex-1 bg-[#f3e6c4]/60" aria-hidden="true"></span>
+            </p>
+            <p class="max-w-[560px] text-[clamp(17px,2.1vw,25px)] leading-snug font-extrabold tracking-wide text-[#e0483b] uppercase [text-shadow:0_2px_0_rgba(0,0,0,0.5)]">
+                The farm belongs to the animals.<br>
+                The Farmhouse belongs to whoever takes it.
+            </p>
+            <div class="mt-2 flex flex-wrap items-center gap-3">
+                <a href="{{ $playUrl }}" class="glow flex h-12 items-center rounded-md bg-brand px-6 text-[17px] font-bold text-ground no-underline hover:text-ground">Play the test season</a>
+                <a href="{{ route('puzzle') }}" class="flex h-12 items-center rounded-md border border-[#f3e6c4]/50 bg-black/30 px-5 font-semibold text-[#f3e6c4] no-underline hover:border-[#f3e6c4] hover:text-[#f3e6c4]">Try today's puzzle</a>
+            </div>
+        </div>
+    </section>
+
     {{-- Hero --}}
     <section class="relative overflow-hidden bg-glow">
         <div class="bg-grid pointer-events-none absolute inset-0" aria-hidden="true"></div>
         <div class="relative mx-auto grid max-w-[1200px] items-center gap-12 px-[clamp(16px,4vw,40px)] py-[clamp(48px,8vw,104px)] lg:grid-cols-[1.1fr_0.9fr]">
             <div class="flex flex-col gap-6">
                 <p class="font-mono text-[13px] tracking-[0.14em] text-action">THE ANIMALS RUN THE FARM NOW</p>
-                <h1 class="text-[clamp(40px,6vw,72px)] leading-[1.02] font-extrabold tracking-tight">
+                <h2 class="text-[clamp(40px,6vw,72px)] leading-[1.02] font-extrabold tracking-tight">
                     Take the farm.<br>
                     Write the rules.<br>
                     <span class="text-gradient">Guard the treasury.</span>
-                </h1>
+                </h2>
                 <p class="max-w-[560px] text-[19px] text-ink-2">
                     Pick an animal, join a faction and fight for the Farmhouse. Whoever holds it writes the laws on the Barn Wall, and once a week the rulers may secretly change one. Catch them, and the valley rises.
                 </p>
