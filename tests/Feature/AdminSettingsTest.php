@@ -18,7 +18,7 @@ use Tests\TestCase;
 
 /**
  * The owner's admin page: payment and Claude keys, stored encrypted and
- * never shown again, and the switch that opens Apple sales.
+ * never shown again, and the switches that open Apple sales and cash-outs.
  */
 class AdminSettingsTest extends TestCase
 {
@@ -41,6 +41,7 @@ class AdminSettingsTest extends TestCase
     {
         return $this->actingAs($admin)->put(route('admin.settings.update'), [
             'apples_on_sale' => '0',
+            'cashout_open' => '0',
             'paypal_mode' => 'sandbox',
             ...$changes,
         ]);
@@ -100,6 +101,21 @@ class AdminSettingsTest extends TestCase
         $this->assertTrue($settings->on('apples_on_sale'));
         $this->assertSame('live', $settings->get('paypal_mode'));
         $this->assertSame('client', $settings->get('paypal_client_id'));
+    }
+
+    public function test_cash_outs_stay_closed_until_the_owner_opens_them(): void
+    {
+        $admin = $this->admin();
+
+        $this->actingAs($admin)->get(route('admin'))->assertInertia(fn (Assert $page) => $page->where('settings.cashoutOpen', false));
+        $this->actingAs($admin)->put(route('admin.settings.update'), ['apples_on_sale' => '0', 'paypal_mode' => 'sandbox'])->assertSessionHasErrors('cashout_open');
+
+        $this->save($admin, ['cashout_open' => '1'])->assertSessionHasNoErrors();
+        $this->assertTrue(app(Settings::class)->on('cashout_open'));
+        $this->actingAs($admin)->get(route('admin'))->assertInertia(fn (Assert $page) => $page->where('settings.cashoutOpen', true));
+
+        $this->save($admin)->assertSessionHasNoErrors();
+        $this->assertFalse(app(Settings::class)->on('cashout_open'));
     }
 
     public function test_the_test_buttons_ask_paystack_paypal_and_claude(): void

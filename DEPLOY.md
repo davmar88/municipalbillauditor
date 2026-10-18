@@ -186,6 +186,32 @@ Then, on https://revenueguard.co.za/admin:
 Keys are encrypted with `APP_KEY`. If `APP_KEY` ever changes, type the keys
 in again.
 
+### Cash-outs
+
+Cash-outs stay closed until you open them on the admin page. Open them only
+once a lawyer has confirmed the game may pay out real money: dice decide raids
+and crimes, and Apples pass between animals in bounties and shop sales, so it
+may need a gambling or payments licence.
+
+Every cash-out then waits for you at https://revenueguard.co.za/admin/cashouts.
+
+1. **Bank transfers (Paystack)** are paid from your Paystack balance, so keep
+   money in it. Unless you turn OTP for transfers off in Paystack's settings,
+   Paystack texts you a code for each transfer: type it on the Cash-outs
+   page. The webhook URL above also tells the game when a transfer arrives or
+   fails. Each bank account an animal saves costs R3 to check. If Paystack
+   says transfers aren't enabled, ask Paystack to turn them on.
+2. **PayPal** has to turn on Payouts for your business account first. Ask
+   PayPal for it, then tick Payouts in the app's features on
+   developer.paypal.com. Try a cash-out in Sandbox before going live.
+3. **Bitcoin** is sent by hand from your own wallet. Under South Africa's
+   travel rule, Luno makes the first send to any new address go through its
+   app, and asks for the name of the person being paid; the Cash-outs page
+   shows the address and the animal's legal name. Send Bitcoin worth the rand
+   amount shown, then paste the transaction ID and press Mark paid.
+
+Turning a cash-out down gives the animal its Apples back, with your reason.
+
 ---
 
 ## Deploying updates

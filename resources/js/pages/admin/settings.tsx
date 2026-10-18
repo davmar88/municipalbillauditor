@@ -1,4 +1,4 @@
-import { Form, Head } from '@inertiajs/react';
+import { Form, Head, Link } from '@inertiajs/react';
 import { FlaskConical, KeyRound, Trash2 } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { CopyButton } from '@/components/copy-button';
@@ -8,11 +8,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { NativeSelect } from '@/components/ui/native-select';
 import { act, shortWhen } from '@/lib/game';
+import { cashouts } from '@/routes/admin';
 import { forget, test, update } from '@/routes/admin/settings';
 
 type Props = {
     settings: {
         applesOnSale: boolean;
+        cashoutOpen: boolean;
         /** "••••7a3f" when saved: the key itself never comes back. */
         paystackSecretKey: string | null;
         paystackLive: boolean;
@@ -32,7 +34,10 @@ type Props = {
         /** In cents. */
         usd: number;
         sold: number;
+        /** Apples still with animals, factions, bounties and cash-outs waiting. */
         held: number;
+        /** Apples paid out for money. */
+        cashedOut: number;
         kept: number;
         review: number;
         /** Animals whose Orchard membership is running. */
@@ -59,7 +64,7 @@ const STATUS: Record<Props['purchases'][number]['status'], string> = {
 
 /**
  * The owner's page: payment and Claude keys, whether Apple packs are on
- * sale, and what the sales brought in.
+ * sale and cash-outs open, and what the sales brought in.
  */
 export default function AdminSettings({
     settings,
@@ -78,9 +83,9 @@ export default function AdminSettings({
                         Admin
                     </h1>
                     <p className="text-sm text-muted-foreground">
-                        Payment keys, Apple sales and what they brought in. Keys
-                        are stored encrypted, and once saved this page only
-                        shows their last four characters.
+                        Payment keys, Apple sales and cash-outs, and what the
+                        sales brought in. Keys are stored encrypted, and once
+                        saved this page only shows their last four characters.
                     </p>
                 </header>
 
@@ -96,8 +101,9 @@ export default function AdminSettings({
                     <Stat label="Apples sold">
                         {sales.sold.toLocaleString('en-ZA')}
                         <span className="block text-xs font-normal text-muted-foreground">
-                            {sales.held.toLocaleString('en-ZA')} still held by
-                            animals, factions and bounties
+                            {sales.held.toLocaleString('en-ZA')} still in the
+                            game, {sales.cashedOut.toLocaleString('en-ZA')}{' '}
+                            cashed out
                         </span>
                     </Stat>
                     <Stat label="Kept by the game">
@@ -170,6 +176,53 @@ export default function AdminSettings({
                             </Card>
 
                             <Card
+                                title="Cash-outs"
+                                actions={
+                                    <Button
+                                        type="button"
+                                        size="sm"
+                                        variant="outline"
+                                        asChild
+                                    >
+                                        <Link href={cashouts()}>
+                                            See the queue
+                                        </Link>
+                                    </Button>
+                                }
+                            >
+                                <div className="grid gap-2">
+                                    <Label htmlFor="cashout_open">
+                                        Cashing out
+                                    </Label>
+                                    <NativeSelect
+                                        id="cashout_open"
+                                        name="cashout_open"
+                                        defaultValue={
+                                            settings.cashoutOpen ? '1' : '0'
+                                        }
+                                    >
+                                        <option value="0">Closed</option>
+                                        <option value="1">Open</option>
+                                    </NativeSelect>
+                                    <InputError message={errors.cashout_open} />
+                                    <p className="rounded-md border border-orange-500/40 bg-orange-500/10 px-3 py-2 text-xs text-orange-200">
+                                        Open this only once a lawyer has
+                                        confirmed the game may pay out real
+                                        money. Dice decide raids and crimes, and
+                                        Apples pass between animals in bounties
+                                        and shop sales, so cash-outs may need a
+                                        gambling or payments licence.
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
+                                        Animals cash out by bank transfer
+                                        through Paystack, by PayPal, or in
+                                        Bitcoin you send by hand. Each one waits
+                                        for you on the Cash-outs page.
+                                    </p>
+                                </div>
+                            </Card>
+
+                            <Card
                                 title="Paystack, in rand"
                                 actions={
                                     <KeyActions
@@ -207,7 +260,8 @@ export default function AdminSettings({
                                     <p className="text-xs text-muted-foreground">
                                         Paste it into Paystack's Webhook URL, so
                                         Apples arrive even when a player closes
-                                        the page before coming back.
+                                        the page before coming back, and
+                                        cash-outs settle when the bank answers.
                                     </p>
                                 </div>
                             </Card>
@@ -246,7 +300,7 @@ export default function AdminSettings({
                                     label="Secret"
                                     saved={settings.paypalClientSecret}
                                     error={errors.paypal_client_secret}
-                                    note="From developer.paypal.com: Apps & Credentials. PayPal needs no webhook."
+                                    note="From developer.paypal.com: Apps & Credentials. PayPal needs no webhook. Cash-outs need Payouts turned on for the app."
                                 />
                                 <div className="grid gap-2">
                                     <Label htmlFor="paypal_mode">Mode</Label>

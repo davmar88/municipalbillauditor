@@ -8,10 +8,13 @@ use App\Game\Orchard;
 use App\Http\Controllers\Controller;
 use App\Models\AppleEntry;
 use App\Models\ApplePurchase;
+use App\Models\Cashout;
 use App\Models\Player;
+use App\Payments\Cashouts;
 use App\Payments\Checkout;
 use App\Payments\Packs;
 use App\Payments\PaymentException;
+use App\Payments\Paystack;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -21,12 +24,12 @@ use Symfony\Component\HttpFoundation\Response as HttpResponse;
 
 /**
  * The Apples page: buying packs with Paystack or PayPal, coming back from
- * paying, swapping Apples for Corn, Orchard membership, and the animal's
- * Apple history.
+ * paying, swapping Apples for Corn, Orchard membership, cashing out, and the
+ * animal's Apple history.
  */
 class AppleController extends Controller
 {
-    public function index(Request $request, Checkout $checkout): Response
+    public function index(Request $request, Checkout $checkout, Cashouts $cashouts, Paystack $paystack): Response
     {
         /** @var Player $player */
         $player = $request->user()->player;
@@ -68,6 +71,7 @@ class AppleController extends Controller
                 'refillReady' => Orchard::refillReady($player),
                 'shelves' => Market::SHELVES + 1,
             ],
+            'cashout' => $this->cashout($player, $cashouts, $paystack),
             'contact' => config('game.contact_email'),
         ]);
     }
@@ -151,6 +155,50 @@ class AppleController extends Controller
         $corn = Apples::swapForCorn($request->user()->player, $apples);
 
         return $this->told('You swapped '.number_format($apples).' '.($apples === 1 ? 'Apple' : 'Apples').' for '.number_format($corn).' Corn.');
+    }
+
+    /** @return array<string, mixed> What the Cash out part of the page needs. */
+    private function cashout(Player $player, Cashouts $cashouts, Paystack $paystack): array
+    {
+        $ways = $cashouts->ways();
+        $account = $player->payoutAccount;
+
+        return [
+            'open' => $cashouts->open(),
+            'ways' => $ways,
+            'per100' => config('game.cashout.per_100'),
+            'min' => Cashouts::min(),
+            'dailyCap' => Cashouts::dailyCap(),
+            'holdDays' => Cashouts::holdDays(),
+            'held' => Cashouts::held($player),
+            'available' => Cashouts::available($player),
+            // Their own details, with the numbers hidden: changing them means typing them again.
+            'account' => $account === null ? null : [
+                'method' => $account->method,
+                'label' => $account->describe(),
+                'name' => $account->legal_name,
+                'country' => $account->country,
+                'documentType' => $account->document_type,
+                'document' => $account->maskedDocument(),
+                'bankCode' => $account->bank_code,
+            ],
+            'banks' => $ways['paystack'] ? $paystack->banks() : [],
+            'history' => Cashout::query()
+                ->where('player_id', $player->id)
+                ->latest('id')
+                ->limit(10)
+                ->get()
+                ->map(fn (Cashout $cashout) => [
+                    'id' => $cashout->id,
+                    'apples' => $cashout->apples,
+                    'price' => $cashout->price(),
+                    'label' => $cashout->destination['label'] ?? '',
+                    'status' => $cashout->status,
+                    // Only the owner's reason for turning one down is for the animal's eyes.
+                    'reason' => $cashout->status === 'rejected' ? $cashout->note : null,
+                    'at' => $cashout->created_at->toIso8601String(),
+                ]),
+        ];
     }
 
     private function purchase(Request $request, string $provider, string $column, string $value): ?ApplePurchase

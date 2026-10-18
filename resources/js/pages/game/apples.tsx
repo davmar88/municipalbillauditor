@@ -1,10 +1,12 @@
 import { Head, router, usePage } from '@inertiajs/react';
 import { Clock3, RefreshCw, Wheat } from 'lucide-react';
 import { useState } from 'react';
+import { CashOut } from '@/components/game/cash-out';
+import type { CashOutInfo } from '@/components/game/cash-out';
 import { GameBar } from '@/components/game/game-bar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { act, dayMonth, shortWhen } from '@/lib/game';
+import { act, dayMonth, dollars, rand, shortWhen } from '@/lib/game';
 import { buy, check, swap } from '@/routes/play/apples';
 import { join, refill } from '@/routes/play/orchard';
 
@@ -50,26 +52,14 @@ type Props = {
         /** Shelves in a member's shop. */
         shelves: number;
     };
+    cashout: CashOutInfo;
     contact: string | null;
 };
 
-/** "R95", "R95.50". */
-function rand(cents: number): string {
-    return `R${(cents / 100).toLocaleString('en-ZA', {
-        minimumFractionDigits: cents % 100 === 0 ? 0 : 2,
-        maximumFractionDigits: 2,
-    })}`;
-}
-
-/** "$5.70". */
-function dollars(cents: number): string {
-    return `$${(cents / 100).toFixed(2)}`;
-}
-
 /**
  * Apples, bought with real money: packs to buy with Paystack or PayPal,
- * Orchard membership, swapping Apples for Corn, and where your Apples came
- * from and went.
+ * Orchard membership, swapping Apples for Corn, cashing out, and where your
+ * Apples came from and went.
  */
 export default function ApplesPage({
     packs,
@@ -79,6 +69,7 @@ export default function ApplesPage({
     pending,
     history,
     orchard,
+    cashout,
     contact,
 }: Props) {
     const [buying, setBuying] = useState<string | null>(null);
@@ -222,6 +213,8 @@ export default function ApplesPage({
                 <Orchard orchard={orchard} />
 
                 <Swap cornPerApple={cornPerApple} />
+
+                <CashOut cashout={cashout} />
 
                 <section className="flex flex-col gap-2">
                     <h2 className="text-lg font-bold">Your Apples</h2>

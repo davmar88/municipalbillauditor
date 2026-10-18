@@ -86,6 +86,20 @@ return [
         'days' => 31,
     ],
 
+    // Cashing Apples out for real money, once the owner opens it on the
+    // admin page. The cheapest Apple costs 80c (R800 for 1,000), and a
+    // cash-out pays 60c, so every cash-out leaves the game ahead.
+    'cashout' => [
+        // What the game pays for 100 Apples, in cents. Bitcoin is worked
+        // out in rand.
+        'per_100' => ['ZAR' => 6000, 'USD' => 360],
+        'min' => 500,
+        'daily_cap' => 5000,
+        // Apples an animal bought itself wait this long before they can be
+        // cashed out, in case the card payment is reversed.
+        'hold_days' => 14,
+    ],
+
     /*
     |--------------------------------------------------------------------------
     | Chat translation

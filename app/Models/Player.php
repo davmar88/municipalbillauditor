@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Carbon;
 
 /**
@@ -46,6 +47,7 @@ use Illuminate\Support\Carbon;
  * @property Valley $valley
  * @property Faction|null $faction
  * @property Region|null $region
+ * @property PayoutAccount|null $payoutAccount
  */
 #[Fillable(['user_id', 'valley_id', 'region_id', 'name', 'species', 'language', 'materials', 'corn', 'horseshoes', 'horseshoes_at', 'shield_until', 'adult_confirmed_at'])]
 class Player extends Model
@@ -112,6 +114,12 @@ class Player extends Model
     public function designs(): HasMany
     {
         return $this->hasMany(ItemDesign::class);
+    }
+
+    /** @return HasOne<PayoutAccount, $this> Where the animal's cash-outs go. */
+    public function payoutAccount(): HasOne
+    {
+        return $this->hasOne(PayoutAccount::class);
     }
 
     /** @return HasMany<RosetteEntry, $this> */

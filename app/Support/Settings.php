@@ -9,7 +9,8 @@ use Illuminate\Support\Facades\Log;
 
 /**
  * What the owner typed in on the admin page: the payment and Claude keys,
- * and whether Apple packs are on sale. Read once per request.
+ * whether Apple packs are on sale and whether cash-outs are open. Read once
+ * per request.
  */
 final class Settings
 {
@@ -18,6 +19,7 @@ final class Settings
 
     public const KEYS = [
         'apples_on_sale',
+        'cashout_open',
         'paystack_secret_key',
         'paypal_client_id',
         'paypal_client_secret',

@@ -17,6 +17,8 @@ declare module '@inertiajs/core' {
             unreadNotices: number;
             isStaff: boolean;
             isAdmin: boolean;
+            /** Cash-outs waiting for the owner, for the admin badge. */
+            cashoutsWaiting: number;
             missionsWaiting: number;
             nextStep: MissionCard | null;
             sidebarOpen: boolean;

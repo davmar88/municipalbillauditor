@@ -1,10 +1,12 @@
 <?php
 
+use App\Http\Controllers\Admin\CashoutController as CashoutQueueController;
 use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\Game\AppleController;
 use App\Http\Controllers\Game\BaseController;
 use App\Http\Controllers\Game\BattleController;
+use App\Http\Controllers\Game\CashoutController;
 use App\Http\Controllers\Game\ChatController;
 use App\Http\Controllers\Game\CrimeController;
 use App\Http\Controllers\Game\FactionController;
@@ -112,7 +114,7 @@ Route::middleware(['auth', 'verified', 'player', 'throttle:120,1'])->prefix('pla
     Route::post('missions/{mission}/claim', [TodayController::class, 'claim'])->name('play.mission.claim');
     Route::get('rankings', [RankingsController::class, 'index'])->name('play.rankings');
 
-    // Apples: buying packs, coming back from paying, and swapping for Corn.
+    // Apples: buying packs, coming back from paying, swapping for Corn and cashing out.
     Route::get('apples', [AppleController::class, 'index'])->name('play.apples');
     Route::post('apples/buy', [AppleController::class, 'buy'])->middleware('throttle:10,1,apple-buy')->name('play.apples.buy');
     Route::get('apples/paystack', [AppleController::class, 'paystack'])->name('play.apples.paystack');
@@ -122,6 +124,9 @@ Route::middleware(['auth', 'verified', 'player', 'throttle:120,1'])->prefix('pla
     Route::post('apples/swap', [AppleController::class, 'swap'])->name('play.apples.swap');
     Route::post('orchard/join', [OrchardController::class, 'join'])->name('play.orchard.join');
     Route::post('orchard/refill', [OrchardController::class, 'refill'])->name('play.orchard.refill');
+    // Each bank account check costs the game R3.
+    Route::post('cashout/account', [CashoutController::class, 'account'])->middleware('throttle:10,60,cashout-account')->name('play.cashout.account');
+    Route::post('cashout', [CashoutController::class, 'store'])->middleware('throttle:10,1,cashout')->name('play.cashout.request');
 
     Route::get('me', [ProfileController::class, 'show'])->name('play.me');
     Route::put('me/language', [ProfileController::class, 'language'])->name('play.me.language');
@@ -153,12 +158,23 @@ Route::middleware(['auth', 'verified', 'can:staff'])->prefix('staff')->group(fun
     Route::post('reports/{report}/mute', [ReportController::class, 'mute'])->name('staff.reports.mute');
 });
 
-// The owner's page: payment keys, Apple sales and what they brought in.
+// The owner's pages: payment keys, Apple sales and what they brought in, and
+// the cash-outs waiting for the owner's approval.
 Route::middleware(['auth', 'verified', 'can:admin'])->prefix('admin')->group(function () {
     Route::get('/', [SettingsController::class, 'index'])->name('admin');
     Route::put('settings', [SettingsController::class, 'update'])->name('admin.settings.update');
     Route::delete('settings/{key}', [SettingsController::class, 'forget'])->whereIn('key', SettingsController::REMOVABLE)->name('admin.settings.forget');
     Route::post('settings/test/{service}', [SettingsController::class, 'test'])->whereIn('service', ['paystack', 'paypal', 'claude'])->middleware('throttle:10,1,admin-test')->name('admin.settings.test');
+
+    Route::get('cashouts', [CashoutQueueController::class, 'index'])->name('admin.cashouts');
+    Route::middleware('throttle:30,1,admin-cashouts')->group(function () {
+        Route::post('cashouts/{cashout}/pay', [CashoutQueueController::class, 'pay'])->name('admin.cashouts.pay');
+        Route::post('cashouts/{cashout}/check', [CashoutQueueController::class, 'check'])->name('admin.cashouts.check');
+        Route::post('cashouts/{cashout}/otp', [CashoutQueueController::class, 'otp'])->name('admin.cashouts.otp');
+        Route::post('cashouts/{cashout}/otp/resend', [CashoutQueueController::class, 'resendOtp'])->name('admin.cashouts.resend-otp');
+        Route::post('cashouts/{cashout}/paid', [CashoutQueueController::class, 'paid'])->name('admin.cashouts.paid');
+        Route::post('cashouts/{cashout}/reject', [CashoutQueueController::class, 'reject'])->name('admin.cashouts.reject');
+    });
 });
 
 require __DIR__.'/settings.php';

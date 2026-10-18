@@ -3,6 +3,7 @@
 namespace App\Payments;
 
 use App\Models\ApplePurchase;
+use App\Models\Cashout;
 use App\Support\Settings;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\PendingRequest;
@@ -13,7 +14,8 @@ use Illuminate\Support\Facades\Log;
 /**
  * Payments in US dollars. The player approves the order on PayPal's page,
  * and we take the money when they come back, so an order nobody comes back
- * from never charges anyone.
+ * from never charges anyone. Cash-outs go the other way, as payouts to the
+ * animal's PayPal email.
  */
 final class PayPal
 {
@@ -114,6 +116,95 @@ final class PayPal
         }
 
         return $response->json();
+    }
+
+    /**
+     * Send a cash-out to a PayPal email, and return PayPal's id for the
+     * payout. PayPal refuses a second payout with the same reference, so
+     * sending again can't pay twice: it hands back the first one instead.
+     *
+     * @throws PaymentException
+     */
+    public function payout(Cashout $cashout): string
+    {
+        if (! $this->ready()) {
+            throw new PaymentRefused('Add the PayPal client ID and secret first.');
+        }
+
+        // Nothing has been sent yet, so a problem here is safe to retry.
+        try {
+            $token = $this->token();
+        } catch (PaymentException $e) {
+            throw new PaymentRefused($e->getMessage());
+        }
+
+        try {
+            $response = Http::withToken($token)->acceptJson()->asJson()->timeout(30)
+                ->post($this->base().'/v1/payments/payouts', [
+                    'sender_batch_header' => [
+                        'sender_batch_id' => $cashout->reference,
+                        'email_subject' => 'Your '.config('app.name').' cash-out',
+                        'email_message' => "Here is your cash-out of {$cashout->apples} Apples.",
+                    ],
+                    'items' => [[
+                        'recipient_type' => 'EMAIL',
+                        'receiver' => $cashout->destination['email'] ?? '',
+                        'amount' => ['value' => self::money($cashout->amount), 'currency' => $cashout->currency],
+                        'note' => "Cash-out of {$cashout->apples} Apples",
+                        'sender_item_id' => $cashout->reference,
+                    ]],
+                ]);
+        } catch (ConnectionException) {
+            throw new PaymentException("PayPal didn't answer. Press Check to see whether the payout went.");
+        }
+
+        $id = $response->json('batch_header.payout_batch_id');
+
+        if ($response->successful() && is_string($id)) {
+            return $id;
+        }
+
+        // Sent before: PayPal links to the first payout.
+        $first = collect($response->json('links', []))
+            ->merge(collect($response->json('details', []))->flatMap(fn ($detail) => is_array($detail) ? ($detail['link'] ?? $detail['links'] ?? []) : []))
+            ->map(fn ($link) => is_array($link) ? (string) ($link['href'] ?? '') : '')
+            ->map(fn (string $href) => preg_match('~/v1/payments/payouts/([A-Z0-9]+)$~', $href, $match) ? $match[1] : null)
+            ->filter()
+            ->first();
+
+        if (is_string($first)) {
+            return $first;
+        }
+
+        if ($response->serverError()) {
+            throw new PaymentException("PayPal didn't answer. Press Check to see whether the payout went.");
+        }
+
+        Log::warning('PayPal refused a payout', ['cashout' => $cashout->id, 'status' => $response->status(), 'name' => $response->json('name')]);
+
+        throw new PaymentRefused('PayPal said: '.($response->json('details.0.issue') ?? $response->json('message') ?? "error {$response->status()}"));
+    }
+
+    /**
+     * How a payout stands: PayPal's status for the one payment in it, and
+     * the reason when it failed.
+     *
+     * @return array{status: string|null, error: string|null}
+     *
+     * @throws PaymentException
+     */
+    public function payoutStatus(string $batchId): array
+    {
+        $response = $this->call(fn (PendingRequest $http) => $http->get($this->base().'/v1/payments/payouts/'.rawurlencode($batchId)));
+
+        if (! $response->successful()) {
+            throw new PaymentException('PayPal said: '.($response->json('message') ?? "error {$response->status()}"));
+        }
+
+        return [
+            'status' => $response->json('items.0.transaction_status') ?? $response->json('batch_header.batch_status'),
+            'error' => $response->json('items.0.errors.message') ?? $response->json('items.0.errors.name'),
+        ];
     }
 
     /** Null when the keys work, otherwise what PayPal said. */

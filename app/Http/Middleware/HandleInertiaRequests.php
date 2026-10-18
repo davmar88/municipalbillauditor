@@ -9,6 +9,7 @@ use App\Game\Missions;
 use App\Game\Notices;
 use App\Game\Orchard;
 use App\Game\Powers;
+use App\Models\Cashout;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Middleware;
@@ -102,6 +103,8 @@ class HandleInertiaRequests extends Middleware
             }),
             'isStaff' => fn () => (bool) $request->user()?->is_staff,
             'isAdmin' => fn () => (bool) $request->user()?->is_admin,
+            // The badge on the owner's Cash-outs page.
+            'cashoutsWaiting' => fn () => $request->user()?->is_admin ? Cashout::query()->where('status', 'pending')->count() : 0,
             // Finished missions waiting to be collected, for the Today badge.
             'missionsWaiting' => fn () => $request->user()?->player ? Missions::waiting($request->user()->player) : 0,
             // The story step you're on, for the Next step bar under the game bar.

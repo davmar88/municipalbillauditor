@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\ApplePurchase;
+use App\Models\Cashout;
 use App\Models\Faction;
 use App\Models\Player;
 use App\Models\Warrant;
@@ -21,8 +22,9 @@ use Inertia\Response;
 
 /**
  * The owner's page: the Paystack, PayPal and Claude keys, whether Apple
- * packs are on sale, and what the sales brought in. Saved keys are never
- * sent back to the browser, only their last four characters.
+ * packs are on sale and cash-outs open, and what the sales brought in.
+ * Saved keys are never sent back to the browser, only their last four
+ * characters.
  */
 class SettingsController extends Controller
 {
@@ -33,11 +35,14 @@ class SettingsController extends Controller
     {
         $paid = ApplePurchase::query()->where('status', 'paid');
         $sold = (int) (clone $paid)->sum('apples');
-        $held = (int) Player::query()->sum('apples') + (int) Faction::query()->sum('apples') + (int) Warrant::query()->where('status', 'open')->sum('bounty');
+        $held = (int) Player::query()->sum('apples') + (int) Faction::query()->sum('apples') + (int) Warrant::query()->where('status', 'open')->sum('bounty')
+            + (int) Cashout::query()->whereIn('status', ['pending', 'sending'])->sum('apples');
+        $cashedOut = (int) Cashout::query()->where('status', 'paid')->sum('apples');
 
         return Inertia::render('admin/settings', [
             'settings' => [
                 'applesOnSale' => $settings->on('apples_on_sale'),
+                'cashoutOpen' => $settings->on('cashout_open'),
                 'paystackSecretKey' => $settings->hint('paystack_secret_key'),
                 'paystackLive' => str_starts_with((string) $settings->get('paystack_secret_key'), 'sk_live_'),
                 'paypalClientId' => $settings->get('paypal_client_id'),
@@ -54,7 +59,8 @@ class SettingsController extends Controller
                 'usd' => (int) (clone $paid)->where('currency', 'USD')->sum('amount'),
                 'sold' => $sold,
                 'held' => $held,
-                'kept' => max(0, $sold - $held),
+                'cashedOut' => $cashedOut,
+                'kept' => max(0, $sold - $held - $cashedOut),
                 'review' => ApplePurchase::query()->where('status', 'review')->count(),
                 'members' => Player::query()->where('orchard_until', '>', now())->count(),
             ],
@@ -80,6 +86,7 @@ class SettingsController extends Controller
     {
         $data = $request->validate([
             'apples_on_sale' => ['required', 'boolean'],
+            'cashout_open' => ['required', 'boolean'],
             'paystack_secret_key' => ['nullable', 'string', 'max:200', 'starts_with:sk_test_,sk_live_'],
             'paypal_client_id' => ['nullable', 'string', 'max:200'],
             'paypal_client_secret' => ['nullable', 'string', 'max:200'],
@@ -107,6 +114,7 @@ class SettingsController extends Controller
         }
 
         $settings->put('apples_on_sale', $request->boolean('apples_on_sale') ? '1' : null, $user);
+        $settings->put('cashout_open', $request->boolean('cashout_open') ? '1' : null, $user);
 
         return $this->told('Saved.');
     }
