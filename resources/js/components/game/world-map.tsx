@@ -1,12 +1,17 @@
 import { LocateFixed, Minus, Plus, Scan } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { MapFeatures, MapGround } from '@/components/game/map-terrain';
+import {
+    FieldGround,
+    MapFeatures,
+    MapGround,
+} from '@/components/game/map-terrain';
 import { clockTime, speciesEmoji } from '@/lib/game';
 import type { Point } from '@/lib/hollowmere';
 import {
     BROOK,
     FARM,
+    FIELDS,
     REACH,
     ROADS,
     WORLD,
@@ -580,6 +585,15 @@ const Territory = memo(function Territory({
 }) {
     return (
         <g pointerEvents="none">
+            {/* Wild land a farm has grown into, cleared and planted. */}
+            {regions
+                .filter((region) => FIELDS[region.key] !== undefined)
+                .map((region) => (
+                    <FieldGround
+                        key={`field-${region.id}`}
+                        fieldKey={region.key}
+                    />
+                ))}
             {regions.map((region) => {
                 const d = toPath(shapeFor(region).polygon);
 
@@ -1050,7 +1064,7 @@ const Labels = memo(function Labels({
             )}
             {(
                 [
-                    ['THE RIDGE', [800, -330], 0],
+                    ['THE RIDGE', [800, -570], 0],
                     ['IRONFIELD', [1600, 560], 90],
                 ] as const
             ).map(([text, [x, y], angle]) => (

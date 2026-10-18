@@ -21,6 +21,7 @@ use Illuminate\Support\Carbon;
  * @property string|null $produces
  * @property int $col
  * @property int $row
+ * @property bool $wild Wild land round a farm, not yet grown into
  * @property int|null $faction_id
  * @property Carbon|null $held_since
  * @property Carbon|null $settled_until
@@ -35,6 +36,7 @@ class Region extends Model
         return [
             'held_since' => 'datetime',
             'settled_until' => 'datetime',
+            'wild' => 'boolean',
         ];
     }
 

@@ -27,6 +27,10 @@ final class Movement
             Players::ensureFree($player);
             $here = $player->location();
 
+            if ($target->wild) {
+                throw new GameException("{$target->name} is still wild land. Its farm's holders can grow into it.");
+            }
+
             if ($here->is($target)) {
                 throw new GameException("You're already in {$target->name}.");
             }

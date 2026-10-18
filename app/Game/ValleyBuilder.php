@@ -42,6 +42,29 @@ final class ValleyBuilder
         'thornbury' => ['Thornbury Farm', 'farm', 'honey', 0, 9],
         'brookside' => ['Brookside Farm', 'farm', 'herbs', 1, 9],
         'willowby' => ['Willowby Farm', 'farm', 'iron', 2, 9],
+        // Wild land round each farm, cleared one patch at a time as its holder grows it.
+        'thornbury_heath' => ['Thornbury Heath', 'farm', 'honey', 3, 9],
+        'thornbury_hives' => ['Thornbury Hives', 'farm', 'honey', 4, 9],
+        'thornbury_hollow' => ['Thornbury Hollow', 'farm', 'honey', 5, 9],
+        'brookside_reeds' => ['Brookside Reeds', 'farm', 'herbs', 6, 9],
+        'brookside_marsh' => ['Brookside Marsh', 'farm', 'herbs', 7, 9],
+        'brookside_meadow' => ['Brookside Meadow', 'farm', 'herbs', 8, 9],
+        'willowby_copse' => ['Willowby Copse', 'farm', 'iron', 9, 9],
+        'willowby_forge' => ['Willowby Forge', 'farm', 'iron', 10, 9],
+        'willowby_pits' => ['Willowby Pits', 'farm', 'iron', 11, 9],
+    ];
+
+    /** Which farm each patch of wild land belongs to, in the order it is cleared. */
+    public const FIELD_OF = [
+        'thornbury_heath' => 'thornbury',
+        'thornbury_hives' => 'thornbury',
+        'thornbury_hollow' => 'thornbury',
+        'brookside_reeds' => 'brookside',
+        'brookside_marsh' => 'brookside',
+        'brookside_meadow' => 'brookside',
+        'willowby_copse' => 'willowby',
+        'willowby_forge' => 'willowby',
+        'willowby_pits' => 'willowby',
     ];
 
     /** Which Hollowmere regions each farm borders. */
@@ -49,6 +72,15 @@ final class ValleyBuilder
         'thornbury' => ['orchard', 'big_barn', 'hayfield'],
         'brookside' => ['wildwood', 'sheepfold', 'duck_pond'],
         'willowby' => ['paddock'],
+        'thornbury_heath' => ['thornbury'],
+        'thornbury_hives' => ['thornbury'],
+        'thornbury_hollow' => ['thornbury'],
+        'brookside_reeds' => ['brookside'],
+        'brookside_marsh' => ['brookside'],
+        'brookside_meadow' => ['brookside'],
+        'willowby_copse' => ['willowby'],
+        'willowby_forge' => ['willowby'],
+        'willowby_pits' => ['willowby'],
     ];
 
     public function build(string $name = 'Hollowmere'): Valley
@@ -58,10 +90,15 @@ final class ValleyBuilder
 
             foreach (self::REGIONS as $key => [$regionName, $ring, $produces, $col, $row]) {
                 // Kept in step with the list, so a region's crop can change; who holds it never does here.
-                Region::query()->updateOrCreate(
+                $region = Region::query()->updateOrCreate(
                     ['valley_id' => $valley->id, 'key' => $key],
                     ['name' => $regionName, 'ring' => $ring, 'produces' => $produces, 'col' => $col, 'row' => $row],
                 );
+
+                // A farm's patches start wild; once cleared they stay cleared.
+                if ($region->wasRecentlyCreated && isset(self::FIELD_OF[$key])) {
+                    $region->forceFill(['wild' => true])->save();
+                }
             }
 
             $this->link($valley);

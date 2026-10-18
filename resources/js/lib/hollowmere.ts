@@ -9,10 +9,10 @@
 export type Point = [number, number];
 
 /** Everything drawn: Hollowmere, the farms beyond its fences and the land round them. */
-export const WORLD = { x: -460, y: -400, width: 2200, height: 1880 };
+export const WORLD = { x: -720, y: -640, width: 2500, height: 2360 };
 
 /** Hollowmere and its farms, for seeing everything at once. */
-export const REACH = { x: -380, y: -300, width: 2020, height: 1700 };
+export const REACH = { x: -680, y: -500, width: 2200, height: 2140 };
 
 /** The farm without the land around it, for fitting it on screen. */
 export const FARM = { x: 96, y: 92, width: 1408, height: 904 };
@@ -278,13 +278,136 @@ export const SHAPES: Record<string, RegionShape> = Object.fromEntries([
     ...Object.entries(FARMS).map(([key, farm]) => [key, shape(farm.polygon)]),
 ]);
 
+/**
+ * The wild land round each farm, in the order the farm grows into it. A
+ * patch is drawn as scrub until it's cleared into a region of its farm.
+ */
+export const FIELDS: Record<string, { farm: string; polygon: Point[] }> = {
+    thornbury_heath: {
+        farm: 'thornbury',
+        polygon: [
+            [130, 96],
+            [380, 98],
+            [345, -60],
+            [400, -236],
+            [260, -300],
+            [130, -240],
+            [110, -80],
+        ],
+    },
+    thornbury_hives: {
+        farm: 'thornbury',
+        polygon: [
+            [412, -242],
+            [800, -278],
+            [1188, -240],
+            [1150, -420],
+            [800, -472],
+            [452, -430],
+        ],
+    },
+    thornbury_hollow: {
+        farm: 'thornbury',
+        polygon: [
+            [1222, 96],
+            [1470, 100],
+            [1484, -60],
+            [1460, -240],
+            [1300, -300],
+            [1198, -238],
+            [1258, -40],
+        ],
+    },
+    brookside_reeds: {
+        farm: 'brookside',
+        polygon: [
+            [-345, 176],
+            [-162, 78],
+            [18, 102],
+            [30, -100],
+            [0, -280],
+            [-180, -330],
+            [-360, -250],
+            [-390, -20],
+        ],
+    },
+    brookside_marsh: {
+        farm: 'brookside',
+        polygon: [
+            [-346, 214],
+            [-380, 480],
+            [-342, 768],
+            [-500, 840],
+            [-650, 640],
+            [-660, 330],
+            [-530, 200],
+        ],
+    },
+    brookside_meadow: {
+        farm: 'brookside',
+        polygon: [
+            [20, 860],
+            [-150, 904],
+            [-336, 786],
+            [-480, 880],
+            [-420, 1100],
+            [-200, 1180],
+            [10, 1120],
+            [36, 990],
+        ],
+    },
+    willowby_copse: {
+        farm: 'willowby',
+        polygon: [
+            [420, 1082],
+            [388, 1212],
+            [470, 1346],
+            [300, 1420],
+            [150, 1380],
+            [120, 1200],
+            [190, 1082],
+        ],
+    },
+    willowby_forge: {
+        farm: 'willowby',
+        polygon: [
+            [480, 1350],
+            [800, 1386],
+            [1124, 1354],
+            [1090, 1540],
+            [800, 1600],
+            [500, 1550],
+        ],
+    },
+    willowby_pits: {
+        farm: 'willowby',
+        polygon: [
+            [1182, 1082],
+            [1214, 1220],
+            [1134, 1352],
+            [1300, 1420],
+            [1484, 1360],
+            [1484, 1180],
+            [1420, 1072],
+        ],
+    },
+};
+
+export const FIELD_SHAPES: Record<string, RegionShape> = Object.fromEntries(
+    Object.entries(FIELDS).map(([key, field]) => [key, shape(field.polygon)]),
+);
+
+function anyShape(key: string): RegionShape | undefined {
+    return SHAPES[key] ?? FIELD_SHAPES[key];
+}
+
 export function shapeOf(
     key: string,
     col: number,
     row: number,
     safe: boolean,
 ): RegionShape {
-    return SHAPES[key] ?? regionShape(col, row, safe);
+    return anyShape(key) ?? regionShape(col, row, safe);
 }
 
 export function toPath(points: Point[]): string {
@@ -428,15 +551,15 @@ const PLOTS: Record<string, Point> = {
 
 /** The spot where a faction builds in a region. */
 export function plot(key: string): Point {
-    const shape = SHAPES[key];
-    const [dx, dy] = PLOTS[key] ?? [60, 40];
+    const shape = anyShape(key);
+    const [dx, dy] = PLOTS[key] ?? (FIELDS[key] ? [30, 40] : [60, 40]);
 
     return shape ? [shape.centre[0] + dx, shape.centre[1] + dy] : hub(key);
 }
 
 /** The spot in a region where its lanes meet and animals gather. */
 export function hub(key: string): Point {
-    const shape = SHAPES[key];
+    const shape = anyShape(key);
 
     if (!shape) {
         return [WORLD.width / 2, WORLD.height / 2];

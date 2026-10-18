@@ -29,9 +29,10 @@ class FarmsTest extends TestCase
 
     public function test_the_valley_has_three_farms_beyond_the_fences(): void
     {
-        $this->assertSame(19, $this->valley->regions()->count());
-        $this->assertEqualsCanonicalizing(['orchard', 'big_barn', 'hayfield'], $this->region('thornbury')->neighbours()->pluck('key')->all());
-        $this->assertEqualsCanonicalizing(['paddock'], $this->region('willowby')->neighbours()->pluck('key')->all());
+        $this->assertSame(19, $this->valley->regions()->where('wild', false)->count());
+        $this->assertSame(9, $this->valley->regions()->where('wild', true)->count(), 'Three patches of wild land round each farm.');
+        $this->assertEqualsCanonicalizing(['orchard', 'big_barn', 'hayfield'], $this->region('thornbury')->neighbours()->where('wild', false)->pluck('key')->all());
+        $this->assertEqualsCanonicalizing(['paddock'], $this->region('willowby')->neighbours()->where('wild', false)->pluck('key')->all());
         $this->assertTrue($this->region('big_barn')->neighbours()->where('key', 'thornbury')->exists());
     }
 

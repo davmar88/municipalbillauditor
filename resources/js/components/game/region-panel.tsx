@@ -7,12 +7,18 @@ import {
     ScrollText,
     Shield,
     Store,
+    Sprout,
     Swords,
     Wheat,
     X,
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { BuildingDetails, BuildOptions } from '@/components/game/faction-base';
+import {
+    BuildingDetails,
+    BuildOptions,
+    CostList,
+    shortOf,
+} from '@/components/game/faction-base';
 import { Horseshoe } from '@/components/game/game-bar';
 import { HorseshoePicker } from '@/components/game/horseshoe-picker';
 import { Button } from '@/components/ui/button';
@@ -22,6 +28,7 @@ import { openChat } from '@/lib/pulse';
 import {
     attack,
     buyFarm,
+    growFarm,
     commit,
     faction as factionPage,
     gate,
@@ -360,9 +367,15 @@ export function RegionPanel({
                                 aria-hidden
                             />
                             {region.faction
-                                ? `${region.faction.name} owns this farm`
-                                : 'This farm is for sale'}
+                                ? `${region.faction.name} owns this ${region.partOf ? 'land' : 'farm'}`
+                                : `This ${region.partOf ? 'land' : 'farm'} is for sale`}
                         </p>
+                        {region.partOf && (
+                            <p className="text-muted-foreground">
+                                Part of {region.partOf}, cleared from the wild
+                                land round it.
+                            </p>
+                        )}
                         <p>
                             It grows{' '}
                             <span className="font-semibold">
@@ -400,6 +413,65 @@ export function RegionPanel({
                                         : 'Join or found a faction to buy farms.'}
                                 </p>
                             ))}
+                        {region.growth && (
+                            <div className="mt-1 flex flex-col gap-2 border-t border-yellow-400/30 pt-2">
+                                <p className="font-semibold">
+                                    Grown {region.growth.grown} of{' '}
+                                    {region.growth.max} times
+                                </p>
+                                {region.growth.next ? (
+                                    <>
+                                        <p className="text-muted-foreground">
+                                            Next it grows into{' '}
+                                            {region.growth.next.name}, a new
+                                            region of this farm in its holder's
+                                            colour.
+                                        </p>
+                                        {holds(region) && base?.canBuild ? (
+                                            <>
+                                                <CostList
+                                                    cost={
+                                                        region.growth.next.cost
+                                                    }
+                                                    store={base}
+                                                />
+                                                <Button
+                                                    className="self-start"
+                                                    disabled={
+                                                        shortOf(
+                                                            region.growth.next
+                                                                .cost,
+                                                            base,
+                                                        ).length > 0
+                                                    }
+                                                    onClick={() =>
+                                                        act(
+                                                            growFarm.url(
+                                                                region.id,
+                                                            ),
+                                                        )
+                                                    }
+                                                >
+                                                    <Sprout className="size-4" />
+                                                    Grow into{' '}
+                                                    {region.growth.next.name}
+                                                </Button>
+                                            </>
+                                        ) : (
+                                            <p className="text-xs text-muted-foreground">
+                                                {holds(region)
+                                                    ? "Your faction's leader and council can grow it."
+                                                    : 'Only the faction holding this farm can grow it.'}
+                                            </p>
+                                        )}
+                                    </>
+                                ) : (
+                                    <p className="text-muted-foreground">
+                                        It has grown into all the land round it.
+                                    </p>
+                                )}
+                            </div>
+                        )}
                     </div>
                 )}
 

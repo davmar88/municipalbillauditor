@@ -31,7 +31,7 @@ final class Gathering
      */
     public function gather(Player $player, Region $region): array
     {
-        if ($region->produces === null) {
+        if ($region->produces === null || $region->wild) {
             throw new GameException("Nothing grows in {$region->name}. Try a field or the woods.");
         }
 

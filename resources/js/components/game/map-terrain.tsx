@@ -2,6 +2,8 @@ import { memo } from 'react';
 import type { Point } from '@/lib/hollowmere';
 import {
     BROOK,
+    FIELD_SHAPES,
+    FIELDS,
     LINKS,
     ROAD_LINKS,
     ROADS,
@@ -342,6 +344,35 @@ function Surroundings() {
                 { x: 40, y: 1046, width: 1560, height: 40 },
                 46,
                 'south',
+            ),
+            // The far edges of the valley, and the wild patches round each farm.
+            ...scatterBox(
+                { x: -720, y: -640, width: 2500, height: 160 },
+                150,
+                'outer-north',
+            ),
+            ...scatterBox(
+                { x: -720, y: -500, width: 60, height: 2200 },
+                70,
+                'outer-west',
+            ),
+            ...scatterBox(
+                { x: -720, y: 1610, width: 2500, height: 110 },
+                130,
+                'outer-south',
+            ),
+            ...scatterBox(
+                { x: -660, y: -480, width: 280, height: 680 },
+                70,
+                'outer-north-west',
+            ),
+            ...scatterBox(
+                { x: -660, y: 860, width: 260, height: 760 },
+                70,
+                'outer-south-west',
+            ),
+            ...Object.entries(FIELD_SHAPES).flatMap(([key, field]) =>
+                scatter(field, 46, `wild:${key}`, 6),
             ),
             // The wild land round the farms beyond the fences.
             ...scatterBox(
@@ -1571,11 +1602,13 @@ export const MapGround = memo(function MapGround() {
         <g>
             <defs>
                 <Patterns />
-                {shapes.map(([key, shape]) => (
-                    <clipPath key={key} id={`clip-${key}`}>
-                        <path d={toPath(shape.polygon)} />
-                    </clipPath>
-                ))}
+                {[...shapes, ...Object.entries(FIELD_SHAPES)].map(
+                    ([key, shape]) => (
+                        <clipPath key={key} id={`clip-${key}`}>
+                            <path d={toPath(shape.polygon)} />
+                        </clipPath>
+                    ),
+                )}
             </defs>
             <Surroundings />
             {/* The fence round the farm: the half of these strokes outside the fields. */}
@@ -1720,3 +1753,56 @@ export const MapFeatures = memo(function MapFeatures() {
         </g>
     );
 });
+
+/**
+ * A patch of wild land that its farm has grown into: cleared, fenced and
+ * planted with the farm's crop. Drawn over the scrub it replaced.
+ */
+export function FieldGround({ fieldKey }: { fieldKey: string }) {
+    const field = FIELDS[fieldKey];
+    const shape = FIELD_SHAPES[fieldKey];
+
+    if (!field || !shape) {
+        return null;
+    }
+
+    const d = toPath(shape.polygon);
+
+    return (
+        <g>
+            <path
+                d={d}
+                fill="none"
+                stroke={INK.fence}
+                strokeWidth={12}
+                strokeLinejoin="round"
+            />
+            <path d={d} fill={`url(#rows-${field.farm})`} />
+            <g clipPath={`url(#clip-${fieldKey})`}>
+                <Trees
+                    list={trees(
+                        scatter(shape, 5, `field:${fieldKey}`, 24),
+                        fieldKey,
+                        [7, 4],
+                    )}
+                />
+            </g>
+            <path
+                d={d}
+                fill="none"
+                stroke={INK.hedge}
+                strokeWidth={6}
+                strokeLinejoin="round"
+                opacity={0.85}
+            />
+            <path
+                d={d}
+                fill="none"
+                stroke={INK.border}
+                strokeWidth={1.4}
+                strokeDasharray="7 6"
+                opacity={0.75}
+            />
+        </g>
+    );
+}

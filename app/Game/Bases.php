@@ -311,7 +311,7 @@ final class Bases
      *
      * @throws GameException
      */
-    private function pay(Faction $faction, array $cost): void
+    public function pay(Faction $faction, array $cost): void
     {
         $short = [];
 

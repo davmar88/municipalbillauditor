@@ -10,6 +10,7 @@ use App\Game\GateNight;
 use App\Game\Gathering;
 use App\Game\Movement;
 use App\Game\Powers;
+use App\Game\ValleyBuilder;
 use App\Game\Wall;
 use App\Http\Controllers\Controller;
 use App\Models\Attack;
@@ -34,7 +35,13 @@ class MapController extends Controller
         $season = $valley->currentSeason();
         $house = $valley->house();
 
-        $regions = $valley->regions()->with(['faction:id,name,colour', 'neighbours:id', 'building'])->orderBy('row')->orderBy('col')->get();
+        // Wild land round the farms isn't a region yet: it stays off the map and its paths.
+        $regions = $valley->regions()
+            ->where('wild', false)
+            ->with(['faction:id,name,colour', 'neighbours' => fn ($query) => $query->where('regions.wild', false), 'building'])
+            ->orderBy('row')
+            ->orderBy('col')
+            ->get();
         $open = $season?->attacks()->with(['faction:id,name,colour'])->whereNull('resolved_at')->get() ?? collect();
         $mine = $open->filter(fn (Attack $attack) => $player->faction_id !== null
             && ($attack->faction_id === $player->faction_id || $regions->firstWhere('id', $attack->region_id)?->faction_id === $player->faction_id));
@@ -68,6 +75,17 @@ class MapController extends Controller
                 'faction' => $region->faction ? ['id' => $region->faction->id, 'name' => $region->faction->name, 'colour' => $region->faction->colour] : null,
                 'settledUntil' => $region->settled_until?->isFuture() ? $region->settled_until->toIso8601String() : null,
                 'gatedUntil' => Powers::gatedUntil($region)?->toIso8601String(),
+                'partOf' => isset(ValleyBuilder::FIELD_OF[$region->key]) ? $regions->firstWhere('key', ValleyBuilder::FIELD_OF[$region->key])?->name : null,
+                'growth' => Farms::fieldKeys($region->key) === [] ? null : (function () use ($region) {
+                    $next = Farms::nextField($region);
+                    $grown = Farms::grown($region);
+
+                    return [
+                        'grown' => $grown,
+                        'max' => Farms::GROWTH,
+                        'next' => $next ? ['name' => $next->name, 'cost' => Farms::growCost($grown + 1, (string) $region->produces)] : null,
+                    ];
+                })(),
                 'neighbours' => $region->neighbours->pluck('id'),
                 'incoming' => $open->where('region_id', $region->id)->values()->map(fn (Attack $attack) => [
                     'id' => $attack->id,
@@ -148,6 +166,14 @@ class MapController extends Controller
         $farms->buy($request->user()->player, $region);
 
         return $this->told("{$region->name} is your faction's now. It pays ".Farms::INCOME.' Corn into the treasury every half hour.');
+    }
+
+    public function grow(Request $request, Region $region, Farms $farms): RedirectResponse
+    {
+        abort_unless($region->valley_id === $request->user()->player->valley_id, 404);
+        $field = $farms->grow($request->user()->player, $region);
+
+        return $this->told("{$region->name} grew into {$field->name}. It's your faction's new region.");
     }
 
     public function gather(Request $request, Region $region, Gathering $gathering): RedirectResponse

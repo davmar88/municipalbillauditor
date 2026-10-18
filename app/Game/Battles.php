@@ -37,6 +37,10 @@ final class Battles
             throw new GameException('A faction needs at least '.config('game.faction.members_to_raid').' members to raid.');
         }
 
+        if ($target->wild) {
+            throw new GameException("{$target->name} is still wild land. There's nothing there to raid.");
+        }
+
         if ($target->isSafe()) {
             throw new GameException("{$target->name} is safe ground. Nobody can attack it.");
         }

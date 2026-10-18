@@ -141,6 +141,17 @@ export type MapRegion = {
     settledUntil: string | null;
     /** When an Iron Gate keeping raiders out comes down. */
     gatedUntil: string | null;
+    /** The farm a cleared patch of land belongs to. */
+    partOf: string | null;
+    /** How far a farm has grown into the wild land round it. */
+    growth: {
+        grown: number;
+        max: number;
+        next: {
+            name: string;
+            cost: { corn: number; materials: Record<string, number> };
+        } | null;
+    } | null;
     neighbours: number[];
     incoming: {
         id: number;
