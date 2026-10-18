@@ -142,10 +142,7 @@ export function RegionPanel({
     const battleFor = new Map(battles.map((battle) => [battle.id, battle]));
     const isHouse = house !== null && region.faction?.id === house.id;
     const buildable =
-        holds(region) &&
-        region.ring !== 'safe' &&
-        region.key !== 'farmhouse' &&
-        region.building === null;
+        holds(region) && region.ring !== 'safe' && region.building === null;
 
     return (
         <section
@@ -642,6 +639,16 @@ export function RegionPanel({
                     </p>
                 )}
 
+                {region.key === 'farmhouse' &&
+                    region.faction &&
+                    region.faction.id !== house?.id && (
+                        <p className="rounded-lg border border-yellow-400/40 bg-yellow-400/10 p-3">
+                            {region.faction.name} holds the Farmhouse but
+                            doesn't rule yet: it rules once its Head Office
+                            stands. Until then the Farmhouse can be taken.
+                        </p>
+                    )}
+
                 {region.building && region.faction && (
                     <div className="flex flex-col gap-2 rounded-lg border p-3">
                         <p className="flex items-center gap-2 font-semibold">
@@ -677,6 +684,7 @@ export function RegionPanel({
                         </p>
                         <BuildOptions
                             regionId={region.id}
+                            regionKey={region.key}
                             kinds={buildingKinds}
                             store={base}
                             hasDen={base.hasDen}

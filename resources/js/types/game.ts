@@ -110,7 +110,8 @@ export type BuildingKindValue =
     | 'watchtower'
     | 'drill_yard'
     | 'storehouse'
-    | 'workshop';
+    | 'workshop'
+    | 'head_office';
 
 /** What a building costs and does at each level. */
 export type BuildingKindCard = {

@@ -50,6 +50,7 @@ final class Tick
         $this->wall->settleSecretEdits($season);
         $this->wall->expireLaws($season);
         $this->battles->resolveDue($season);
+        $this->bases->crown($valley);
         $this->crimes->resolveDue($season);
         $this->uprisings->resolveDue($season, $this->battles, $this->wall);
         $this->uprisings->riseIfFurious($season->fresh());

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\BuildingKind;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -52,9 +53,25 @@ class Valley extends Model
     }
 
     /** The faction holding the Farmhouse rules the valley. */
+    /**
+     * The House: the faction that holds the Farmhouse and has a Head Office
+     * standing there. Holding it isn't enough to rule.
+     */
     public function house(): ?Faction
     {
-        return $this->region('farmhouse')->faction;
+        $farmhouse = $this->region('farmhouse');
+
+        if ($farmhouse->faction_id === null) {
+            return null;
+        }
+
+        $office = Building::query()
+            ->where('region_id', $farmhouse->id)
+            ->where('faction_id', $farmhouse->faction_id)
+            ->where('kind', BuildingKind::HeadOffice)
+            ->first();
+
+        return $office !== null && $office->workingLevel() >= 1 ? $farmhouse->faction : null;
     }
 
     public static function main(): self

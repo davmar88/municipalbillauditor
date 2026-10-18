@@ -77,7 +77,8 @@ class UprisingsAndCrimesTest extends TestCase
         $uprisings->resolveDue($this->season(), app(Battles::class), app(Wall::class));
 
         $this->assertSame('won', $uprising->fresh()->status);
-        $this->assertSame($faction->id, $this->valley->fresh()->house()?->id);
+        $this->assertSame($faction->id, $this->region('farmhouse')->faction_id);
+        $this->assertNull($this->valley->fresh()->house(), 'The rebels hold the Farmhouse, and rule once they build a Head Office.');
         $this->assertSame(15, $rebels[0]->fresh()->rosettes);
     }
 

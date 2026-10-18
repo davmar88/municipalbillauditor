@@ -108,7 +108,7 @@ class BattlesTest extends TestCase
         $this->battles->commit($this->player(), $attack, 1);
     }
 
-    public function test_taking_the_farmhouse_makes_a_new_house_with_extra_law_changes(): void
+    public function test_taking_the_farmhouse_holds_it_but_ruling_waits_for_a_head_office(): void
     {
         $this->hold($this->redHooves, 'market_square', 'granary');
         $this->stand($this->red[0], 'market_square');
@@ -118,8 +118,9 @@ class BattlesTest extends TestCase
         $this->travel(121)->minutes();
         $this->battles->resolveDue($this->season());
 
-        $this->assertSame($this->redHooves->id, $this->valley->fresh()->house()?->id);
-        $this->assertSame(3, $this->season()->fresh()->bonus_law_changes);
+        $this->assertSame($this->redHooves->id, $this->region('farmhouse')->faction_id);
+        $this->assertNull($this->valley->fresh()->house());
+        $this->assertSame(0, $this->season()->fresh()->bonus_law_changes, 'The extra law changes come with the Head Office.');
         $this->assertTrue($this->region('farmhouse')->settled_until->isFuture(), 'A region that just changed hands gets an hour of peace.');
     }
 

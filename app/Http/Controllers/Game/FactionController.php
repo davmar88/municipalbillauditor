@@ -60,10 +60,10 @@ class FactionController extends Controller
                             'region' => ['id' => $building->region->id, 'name' => $building->region->name],
                         ]),
                     'plots' => $faction->regions()
-                        ->whereNotIn('key', ['farmhouse', 'paddock'])
+                        ->where('key', '!=', 'paddock')
                         ->whereDoesntHave('building', fn ($query) => $query->where('faction_id', $faction->id))
                         ->orderBy('name')
-                        ->get(['id', 'name']),
+                        ->get(['id', 'name', 'key']),
                 ],
                 'studies' => Research::page($faction, $player),
                 'members' => $faction->members()->orderByRaw("case faction_role when 'leader' then 0 when 'council' then 1 when 'member' then 2 else 3 end")->orderBy('name')->get()

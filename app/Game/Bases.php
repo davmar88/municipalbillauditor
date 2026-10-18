@@ -92,8 +92,14 @@ final class Bases
                 throw new GameException("Your faction doesn't hold {$region->name}. Build on land you hold.");
             }
 
-            if ($region->isSafe() || $region->isFarmhouse()) {
+            if ($region->isSafe()) {
                 throw new GameException("Nothing can be built in {$region->name}.");
+            }
+
+            if ($region->isFarmhouse() !== ($kind === BuildingKind::HeadOffice)) {
+                throw new GameException($kind === BuildingKind::HeadOffice
+                    ? 'A Head Office goes in the Farmhouse, where the valley is ruled from.'
+                    : 'Only a Head Office can be built in the Farmhouse.');
             }
 
             // What the last holders built here is a ruin now.
@@ -109,19 +115,23 @@ final class Bases
                 throw new GameException('Your faction already has its Den. A faction has one base.');
             }
 
-            if ($kind !== BuildingKind::Den && ! $hasDen) {
+            if ($kind !== BuildingKind::Den && $kind !== BuildingKind::HeadOffice && ! $hasDen) {
                 throw new GameException("Raise a Den first: it's your faction's base.");
             }
 
             $this->pay($faction, $kind->cost(1));
 
-            return Building::create([
+            $building = Building::create([
                 'faction_id' => $faction->id,
                 'region_id' => $region->id,
                 'kind' => $kind,
                 'level' => 1,
                 'ready_at' => CarbonImmutable::now()->addMinutes($kind->minutes(1)),
             ]);
+
+            $this->exposed($region, $faction, $building);
+
+            return $building;
         });
     }
 
@@ -155,7 +165,7 @@ final class Bases
                 throw new GameException("The {$name} is as big as it gets.");
             }
 
-            if ($building->kind !== BuildingKind::Den && self::den($faction) === null) {
+            if ($building->kind !== BuildingKind::Den && $building->kind !== BuildingKind::HeadOffice && self::den($faction) === null) {
                 throw new GameException('Your faction needs a Den before it can build.');
             }
 
@@ -165,6 +175,8 @@ final class Bases
                 'level' => $level,
                 'ready_at' => CarbonImmutable::now()->addMinutes($building->kind->minutes($level)),
             ])->save();
+
+            $this->exposed($region, $faction, $building);
 
             return $building;
         });
@@ -193,6 +205,50 @@ final class Bases
         }
 
         $building->delete();
+    }
+
+    /**
+     * A faction busy building drops its guard: whatever peace the region had
+     * after changing hands ends, and it can be raided while the work goes
+     * on. The valley hears when a Head Office starts going up.
+     */
+    private function exposed(Region $region, Faction $faction, Building $building): void
+    {
+        $region->forceFill(['settled_until' => null])->save();
+
+        if ($building->kind === BuildingKind::HeadOffice && $building->level === 1) {
+            Notices::send(Notices::valley($region->valley_id), 'house', "🏛 {$faction->name} is building a Head Office in the Farmhouse. It rules Hollowmere once it stands at ".Clock::local($building->ready_at)->format('H:i').', unless someone takes the Farmhouse first.', route('play', [], false));
+        }
+    }
+
+    /**
+     * A finished Head Office makes its faction the ruler: the House. The
+     * valley hears it once, and a new House gets three extra law changes.
+     */
+    public function crown(Valley $valley): void
+    {
+        $farmhouse = $valley->region('farmhouse');
+
+        if ($farmhouse->faction_id === null) {
+            return;
+        }
+
+        $office = Building::query()
+            ->where('region_id', $farmhouse->id)
+            ->where('faction_id', $farmhouse->faction_id)
+            ->where('kind', BuildingKind::HeadOffice)
+            ->whereNull('crowned_at')
+            ->first();
+
+        if ($office === null || $office->workingLevel() < 1) {
+            return;
+        }
+
+        $office->forceFill(['crowned_at' => CarbonImmutable::now()])->save();
+        $season = $valley->currentSeason();
+        $season?->forceFill(['house_since' => CarbonImmutable::now(), 'bonus_law_changes' => $season->bonus_law_changes + 3])->save();
+        $name = Faction::query()->whereKey($farmhouse->faction_id)->value('name');
+        Notices::send(Notices::valley($valley->id), 'house', "👑 {$name} finished its Head Office in the Farmhouse and now rules Hollowmere.", route('play', [], false));
     }
 
     /** Clear away buildings on land their faction no longer holds. */
@@ -234,7 +290,7 @@ final class Bases
     {
         $building = Building::query()->where('region_id', $region->id)->where('faction_id', $region->faction_id)->first();
 
-        return $building && in_array($building->kind, [BuildingKind::Den, BuildingKind::Watchtower], true)
+        return $building && in_array($building->kind, [BuildingKind::Den, BuildingKind::Watchtower, BuildingKind::HeadOffice], true)
             ? 1 + $building->bonus()
             : 1.0;
     }

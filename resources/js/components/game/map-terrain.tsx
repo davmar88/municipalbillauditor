@@ -64,8 +64,6 @@ export const INK = {
     wall: '#e7e2d3',
 } as const;
 
-const STALLS = ['#b39aff', '#41d1ff', '#d18cff', '#ff8fb1', '#ffd33d'];
-
 type Disc = { x: number; y: number; r: number };
 type TreeSpec = Disc & { tone: number };
 
@@ -619,42 +617,6 @@ function BigBarn() {
     );
 }
 
-function BigBarnBuildings() {
-    const [x, y] = at('big_barn', 0, -26);
-
-    return (
-        <>
-            <Building at={[x, y]} w={136} h={64} angle={-3} />
-            {/* The Barn Wall: the gable end painted white, and the rules on a board. */}
-            <g
-                transform={`translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(-3)`}
-            >
-                <rect
-                    x={62}
-                    y={-30}
-                    width={6}
-                    height={60}
-                    fill={INK.wall}
-                    opacity={0.9}
-                />
-                <rect
-                    x={82}
-                    y={-18}
-                    width={34}
-                    height={26}
-                    rx={2}
-                    fill={INK.wall}
-                />
-                <path
-                    d="M87 -13h20M87 -8h22M87 -3h18M87 2h21"
-                    stroke="#3a3447"
-                    strokeWidth={1.4}
-                />
-            </g>
-        </>
-    );
-}
-
 function Hayfield() {
     const lane = hub('hayfield');
     const bales = scatter(SHAPES.hayfield, 16, 'bales', 14)
@@ -822,40 +784,6 @@ function Granary() {
     );
 }
 
-function GranaryBuildings() {
-    const silos: [Point, number][] = [
-        [at('granary', -54, -30), 21],
-        [at('granary', -14, -46), 15],
-    ];
-
-    return (
-        <>
-            <path
-                d={discs(
-                    silos.map(([[x, y], r]) => ({ x: x + 3, y: y + 4, r })),
-                )}
-                fill={INK.shadow}
-                opacity={0.65}
-            />
-            <path
-                d={discs(silos.map(([[x, y], r]) => ({ x, y, r })))}
-                fill={INK.roofDark}
-                stroke={INK.buildingEdge}
-                strokeWidth={1.3}
-            />
-            <path
-                d={discs(silos.map(([[x, y], r]) => ({ x, y, r: r * 0.62 })))}
-                fill={INK.roof}
-            />
-            <path
-                d={discs(silos.map(([[x, y]]) => ({ x, y, r: 2 })))}
-                fill={INK.buildingEdge}
-            />
-            <Building at={at('granary', 44, -28)} w={78} h={34} angle={4} />
-        </>
-    );
-}
-
 function Farmhouse() {
     const garden = at('farmhouse', 0, -16);
     const gardenTrees = (
@@ -896,25 +824,6 @@ function Farmhouse() {
     );
 }
 
-function FarmhouseBuildings() {
-    const [cx, cy] = at('farmhouse', -40, -38);
-
-    return (
-        <>
-            <Building at={at('farmhouse', -10, -20)} w={94} h={46} angle={-2} />
-            <Building at={at('farmhouse', 34, 2)} w={36} h={42} angle={-2} />
-            <rect
-                x={cx}
-                y={cy}
-                width={7}
-                height={7}
-                fill="#4a4357"
-                stroke={INK.buildingEdge}
-            />
-        </>
-    );
-}
-
 function WindmillHill() {
     const top = at('windmill_hill', 16, -30);
 
@@ -936,63 +845,6 @@ function WindmillHill() {
                     opacity={0.9}
                 />
             ))}
-        </>
-    );
-}
-
-function Windmill() {
-    const [x, y] = at('windmill_hill', 16, -30);
-
-    return (
-        <g transform={`translate(${x.toFixed(1)} ${y.toFixed(1)})`}>
-            <circle cx={3} cy={4} r={14} fill={INK.shadow} opacity={0.65} />
-            <circle
-                r={14}
-                fill={INK.roofDark}
-                stroke={INK.buildingEdge}
-                strokeWidth={1.4}
-            />
-            <circle r={8} fill={INK.roof} />
-            <g className="map-sails">
-                <path
-                    d="M-3.5 -46h7v40h-7zM-3.5 6h7v40h-7zM6 -3.5h40v7H6zM-46 -3.5h40v7h-40z"
-                    fill="#cfc8dd"
-                    opacity={0.85}
-                />
-                <path
-                    d="M0 -46v40M0 6v40M6 0h40M-46 0h40M-3.5 -38h7M-3.5 -30h7M-3.5 -22h7M-3.5 -14h7M-3.5 14h7M-3.5 22h7M-3.5 30h7M-3.5 38h7M14 -3.5v7M22 -3.5v7M30 -3.5v7M38 -3.5v7M-14 -3.5v7M-22 -3.5v7M-30 -3.5v7M-38 -3.5v7"
-                    stroke="#6f6881"
-                    strokeWidth={0.9}
-                />
-                <circle r={3.5} fill="#4f4860" />
-            </g>
-        </g>
-    );
-}
-
-function IronfieldGateBuildings() {
-    return (
-        <>
-            <Building
-                at={at('ironfield_gate', 44, -62)}
-                w={28}
-                h={22}
-                angle={6}
-            />
-            {/* The gate in the east fence, where Gate Road leaves the farm. */}
-            <g transform="translate(1484 478)">
-                <path
-                    d="M-5 -24h10v10h-10zM-5 14h10v10h-10z"
-                    fill="#5a5368"
-                    stroke="#8a8399"
-                />
-                <path
-                    d="M0 -14L-20 -4M0 14L-20 4"
-                    stroke="#a59db6"
-                    strokeWidth={3}
-                    strokeLinecap="round"
-                />
-            </g>
         </>
     );
 }
@@ -1119,28 +971,6 @@ function Henhouse() {
     );
 }
 
-function HenhouseBuildings() {
-    return (
-        <>
-            {(
-                [
-                    [-52, -44, -4],
-                    [-12, -52, 3],
-                    [30, -44, -6],
-                ] as const
-            ).map(([dx, dy, angle], i) => (
-                <Building
-                    key={i}
-                    at={at('henhouse', dx, dy)}
-                    w={30}
-                    h={20}
-                    angle={angle}
-                />
-            ))}
-        </>
-    );
-}
-
 function MarketSquare() {
     const [x, y] = hub('market_square');
 
@@ -1165,76 +995,6 @@ function MarketSquare() {
                 fill="url(#cobbles)"
                 opacity={0.55}
             />
-        </>
-    );
-}
-
-function MarketBuildings() {
-    const [x, y] = hub('market_square');
-    const stalls: Point[] = [
-        [-48, -30],
-        [-22, -32],
-        [22, -32],
-        [48, -30],
-        [-50, 30],
-        [-24, 32],
-        [24, 32],
-        [50, 30],
-    ];
-
-    return (
-        <>
-            {STALLS.map((colour, c) => (
-                <path
-                    key={colour}
-                    d={stalls
-                        .filter((_, i) => i % STALLS.length === c)
-                        .map(
-                            ([dx, dy]) =>
-                                `M${x + dx - 8} ${y + dy - 6}h16v12h-16z`,
-                        )
-                        .join('')}
-                    fill={colour}
-                    opacity={0.85}
-                />
-            ))}
-            <path
-                d={stalls
-                    .map(
-                        ([dx, dy]) =>
-                            `M${x + dx - 3} ${y + dy - 6}v12M${x + dx + 3} ${y + dy - 6}v12`,
-                    )
-                    .join('')}
-                stroke="#14121a"
-                strokeWidth={1.2}
-                opacity={0.5}
-            />
-            <circle
-                cx={x}
-                cy={y}
-                r={10}
-                fill={INK.water}
-                stroke={INK.stone}
-                strokeWidth={2.4}
-            />
-            {(
-                [
-                    [-98, -48, 36, 28, 3],
-                    [-100, 50, 32, 30, -4],
-                    [100, -50, 34, 26, -3],
-                    [98, 52, 36, 28, 4],
-                    [-50, -84, 40, 22, 2],
-                    [54, -82, 38, 22, -2],
-                ] as const
-            ).map(([dx, dy, w, h, angle], i) => (
-                <Building
-                    key={i}
-                    at={[x + dx, y + dy]}
-                    w={w}
-                    h={h}
-                    angle={angle}
-                />
-            ))}
         </>
     );
 }
@@ -1266,25 +1026,6 @@ function Stables() {
                 strokeDasharray="4 3"
             />
             <Bales list={hay} />
-        </>
-    );
-}
-
-function StablesBuildings() {
-    const [x, y] = at('stables', -6, -46);
-
-    return (
-        <>
-            <Building at={[x, y]} w={130} h={32} angle={2} />
-            <g
-                transform={`translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(2)`}
-            >
-                <path
-                    d="M-48 -16v32M-32 -16v32M-16 -16v32M0 -16v32M16 -16v32M32 -16v32M48 -16v32"
-                    stroke={INK.buildingEdge}
-                    strokeWidth={0.9}
-                />
-            </g>
         </>
     );
 }
@@ -1340,30 +1081,6 @@ function OldWell() {
                 />
             ))}
         </>
-    );
-}
-
-function OldWellBuildings() {
-    const [x, y] = at('old_well', 14, -28);
-
-    return (
-        <g transform={`translate(${x.toFixed(1)} ${y.toFixed(1)})`}>
-            <circle cx={2} cy={3} r={14} fill={INK.shadow} opacity={0.6} />
-            <circle
-                r={13}
-                fill="#0f1d2e"
-                stroke={INK.stone}
-                strokeWidth={4.5}
-            />
-            <rect x={-17} y={-2} width={34} height={4} rx={1} fill="#4f3d2c" />
-            <path
-                d={discs([
-                    { x: -17, y: 0, r: 2.6 },
-                    { x: 17, y: 0, r: 2.6 },
-                ])}
-                fill="#5d4a36"
-            />
-        </g>
     );
 }
 
@@ -1508,26 +1225,6 @@ function Crop({ farm, centre: [cx, cy] }: { farm: string; centre: Point }) {
     );
 }
 
-function farmstead(key: string) {
-    return function Farmstead() {
-        const [cx, cy] = SHAPES[key].centre;
-
-        return (
-            <>
-                <Building at={[cx - 70, cy - 10]} w={70} h={40} angle={-4} />
-                <Building at={[cx - 10, cy + 6]} w={34} h={26} angle={3} />
-                <path
-                    d={`M${cx - 120} ${cy - 50}h110v100h-110z`}
-                    fill="none"
-                    stroke={INK.stone}
-                    strokeWidth={2}
-                    strokeDasharray="4 3"
-                />
-            </>
-        );
-    };
-}
-
 const UNDER: Record<string, () => React.ReactNode> = {
     thornbury: farmland('thornbury'),
     brookside: farmland('brookside'),
@@ -1547,22 +1244,6 @@ const UNDER: Record<string, () => React.ReactNode> = {
     stables: Stables,
     old_well: OldWell,
     paddock: Paddock,
-};
-
-/** Buildings, drawn over the lanes. */
-const OVER: Record<string, () => React.ReactNode> = {
-    thornbury: farmstead('thornbury'),
-    brookside: farmstead('brookside'),
-    willowby: farmstead('willowby'),
-    big_barn: BigBarnBuildings,
-    granary: GranaryBuildings,
-    farmhouse: FarmhouseBuildings,
-    windmill_hill: Windmill,
-    ironfield_gate: IronfieldGateBuildings,
-    henhouse: HenhouseBuildings,
-    market_square: MarketBuildings,
-    stables: StablesBuildings,
-    old_well: OldWellBuildings,
 };
 
 /** Trees in the hedges, one per bend in a border. */
@@ -1655,17 +1336,9 @@ export const MapGround = memo(function MapGround() {
     );
 });
 
-/** The buildings. Animals go anywhere, so there are no roads. */
+/** Nothing is painted over the land: animals go anywhere, and factions raise their own buildings. */
 export const MapFeatures = memo(function MapFeatures() {
-    return (
-        <g>
-            {Object.entries(OVER).map(([key, Over]) => (
-                <g key={key}>
-                    <Over />
-                </g>
-            ))}
-        </g>
-    );
+    return <g></g>;
 });
 
 /**

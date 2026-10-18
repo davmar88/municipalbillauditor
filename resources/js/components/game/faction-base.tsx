@@ -168,21 +168,41 @@ export function BuildingDetails({
     );
 }
 
+/**
+ * What a faction can raise in a region: a Head Office in the Farmhouse,
+ * and elsewhere the Den first, then the rest.
+ */
+export function buildable(
+    kinds: BuildingKindCard[],
+    hasDen: boolean,
+    regionKey: string | undefined,
+): BuildingKindCard[] {
+    if (regionKey === 'farmhouse') {
+        return kinds.filter((kind) => kind.value === 'head_office');
+    }
+
+    return kinds.filter(
+        (kind) =>
+            kind.value !== 'head_office' &&
+            (hasDen ? kind.value !== 'den' : kind.value === 'den'),
+    );
+}
+
 /** The buildings a faction may raise here, each with its cost and a Build button. */
 export function BuildOptions({
     regionId,
+    regionKey,
     kinds,
     store,
     hasDen,
 }: {
     regionId: number;
+    regionKey: string;
     kinds: BuildingKindCard[];
     store: Store;
     hasDen: boolean;
 }) {
-    const choices = kinds.filter((kind) =>
-        hasDen ? kind.value !== 'den' : kind.value === 'den',
-    );
+    const choices = buildable(kinds, hasDen, regionKey);
 
     return (
         <ul className="flex flex-col gap-2">
@@ -216,11 +236,18 @@ export function BuildOptions({
                     </li>
                 );
             })}
-            {!hasDen && (
+            {regionKey === 'farmhouse' ? (
                 <li className="text-xs text-muted-foreground">
-                    The Den comes first. After it, your faction can raise a
-                    Watchtower, Drill Yard, Storehouse or Workshop.
+                    Your faction rules Hollowmere once its Head Office stands.
+                    While it goes up, the Farmhouse can be raided.
                 </li>
+            ) : (
+                !hasDen && (
+                    <li className="text-xs text-muted-foreground">
+                        The Den comes first. After it, your faction can raise a
+                        Watchtower, Drill Yard, Storehouse or Workshop.
+                    </li>
+                )
             )}
         </ul>
     );
@@ -235,7 +262,7 @@ type Props = {
         apples: number;
         memberCap: number;
         buildings: (MapBuilding & { region: { id: number; name: string } })[];
-        plots: { id: number; name: string }[];
+        plots: { id: number; name: string; key: string }[];
     };
     kinds: BuildingKindCard[];
 };
@@ -246,8 +273,10 @@ export function FactionBase({ treasury, base, kinds }: Props) {
     const store = { treasury, materials: base.materials };
     const hasDen = base.buildings.some((building) => building.kind === 'den');
     const [plotId, setPlotId] = useState(base.plots[0]?.id ?? 0);
-    const choices = kinds.filter((kind) =>
-        hasDen ? kind.value !== 'den' : kind.value === 'den',
+    const choices = buildable(
+        kinds,
+        hasDen,
+        base.plots.find((plot) => plot.id === plotId)?.key,
     );
     const [picked, setPicked] = useState<BuildingKindValue>(
         choices[0]?.value ?? 'den',

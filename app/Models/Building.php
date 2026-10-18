@@ -18,10 +18,11 @@ use Illuminate\Support\Carbon;
  * @property BuildingKind $kind
  * @property int $level
  * @property Carbon $ready_at
+ * @property Carbon|null $crowned_at When a Head Office made its faction the ruler
  * @property Faction $faction
  * @property Region $region
  */
-#[Fillable(['faction_id', 'region_id', 'kind', 'level', 'ready_at'])]
+#[Fillable(['faction_id', 'region_id', 'kind', 'level', 'ready_at', 'crowned_at'])]
 class Building extends Model
 {
     protected function casts(): array
@@ -29,6 +30,7 @@ class Building extends Model
         return [
             'kind' => BuildingKind::class,
             'ready_at' => 'datetime',
+            'crowned_at' => 'datetime',
         ];
     }
 

@@ -2,11 +2,13 @@
 
 namespace Tests\Feature\Game;
 
+use App\Enums\BuildingKind;
 use App\Enums\FactionRole;
 use App\Enums\Species;
 use App\Game\Levels;
 use App\Game\Players;
 use App\Game\ValleyBuilder;
+use App\Models\Building;
 use App\Models\Faction;
 use App\Models\Player;
 use App\Models\Region;
@@ -75,6 +77,19 @@ trait MakesPlayers
     {
         foreach ($keys as $key) {
             $this->region($key)->forceFill(['faction_id' => $faction->id, 'held_since' => now()->subDay()])->save();
+
+            // Holding the Farmhouse here means ruling from it: its Head Office stands.
+            if ($key === 'farmhouse') {
+                Building::query()->where('region_id', $this->region($key)->id)->delete();
+                Building::create([
+                    'faction_id' => $faction->id,
+                    'region_id' => $this->region($key)->id,
+                    'kind' => BuildingKind::HeadOffice,
+                    'level' => 1,
+                    'ready_at' => now()->subDay(),
+                    'crowned_at' => now()->subDay(),
+                ]);
+            }
         }
     }
 

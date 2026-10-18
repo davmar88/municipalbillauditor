@@ -1269,6 +1269,7 @@ const BUILDING_GLYPH: Record<BuildingKindValue, string> = {
     drill_yard: '⚔️',
     storehouse: '📦',
     workshop: '🔨',
+    head_office: '🏛️',
 };
 
 /** Faction buildings, a badge in the holder's colour on each plot. */

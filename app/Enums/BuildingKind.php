@@ -4,8 +4,9 @@ namespace App\Enums;
 
 /**
  * What a faction can build on its land. The Den is the faction's base and
- * comes first. Each building goes up to level 3; costs come out of the
- * faction's treasury and its store of materials.
+ * comes first. The Head Office goes in the Farmhouse, and its faction rules
+ * the valley once it stands. Each building goes up to level 3; costs come
+ * out of the faction's treasury and its store of materials.
  */
 enum BuildingKind: string
 {
@@ -14,6 +15,7 @@ enum BuildingKind: string
     case DrillYard = 'drill_yard';
     case Storehouse = 'storehouse';
     case Workshop = 'workshop';
+    case HeadOffice = 'head_office';
 
     public const MAX_LEVEL = 3;
 
@@ -25,6 +27,7 @@ enum BuildingKind: string
             self::DrillYard => 'Drill Yard',
             self::Storehouse => 'Storehouse',
             self::Workshop => 'Workshop',
+            self::HeadOffice => 'Head Office',
         };
     }
 
@@ -39,6 +42,7 @@ enum BuildingKind: string
             self::DrillYard => "Raids from here on the regions next door hit {$percent} harder.",
             self::Storehouse => 'Looters get away with '.(int) round($this->lootShare($level) * 100).'% of the treasury instead of 10%.',
             self::Workshop => "Members gather {$percent} more materials here.",
+            self::HeadOffice => "Your faction rules Hollowmere from here once it stands. Defends the Farmhouse {$percent} harder.",
         };
     }
 
@@ -57,6 +61,7 @@ enum BuildingKind: string
             self::DrillYard => [0.1, 0.2, 0.3][$level - 1],
             self::Storehouse => 0.1 - $this->lootShare($level),
             self::Workshop => [0.25, 0.5, 0.75][$level - 1],
+            self::HeadOffice => [0.2, 0.35, 0.5][$level - 1],
         };
     }
 
@@ -100,6 +105,11 @@ enum BuildingKind: string
                 [100, ['wood' => 25, 'dye' => 20]],
                 [200, ['wood' => 30, 'dye' => 30, 'wool' => 15]],
             ],
+            self::HeadOffice => [
+                [300, ['wood' => 40, 'stone' => 40, 'clay' => 20]],
+                [500, ['stone' => 60, 'clay' => 40, 'wool' => 20]],
+                [800, ['stone' => 90, 'wood' => 60, 'dye' => 30]],
+            ],
         };
 
         [$corn, $materials] = $costs[max(1, min($level, self::MAX_LEVEL)) - 1];
@@ -129,6 +139,9 @@ enum BuildingKind: string
     /** How long a level takes to build. */
     public function minutes(int $level): int
     {
-        return [60, 180, 360][max(1, min($level, self::MAX_LEVEL)) - 1];
+        $level = max(1, min($level, self::MAX_LEVEL));
+
+        // A Head Office takes longest: the valley can fight for the Farmhouse meanwhile.
+        return $this === self::HeadOffice ? [120, 240, 480][$level - 1] : [60, 180, 360][$level - 1];
     }
 }

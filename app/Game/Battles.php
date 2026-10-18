@@ -251,11 +251,9 @@ final class Battles
             'settled_until' => CarbonImmutable::now()->addHour(),
         ])->save();
 
+        // Taking the Farmhouse isn't ruling: the new holders rule once their Head Office stands.
         if ($region->isFarmhouse()) {
-            $season->forceFill([
-                'house_since' => $factionId ? CarbonImmutable::now() : null,
-                'bonus_law_changes' => $season->bonus_law_changes + 3,
-            ])->save();
+            $season->forceFill(['house_since' => null])->save();
         }
     }
 

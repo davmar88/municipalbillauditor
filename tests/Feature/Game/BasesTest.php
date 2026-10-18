@@ -10,8 +10,10 @@ use App\Game\Clock;
 use App\Game\GameException;
 use App\Game\Gathering;
 use App\Game\Seasons;
+use App\Game\Tick;
 use App\Models\Building;
 use App\Models\Faction;
+use App\Models\Notice;
 use App\Models\Region;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -123,21 +125,75 @@ class BasesTest extends TestCase
         $this->bases->build($leader, $this->region('granary'), BuildingKind::Den);
     }
 
-    public function test_nothing_is_built_on_land_you_dont_hold_or_at_the_farmhouse(): void
+    public function test_nothing_is_built_on_land_you_dont_hold_and_only_a_head_office_at_the_farmhouse(): void
     {
         $leader = $this->player();
         $faction = $this->stock($this->faction('Builders', $leader));
-        $this->hold($faction, 'farmhouse');
+        $this->region('farmhouse')->forceFill(['faction_id' => $faction->id, 'held_since' => now()])->save();
+        $this->hold($faction, 'granary');
 
         try {
-            $this->bases->build($leader, $this->region('granary'), BuildingKind::Den);
-            $this->fail('Granary is not theirs.');
+            $this->bases->build($leader, $this->region('henhouse'), BuildingKind::Den);
+            $this->fail('Henhouse is not theirs.');
         } catch (GameException $e) {
-            $this->assertStringContainsString("doesn't hold Granary", $e->getMessage());
+            $this->assertStringContainsString("doesn't hold Henhouse", $e->getMessage());
         }
 
-        $this->expectExceptionMessage('Nothing can be built in The Farmhouse');
-        $this->bases->build($leader, $this->region('farmhouse'), BuildingKind::Den);
+        try {
+            $this->bases->build($leader, $this->region('farmhouse'), BuildingKind::Den);
+            $this->fail('Only a Head Office in the Farmhouse.');
+        } catch (GameException $e) {
+            $this->assertSame('Only a Head Office can be built in the Farmhouse.', $e->getMessage());
+        }
+
+        $this->expectExceptionMessage('A Head Office goes in the Farmhouse');
+        $this->bases->build($leader, $this->region('granary'), BuildingKind::HeadOffice);
+    }
+
+    public function test_a_faction_rules_once_its_head_office_stands_and_can_be_raided_while_it_goes_up(): void
+    {
+        $leader = $this->player();
+        $faction = $this->stock($this->faction('Builders', $leader));
+        $farmhouse = $this->region('farmhouse');
+        $farmhouse->forceFill(['faction_id' => $faction->id, 'held_since' => now(), 'settled_until' => now()->addHour()])->save();
+        $bystander = $this->player();
+
+        $this->assertNull($this->valley->fresh()->house(), 'Holding the Farmhouse is not ruling.');
+
+        // No Den needed. Starting the work ends the hour of peace after taking it.
+        $office = $this->bases->build($leader, $farmhouse, BuildingKind::HeadOffice);
+        $this->assertNull($farmhouse->fresh()->settled_until);
+        $this->assertSame(700, $faction->fresh()->treasury);
+        $this->assertStringContainsString('Builders is building a Head Office in the Farmhouse', Notice::query()->where('player_id', $bystander->id)->latest('id')->value('text'));
+
+        $this->travel(119)->minutes();
+        app(Bases::class)->crown($this->valley);
+        $this->assertNull($this->valley->fresh()->house(), 'Not until it stands.');
+
+        $this->travel(2)->minutes();
+        app(Tick::class)->run($this->valley);
+
+        $this->assertSame($faction->id, $this->valley->fresh()->house()?->id);
+        $this->assertNotNull($office->fresh()->crowned_at);
+        $this->assertSame(3, $this->season()->fresh()->bonus_law_changes);
+        $this->assertSame('👑 Builders finished its Head Office in the Farmhouse and now rules Hollowmere.', Notice::query()->where('player_id', $bystander->id)->latest('id')->value('text'));
+    }
+
+    public function test_losing_the_farmhouse_while_the_head_office_goes_up_loses_it(): void
+    {
+        $leader = $this->player();
+        $faction = $this->stock($this->faction('Builders', $leader));
+        $farmhouse = $this->region('farmhouse');
+        $farmhouse->forceFill(['faction_id' => $faction->id, 'held_since' => now()])->save();
+        $this->bases->build($leader, $farmhouse, BuildingKind::HeadOffice);
+        $raiders = $this->faction('Raiders', $this->player());
+
+        app(Battles::class)->take($this->season(), $farmhouse->fresh(), $raiders->id);
+        $this->travel(3)->hours();
+        app(Bases::class)->crown($this->valley);
+
+        $this->assertSame(0, Building::query()->where('kind', BuildingKind::HeadOffice)->count());
+        $this->assertNull($this->valley->fresh()->house(), 'The raiders hold it, but rule only once they build their own.');
     }
 
     public function test_a_level_goes_up_once_the_last_is_ready_and_keeps_working_meanwhile(): void
@@ -283,7 +339,7 @@ class BasesTest extends TestCase
             ->where('regions.11.building', null)
             ->where('base.canBuild', true)
             ->where('base.hasDen', true)
-            ->has('buildingKinds', 5));
+            ->has('buildingKinds', 6));
 
         $this->actingAs($leader->user)->get(route('play.faction'))->assertInertia(fn (Assert $page) => $page
             ->has('faction.base.buildings', 1)
