@@ -12,6 +12,7 @@ use App\Game\Crimes;
 use App\Game\Dice;
 use App\Game\GameException;
 use App\Game\Gathering;
+use App\Game\Horseshoes;
 use App\Game\Seasons;
 use App\Game\Stores;
 use App\Game\Tick;
@@ -283,6 +284,50 @@ class BasesTest extends TestCase
         // The raiders keep what fits in their own store: 300 Corn and 100 wood in hand.
         $this->assertSame([300, 100], [$redFaction->fresh()->treasury, $redFaction->fresh()->material('wood')]);
         $this->assertStringContainsString('carried off 500 Corn and 120 materials', Notice::query()->where('player_id', $red[1]->id)->where('text', 'like', '📦%')->value('text'));
+    }
+
+    public function test_members_who_help_build_make_it_go_up_faster(): void
+    {
+        $leader = $this->player();
+        $helpers = [$this->player(), $this->player(), $this->player()];
+        $faction = $this->stock($this->faction('Builders', $leader, ...$helpers));
+        $this->hold($faction, 'granary');
+        $den = $this->bases->build($leader, $this->region('granary'), BuildingKind::Den);
+        $this->assertSame(1, $den->builders());
+
+        $this->travel(30)->minutes();
+
+        try {
+            $this->bases->help($helpers[0], $den);
+            $this->fail('You help build where it stands.');
+        } catch (GameException $e) {
+            $this->assertStringContainsString('Walk to Granary first', $e->getMessage());
+        }
+
+        // Thirty minutes of work were left: a second pair of hands makes that twenty.
+        $this->stand($helpers[0], 'granary');
+        $this->actingAs($helpers[0]->user)->post(route('play.help-build', $den))->assertRedirect();
+        $this->assertEqualsWithDelta(20 * 60, now()->diffInSeconds($den->fresh()->ready_at), 2);
+        $this->assertSame(9, Horseshoes::current($helpers[0]->fresh()));
+        $this->assertSame(3, $helpers[0]->fresh()->rosettes);
+
+        // A third makes what's left go twice as fast as it did alone.
+        $this->stand($helpers[1], 'granary');
+        $this->bases->help($helpers[1]->fresh(), $den->fresh());
+        $this->assertEqualsWithDelta(15 * 60, now()->diffInSeconds($den->fresh()->ready_at), 2);
+        $this->assertSame(3, $den->fresh()->builders());
+
+        try {
+            $this->bases->help($helpers[1]->fresh(), $den->fresh());
+            $this->fail('Once per level.');
+        } catch (GameException $e) {
+            $this->assertStringContainsString('already helping', $e->getMessage());
+        }
+
+        $outsider = $this->player();
+        $this->stand($outsider, 'granary');
+        $this->expectExceptionMessage("Only Builders's members can help build");
+        $this->bases->help($outsider->fresh(), $den->fresh());
     }
 
     public function test_a_full_store_takes_no_more_until_a_building_holds_it(): void

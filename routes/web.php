@@ -86,6 +86,7 @@ Route::middleware(['auth', 'verified', 'player', 'throttle:120,1'])->prefix('pla
     Route::post('faction/give', [BaseController::class, 'give'])->name('play.give');
     Route::post('regions/{region}/build', [BaseController::class, 'build'])->name('play.build');
     Route::post('buildings/{building}/upgrade', [BaseController::class, 'upgrade'])->name('play.upgrade');
+    Route::post('buildings/{building}/help', [BaseController::class, 'help'])->middleware('throttle:30,1,build-help')->name('play.help-build');
     Route::post('faction/study', [BaseController::class, 'study'])->name('play.study');
 
     Route::post('crimes', [CrimeController::class, 'store'])->name('play.crime');

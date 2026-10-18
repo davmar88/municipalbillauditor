@@ -669,6 +669,12 @@ export function RegionPanel({
                                 holds(region) && (base?.canBuild ?? false)
                             }
                             hasDen={base?.hasDen ?? false}
+                            canHelp={
+                                holds(region) &&
+                                isHere &&
+                                !region.building.helped &&
+                                (region.building.builders ?? 0) < 6
+                            }
                         />
                     </div>
                 )}

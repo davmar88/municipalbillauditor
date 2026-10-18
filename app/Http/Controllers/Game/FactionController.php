@@ -58,7 +58,7 @@ class FactionController extends Controller
                         ->sortBy(fn (Building $building) => [$building->kind === BuildingKind::Den ? 0 : 1, $building->region->name])
                         ->values()
                         ->map(fn (Building $building) => [
-                            ...$building->summary(),
+                            ...$building->summary($player),
                             'region' => ['id' => $building->region->id, 'name' => $building->region->name],
                         ]),
                     'plots' => $faction->regions()

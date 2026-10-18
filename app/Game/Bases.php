@@ -4,6 +4,7 @@ namespace App\Game;
 
 use App\Enums\BuildingKind;
 use App\Models\Building;
+use App\Models\BuildingHelp;
 use App\Models\Faction;
 use App\Models\Player;
 use App\Models\Region;
@@ -130,6 +131,63 @@ final class Bases
             ]);
 
             $this->exposed($region, $faction, $building);
+
+            return $building;
+        });
+    }
+
+    /** No more than this many can build at once. */
+    public const MOST_BUILDERS = 6;
+
+    /** How fast a building goes up with this many building it: each extra pair of hands adds half again. */
+    public static function pace(int $builders): float
+    {
+        return 1 + 0.5 * (max(1, min($builders, self::MOST_BUILDERS)) - 1);
+    }
+
+    /**
+     * A member lends a hand with their faction's building going up, where
+     * it stands. What is left of the work goes faster with every helper.
+     *
+     * @throws GameException
+     */
+    public function help(Player $player, Building $building): Building
+    {
+        return DB::transaction(function () use ($player, $building) {
+            $player = Players::lock($player);
+            Players::ensureFree($player);
+            $building = Building::query()->with(['region', 'faction'])->lockForUpdate()->findOrFail($building->id);
+            $name = $building->kind->label();
+
+            if ($player->faction_id !== $building->faction_id) {
+                throw new GameException("Only {$building->faction->name}'s members can help build its {$name}.");
+            }
+
+            if ($building->isReady()) {
+                throw new GameException("The {$name} is already standing.");
+            }
+
+            Movement::ensureStandingIn($player, $building->region, 'help build');
+
+            if (BuildingHelp::query()->where('building_id', $building->id)->where('player_id', $player->id)->where('level', $building->level)->exists()) {
+                throw new GameException("You're already helping build the {$name}.");
+            }
+
+            $builders = $building->builders();
+
+            if ($builders >= self::MOST_BUILDERS) {
+                throw new GameException("{$builders} are building the {$name} already: there's no room for more hands.");
+            }
+
+            Horseshoes::spend($player, 1);
+            BuildingHelp::create(['building_id' => $building->id, 'player_id' => $player->id, 'level' => $building->level]);
+
+            $left = max(0, CarbonImmutable::now()->diffInSeconds($building->ready_at));
+            $building->forceFill([
+                'ready_at' => CarbonImmutable::now()->addSeconds((int) ceil($left * self::pace($builders) / self::pace($builders + 1))),
+            ])->save();
+
+            Rosettes::award($player, 3, "Helped build the {$name}", "build:{$building->id}:{$building->level}:{$player->id}", $player->valley->currentSeason());
 
             return $building;
         });

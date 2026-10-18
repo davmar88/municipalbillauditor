@@ -133,6 +133,10 @@ export type MapBuilding = {
     level: number;
     readyAt: string | null;
     does: string | null;
+    /** How many are building the level going up. */
+    builders: number | null;
+    /** Whether you lent a hand with the level going up. */
+    helped: boolean;
 };
 
 /** Your faction's store and whether you may build from it. */

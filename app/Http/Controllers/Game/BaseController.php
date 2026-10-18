@@ -51,6 +51,13 @@ class BaseController extends Controller
         return $this->told("The {$building->kind->label()} is going up to level {$building->level}. It's ready in ".$this->duration($building->kind->minutes($building->level)).'.');
     }
 
+    public function help(Request $request, Building $building, Bases $bases): RedirectResponse
+    {
+        $building = $bases->help($request->user()->player, $building);
+
+        return $this->told("You lent a hand: {$building->builders()} are building the {$building->kind->label()}, and it's ready at ".Clock::local($building->ready_at)->format('H:i').'.');
+    }
+
     public function study(Request $request, Research $research): RedirectResponse
     {
         $study = Study::from($request->validate(['study' => ['required', Rule::enum(Study::class)]])['study']);

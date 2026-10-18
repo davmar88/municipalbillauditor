@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { NativeSelect } from '@/components/ui/native-select';
 import { act, clockTime, MATERIALS } from '@/lib/game';
 import { cn } from '@/lib/utils';
-import { build, give, upgrade } from '@/routes/play';
+import { build, give, helpBuild, upgrade } from '@/routes/play';
 import type {
     BuildingKindCard,
     BuildingKindValue,
@@ -114,12 +114,15 @@ export function BuildingDetails({
     store,
     canBuild,
     hasDen,
+    canHelp = false,
 }: {
     building: MapBuilding;
     kind: BuildingKindCard | undefined;
     store: Store | null;
     canBuild: boolean;
     hasDen: boolean;
+    /** You're a member standing here who hasn't lent a hand yet. */
+    canHelp?: boolean;
 }) {
     const next = kind?.levels.find(
         (level) => level.level === building.level + 1,
@@ -136,7 +139,26 @@ export function BuildingDetails({
                 Level {building.level}
                 {building.readyAt &&
                     ` is going up, ready at ${clockTime(building.readyAt)}`}
+                {building.builders !== null &&
+                    ` · ${building.builders} ${building.builders === 1 ? 'builder' : 'builders'}`}
             </p>
+            {building.readyAt !== null &&
+                (canHelp ? (
+                    <Button
+                        size="sm"
+                        variant="secondary"
+                        className="self-start"
+                        onClick={() => act(helpBuild.url(building.id))}
+                    >
+                        <Hammer className="size-4" /> Help build (1 horseshoe)
+                    </Button>
+                ) : (
+                    <p className="text-xs text-muted-foreground">
+                        {building.helped
+                            ? "You're helping build it."
+                            : 'Every member who helps where it stands makes it go up faster.'}
+                    </p>
+                ))}
             <p className="text-sm">
                 {building.does ??
                     `It starts working at ${clockTime(building.readyAt ?? '')}.`}

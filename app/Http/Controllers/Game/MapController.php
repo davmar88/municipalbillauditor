@@ -105,7 +105,7 @@ class MapController extends Controller
                 ]),
                 // A building stands only while its faction holds the land.
                 'building' => $region->building && $region->building->faction_id === $region->faction_id
-                    ? $region->building->summary()
+                    ? $region->building->summary($player)
                     : null,
                 'animals' => [
                     'count' => ($animals->get($region->id) ?? collect())->count(),

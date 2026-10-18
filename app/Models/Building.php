@@ -63,20 +63,31 @@ class Building extends Model
         return $this->kind->bonus($this->workingLevel());
     }
 
-    /**
-     * What the game screens show about it.
-     *
-     * @return array{id: int, kind: string, label: string, level: int, readyAt: string|null, does: string|null}
-     */
-    public function summary(): array
+    /** How many are building its level now: the faction's crew and every member who helped. */
+    public function builders(): int
     {
+        return 1 + BuildingHelp::query()->where('building_id', $this->id)->where('level', $this->level)->count();
+    }
+
+    /**
+     * What the game screens show about it, and whether this animal has
+     * lent a hand with the level going up.
+     *
+     * @return array{id: int, kind: string, label: string, level: int, readyAt: string|null, does: string|null, builders: int|null, helped: bool}
+     */
+    public function summary(?Player $viewer = null): array
+    {
+        $goingUp = ! $this->isReady();
+
         return [
             'id' => $this->id,
             'kind' => $this->kind->value,
             'label' => $this->kind->label(),
             'level' => $this->level,
-            'readyAt' => $this->isReady() ? null : $this->ready_at->toIso8601String(),
+            'readyAt' => $goingUp ? $this->ready_at->toIso8601String() : null,
             'does' => $this->workingLevel() > 0 ? $this->kind->does($this->workingLevel()) : null,
+            'builders' => $goingUp ? $this->builders() : null,
+            'helped' => $goingUp && $viewer !== null && BuildingHelp::query()->where('building_id', $this->id)->where('level', $this->level)->where('player_id', $viewer->id)->exists(),
         ];
     }
 }
