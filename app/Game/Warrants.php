@@ -20,8 +20,8 @@ use Illuminate\Support\Str;
  * its leader and council put out warrants with a bounty of Apples from the
  * House's store, anyone can add Apples of their own, and any animal who
  * catches the outlaw where they stand sends them to the pound and collects
- * every Apple. A warrant nobody serves by the season's end hands its Apples
- * back to whoever put them up.
+ * the bounty, less the game's share. A warrant nobody serves by the
+ * season's end hands every Apple back to whoever put them up.
  */
 final class Warrants
 {
@@ -42,6 +42,18 @@ final class Warrants
 
     /** After a failed arrest, the outlaw is out of reach this long. */
     public const ESCAPE_MINUTES = 30;
+
+    /** The share of a bounty the game keeps, in percent. */
+    public static function cut(): int
+    {
+        return (int) config('game.apples.bounty_cut');
+    }
+
+    /** What the hunter who serves a warrant collects. */
+    public static function payout(int $bounty): int
+    {
+        return intdiv($bounty * (100 - self::cut()), 100);
+    }
 
     /**
      * Animals the House's informants have seen commit crimes lately, with
@@ -207,8 +219,8 @@ final class Warrants
                 'pound_until' => CarbonImmutable::now()->addHours(Crimes::POUND_HOURS),
                 'wanted' => $wanted->wanted + 1,
             ])->save();
-            // The hunter collects every Apple on the bounty.
-            $apples = $warrant->bounty;
+            // The hunter collects the bounty; the game keeps its share.
+            $apples = self::payout($warrant->bounty);
             Apples::award($hunter, $apples, "Caught {$wanted->name}", "bounty:{$warrant->id}");
             $warrant->forceFill(['status' => 'served', 'hunter_id' => $hunter->id, 'served_at' => CarbonImmutable::now()])->save();
             Rosettes::award($hunter, 15, "Caught {$wanted->name}", "arrest:{$warrant->id}", $hunter->valley->currentSeason());

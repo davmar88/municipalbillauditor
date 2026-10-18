@@ -16,6 +16,7 @@ declare module '@inertiajs/core' {
             unreadMessages: number;
             unreadNotices: number;
             isStaff: boolean;
+            isAdmin: boolean;
             missionsWaiting: number;
             nextStep: MissionCard | null;
             sidebarOpen: boolean;

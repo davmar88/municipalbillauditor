@@ -14,8 +14,10 @@ The design, and the decisions behind it, are in the game design document: https:
 - **Factions:** founded by a player, with their own joining rules (open or by approval, minimum level, species, entry fee, criminals or not).
 - **The Barn Wall:** the House's five laws from a fixed menu, the unrest each adds, festivals, sheep chants, and the weekly secret edit players expose with their saved copies (`app/Game/Wall.php`).
 - **Raids, uprisings and Gate Night:** attacks march for an hour and settle at the tick; at unrest 60 anyone can call an uprising; every Sunday at 19:00 the humans raid.
-- **Lone wolves and the law:** lone wolves loot faction treasuries, burn homes and plunder the farm sections they stand on (crop and Corn), and risk the pound. The House's informants name recent criminals; its leader or council puts out warrants with a Corn bounty from the treasury, anyone can add to a bounty, and any animal standing with an outlaw can try an arrest that sends them to the pound and pays the bounty (`app/Game/Warrants.php`, the Wanted page).
-- **The market:** design items in the Workshop, make numbered copies from gathered materials, sell them from your shop for Corn. Real money comes after the test season.
+- **Lone wolves and the law:** lone wolves loot faction treasuries, burn homes and plunder the farm sections they stand on (crop and Corn), and risk the pound. The House's informants name recent criminals; its leader or council puts out warrants with a bounty of Apples from the House's store, anyone can add Apples to a bounty, and any animal standing with an outlaw can try an arrest that sends them to the pound and pays the bounty, less the game's 20% (`app/Game/Warrants.php`, the Wanted page).
+- **The market:** design items in the Workshop, make numbered copies from gathered materials, sell them from your shop for Corn.
+- **Apples:** bought with real money in packs of 50 to 1,000 on the Apples page, with Paystack in rand or PayPal in dollars; bigger packs save up to 20%. Apples pay bounties and fill a faction's store, and swap for Corn at 10 each, one way only. The game never hands Apples out free, so every Apple was bought by someone. Prices are in `config/game.php`; the payment code is in `app/Payments`.
+- **The admin page:** at `/admin`, the owner pastes the Paystack, PayPal and Claude keys (stored encrypted), tests them, opens Apple sales and sees what they brought in.
 - **Recipes with powers:** eleven Workshop shapes carry a power that works when the owner uses a copy up: Gathering Gloves, Iron Shoes, Night Cloak, Willow Tonic and Prize Ribbon for the animal; War Banner, Thorn Hedge, Feast Basket, Watch Bell, Mason's Trowel and Golden Sheaf for its faction or the House. Stronger recipes open at Creativity levels 2 and 3. None of them gives horseshoes (`app/Enums/ItemTemplate.php`, `app/Game/Powers.php`).
 - **Messages, pop-ups and the bell:** tap any animal's name on the map to talk in a chat window over the screen; new messages and news pop up wherever you are, and the bell at the top keeps the news (raids on your land, battles, sales, requests to join, crimes against you, new laws and uprisings) (`app/Game/Notices.php`, `resources/js/components/game/player-pulse.tsx`).
 - **Chat:** the valley square, your faction, and a channel with each other faction. The Translate button uses Claude when `ANTHROPIC_API_KEY` is set.
@@ -34,7 +36,7 @@ npm run build
 php artisan serve
 ```
 
-The game moves on every half hour with `php artisan game:tick`, which the scheduler runs (`routes/console.php`). Staff check new makers' designs at `/staff/designs`; make a staff account with `php artisan app:make-staff you@example.com`.
+The game moves on every half hour with `php artisan game:tick`, which the scheduler runs (`routes/console.php`). Staff check new makers' designs at `/staff/designs`; make a staff account with `php artisan app:make-staff you@example.com`. The owner's admin page is at `/admin`; open it to an account with `php artisan app:make-admin you@example.com`.
 
 ## Tests
 

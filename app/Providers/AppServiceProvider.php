@@ -7,6 +7,7 @@ use App\Game\Translation\ClaudeTranslator;
 use App\Game\Translation\NullTranslator;
 use App\Game\Translation\Translator;
 use App\Models\User;
+use App\Support\Settings;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
@@ -21,18 +22,22 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        // Chat messages are translated by Claude when an API key is set.
-        // Without one, the Translate button says it isn't available.
-        $this->app->bind(Translator::class, function () {
-            $config = config('game.translator');
+        $this->app->singleton(Settings::class);
 
-            if (blank($config['api_key'])) {
+        // Chat messages are translated by Claude when an API key is set, on
+        // the admin page or in the server's .env. Without one, the
+        // Translate button says it isn't available.
+        $this->app->bind(Translator::class, function ($app) {
+            $config = config('game.translator');
+            $key = $app->make(Settings::class)->get('anthropic_api_key', $config['api_key']);
+
+            if (blank($key)) {
                 return new NullTranslator;
             }
 
             return new ClaudeTranslator(
                 client: new AnthropicClient(
-                    apiKey: $config['api_key'],
+                    apiKey: $key,
                     requestOptions: ['timeout' => $config['timeout'], 'maxRetries' => 2],
                 ),
                 model: $config['model'],
@@ -49,6 +54,7 @@ class AppServiceProvider extends ServiceProvider
         $this->configureDefaults();
 
         Gate::define('staff', fn (User $user): bool => (bool) $user->is_staff);
+        Gate::define('admin', fn (User $user): bool => (bool) $user->is_admin);
     }
 
     /**

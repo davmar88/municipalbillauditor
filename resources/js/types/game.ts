@@ -26,7 +26,7 @@ export type PlayerSummary = {
     maxHorseshoes: number;
     nextHorseshoeIn: number | null;
     corn: number;
-    /** The premium currency; earned Apples stay in the game. */
+    /** The premium currency, bought with real money in packs. */
     apples: number;
     materials: Record<string, number>;
     language: string;

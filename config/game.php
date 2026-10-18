@@ -49,6 +49,33 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Apples
+    |--------------------------------------------------------------------------
+    |
+    | Apples are bought with real money and change hands between players. The
+    | game never hands them out free, so every Apple was paid for by someone.
+    | Prices are in cents, and bigger packs cost less per Apple. The owner
+    | puts the payment keys in and opens sales on the admin page.
+    |
+    */
+
+    'apples' => [
+        'packs' => [
+            'apples-50' => ['apples' => 50, 'zar' => 5000, 'usd' => 300],
+            'apples-100' => ['apples' => 100, 'zar' => 9500, 'usd' => 570],
+            'apples-250' => ['apples' => 250, 'zar' => 22500, 'usd' => 1350],
+            'apples-500' => ['apples' => 500, 'zar' => 42500, 'usd' => 2550],
+            'apples-1000' => ['apples' => 1000, 'zar' => 80000, 'usd' => 4800],
+        ],
+        // One way only: Corn never turns back into Apples, or the Corn
+        // everyone earns free would become money.
+        'corn_per_apple' => 10,
+        // The share of a bounty the game keeps when a hunter collects it.
+        'bounty_cut' => 20,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Chat translation
     |--------------------------------------------------------------------------
     |

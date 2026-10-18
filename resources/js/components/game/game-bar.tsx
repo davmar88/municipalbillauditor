@@ -1,10 +1,10 @@
-import { usePage } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import { Award, Backpack, Clock3, Flame, Sparkles, Wheat } from 'lucide-react';
 import { NextStep } from '@/components/game/next-step';
 import { Button } from '@/components/ui/button';
 import { act, fromNow } from '@/lib/game';
 import { cn } from '@/lib/utils';
-import { rebuild } from '@/routes/play';
+import { apples, rebuild } from '@/routes/play';
 
 /**
  * The strip along the top of every game screen: what you have to spend,
@@ -45,15 +45,15 @@ export function GameBar({ showNextStep = true }: { showNextStep?: boolean }) {
                     <Wheat className="size-4 text-amber-300" aria-hidden />
                     {player.corn.toLocaleString('en-ZA')} Corn
                 </span>
-                {player.apples > 0 && (
-                    <span
-                        className="flex items-center gap-1.5 rounded-full border bg-card px-3 py-1.5 font-semibold"
-                        title="Apples: the valley's premium currency"
-                    >
-                        <span aria-hidden>🍎</span>
-                        {player.apples.toLocaleString('en-ZA')} Apples
-                    </span>
-                )}
+                <Link
+                    href={apples()}
+                    prefetch
+                    className="flex items-center gap-1.5 rounded-full border bg-card px-3 py-1.5 font-semibold hover:border-primary/60"
+                    title="Apples: buy packs, or swap them for Corn"
+                >
+                    <span aria-hidden>🍎</span>
+                    {player.apples.toLocaleString('en-ZA')} Apples
+                </Link>
                 <span className="flex items-center gap-1.5 rounded-full border bg-card px-3 py-1.5 font-semibold">
                     <Award className="size-4 text-pink-300" aria-hidden />
                     Level {player.level}

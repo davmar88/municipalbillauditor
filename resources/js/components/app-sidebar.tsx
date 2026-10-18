@@ -1,7 +1,9 @@
 import { Link, usePage } from '@inertiajs/react';
 import {
+    Apple,
     Crosshair,
     Hammer,
+    KeyRound,
     Mail,
     MessagesSquare,
     Puzzle,
@@ -21,8 +23,8 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { mainNavigation } from '@/lib/navigation';
-import { play, puzzle } from '@/routes';
-import { chat, messages, rankings, wanted } from '@/routes/play';
+import { admin, play, puzzle } from '@/routes';
+import { apples, chat, messages, rankings, wanted } from '@/routes/play';
 import { designs, reports } from '@/routes/staff';
 import type { NavItem } from '@/types';
 
@@ -31,6 +33,7 @@ const moreNavItems: NavItem[] = [
     { title: 'Spot the Edit', href: puzzle(), icon: Puzzle },
     { title: 'Rankings', href: rankings(), icon: Trophy },
     { title: 'Wanted', href: wanted(), icon: Crosshair },
+    { title: 'Apples', href: apples(), icon: Apple },
 ];
 
 const staffNavItems: NavItem[] = [
@@ -38,8 +41,12 @@ const staffNavItems: NavItem[] = [
     { title: 'Reported messages', href: reports(), icon: ShieldAlert },
 ];
 
+const adminNavItems: NavItem[] = [
+    { title: 'Payments and keys', href: admin(), icon: KeyRound },
+];
+
 export function AppSidebar() {
-    const { player, isStaff, missionsWaiting, unreadMessages } =
+    const { player, isStaff, isAdmin, missionsWaiting, unreadMessages } =
         usePage().props;
     const messagesNavItem: NavItem = {
         title: 'Messages',
@@ -81,6 +88,7 @@ export function AppSidebar() {
                     />
                 )}
                 {isStaff && <NavMain label="Our team" items={staffNavItems} />}
+                {isAdmin && <NavMain label="Admin" items={adminNavItems} />}
             </SidebarContent>
 
             <SidebarFooter>
