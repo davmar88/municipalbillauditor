@@ -239,6 +239,9 @@ function Patterns() {
             {rows('rows-thornbury', 8, INK.field, INK.fieldRow)}
             {rows('rows-brookside', -40, INK.hay, INK.hayRow)}
             {rows('rows-willowby', 30, INK.field, INK.fieldRow)}
+            {rows('rows-ashcombe', -18, INK.field, INK.fieldRow)}
+            {rows('rows-fennick', 52, INK.hay, INK.hayRow)}
+            {rows('rows-marlow', -36, INK.hay, INK.hayRow)}
             <pattern
                 id="meadow"
                 width="36"
@@ -317,6 +320,9 @@ const GROUND: Record<string, string> = {
     thornbury: 'url(#rows-thornbury)',
     brookside: 'url(#rows-brookside)',
     willowby: 'url(#rows-willowby)',
+    ashcombe: 'url(#rows-ashcombe)',
+    fennick: 'url(#rows-fennick)',
+    marlow: 'url(#rows-marlow)',
 };
 
 /** The land around the farm: the Ridge, Hollow Brook and Ironfield. */
@@ -1157,15 +1163,31 @@ function farmland(key: string) {
                     stroke={INK.waterEdge}
                     strokeOpacity={0.5}
                 />
-                <Crop farm={key} centre={[cx, cy]} />
+                <Crop crop={FARM_CROP[key] ?? 'iron'} centre={[cx, cy]} />
             </>
         );
     };
 }
 
+/** What each farm grows, as ValleyBuilder has it. */
+const FARM_CROP: Record<string, 'honey' | 'herbs' | 'iron'> = {
+    thornbury: 'honey',
+    brookside: 'herbs',
+    willowby: 'iron',
+    ashcombe: 'iron',
+    fennick: 'honey',
+    marlow: 'herbs',
+};
+
 /** What makes each farm worth having: hives, herb beds or an old forge's ore. */
-function Crop({ farm, centre: [cx, cy] }: { farm: string; centre: Point }) {
-    if (farm === 'thornbury') {
+function Crop({
+    crop,
+    centre: [cx, cy],
+}: {
+    crop: 'honey' | 'herbs' | 'iron';
+    centre: Point;
+}) {
+    if (crop === 'honey') {
         const hives = Array.from({ length: 8 }, (_, i) => ({
             x: cx + 40 + (i % 4) * 22,
             y: cy - 40 + Math.floor(i / 4) * 22,
@@ -1190,7 +1212,7 @@ function Crop({ farm, centre: [cx, cy] }: { farm: string; centre: Point }) {
         );
     }
 
-    if (farm === 'brookside') {
+    if (crop === 'herbs') {
         return (
             <path
                 d={Array.from(
@@ -1229,6 +1251,9 @@ const UNDER: Record<string, () => React.ReactNode> = {
     thornbury: farmland('thornbury'),
     brookside: farmland('brookside'),
     willowby: farmland('willowby'),
+    ashcombe: farmland('ashcombe'),
+    fennick: farmland('fennick'),
+    marlow: farmland('marlow'),
     wildwood: Wildwood,
     orchard: Orchard,
     big_barn: BigBarn,

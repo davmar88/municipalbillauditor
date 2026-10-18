@@ -9,10 +9,10 @@
 export type Point = [number, number];
 
 /** Everything drawn: Hollowmere, the farms beyond its fences and the land round them. */
-export const WORLD = { x: -720, y: -640, width: 2500, height: 2360 };
+export const WORLD = { x: -1380, y: -1240, width: 3160, height: 3530 };
 
 /** Hollowmere and its farms, for seeing everything at once. */
-export const REACH = { x: -680, y: -500, width: 2200, height: 2140 };
+export const REACH = { x: -1340, y: -1200, width: 2900, height: 3450 };
 
 /** The farm without the land around it, for fitting it on screen. */
 export const FARM = { x: 96, y: 92, width: 1408, height: 904 };
@@ -212,6 +212,52 @@ export const FARMS: Record<string, { polygon: Point[]; borders: string[] }> = {
         ],
         borders: ['paddock'],
     },
+    // The second ring of farms, beyond the wild land round the first.
+    ashcombe: {
+        polygon: [
+            [430, -500],
+            [620, -488],
+            [800, -500],
+            [980, -490],
+            [1170, -500],
+            [1215, -640],
+            [1160, -820],
+            [800, -860],
+            [440, -820],
+            [385, -650],
+        ],
+        borders: [],
+    },
+    fennick: {
+        polygon: [
+            [-680, 180],
+            [-690, 400],
+            [-672, 620],
+            [-685, 840],
+            [-860, 880],
+            [-1060, 830],
+            [-1150, 620],
+            [-1130, 380],
+            [-1060, 190],
+            [-860, 150],
+        ],
+        borders: [],
+    },
+    marlow: {
+        polygon: [
+            [440, 1640],
+            [620, 1628],
+            [800, 1640],
+            [980, 1630],
+            [1160, 1642],
+            [1210, 1780],
+            [1160, 1950],
+            [800, 1990],
+            [440, 1950],
+            [390, 1790],
+        ],
+        borders: [],
+    },
 };
 
 /** Which regions border which, by the same rule as ValleyBuilder. */
@@ -389,6 +435,116 @@ export const FIELDS: Record<string, { farm: string; polygon: Point[] }> = {
             [1484, 1360],
             [1484, 1180],
             [1420, 1072],
+        ],
+    },
+    ashcombe_ridge: {
+        farm: 'ashcombe',
+        polygon: [
+            [120, -500],
+            [370, -505],
+            [340, -650],
+            [380, -830],
+            [260, -900],
+            [130, -840],
+            [100, -660],
+        ],
+    },
+    ashcombe_wood: {
+        farm: 'ashcombe',
+        polygon: [
+            [450, -880],
+            [800, -895],
+            [1150, -880],
+            [1120, -1000],
+            [800, -1150],
+            [480, -1000],
+        ],
+    },
+    ashcombe_spring: {
+        farm: 'ashcombe',
+        polygon: [
+            [1240, -500],
+            [1500, -490],
+            [1520, -680],
+            [1480, -880],
+            [1330, -920],
+            [1245, -830],
+            [1230, -650],
+        ],
+    },
+    fennick_downs: {
+        farm: 'fennick',
+        polygon: [
+            [-700, 125],
+            [-860, 115],
+            [-1050, 155],
+            [-1140, 0],
+            [-1100, -220],
+            [-900, -300],
+            [-720, -220],
+            [-680, -40],
+        ],
+    },
+    fennick_moor: {
+        farm: 'fennick',
+        polygon: [
+            [-1175, 380],
+            [-1185, 600],
+            [-1170, 800],
+            [-1260, 760],
+            [-1300, 560],
+            [-1280, 380],
+            [-1210, 300],
+        ],
+    },
+    fennick_brake: {
+        farm: 'fennick',
+        polygon: [
+            [-700, 895],
+            [-860, 905],
+            [-1050, 865],
+            [-1120, 1000],
+            [-1050, 1200],
+            [-850, 1250],
+            [-620, 1210],
+            [-520, 1060],
+            [-560, 925],
+        ],
+    },
+    marlow_glen: {
+        farm: 'marlow',
+        polygon: [
+            [110, 1460],
+            [380, 1440],
+            [370, 1620],
+            [350, 1800],
+            [380, 1960],
+            [250, 2000],
+            [110, 1930],
+            [90, 1700],
+        ],
+    },
+    marlow_leas: {
+        farm: 'marlow',
+        polygon: [
+            [450, 2010],
+            [800, 2020],
+            [1150, 2010],
+            [1120, 2130],
+            [800, 2210],
+            [480, 2130],
+        ],
+    },
+    marlow_mill: {
+        farm: 'marlow',
+        polygon: [
+            [1235, 1460],
+            [1500, 1440],
+            [1520, 1650],
+            [1490, 1900],
+            [1340, 1990],
+            [1245, 1940],
+            [1235, 1780],
         ],
     },
 };

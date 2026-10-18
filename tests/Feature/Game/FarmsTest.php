@@ -27,12 +27,14 @@ class FarmsTest extends TestCase
         $this->travelTo(Clock::now()->setTime(12, 0));
     }
 
-    public function test_the_valley_has_three_farms_beyond_the_fences(): void
+    public function test_the_valley_has_six_farms_beyond_the_fences_in_two_rings(): void
     {
-        $this->assertSame(19, $this->valley->regions()->where('wild', false)->count());
-        $this->assertSame(9, $this->valley->regions()->where('wild', true)->count(), 'Three patches of wild land round each farm.');
-        $this->assertEqualsCanonicalizing(['orchard', 'big_barn', 'hayfield'], $this->region('thornbury')->neighbours()->where('wild', false)->pluck('key')->all());
-        $this->assertEqualsCanonicalizing(['paddock'], $this->region('willowby')->neighbours()->where('wild', false)->pluck('key')->all());
+        $this->assertSame(22, $this->valley->regions()->where('wild', false)->count());
+        $this->assertSame(18, $this->valley->regions()->where('wild', true)->count(), 'Three patches of wild land round each farm.');
+        $this->assertEqualsCanonicalizing(['thornbury'], $this->region('ashcombe')->neighbours()->where('wild', false)->pluck('key')->all(), 'The second ring is reached from the first.');
+        $this->assertSame(['iron', 'honey', 'herbs'], [$this->region('ashcombe')->produces, $this->region('fennick')->produces, $this->region('marlow')->produces]);
+        $this->assertEqualsCanonicalizing(['orchard', 'big_barn', 'hayfield', 'ashcombe'], $this->region('thornbury')->neighbours()->where('wild', false)->pluck('key')->all());
+        $this->assertEqualsCanonicalizing(['paddock', 'marlow'], $this->region('willowby')->neighbours()->where('wild', false)->pluck('key')->all());
         $this->assertTrue($this->region('big_barn')->neighbours()->where('key', 'thornbury')->exists());
     }
 

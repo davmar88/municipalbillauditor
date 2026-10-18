@@ -52,6 +52,19 @@ final class ValleyBuilder
         'willowby_copse' => ['Willowby Copse', 'farm', 'iron', 9, 9],
         'willowby_forge' => ['Willowby Forge', 'farm', 'iron', 10, 9],
         'willowby_pits' => ['Willowby Pits', 'farm', 'iron', 11, 9],
+        // The second ring of farms, out beyond the wild land round the first.
+        'ashcombe' => ['Ashcombe Farm', 'farm', 'iron', 12, 9],
+        'fennick' => ['Fennick Farm', 'farm', 'honey', 13, 9],
+        'marlow' => ['Marlow Farm', 'farm', 'herbs', 14, 9],
+        'ashcombe_ridge' => ['Ashcombe Ridge', 'farm', 'iron', 15, 9],
+        'ashcombe_wood' => ['Ashcombe Wood', 'farm', 'iron', 16, 9],
+        'ashcombe_spring' => ['Ashcombe Spring', 'farm', 'iron', 17, 9],
+        'fennick_downs' => ['Fennick Downs', 'farm', 'honey', 18, 9],
+        'fennick_moor' => ['Fennick Moor', 'farm', 'honey', 19, 9],
+        'fennick_brake' => ['Fennick Brake', 'farm', 'honey', 20, 9],
+        'marlow_glen' => ['Marlow Glen', 'farm', 'herbs', 21, 9],
+        'marlow_leas' => ['Marlow Leas', 'farm', 'herbs', 22, 9],
+        'marlow_mill' => ['Marlow Mill', 'farm', 'herbs', 23, 9],
     ];
 
     /** Which farm each patch of wild land belongs to, in the order it is cleared. */
@@ -65,6 +78,15 @@ final class ValleyBuilder
         'willowby_copse' => 'willowby',
         'willowby_forge' => 'willowby',
         'willowby_pits' => 'willowby',
+        'ashcombe_ridge' => 'ashcombe',
+        'ashcombe_wood' => 'ashcombe',
+        'ashcombe_spring' => 'ashcombe',
+        'fennick_downs' => 'fennick',
+        'fennick_moor' => 'fennick',
+        'fennick_brake' => 'fennick',
+        'marlow_glen' => 'marlow',
+        'marlow_leas' => 'marlow',
+        'marlow_mill' => 'marlow',
     ];
 
     /** Which Hollowmere regions each farm borders. */
@@ -81,6 +103,19 @@ final class ValleyBuilder
         'willowby_copse' => ['willowby'],
         'willowby_forge' => ['willowby'],
         'willowby_pits' => ['willowby'],
+        // The second ring is reached from the first ring's farms.
+        'ashcombe' => ['thornbury'],
+        'fennick' => ['brookside'],
+        'marlow' => ['willowby'],
+        'ashcombe_ridge' => ['ashcombe'],
+        'ashcombe_wood' => ['ashcombe'],
+        'ashcombe_spring' => ['ashcombe'],
+        'fennick_downs' => ['fennick'],
+        'fennick_moor' => ['fennick'],
+        'fennick_brake' => ['fennick'],
+        'marlow_glen' => ['marlow'],
+        'marlow_leas' => ['marlow'],
+        'marlow_mill' => ['marlow'],
     ];
 
     public function build(string $name = 'Hollowmere'): Valley
