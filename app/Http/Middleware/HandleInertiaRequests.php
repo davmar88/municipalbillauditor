@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Game\Horseshoes;
 use App\Game\Levels;
+use App\Game\Missions;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -78,6 +79,8 @@ class HandleInertiaRequests extends Middleware
                 ];
             },
             'isStaff' => fn () => (bool) $request->user()?->is_staff,
+            // Finished missions waiting to be collected, for the Today badge.
+            'missionsWaiting' => fn () => $request->user()?->player ? Missions::waiting($request->user()->player) : 0,
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
     }

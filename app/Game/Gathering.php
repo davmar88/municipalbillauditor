@@ -53,6 +53,7 @@ final class Gathering
             }
 
             $player->save();
+            Missions::record($player, 'gather');
 
             return ['what' => $region->produces, 'amount' => $amount - $tax, 'tax' => $tax];
         });

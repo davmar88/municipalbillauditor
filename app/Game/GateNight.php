@@ -50,7 +50,10 @@ final class GateNight
             Players::ensureFree($locked);
             Horseshoes::spend($locked, $horseshoes);
 
-            return GateDefence::create(['season_id' => $season->id, 'player_id' => $locked->id, 'night_on' => $night, 'horseshoes' => $horseshoes]);
+            $defence = GateDefence::create(['season_id' => $season->id, 'player_id' => $locked->id, 'night_on' => $night, 'horseshoes' => $horseshoes]);
+            Missions::record($locked, 'battle');
+
+            return $defence;
         });
     }
 

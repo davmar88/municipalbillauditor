@@ -14,6 +14,7 @@ declare module '@inertiajs/core' {
             auth: Auth;
             player: PlayerSummary | null;
             isStaff: boolean;
+            missionsWaiting: number;
             sidebarOpen: boolean;
             [key: string]: unknown;
         };
