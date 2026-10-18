@@ -24,6 +24,7 @@ import {
 } from '@/components/game/faction-base';
 import { Horseshoe } from '@/components/game/game-bar';
 import { HorseshoePicker } from '@/components/game/horseshoe-picker';
+import { ProfileLink } from '@/components/game/profile-link';
 import { Button } from '@/components/ui/button';
 import { act, capitalise, clockTime, fromNow, speciesEmoji } from '@/lib/game';
 import { route } from '@/lib/hollowmere';
@@ -309,23 +310,32 @@ export function RegionPanel({
                         {others.length > 0 && (
                             <ul className="flex flex-wrap gap-1.5">
                                 {others.slice(0, 8).map((animal, i) => (
-                                    <li key={`${animal.name}-${i}`}>
-                                        <button
-                                            type="button"
-                                            onClick={() => openChat(animal.id)}
-                                            className="flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-                                            style={{
-                                                borderColor:
-                                                    animal.colour ?? undefined,
-                                            }}
-                                            title={`Talk to ${animal.name}`}
+                                    <li
+                                        key={`${animal.name}-${i}`}
+                                        className="flex items-center rounded-full border text-xs"
+                                        style={{
+                                            borderColor:
+                                                animal.colour ?? undefined,
+                                        }}
+                                    >
+                                        <ProfileLink
+                                            animal={animal}
+                                            className="flex items-center gap-1 rounded-l-full py-0.5 pr-1 pl-2 hover:bg-accent hover:no-underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                                         >
                                             <span aria-hidden>
                                                 {speciesEmoji(animal.species)}
                                             </span>
                                             {animal.name}
+                                        </ProfileLink>
+                                        <button
+                                            type="button"
+                                            onClick={() => openChat(animal.id)}
+                                            className="flex items-center self-stretch rounded-r-full pr-2 pl-1 text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                                            aria-label={`Talk to ${animal.name}`}
+                                            title={`Talk to ${animal.name}`}
+                                        >
                                             <MessageCircle
-                                                className="size-3 text-muted-foreground"
+                                                className="size-3"
                                                 aria-hidden
                                             />
                                         </button>

@@ -80,6 +80,7 @@ class FactionController extends Controller
                 'requests' => $player->decides() ? $faction->joinRequests()->with('player')->where('status', 'pending')->get()
                     ->map(fn (FactionJoinRequest $joinRequest) => [
                         'id' => $joinRequest->id,
+                        'playerId' => $joinRequest->player_id,
                         'name' => $joinRequest->player->name,
                         'species' => $joinRequest->player->species->value,
                         'level' => $joinRequest->player->level(),

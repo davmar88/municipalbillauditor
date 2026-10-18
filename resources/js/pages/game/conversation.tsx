@@ -10,6 +10,7 @@ import {
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { OrchardBadge } from '@/components/game/orchard-badge';
+import { ProfileLink } from '@/components/game/profile-link';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -131,7 +132,7 @@ export default function ConversationPage({
                                     : undefined
                             }
                         >
-                            {animal.name}
+                            <ProfileLink animal={animal} />
                             <OrchardBadge member={animal.orchard} />
                         </h1>
                         <p className="text-sm text-muted-foreground">

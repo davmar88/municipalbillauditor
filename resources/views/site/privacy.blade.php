@@ -38,7 +38,7 @@
                     'Payout details are used only to pay you, to check that the bank account is in your own name, and to stop fraud.',
                 ]],
                 ['Who sees it', [
-                    'Other players see your animal, its faction, its shop and what you write in chat channels they can read.',
+                    'Other players see your animal, its faction, its shop and what you write in chat channels they can read. Your animal\'s profile shows players in your valley its level, Rosettes, skills, record (battles won, items sold and the like) and the items it holds, but never your Corn, Apples, Pineapples, materials or where it stands.',
                     'A private message is seen by the animal you send it to. Our team reads one only when its reader reports it, together with the few messages before it.',
                     'Our team, when we moderate items, chat or reports.',
                     'Anthropic, when a player taps Translate on a chat or private message: it receives that message and returns the translation.',

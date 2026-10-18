@@ -1,6 +1,6 @@
 import { router } from '@inertiajs/react';
 import type { RequestPayload } from '@inertiajs/core';
-import type { Species } from '@/types/game';
+import type { Currency, Species } from '@/types/game';
 
 const EMOJI: Record<Species, string> = {
     pig: '🐷',
@@ -99,6 +99,15 @@ export function rand(cents: number): string {
 /** "$5.70", from cents. */
 export function dollars(cents: number): string {
     return `$${(cents / 100).toFixed(2)}`;
+}
+
+/** "12 Corn", "1 Apple", "30 Apples". */
+export function money(amount: number, currency: Currency): string {
+    if (currency === 'corn') {
+        return `${amount.toLocaleString('en-ZA')} Corn`;
+    }
+
+    return `${amount.toLocaleString('en-ZA')} ${amount === 1 ? 'Apple' : 'Apples'}`;
 }
 
 export function capitalise(text: string): string {

@@ -1,6 +1,7 @@
 import { Link } from '@inertiajs/react';
 import { Maximize2, Send, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import { ProfileLink } from '@/components/game/profile-link';
 import { gameJson, shortWhen, speciesEmoji } from '@/lib/game';
 import { closeChat, usePulse } from '@/lib/pulse';
 import { cn } from '@/lib/utils';
@@ -122,7 +123,15 @@ export function FloatingChat() {
                 </span>
                 <div className="min-w-0 flex-1">
                     <p className="truncate font-bold">
-                        {animal?.name ?? 'Opening…'}
+                        {animal ? (
+                            // The profile has its own Message button, so the window steps aside.
+                            <ProfileLink
+                                animal={animal}
+                                onClick={() => closeChat()}
+                            />
+                        ) : (
+                            'Opening…'
+                        )}
                     </p>
                     {animal?.faction && (
                         <p
