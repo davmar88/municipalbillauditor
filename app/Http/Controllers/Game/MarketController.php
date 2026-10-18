@@ -25,7 +25,8 @@ class MarketController extends Controller
         /** @var Player $player */
         $player = $request->user()->player;
         $season = $player->valley->currentSeason();
-        $levy = $season ? Wall::law($season, LawTemplate::MarketLevy) : null;
+        // The levy goes to the House, so without one nobody charges it.
+        $levy = $season && $player->valley->house() !== null ? Wall::law($season, LawTemplate::MarketLevy) : null;
         $ban = $season ? Wall::law($season, LawTemplate::TradeBan) : null;
 
         $listings = Listing::query()

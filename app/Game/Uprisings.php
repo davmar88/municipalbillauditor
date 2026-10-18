@@ -167,7 +167,7 @@ final class Uprisings
 
             if ($won) {
                 $battles->take($season, $season->valley->region('farmhouse'), $winner);
-                $wall->stir($season, -30, 'A new House promises change', 24);
+                $wall->stir($season, -30, $winner !== null ? 'A new House promises change' : 'The House has fallen', 24);
             }
 
             foreach ($pledges as $pledge) {

@@ -67,7 +67,7 @@ class WallController extends Controller
             'canRemember' => ! WallCopy::query()->where('player_id', $player->id)->where('created_at', '>=', Clock::startOfToday())->exists(),
             'goatHints' => Wall::goatHints($player, $season),
             'history' => Wall::history($season),
-            'uprising' => $uprising ? $this->uprising($uprising, $player) : null,
+            'uprising' => $uprising ? $this->uprising($uprising, $player, $isHouse) : null,
             'canCallUprising' => $house !== null && ! $isHouse && $uprising === null && $unrest >= Wall::UPRISING_AT,
             'festivalReady' => $season->last_festival_at === null || $season->last_festival_at->lte(CarbonImmutable::now()->subDays(3)),
             'canChant' => $player->species === Species::Sheep && $player->faction?->motto !== null && $house !== null,
@@ -179,7 +179,7 @@ class WallController extends Controller
     }
 
     /** @return array<string, mixed> */
-    private function uprising(Uprising $uprising, Player $player): array
+    private function uprising(Uprising $uprising, Player $player, bool $isHouse): array
     {
         $pledges = $uprising->pledges();
 
@@ -192,6 +192,8 @@ class WallController extends Controller
             'gatheringUntil' => $uprising->gathering_until->toIso8601String(),
             'closesAt' => $uprising->closes_at?->toIso8601String(),
             'myPledge' => (clone $pledges)->where('player_id', $player->id)->value('side'),
+            // The House's own animals can only stand with it, once it opens.
+            'houseMember' => $isHouse,
         ];
     }
 }

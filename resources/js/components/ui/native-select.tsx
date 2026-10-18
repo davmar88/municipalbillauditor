@@ -5,17 +5,15 @@ import { cn } from "@/lib/utils"
 
 /**
  * A plain <select>, styled like the inputs. It posts with the form and
- * uses the phone's own picker.
+ * uses the phone's own picker. A className sizes and places it, so the
+ * arrow stays inside a narrow select.
  */
 function NativeSelect({ className, children, ...props }: React.ComponentProps<"select">) {
   return (
-    <div className="relative w-full">
+    <div className={cn("relative w-full", className)}>
       <select
         data-slot="native-select"
-        className={cn(
-          "border-input focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive h-11 w-full min-w-0 appearance-none rounded-md border bg-transparent py-1 pr-9 pl-3 text-base shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 md:text-sm dark:bg-input/30 [&>option]:bg-popover [&>option]:text-popover-foreground",
-          className
-        )}
+        className="border-input focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive h-11 w-full min-w-0 appearance-none rounded-md border bg-transparent py-1 pr-9 pl-3 text-base shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 md:text-sm dark:bg-input/30 [&>option]:bg-popover [&>option]:text-popover-foreground"
         {...props}
       >
         {children}

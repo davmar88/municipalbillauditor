@@ -124,6 +124,20 @@ class MarketTest extends TestCase
         $this->assertSame(210, $maker->fresh()->corn, 'The maker earns the royalty.');
     }
 
+    public function test_without_a_house_nobody_charges_the_levy(): void
+    {
+        Law::create(['season_id' => $this->season()->id, 'slot' => 1, 'template' => LawTemplate::MarketLevy, 'value' => 5]);
+        $maker = $this->maker();
+        $listing = $this->market->list($maker, $this->market->craft($maker, $this->design($maker)), 100);
+        $buyer = $this->player(attributes: ['corn' => 300]);
+
+        $this->actingAs($buyer->user)->get(route('play.market'))->assertInertia(fn (Assert $page) => $page
+            ->where('levy', 0));
+
+        $this->market->buy($buyer, $listing);
+        $this->assertSame(200, $buyer->fresh()->corn);
+    }
+
     public function test_a_trade_ban_stops_the_banned_faction_trading(): void
     {
         $ruler = $this->player();
