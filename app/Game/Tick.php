@@ -31,6 +31,7 @@ final class Tick
         private readonly Seasons $seasons,
         private readonly Bases $bases,
         private readonly Farms $farms,
+        private readonly Research $research,
     ) {}
 
     public function run(Valley $valley): void
@@ -41,6 +42,8 @@ final class Tick
             return;
         }
 
+        // Studies finish first, so what was learned counts this half hour.
+        $this->research->finishDue($valley->id);
         $this->wall->settleSecretEdits($season);
         $this->wall->expireLaws($season);
         $this->battles->resolveDue($season);

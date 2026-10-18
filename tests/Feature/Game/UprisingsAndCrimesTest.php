@@ -233,7 +233,8 @@ class UprisingsAndCrimesTest extends TestCase
             app(GateNight::class)->defend($defender, 3);
         }
 
-        // The map shows how strong the gate is before the raid.
+        // The map shows how strong the gate is before the raid. Five animals
+        // are active this week, so Ironfield sends ten men rather than six.
         $this->actingAs($this->ruler->user)->get(route('play'))->assertInertia(fn (Assert $page) => $page
             ->where('gate.open', true)
             ->where('gate.defenders', 4)
@@ -266,7 +267,7 @@ class UprisingsAndCrimesTest extends TestCase
         $this->assertSame(1, $this->house->regions()->where('ring', 'outer')->count());
         $burned = $this->season()->fresh()->last_gate_night['burned'];
         $this->assertCount(2, $burned);
-        $this->assertSame("🔥 Ironfield's 10 men broke through the gate at 19:00, with nobody defending it. They burned {$burned[0]} and {$burned[1]}.", Notice::query()->where('player_id', $this->ruler->id)->latest('id')->value('text'));
+        $this->assertSame("🔥 Ironfield's 6 men broke through the gate at 19:00, with nobody defending it. They burned {$burned[0]} and {$burned[1]}.", Notice::query()->where('player_id', $this->ruler->id)->latest('id')->value('text'));
         $this->assertSame("Ironfield's men burned the outer fields", UnrestEvent::query()->latest('id')->value('reason'));
     }
 
@@ -280,7 +281,7 @@ class UprisingsAndCrimesTest extends TestCase
         app(GateNight::class)->resolveIfDue($this->season(), app(Wall::class));
 
         $this->assertSame(['held' => false, 'defenders' => 1, 'burned' => []], $this->season()->fresh()->last_gate_night);
-        $this->assertSame("🔥 Ironfield's 10 men broke through the gate at 19:00. No field beyond the fences was held, so nothing burned. You earned 5 Rosettes for fighting.", Notice::query()->where('player_id', $defender->id)->latest('id')->value('text'));
+        $this->assertSame("🔥 Ironfield's 6 men broke through the gate at 19:00. No field beyond the fences was held, so nothing burned. You earned 5 Rosettes for fighting.", Notice::query()->where('player_id', $defender->id)->latest('id')->value('text'));
         $this->assertSame("Ironfield's men broke through the gate", UnrestEvent::query()->latest('id')->value('reason'));
     }
 

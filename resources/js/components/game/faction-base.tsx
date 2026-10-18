@@ -35,9 +35,16 @@ export function shortOf(cost: Cost, store: Store): string[] {
 }
 
 export function duration(minutes: number): string {
-    return minutes >= 60
-        ? `${minutes / 60} ${minutes === 60 ? 'hour' : 'hours'}`
-        : `${minutes} minutes`;
+    const hours = Math.floor(minutes / 60);
+    const rest = minutes % 60;
+
+    if (hours === 0) {
+        return `${minutes} minutes`;
+    }
+
+    const whole = hours === 1 ? '1 hour' : `${hours} hours`;
+
+    return rest === 0 ? whole : `${whole} ${rest} minutes`;
 }
 
 /** A cost, with what the store can't cover yet in orange. */

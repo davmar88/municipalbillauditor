@@ -76,7 +76,7 @@ final class Battles
                 'region_id' => $target->id,
                 'defender_faction_id' => $target->faction_id,
                 'player_id' => $locked->id,
-                'lands_at' => $this->landing($target),
+                'lands_at' => $this->landing($target, $faction->id),
                 'seed' => Dice::seed(),
             ]);
 
@@ -181,6 +181,10 @@ final class Battles
             // A War Banner and a Thorn Hedge, from the Workshop's recipes.
             $attackStrength *= Powers::attack($attack->faction_id);
             $defenceStrength *= Powers::defence($region);
+
+            // What each faction has studied.
+            $attackStrength *= Research::attack($attack->faction_id);
+            $defenceStrength *= Research::defence($region->faction_id);
 
             $attackStrength *= Dice::roll($attack->seed, 'attack', 0.9, 1.1);
             $defenceStrength *= Dice::roll($attack->seed, 'defence', 0.9, 1.1);
@@ -335,9 +339,10 @@ final class Battles
     }
 
     /** No battles settle in the quiet hours, 01:00 to 06:00. */
-    private function landing(Region $target): CarbonImmutable
+    private function landing(Region $target, int $factionId): CarbonImmutable
     {
-        $lands = CarbonImmutable::now()->addMinutes($target->isFarmhouse() ? self::FARMHOUSE_MARCH_MINUTES : self::MARCH_MINUTES);
+        // Marching gets a faction's raids there sooner.
+        $lands = CarbonImmutable::now()->addMinutes(Research::march($factionId, $target->isFarmhouse() ? self::FARMHOUSE_MARCH_MINUTES : self::MARCH_MINUTES));
 
         if (Clock::hourIn($lands, 1, 5)) {
             $lands = Clock::local($lands)->setTime(6, 0)->setTimezone(config('app.timezone'));

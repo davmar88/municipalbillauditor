@@ -3,7 +3,10 @@
 namespace App\Http\Controllers\Game;
 
 use App\Enums\BuildingKind;
+use App\Enums\Study;
 use App\Game\Bases;
+use App\Game\Clock;
+use App\Game\Research;
 use App\Http\Controllers\Controller;
 use App\Models\Building;
 use App\Models\Region;
@@ -11,7 +14,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
-/** Faction bases: giving to the store, raising buildings and levels. */
+/** Faction bases: giving to the store, raising buildings and levels, and studies. */
 class BaseController extends Controller
 {
     public function give(Request $request, Bases $bases): RedirectResponse
@@ -46,6 +49,16 @@ class BaseController extends Controller
         $building = $bases->upgrade($request->user()->player, $building);
 
         return $this->told("The {$building->kind->label()} is going up to level {$building->level}. It's ready in ".$this->duration($building->kind->minutes($building->level)).'.');
+    }
+
+    public function study(Request $request, Research $research): RedirectResponse
+    {
+        $study = Study::from($request->validate(['study' => ['required', Rule::enum(Study::class)]])['study']);
+
+        $faction = $research->start($request->user()->player, $study);
+        $level = Research::level($faction, $study) + 1;
+
+        return $this->told("Your faction is studying {$study->label()} {$level}. It's done at ".Clock::local($faction->studying_until)->format('H:i').'.');
     }
 
     private function duration(int $minutes): string

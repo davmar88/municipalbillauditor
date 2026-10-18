@@ -56,8 +56,8 @@ final class Gathering
             };
             $own = $player->faction_id !== null && $region->faction_id === $player->faction_id;
             $workshop = $region->produces === 'corn' ? 1.0 : Bases::gathering($player, $region);
-            // Gathering Gloves and a Feast Basket bring in more.
-            $amount = (int) floor($base * $player->species->gathering() * ($own ? 1.5 : 1.0) * $workshop * Powers::gathering($player, $region->produces));
+            // Gathering Gloves, a Feast Basket and the faction's Farming bring in more.
+            $amount = (int) floor($base * $player->species->gathering() * ($own ? 1.5 : 1.0) * $workshop * Powers::gathering($player, $region->produces) * Research::gathering($player));
             $tax = 0;
 
             if ($region->produces === 'corn') {

@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
 
 /**
  * A group of players that holds land, and rules the valley while it holds
@@ -21,6 +22,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property int $treasury
  * @property int $apples The faction's store of Apples, for the House's warrant bounties
  * @property array<string, int>|null $materials
+ * @property array<string, int>|null $studies The level reached in each study
+ * @property string|null $studying The study under way
+ * @property Carbon|null $studying_until When it is done
  * @property EntryMode $entry_mode
  * @property int $min_level
  * @property array<int, string>|null $species
@@ -40,6 +44,8 @@ class Faction extends Model
             'species' => 'array',
             'accepts_criminals' => 'boolean',
             'materials' => 'array',
+            'studies' => 'array',
+            'studying_until' => 'datetime',
         ];
     }
 

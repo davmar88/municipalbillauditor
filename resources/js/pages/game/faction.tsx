@@ -2,6 +2,7 @@ import { Head, Link, usePage } from '@inertiajs/react';
 import { Crown, Flame, Mail, MessagesSquare, Skull } from 'lucide-react';
 import { useState } from 'react';
 import { FactionBase } from '@/components/game/faction-base';
+import { FactionStudyList } from '@/components/game/faction-studies';
 import { GameBar } from '@/components/game/game-bar';
 import { OrchardBadge } from '@/components/game/orchard-badge';
 import { Button } from '@/components/ui/button';
@@ -21,7 +22,11 @@ import {
     rules as rulesRoute,
     store,
 } from '@/routes/play/faction';
-import type { BuildingKindCard, MapBuilding } from '@/types/game';
+import type {
+    FactionStudies,
+    BuildingKindCard,
+    MapBuilding,
+} from '@/types/game';
 
 type Rules = {
     entryMode: 'open' | 'approval' | 'invite';
@@ -54,6 +59,7 @@ type Props = {
                   })[];
                   plots: { id: number; name: string }[];
               };
+              studies: FactionStudies;
               members: {
                   id: number;
                   name: string;
@@ -189,6 +195,14 @@ function MyFaction({
                 treasury={faction.treasury}
                 base={faction.base}
                 kinds={buildingKinds}
+            />
+
+            <FactionStudyList
+                studies={faction.studies}
+                store={{
+                    treasury: faction.treasury,
+                    materials: faction.base.materials,
+                }}
             />
 
             <section className="flex flex-col gap-2">

@@ -22,18 +22,22 @@ final class GateNight
 {
     public const HOUR = 19;
 
-    /** Ironfield never sends fewer men than this. */
-    public const MIN_HUMANS = 10;
+    /** Ironfield never sends fewer men than this, before the factions study. */
+    public const MIN_HUMANS = 6;
 
     public static function isGateDay(): bool
     {
         return Clock::now()->isSunday() && Clock::now()->hour < self::HOUR;
     }
 
-    /** The men Ironfield sends: two for every animal active this week, and never fewer than ten. */
+    /**
+     * The men Ironfield sends: six, and one more for every study level the
+     * valley's strongest faction has, but never fewer than two for every
+     * animal active this week.
+     */
     public static function humans(Valley $valley): int
     {
-        return max(self::MIN_HUMANS, 2 * Players::activeCount($valley));
+        return max(self::MIN_HUMANS + Research::topPoints($valley->id), 2 * Players::activeCount($valley));
     }
 
     /**
@@ -72,7 +76,8 @@ final class GateNight
     /** @param  Collection<int, GateDefence>  $defences */
     private static function strength(Collection $defences): float
     {
-        return (float) $defences->sum(fn (GateDefence $d) => $d->horseshoes * $d->player->species->defence());
+        // A faction's Defence makes its members stronger at the gate too.
+        return (float) $defences->sum(fn (GateDefence $d) => $d->horseshoes * $d->player->species->defence() * Research::defence($d->player->faction_id));
     }
 
     /**

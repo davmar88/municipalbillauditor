@@ -10,6 +10,7 @@ use App\Enums\Species;
 use App\Game\Bases;
 use App\Game\Clock;
 use App\Game\Factions;
+use App\Game\Research;
 use App\Http\Controllers\Controller;
 use App\Models\Building;
 use App\Models\Crime;
@@ -64,6 +65,7 @@ class FactionController extends Controller
                         ->orderBy('name')
                         ->get(['id', 'name']),
                 ],
+                'studies' => Research::page($faction, $player),
                 'members' => $faction->members()->orderByRaw("case faction_role when 'leader' then 0 when 'council' then 1 when 'member' then 2 else 3 end")->orderBy('name')->get()
                     ->map(fn (Player $member) => [
                         'id' => $member->id,

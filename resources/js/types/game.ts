@@ -136,6 +136,41 @@ export type FactionStore = {
     materials: Record<string, number>;
 };
 
+export type StudyValue =
+    | 'attack'
+    | 'defence'
+    | 'science'
+    | 'farming'
+    | 'marching';
+
+/** A faction's studies, as the Faction page shows them. */
+export type FactionStudies = {
+    /** The faction's study levels, added up. */
+    points: number;
+    canStudy: boolean;
+    studying: {
+        value: StudyValue;
+        label: string;
+        level: number;
+        until: string;
+    } | null;
+    studies: {
+        value: StudyValue;
+        label: string;
+        level: number;
+        max: number;
+        /** What it does at the level reached, or null before level 1. */
+        does: string | null;
+        next: {
+            level: number;
+            does: string;
+            corn: number;
+            materials: Record<string, number>;
+            minutes: number;
+        } | null;
+    }[];
+};
+
 /** Gate Night: Ironfield's Sunday raid at 19:00, and how it went. */
 export type GateNightInfo = {
     /** Whether animals can still put horseshoes into holding the gate. */
