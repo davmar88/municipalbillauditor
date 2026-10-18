@@ -10,7 +10,9 @@ return [
     | The numbers players feel: how fast horseshoes come back, how long a
     | season runs and which level unlocks what. The design document explains
     | each one. The test season runs at the lower levels below, so factions
-    | and shops start in the first days instead of the first week.
+    | and shops start in the first days instead of the first week. Founding
+    | costs what a newcomer has after the story's first three steps, so the
+    | first factions can start on day one.
     |
     */
 
@@ -30,13 +32,13 @@ return [
 
     'levels' => [
         'vote' => 1,
-        'found_faction' => 2,
+        'found_faction' => 1,
         'stall' => 2,
         'crime' => 3,
     ],
 
     'faction' => [
-        'founding_corn' => 200,
+        'founding_corn' => 150,
         'max_members' => 15,
         'members_to_raid' => 3,
     ],

@@ -533,7 +533,8 @@ function LoneWolf({ factions, founding, underworld, entryModes }: Props) {
             <section className="flex flex-col gap-3 rounded-xl border bg-card p-4">
                 <h2 className="text-lg font-bold">Found a faction</h2>
                 <p className="text-sm text-muted-foreground">
-                    From level {founding.level}, for {founding.corn} Corn. A
+                    Costs {founding.corn} Corn
+                    {founding.level > 1 && `, from level ${founding.level}`}. A
                     faction needs 3 members to raid. You can set its joining
                     rules once it exists.
                 </p>

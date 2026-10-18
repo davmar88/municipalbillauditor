@@ -31,6 +31,8 @@ class FactionsTest extends TestCase
 
     public function test_founding_costs_corn_and_needs_a_level(): void
     {
+        // The test season lets newcomers found; a later season can ask for a level.
+        config(['game.levels.found_faction' => 2]);
         $newcomer = $this->player(level: 1, attributes: ['corn' => 500]);
         $founder = $this->player(level: 2, attributes: ['corn' => 500]);
 
@@ -52,12 +54,27 @@ class FactionsTest extends TestCase
         $founder->refresh();
         $this->assertSame($faction->id, $founder->faction_id);
         $this->assertSame(FactionRole::Leader, $founder->faction_role);
-        $this->assertSame(300, $founder->corn);
+        $this->assertSame(350, $founder->corn);
         $this->assertSame(EntryMode::Approval, $faction->entry_mode);
         $this->assertSame(3, $faction->min_level);
         $this->assertSame(['dog', 'horse'], $faction->species);
         $this->assertSame(25, $faction->entry_fee);
         $this->assertFalse($faction->accepts_criminals);
+    }
+
+    public function test_a_newcomer_can_found_a_faction_on_day_one(): void
+    {
+        $short = $this->player(attributes: ['corn' => 149]);
+        $newcomer = $this->player(attributes: ['corn' => 150]);
+
+        $this->actingAs($short->user)->post(route('play.faction.store'), ['name' => 'Short Straw', 'colour' => Faction::COLOURS[0]]);
+        $this->assertSame(0, Faction::count());
+
+        $this->actingAs($newcomer->user)->post(route('play.faction.store'), ['name' => 'Day One', 'colour' => Faction::COLOURS[0]])->assertRedirect();
+
+        $newcomer->refresh();
+        $this->assertSame('Day One', $newcomer->faction?->name);
+        $this->assertSame(0, $newcomer->corn);
     }
 
     public function test_an_open_faction_takes_a_recruit_who_pays_the_entry_fee(): void
