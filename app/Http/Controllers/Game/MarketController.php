@@ -43,6 +43,7 @@ class MarketController extends Controller
                 'serial' => $listing->item->serial,
                 'design' => $listing->item->design->toCard(),
                 'seller' => [
+                    'id' => $listing->seller->id,
                     'name' => $listing->seller->name,
                     'faction' => $listing->seller->faction?->name,
                     'colour' => $listing->seller->faction?->colour,

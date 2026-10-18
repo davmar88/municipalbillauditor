@@ -48,6 +48,15 @@ export type DesignCard = {
 
 export type FactionRef = { id: number; name: string; colour: string };
 
+/** An animal you can write to, as Messages shows it. */
+export type MessageAnimal = {
+    id: number;
+    name: string;
+    species: Species;
+    faction: string | null;
+    colour: string | null;
+};
+
 export type MapAnimal = {
     name: string;
     species: Species;

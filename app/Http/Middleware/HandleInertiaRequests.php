@@ -4,7 +4,9 @@ namespace App\Http\Middleware;
 
 use App\Game\Horseshoes;
 use App\Game\Levels;
+use App\Game\Messages;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
@@ -77,6 +79,13 @@ class HandleInertiaRequests extends Middleware
                     'shieldUntil' => $player->isShielded() ? $player->shield_until->toIso8601String() : null,
                 ];
             },
+            // The badge on Messages. Sent with every reload, so pages that
+            // poll keep it fresh too.
+            'unreadMessages' => Inertia::always(function () use ($request) {
+                $player = $request->user()?->player;
+
+                return $player !== null ? Messages::unread($player) : 0;
+            }),
             'isStaff' => fn () => (bool) $request->user()?->is_staff,
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];

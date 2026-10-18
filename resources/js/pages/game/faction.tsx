@@ -1,5 +1,5 @@
 import { Head, Link } from '@inertiajs/react';
-import { Crown, Flame, MessagesSquare, Skull } from 'lucide-react';
+import { Crown, Flame, Mail, MessagesSquare, Skull } from 'lucide-react';
 import { useState } from 'react';
 import { FactionBase } from '@/components/game/faction-base';
 import { GameBar } from '@/components/game/game-bar';
@@ -10,6 +10,7 @@ import { NativeSelect } from '@/components/ui/native-select';
 import { act, capitalise, clockTime } from '@/lib/game';
 import { cn } from '@/lib/utils';
 import { chat, crime } from '@/routes/play';
+import { show as conversation } from '@/routes/play/messages';
 import {
     answer,
     join,
@@ -208,6 +209,17 @@ function MyFaction({
                             <span className="font-mono text-xs tracking-[0.1em] text-primary">
                                 {member.role?.toUpperCase()}
                             </span>
+                            {!member.me && (
+                                <Button size="icon" variant="ghost" asChild>
+                                    <Link
+                                        href={conversation(member.id)}
+                                        aria-label={`Write to ${member.name}`}
+                                        title={`Write to ${member.name}`}
+                                    >
+                                        <Mail className="size-4" />
+                                    </Link>
+                                </Button>
+                            )}
                             {leader && !member.me && (
                                 <NativeSelect
                                     value=""

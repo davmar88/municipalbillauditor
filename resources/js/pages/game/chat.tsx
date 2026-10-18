@@ -4,10 +4,11 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { capitalise, clockTime } from '@/lib/game';
+import { capitalise, clockTime, fetchTranslation } from '@/lib/game';
 import { cn } from '@/lib/utils';
 import { chat } from '@/routes/play';
 import { store, translate } from '@/routes/play/chat';
+import { show as conversation } from '@/routes/play/messages';
 
 type Message = {
     id: number;
@@ -16,6 +17,7 @@ type Message = {
     at: string;
     mine: boolean;
     from: {
+        id: number;
         name: string;
         species: string;
         faction: string | null;
@@ -30,6 +32,7 @@ type Props = {
     canTranslate: boolean;
     language: string;
     maxLength: number;
+    silenced: string | null;
 };
 
 export default function ChatPage({
@@ -39,6 +42,7 @@ export default function ChatPage({
     canTranslate,
     language,
     maxLength,
+    silenced,
 }: Props) {
     const form = useForm({ channel, body: '' });
     const [translations, setTranslations] = useState<Record<number, string>>(
@@ -49,32 +53,17 @@ export default function ChatPage({
     usePoll(10000, { only: ['messages'] });
 
     async function translateMessage(message: Message) {
-        const token = decodeURIComponent(
-            document.cookie.match(/XSRF-TOKEN=([^;]+)/)?.[1] ?? '',
-        );
-        const response = await fetch(translate.url(message.id), {
-            method: 'POST',
-            headers: {
-                Accept: 'application/json',
-                'X-XSRF-TOKEN': token,
-                'X-Requested-With': 'XMLHttpRequest',
-            },
-            credentials: 'same-origin',
-        });
-        const data = (await response.json()) as {
-            translation?: string;
-            message?: string;
-        };
+        const result = await fetchTranslation(translate.url(message.id));
 
-        if (!response.ok || !data.translation) {
-            toast.error(data.message ?? "That message couldn't be translated.");
+        if ('error' in result) {
+            toast.error(result.error);
 
             return;
         }
 
         setTranslations((current) => ({
             ...current,
-            [message.id]: data.translation!,
+            [message.id]: result.translation,
         }));
     }
 
@@ -134,16 +123,27 @@ export default function ChatPage({
                                 )}
                             >
                                 <span className="text-xs text-muted-foreground">
-                                    <span
-                                        className="font-semibold"
-                                        style={
-                                            message.from.colour
-                                                ? { color: message.from.colour }
-                                                : undefined
-                                        }
-                                    >
-                                        {message.from.name}
-                                    </span>{' '}
+                                    {message.mine ? (
+                                        <span className="font-semibold">
+                                            {message.from.name}
+                                        </span>
+                                    ) : (
+                                        <Link
+                                            href={conversation(message.from.id)}
+                                            className="font-semibold no-underline hover:underline"
+                                            style={
+                                                message.from.colour
+                                                    ? {
+                                                          color: message.from
+                                                              .colour,
+                                                      }
+                                                    : undefined
+                                            }
+                                            title={`Write to ${message.from.name}`}
+                                        >
+                                            {message.from.name}
+                                        </Link>
+                                    )}{' '}
                                     the {capitalise(message.from.species)}
                                     {message.from.faction &&
                                         ` · ${message.from.faction}`}{' '}
@@ -182,6 +182,12 @@ export default function ChatPage({
                         );
                     })}
                 </ol>
+
+                {silenced && (
+                    <p className="rounded-md border border-orange-500/40 bg-orange-500/10 px-3 py-2 text-sm text-orange-200">
+                        {silenced}
+                    </p>
+                )}
 
                 <form
                     className="flex flex-col gap-2"

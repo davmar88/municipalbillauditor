@@ -105,6 +105,14 @@ final class Players
         return Player::query()->lockForUpdate()->findOrFail($player->id);
     }
 
+    /** Why the animal can't write in chat or messages, or null when it can. */
+    public static function silenced(Player $player): ?string
+    {
+        return $player->isMuted()
+            ? 'Our team has stopped you writing until '.Clock::local($player->muted_until)->format('j M \\a\\t H:i').'.'
+            : null;
+    }
+
     /**
      * @throws GameException
      */

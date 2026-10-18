@@ -33,6 +33,7 @@ class ChatController extends Controller
             'language' => $player->language,
             'languages' => Players::LANGUAGES,
             'maxLength' => Chat::MAX_LENGTH,
+            'silenced' => Players::silenced($player),
         ]);
     }
 

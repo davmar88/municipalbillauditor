@@ -8,12 +8,14 @@ use App\Http\Controllers\Game\CrimeController;
 use App\Http\Controllers\Game\FactionController;
 use App\Http\Controllers\Game\MapController;
 use App\Http\Controllers\Game\MarketController;
+use App\Http\Controllers\Game\MessageController;
 use App\Http\Controllers\Game\ProfileController;
 use App\Http\Controllers\Game\StartController;
 use App\Http\Controllers\Game\WallController;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\PuzzleController;
 use App\Http\Controllers\Staff\DesignController;
+use App\Http\Controllers\Staff\ReportController;
 use Illuminate\Support\Facades\Route;
 
 // Public pages, server-rendered for search engines.
@@ -84,12 +86,25 @@ Route::middleware(['auth', 'verified', 'player', 'throttle:120,1'])->prefix('pla
 
     Route::get('me', [ProfileController::class, 'show'])->name('play.me');
     Route::put('me/language', [ProfileController::class, 'language'])->name('play.me.language');
+
+    // Private messages between any two animals.
+    Route::get('messages', [MessageController::class, 'index'])->name('play.messages');
+    Route::get('messages/{player}', [MessageController::class, 'show'])->name('play.messages.show');
+    Route::post('messages/{player}', [MessageController::class, 'store'])->middleware('throttle:20,1')->name('play.messages.store');
+    Route::post('messages/{player}/block', [MessageController::class, 'block'])->name('play.messages.block');
+    Route::delete('messages/{player}/block', [MessageController::class, 'unblock'])->name('play.messages.unblock');
+    Route::post('message/{message}/translate', [MessageController::class, 'translate'])->middleware('throttle:30,1')->name('play.messages.translate');
+    Route::post('message/{message}/report', [MessageController::class, 'report'])->middleware('throttle:10,1')->name('play.messages.report');
 });
 
 Route::middleware(['auth', 'verified', 'can:staff'])->prefix('staff')->group(function () {
     Route::get('designs', [DesignController::class, 'index'])->name('staff.designs');
     Route::post('designs/{design}/approve', [DesignController::class, 'approve'])->name('staff.designs.approve');
     Route::post('designs/{design}/reject', [DesignController::class, 'reject'])->name('staff.designs.reject');
+
+    Route::get('reports', [ReportController::class, 'index'])->name('staff.reports');
+    Route::post('reports/{report}/dismiss', [ReportController::class, 'dismiss'])->name('staff.reports.dismiss');
+    Route::post('reports/{report}/mute', [ReportController::class, 'mute'])->name('staff.reports.mute');
 });
 
 require __DIR__.'/settings.php';

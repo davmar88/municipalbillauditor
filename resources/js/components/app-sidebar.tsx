@@ -1,5 +1,11 @@
 import { Link, usePage } from '@inertiajs/react';
-import { Hammer, MessagesSquare, Puzzle } from 'lucide-react';
+import {
+    Hammer,
+    Mail,
+    MessagesSquare,
+    Puzzle,
+    ShieldAlert,
+} from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
@@ -14,8 +20,8 @@ import {
 } from '@/components/ui/sidebar';
 import { mainNavigation } from '@/lib/navigation';
 import { play, puzzle } from '@/routes';
-import { chat } from '@/routes/play';
-import { designs } from '@/routes/staff';
+import { chat, messages } from '@/routes/play';
+import { designs, reports } from '@/routes/staff';
 import type { NavItem } from '@/types';
 
 const moreNavItems: NavItem[] = [
@@ -25,10 +31,17 @@ const moreNavItems: NavItem[] = [
 
 const staffNavItems: NavItem[] = [
     { title: 'Designs to check', href: designs(), icon: Hammer },
+    { title: 'Reported messages', href: reports(), icon: ShieldAlert },
 ];
 
 export function AppSidebar() {
-    const { player, isStaff } = usePage().props;
+    const { player, isStaff, unreadMessages } = usePage().props;
+    const messagesNavItem: NavItem = {
+        title: 'Messages',
+        href: messages(),
+        icon: Mail,
+        badge: unreadMessages,
+    };
 
     return (
         <Sidebar collapsible="icon" variant="inset">
@@ -56,7 +69,12 @@ export function AppSidebar() {
 
             <SidebarContent>
                 {player && <NavMain items={mainNavigation()} />}
-                {player && <NavMain label="More" items={moreNavItems} />}
+                {player && (
+                    <NavMain
+                        label="More"
+                        items={[messagesNavItem, ...moreNavItems]}
+                    />
+                )}
                 {isStaff && <NavMain label="Our team" items={staffNavItems} />}
             </SidebarContent>
 
