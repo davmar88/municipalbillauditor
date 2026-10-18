@@ -18,6 +18,8 @@ use Illuminate\Support\Carbon;
  * @property CrimeKind $kind
  * @property int|null $target_faction_id
  * @property int|null $target_player_id
+ * @property int|null $region_id The farm section a plunder hit
+ * @property Region|null $region
  * @property Carbon $settles_at
  * @property Carbon|null $resolved_at
  * @property bool|null $caught
@@ -27,7 +29,7 @@ use Illuminate\Support\Carbon;
  * @property Faction|null $targetFaction
  * @property Player|null $targetPlayer
  */
-#[Fillable(['season_id', 'player_id', 'kind', 'target_faction_id', 'target_player_id', 'settles_at', 'seed', 'cloaked'])]
+#[Fillable(['season_id', 'player_id', 'kind', 'target_faction_id', 'target_player_id', 'region_id', 'settles_at', 'seed', 'cloaked'])]
 class Crime extends Model
 {
     protected function casts(): array
@@ -57,5 +59,11 @@ class Crime extends Model
     public function targetPlayer(): BelongsTo
     {
         return $this->belongsTo(Player::class, 'target_player_id');
+    }
+
+    /** @return BelongsTo<Region, $this> */
+    public function region(): BelongsTo
+    {
+        return $this->belongsTo(Region::class);
     }
 }

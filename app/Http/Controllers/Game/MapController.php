@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Game;
 
 use App\Enums\BuildingKind;
+use App\Enums\CrimeKind;
 use App\Game\Bases;
 use App\Game\Clock;
+use App\Game\Crimes;
 use App\Game\Farms;
 use App\Game\GateNight;
 use App\Game\Gathering;
@@ -19,6 +21,7 @@ use App\Models\GateDefence;
 use App\Models\Law;
 use App\Models\Player;
 use App\Models\Region;
+use App\Models\Warrant;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -118,6 +121,18 @@ class MapController extends Controller
                 'materials' => (object) ($player->faction->materials ?? []),
             ] : null,
             'farms' => ['price' => Farms::PRICE, 'income' => Farms::INCOME],
+            // Open warrants, so the map can mark outlaws and offer arrests.
+            'warrants' => $season ? Warrant::query()
+                ->where('season_id', $season->id)
+                ->where('status', 'open')
+                ->get()
+                ->map(fn (Warrant $warrant) => [
+                    'id' => $warrant->id,
+                    'playerId' => $warrant->player_id,
+                    'bounty' => $warrant->bounty,
+                    'escapedUntil' => $warrant->escaped_until?->isFuture() ? $warrant->escaped_until->toIso8601String() : null,
+                ]) : [],
+            'plunder' => ['crop' => Crimes::PLUNDER_CROP, 'corn' => Crimes::PLUNDER_CORN, 'level' => (int) config('game.levels.crime'), 'horseshoes' => CrimeKind::Plunder->horseshoes()],
             'buildingKinds' => array_map(fn (BuildingKind $kind) => $kind->card(), BuildingKind::cases()),
             'laws' => $season ? Wall::laws($season)->map(fn (Law $law) => [
                 'label' => $law->template->label(),

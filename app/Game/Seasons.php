@@ -40,6 +40,7 @@ final class Seasons
             $season->crimes()->whereNull('resolved_at')->update(['resolved_at' => $now]);
             $season->uprisings()->whereIn('status', ['gathering', 'open'])->update(['status' => 'failed', 'resolved_at' => $now]);
             $season->laws()->delete();
+            app(Warrants::class)->lapse($season);
             $season->forceFill(['ended_at' => $now])->save();
 
             Building::query()->whereIn('region_id', $valley->regions()->select('id'))->delete();

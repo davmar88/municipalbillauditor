@@ -1,6 +1,9 @@
 import { Link, usePage } from '@inertiajs/react';
 import {
+    Crosshair,
     Crown,
+    Flame,
+    Gavel,
     Footprints,
     Hammer,
     MessageCircle,
@@ -25,11 +28,13 @@ import { Button } from '@/components/ui/button';
 import { act, capitalise, clockTime, fromNow, speciesEmoji } from '@/lib/game';
 import { route } from '@/lib/hollowmere';
 import { openChat } from '@/lib/pulse';
+import { arrest as arrestOutlaw } from '@/routes/play/warrant';
 import {
     attack,
     buyFarm,
     growFarm,
     commit,
+    crime,
     faction as factionPage,
     gate,
     gather,
@@ -44,6 +49,22 @@ import type {
     MapBattle,
     MapRegion,
 } from '@/types/game';
+
+/** An open warrant, as the map knows it. */
+export type Warrant = {
+    id: number;
+    playerId: number;
+    bounty: number;
+    escapedUntil: string | null;
+};
+
+/** What plundering a farm section carries off, and what it takes. */
+export type Plunder = {
+    crop: number;
+    corn: number;
+    level: number;
+    horseshoes: number;
+};
 
 const RINGS: Record<MapRegion['ring'], string> = {
     seat: 'Seat of power',
@@ -65,6 +86,8 @@ type Props = {
     base: FactionStore | null;
     buildingKinds: BuildingKindCard[];
     farms: { price: number; income: number };
+    warrants: Warrant[];
+    plunder: Plunder;
     onClose: () => void;
 };
 
@@ -84,6 +107,8 @@ export function RegionPanel({
     base,
     buildingKinds,
     farms,
+    warrants,
+    plunder,
     onClose,
 }: Props) {
     const { player } = usePage().props;
@@ -119,6 +144,13 @@ export function RegionPanel({
     const raidable =
         myFaction !== null && region.ring !== 'safe' && !holds(region);
     const others = region.animals.sample.filter((animal) => !animal.me);
+    const outlaws = others.flatMap((animal) => {
+        const warrant = warrants.find((w) => w.playerId === animal.id);
+
+        return warrant ? [{ animal, warrant }] : [];
+    });
+    const plunderable =
+        myFaction === null && region.ring === 'farm' && region.faction !== null;
     const battleFor = new Map(battles.map((battle) => [battle.id, battle]));
     const isHouse = house !== null && region.faction?.id === house.id;
     const buildable =
@@ -300,6 +332,44 @@ export function RegionPanel({
                         )}
                     </div>
                 )}
+
+                {outlaws.map(({ animal, warrant }) => (
+                    <div
+                        key={warrant.id}
+                        className="flex flex-col gap-2 rounded-lg border border-orange-500/50 bg-orange-500/10 p-3"
+                    >
+                        <p className="flex items-center gap-2 font-semibold">
+                            <Crosshair
+                                className="size-4 text-orange-300"
+                                aria-hidden
+                            />
+                            {animal.name} is wanted: {warrant.bounty} Corn
+                            bounty
+                        </p>
+                        {isHere ? (
+                            warrant.escapedUntil ? (
+                                <p className="text-muted-foreground">
+                                    They slipped away. Back on the trail at{' '}
+                                    {clockTime(warrant.escapedUntil)}.
+                                </p>
+                            ) : (
+                                <Button
+                                    className="self-start"
+                                    onClick={() =>
+                                        act(arrestOutlaw.url(warrant.id))
+                                    }
+                                >
+                                    <Gavel className="size-4" /> Arrest{' '}
+                                    {animal.name} (2 horseshoes)
+                                </Button>
+                            )
+                        ) : (
+                            <p className="text-muted-foreground">
+                                Walk here to try an arrest.
+                            </p>
+                        )}
+                    </div>
+                ))}
 
                 {isHere ? (
                     <div className="flex flex-col gap-2 rounded-lg border border-primary/40 bg-primary/10 p-3">
@@ -536,6 +606,44 @@ export function RegionPanel({
                                 To take the Farmhouse your faction must hold 2
                                 of the 4 regions around it.
                             </p>
+                        )}
+                    </div>
+                )}
+
+                {plunderable && (
+                    <div className="flex flex-col gap-2 rounded-lg border border-orange-500/40 p-3">
+                        <p className="flex items-center gap-2 font-semibold">
+                            <Flame
+                                className="size-4 text-orange-300"
+                                aria-hidden
+                            />{' '}
+                            Plunder {region.name}
+                        </p>
+                        <p className="text-muted-foreground">
+                            Carry off {plunder.crop} {region.produces} and up to{' '}
+                            {plunder.corn} Corn from {region.faction?.name}'s
+                            treasury. It settles in half an hour: you may be
+                            caught, and the House may put a warrant out for you.
+                        </p>
+                        {!isHere ? (
+                            <p className="text-xs text-muted-foreground">
+                                Walk onto it to plunder it.
+                            </p>
+                        ) : (player?.level ?? 1) < plunder.level ? (
+                            <p className="text-xs text-muted-foreground">
+                                Crime opens up at level {plunder.level}.
+                            </p>
+                        ) : (
+                            <Button
+                                variant="secondary"
+                                className="self-start"
+                                onClick={() =>
+                                    act(crime.url(), { kind: 'plunder' })
+                                }
+                            >
+                                <Flame className="size-4" /> Plunder (
+                                {plunder.horseshoes} horseshoes)
+                            </Button>
                         )}
                     </div>
                 )}

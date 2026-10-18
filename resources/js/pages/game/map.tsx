@@ -1,10 +1,11 @@
 import { Head, usePage } from '@inertiajs/react';
 import { Flame, Shield, Swords } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { GameBar } from '@/components/game/game-bar';
 import { HorseshoePicker } from '@/components/game/horseshoe-picker';
 import { MapHud } from '@/components/game/map-hud';
 import { RegionPanel } from '@/components/game/region-panel';
+import type { Plunder, Warrant } from '@/components/game/region-panel';
 import { WorldMap } from '@/components/game/world-map';
 import { Button } from '@/components/ui/button';
 import { act, clockTime, fromNow } from '@/lib/game';
@@ -32,6 +33,8 @@ type Props = {
     base: FactionStore | null;
     buildingKinds: BuildingKindCard[];
     farms: { price: number; income: number };
+    warrants: Warrant[];
+    plunder: Plunder;
 };
 
 export default function MapPage({
@@ -48,11 +51,17 @@ export default function MapPage({
     base,
     buildingKinds,
     farms,
+    warrants,
+    plunder,
 }: Props) {
     const { player } = usePage().props;
     const [selectedId, setSelectedId] = useState<number | null>(null);
     const [horseshoes, setHorseshoes] = useState(1);
     const selected = regions.find((region) => region.id === selectedId) ?? null;
+    const wanted = useMemo(
+        () => warrants.map((warrant) => warrant.playerId),
+        [warrants],
+    );
 
     return (
         <>
@@ -169,6 +178,7 @@ export default function MapPage({
                     selectedId={selectedId}
                     onSelect={setSelectedId}
                     gateNight={gateNight.open}
+                    wanted={wanted}
                 >
                     <MapHud
                         valley={valley}
@@ -191,6 +201,8 @@ export default function MapPage({
                             base={base}
                             buildingKinds={buildingKinds}
                             farms={farms}
+                            warrants={warrants}
+                            plunder={plunder}
                             onClose={() => setSelectedId(null)}
                         />
                     )}

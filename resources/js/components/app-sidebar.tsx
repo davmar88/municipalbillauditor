@@ -1,5 +1,6 @@
 import { Link, usePage } from '@inertiajs/react';
 import {
+    Crosshair,
     Hammer,
     Mail,
     MessagesSquare,
@@ -21,7 +22,7 @@ import {
 } from '@/components/ui/sidebar';
 import { mainNavigation } from '@/lib/navigation';
 import { play, puzzle } from '@/routes';
-import { chat, messages, rankings } from '@/routes/play';
+import { chat, messages, rankings, wanted } from '@/routes/play';
 import { designs, reports } from '@/routes/staff';
 import type { NavItem } from '@/types';
 
@@ -29,6 +30,7 @@ const moreNavItems: NavItem[] = [
     { title: 'Chat', href: chat(), icon: MessagesSquare },
     { title: 'Spot the Edit', href: puzzle(), icon: Puzzle },
     { title: 'Rankings', href: rankings(), icon: Trophy },
+    { title: 'Wanted', href: wanted(), icon: Crosshair },
 ];
 
 const staffNavItems: NavItem[] = [

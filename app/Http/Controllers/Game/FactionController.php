@@ -105,7 +105,8 @@ class FactionController extends Controller
                 'level' => (int) config('game.levels.crime'),
                 'triedToday' => Crime::query()->where('player_id', $player->id)->where('created_at', '>=', Clock::startOfToday())->exists(),
                 'wanted' => $player->wanted,
-                'crimes' => array_map(fn (CrimeKind $kind) => ['value' => $kind->value, 'label' => $kind->label(), 'horseshoes' => $kind->horseshoes()], CrimeKind::cases()),
+                // Plunder happens on the map, standing on a farm section.
+                'crimes' => array_map(fn (CrimeKind $kind) => ['value' => $kind->value, 'label' => $kind->label(), 'horseshoes' => $kind->horseshoes()], [CrimeKind::Loot, CrimeKind::Burn]),
                 'targets' => Player::query()
                     ->where('valley_id', $player->valley_id)
                     ->whereNotNull('faction_id')
@@ -119,11 +120,15 @@ class FactionController extends Controller
                         'faction' => $target->faction->name,
                         'protected' => $target->isShielded() || $target->homeIsClosed(),
                     ]),
-                'history' => Crime::query()->with(['targetFaction:id,name', 'targetPlayer:id,name'])->where('player_id', $player->id)->latest('id')->limit(5)->get()
+                'history' => Crime::query()->with(['targetFaction:id,name', 'targetPlayer:id,name', 'region:id,name'])->where('player_id', $player->id)->latest('id')->limit(5)->get()
                     ->map(fn (Crime $crime) => [
                         'id' => $crime->id,
                         'kind' => $crime->kind->value,
-                        'target' => $crime->kind === CrimeKind::Loot ? $crime->targetFaction?->name : $crime->targetPlayer?->name,
+                        'target' => match ($crime->kind) {
+                            CrimeKind::Loot => $crime->targetFaction?->name,
+                            CrimeKind::Plunder => $crime->region?->name,
+                            CrimeKind::Burn => $crime->targetPlayer?->name,
+                        },
                         'outcome' => match (true) {
                             $crime->resolved_at === null => 'pending',
                             (bool) $crime->caught => 'caught',

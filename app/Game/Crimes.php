@@ -25,11 +25,23 @@ final class Crimes
 
     public const REBUILD_CORN = 100;
 
+    /** What a plunder carries off: crop gathered, and Corn from the holders' treasury. */
+    public const PLUNDER_CROP = 8;
+
+    public const PLUNDER_CORN = 20;
+
+    /** A plunderer lies low this long, and a plundered section is watched this long. */
+    public const PLUNDER_REST_MINUTES = 60;
+
+    public const PLUNDER_WATCH_MINUTES = 120;
+
     /**
      * @throws GameException
      */
     public function commit(Player $player, CrimeKind $kind, ?Faction $faction = null, ?Player $target = null): Crime
     {
+        $region = null;
+
         $season = $player->valley->currentSeason() ?? throw new GameException('The season is changing. Try again in a moment.');
         $level = (int) config('game.levels.crime');
 
@@ -41,16 +53,41 @@ final class Crimes
             throw new GameException("Crime opens up at level {$level}.");
         }
 
-        if (Crime::query()->where('player_id', $player->id)->where('created_at', '>=', Clock::startOfToday())->exists()) {
+        // Plunder runs on its own clock; looting and burning are once a day.
+        if ($kind !== CrimeKind::Plunder && Crime::query()->where('player_id', $player->id)->where('kind', '!=', CrimeKind::Plunder)->where('created_at', '>=', Clock::startOfToday())->exists()) {
             throw new GameException('You have already tried a crime today. Lie low until tomorrow.');
         }
 
-        if ($kind === CrimeKind::Loot) {
+        if ($kind === CrimeKind::Plunder) {
+            $region = $player->location();
+
+            if (! $region->isFarm() || $region->wild) {
+                throw new GameException('Plunder happens on the farms beyond the fences. Walk onto a farm section a faction holds.');
+            }
+
+            if ($region->faction_id === null) {
+                throw new GameException("{$region->name} belongs to nobody yet. Just gather there.");
+            }
+
+            $last = Crime::query()->where('player_id', $player->id)->where('kind', CrimeKind::Plunder)->latest('id')->first();
+
+            if ($last !== null && $last->created_at->gt(CarbonImmutable::now()->subMinutes(self::PLUNDER_REST_MINUTES))) {
+                throw new GameException('You plundered not long ago. Lie low until '.Clock::local($last->created_at->addMinutes(self::PLUNDER_REST_MINUTES))->format('H:i').'.');
+            }
+
+            $watched = Crime::query()->where('region_id', $region->id)->where('kind', CrimeKind::Plunder)->latest('id')->first();
+
+            if ($watched !== null && $watched->created_at->gt(CarbonImmutable::now()->subMinutes(self::PLUNDER_WATCH_MINUTES))) {
+                throw new GameException("{$region->name} was plundered not long ago and its holders are watching. Try again after ".Clock::local($watched->created_at->addMinutes(self::PLUNDER_WATCH_MINUTES))->format('H:i').'.');
+            }
+
+            $faction = Faction::query()->find($region->faction_id);
+        } elseif ($kind === CrimeKind::Loot) {
             if ($faction === null || $faction->valley_id !== $player->valley_id) {
                 throw new GameException('Pick a faction to loot.');
             }
 
-            if (Crime::query()->where('target_faction_id', $faction->id)->where('created_at', '>=', Clock::startOfToday())->exists()) {
+            if (Crime::query()->where('target_faction_id', $faction->id)->where('kind', '!=', CrimeKind::Plunder)->where('created_at', '>=', Clock::startOfToday())->exists()) {
                 throw new GameException("{$faction->name} has already been targeted today.");
             }
         } else {
@@ -71,7 +108,7 @@ final class Crimes
             }
         }
 
-        return DB::transaction(function () use ($player, $kind, $faction, $target, $season) {
+        return DB::transaction(function () use ($player, $kind, $faction, $target, $season, $region) {
             $locked = Players::lock($player);
             Players::ensureFree($locked);
             Horseshoes::spend($locked, $kind->horseshoes());
@@ -81,8 +118,9 @@ final class Crimes
                 'season_id' => $season->id,
                 'player_id' => $locked->id,
                 'kind' => $kind,
-                'target_faction_id' => $kind === CrimeKind::Loot ? $faction?->id : $target?->faction_id,
+                'target_faction_id' => $kind === CrimeKind::Burn ? $target?->faction_id : $faction?->id,
                 'target_player_id' => $target?->id,
+                'region_id' => $region?->id,
                 'settles_at' => CarbonImmutable::now()->addMinutes(30),
                 'seed' => Dice::seed(),
                 'cloaked' => Powers::cloak($locked),
@@ -126,6 +164,21 @@ final class Crimes
                     $faction->decrement('treasury', $loot);
                     $criminal->increment('corn', $loot);
                 }
+            } elseif ($crime->kind === CrimeKind::Plunder && $crime->region_id !== null) {
+                // The plunderer gathers the section's crop, and takes Corn from its holders.
+                $region = $crime->region;
+                $materials = $criminal->materials;
+                $materials[$region->produces] = (int) ($materials[$region->produces] ?? 0) + self::PLUNDER_CROP;
+                $criminal->materials = $materials;
+                $criminal->save();
+
+                $faction = $crime->target_faction_id !== null ? Faction::query()->lockForUpdate()->find($crime->target_faction_id) : null;
+
+                if ($faction !== null) {
+                    $loot = min(self::PLUNDER_CORN, $faction->treasury);
+                    $faction->decrement('treasury', $loot);
+                    $criminal->increment('corn', $loot);
+                }
             } elseif ($crime->kind === CrimeKind::Burn && $crime->target_player_id !== null) {
                 Player::query()->whereKey($crime->target_player_id)->update([
                     'home_closed_until' => CarbonImmutable::now()->addDay(),
@@ -142,13 +195,24 @@ final class Crimes
     private function announce(Crime $crime, Player $criminal, bool $caught, int $loot): void
     {
         $underworld = route('play.faction', [], false);
-        $victims = $crime->kind === CrimeKind::Loot ? Notices::members($crime->target_faction_id) : collect([$crime->target_player_id]);
+        $victims = $crime->kind === CrimeKind::Burn ? collect([$crime->target_player_id]) : Notices::members($crime->target_faction_id);
+        $section = $crime->region?->name;
 
         if ($caught) {
             Notices::send($criminal->id, 'crime', '🚨 You were caught and sent to the pound until '.Clock::local($criminal->pound_until)->format('H:i').'.', $underworld);
-            Notices::send($victims, 'crime', $crime->kind === CrimeKind::Loot
-                ? "🚨 A lone wolf tried to loot your faction's treasury and was caught."
-                : '🚨 Someone tried to burn down your home and was caught.', $underworld);
+            Notices::send($victims, 'crime', match ($crime->kind) {
+                CrimeKind::Loot => "🚨 A lone wolf tried to loot your faction's treasury and was caught.",
+                CrimeKind::Plunder => "🚨 A lone wolf tried to plunder {$section} and was caught.",
+                CrimeKind::Burn => '🚨 Someone tried to burn down your home and was caught.',
+            }, $underworld);
+
+            return;
+        }
+
+        if ($crime->kind === CrimeKind::Plunder) {
+            $crop = $crime->region?->produces;
+            Notices::send($criminal->id, 'crime', '🌾 You plundered '.self::PLUNDER_CROP." {$crop} and {$loot} Corn from {$section}.", route('play', [], false));
+            Notices::send($victims, 'crime', "🔥 A lone wolf plundered {$section}, taking {$loot} Corn from your treasury. Ask the House for a warrant.", route('play', [], false));
 
             return;
         }

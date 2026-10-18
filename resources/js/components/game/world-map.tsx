@@ -1157,18 +1157,25 @@ const SPOTS: Point[] = [
 const Crowd = memo(function Crowd({
     regions,
     k,
+    wanted,
 }: {
     regions: MapRegion[];
     k: number;
+    /** Animals with a warrant out: always shown, marked for bounty hunters. */
+    wanted: number[];
 }) {
     const room = k < 0.55 ? 3 : k < 0.9 ? 6 : 12;
 
     return (
         <g pointerEvents="none">
             {regions.map((region) => {
-                const others = region.animals.sample.filter(
-                    (animal) => !animal.me,
-                );
+                const others = region.animals.sample
+                    .filter((animal) => !animal.me)
+                    .sort(
+                        (a, b) =>
+                            Number(wanted.includes(b.id)) -
+                            Number(wanted.includes(a.id)),
+                    );
                 const shown = others.slice(0, room);
                 const extra =
                     region.animals.count -
@@ -1189,8 +1196,16 @@ const Crowd = memo(function Crowd({
                                     <circle
                                         r={11.5}
                                         fill="#14121a"
-                                        stroke={animal.colour ?? '#8a8399'}
-                                        strokeWidth={2.2}
+                                        stroke={
+                                            wanted.includes(animal.id)
+                                                ? FLAG
+                                                : (animal.colour ?? '#8a8399')
+                                        }
+                                        strokeWidth={
+                                            wanted.includes(animal.id)
+                                                ? 3.2
+                                                : 2.2
+                                        }
                                     />
                                     <text
                                         textAnchor="middle"
@@ -1200,6 +1215,24 @@ const Crowd = memo(function Crowd({
                                     >
                                         {speciesEmoji(animal.species)}
                                     </text>
+                                    {wanted.includes(animal.id) && (
+                                        <g transform="translate(10 -10)">
+                                            <circle
+                                                r={7}
+                                                fill={FLAG}
+                                                stroke={HALO}
+                                                strokeWidth={1.2}
+                                            />
+                                            <text
+                                                textAnchor="middle"
+                                                dominantBaseline="central"
+                                                fontSize={8}
+                                                y={0.5}
+                                            >
+                                                🎯
+                                            </text>
+                                        </g>
+                                    )}
                                 </g>
                             );
                         })}
@@ -1424,6 +1457,8 @@ type Props = {
     selectedId: number | null;
     onSelect: (id: number | null) => void;
     gateNight: boolean;
+    /** The animals with a warrant out for their arrest. */
+    wanted: number[];
     children?: ReactNode;
 };
 
@@ -1440,6 +1475,7 @@ export function WorldMap({
     selectedId,
     onSelect,
     gateNight,
+    wanted,
     children,
 }: Props) {
     const containerRef = useRef<HTMLDivElement>(null);
@@ -1585,7 +1621,7 @@ export function WorldMap({
                             gateNight={gateNight}
                         />
                         <Bases regions={regions} k={k} />
-                        <Crowd regions={regions} k={k} />
+                        <Crowd regions={regions} k={k} wanted={wanted} />
                         {herePoint && species && (
                             <Me at={herePoint} species={species} k={k} />
                         )}

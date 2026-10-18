@@ -15,6 +15,7 @@ use App\Http\Controllers\Game\RankingsController;
 use App\Http\Controllers\Game\StartController;
 use App\Http\Controllers\Game\TodayController;
 use App\Http\Controllers\Game\WallController;
+use App\Http\Controllers\Game\WantedController;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\PuzzleController;
 use App\Http\Controllers\Staff\DesignController;
@@ -79,6 +80,12 @@ Route::middleware(['auth', 'verified', 'player', 'throttle:120,1'])->prefix('pla
     Route::post('buildings/{building}/upgrade', [BaseController::class, 'upgrade'])->name('play.upgrade');
 
     Route::post('crimes', [CrimeController::class, 'store'])->name('play.crime');
+
+    // The House's warrants and the bounty hunters who serve them.
+    Route::get('wanted', [WantedController::class, 'index'])->name('play.wanted');
+    Route::post('warrants', [WantedController::class, 'issue'])->name('play.warrant.issue');
+    Route::post('warrants/{warrant}/raise', [WantedController::class, 'raise'])->name('play.warrant.raise');
+    Route::post('warrants/{warrant}/arrest', [WantedController::class, 'arrest'])->middleware('throttle:20,1,arrests')->name('play.warrant.arrest');
     Route::post('home/rebuild', [CrimeController::class, 'rebuild'])->name('play.rebuild');
 
     Route::get('chat', [ChatController::class, 'index'])->name('play.chat');
