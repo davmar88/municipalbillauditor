@@ -280,7 +280,11 @@ class UprisingsAndCrimesTest extends TestCase
 
         app(GateNight::class)->resolveIfDue($this->season(), app(Wall::class));
 
-        $this->assertSame(['held' => false, 'defenders' => 1, 'burned' => []], $this->season()->fresh()->last_gate_night);
+        // MySQL keeps a JSON object's keys in its own order, so check each one.
+        $night = $this->season()->fresh()->last_gate_night;
+        $this->assertFalse($night['held']);
+        $this->assertSame(1, $night['defenders']);
+        $this->assertSame([], $night['burned']);
         $this->assertSame("🔥 Ironfield's 6 men broke through the gate at 19:00. No field beyond the fences was held, so nothing burned. You earned 5 Rosettes for fighting.", Notice::query()->where('player_id', $defender->id)->latest('id')->value('text'));
         $this->assertSame("Ironfield's men broke through the gate", UnrestEvent::query()->latest('id')->value('reason'));
     }
