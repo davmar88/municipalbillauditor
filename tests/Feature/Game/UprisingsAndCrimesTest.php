@@ -19,6 +19,7 @@ use App\Models\Law;
 use App\Models\Player;
 use App\Models\UnrestEvent;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 /**
@@ -77,6 +78,36 @@ class UprisingsAndCrimesTest extends TestCase
         $this->assertSame('won', $uprising->fresh()->status);
         $this->assertSame($faction->id, $this->valley->fresh()->house()?->id);
         $this->assertSame(15, $rebels[0]->fresh()->rosettes);
+    }
+
+    public function test_lone_wolves_who_win_leave_the_farmhouse_empty(): void
+    {
+        $this->anger(60);
+        $rebels = [$this->player(Species::Horse), $this->player(Species::Horse), $this->player(Species::Horse)];
+        $uprisings = app(Uprisings::class);
+
+        $uprising = $uprisings->call($rebels[0], 3);
+        $uprisings->pledge($rebels[1], $uprising, 'rebel', 3);
+        $uprisings->pledge($rebels[2], $uprising, 'rebel', 3);
+
+        $this->travel(7)->hours();
+        $uprisings->resolveDue($this->season(), app(Battles::class), app(Wall::class));
+
+        $this->assertSame('won', $uprising->fresh()->status);
+        $this->assertNull($this->valley->fresh()->house());
+        $this->assertSame(['The House has fallen'], UnrestEvent::query()->where('amount', -30)->pluck('reason')->all());
+    }
+
+    public function test_the_wall_tells_house_members_they_can_only_stand_with_the_house(): void
+    {
+        $this->anger(60);
+        app(Uprisings::class)->call($this->player(), 1);
+
+        $this->actingAs($this->ruler->user)->get(route('play.wall'))->assertInertia(fn (Assert $page) => $page
+            ->where('uprising.status', 'gathering')
+            ->where('uprising.houseMember', true));
+        $this->actingAs($this->player()->user)->get(route('play.wall'))->assertInertia(fn (Assert $page) => $page
+            ->where('uprising.houseMember', false));
     }
 
     public function test_house_members_can_only_stand_with_the_house(): void

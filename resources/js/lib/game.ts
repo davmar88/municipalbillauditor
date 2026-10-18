@@ -57,6 +57,25 @@ export function fromNow(iso: string, now: number = Date.now()): string {
     return hours > 0 ? `in ${hours} h ${rest} min` : `in ${rest} min`;
 }
 
+/** "14:05" for today, "12 Oct" for earlier days. */
+export function shortWhen(iso: string, now: Date = new Date()): string {
+    const day = (date: Date) =>
+        new Intl.DateTimeFormat('en-ZA', {
+            dateStyle: 'short',
+            timeZone: 'Africa/Johannesburg',
+        }).format(date);
+
+    if (day(new Date(iso)) === day(now)) {
+        return clockTime(iso);
+    }
+
+    return new Intl.DateTimeFormat('en-ZA', {
+        day: 'numeric',
+        month: 'short',
+        timeZone: 'Africa/Johannesburg',
+    }).format(new Date(iso));
+}
+
 export function capitalise(text: string): string {
     return text.charAt(0).toUpperCase() + text.slice(1);
 }
@@ -73,4 +92,37 @@ export function act(
         preserveScroll: true,
         preserveState: true,
     });
+}
+
+/**
+ * Ask the game to translate a message into your language. Returns the
+ * translation, or the reason it couldn't be done as an error.
+ */
+export async function fetchTranslation(
+    url: string,
+): Promise<{ translation: string } | { error: string }> {
+    const token = decodeURIComponent(
+        document.cookie.match(/XSRF-TOKEN=([^;]+)/)?.[1] ?? '',
+    );
+    const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+            Accept: 'application/json',
+            'X-XSRF-TOKEN': token,
+            'X-Requested-With': 'XMLHttpRequest',
+        },
+        credentials: 'same-origin',
+    });
+    const data = (await response.json()) as {
+        translation?: string;
+        message?: string;
+    };
+
+    if (!response.ok || !data.translation) {
+        return {
+            error: data.message ?? "That message couldn't be translated.",
+        };
+    }
+
+    return { translation: data.translation };
 }

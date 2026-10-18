@@ -8,6 +8,7 @@ use App\Http\Controllers\Game\CrimeController;
 use App\Http\Controllers\Game\FactionController;
 use App\Http\Controllers\Game\MapController;
 use App\Http\Controllers\Game\MarketController;
+use App\Http\Controllers\Game\MessageController;
 use App\Http\Controllers\Game\ProfileController;
 use App\Http\Controllers\Game\RankingsController;
 use App\Http\Controllers\Game\StartController;
@@ -16,6 +17,7 @@ use App\Http\Controllers\Game\WallController;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\PuzzleController;
 use App\Http\Controllers\Staff\DesignController;
+use App\Http\Controllers\Staff\ReportController;
 use Illuminate\Support\Facades\Route;
 
 // Public pages, server-rendered for search engines.
@@ -26,7 +28,7 @@ Route::get('robots.txt', [PageController::class, 'robots'])->name('robots');
 
 // Spot the Edit: anyone can play; players earn Rosettes for solving it.
 Route::get('spot-the-edit', [PuzzleController::class, 'show'])->name('puzzle');
-Route::post('spot-the-edit', [PuzzleController::class, 'solve'])->middleware(['auth', 'verified', 'player', 'throttle:10,1'])->name('puzzle.solve');
+Route::post('spot-the-edit', [PuzzleController::class, 'solve'])->middleware(['auth', 'verified', 'player', 'throttle:10,1,puzzle'])->name('puzzle.solve');
 
 // "Continue with Google", for signing in and signing up.
 Route::middleware(['guest', 'throttle:20,1'])->group(function () {
@@ -36,9 +38,12 @@ Route::middleware(['guest', 'throttle:20,1'])->group(function () {
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('play/start', [StartController::class, 'create'])->name('play.start');
-    Route::post('play/start', [StartController::class, 'store'])->middleware('throttle:10,1')->name('play.start.store');
+    Route::post('play/start', [StartController::class, 'store'])->middleware('throttle:10,1,start')->name('play.start.store');
 });
 
+// A throttle's last part names its own count. Without one, every throttle
+// shares the player's count, so a limit of 20 on chat would also count the
+// pages they opened.
 Route::middleware(['auth', 'verified', 'player', 'throttle:120,1'])->prefix('play')->group(function () {
     Route::get('/', [MapController::class, 'index'])->name('play');
     Route::post('regions/{region}/walk', [MapController::class, 'walk'])->name('play.walk');
@@ -74,8 +79,8 @@ Route::middleware(['auth', 'verified', 'player', 'throttle:120,1'])->prefix('pla
     Route::post('home/rebuild', [CrimeController::class, 'rebuild'])->name('play.rebuild');
 
     Route::get('chat', [ChatController::class, 'index'])->name('play.chat');
-    Route::post('chat', [ChatController::class, 'store'])->middleware('throttle:20,1')->name('play.chat.store');
-    Route::post('chat/{message}/translate', [ChatController::class, 'translate'])->middleware('throttle:30,1')->name('play.chat.translate');
+    Route::post('chat', [ChatController::class, 'store'])->middleware('throttle:20,1,chat')->name('play.chat.store');
+    Route::post('chat/{message}/translate', [ChatController::class, 'translate'])->middleware('throttle:30,1,chat-translate')->name('play.chat.translate');
 
     Route::get('market', [MarketController::class, 'index'])->name('play.market');
     Route::post('designs', [MarketController::class, 'design'])->name('play.design');
@@ -91,12 +96,25 @@ Route::middleware(['auth', 'verified', 'player', 'throttle:120,1'])->prefix('pla
 
     Route::get('me', [ProfileController::class, 'show'])->name('play.me');
     Route::put('me/language', [ProfileController::class, 'language'])->name('play.me.language');
+
+    // Private messages between any two animals.
+    Route::get('messages', [MessageController::class, 'index'])->name('play.messages');
+    Route::get('messages/{player}', [MessageController::class, 'show'])->name('play.messages.show');
+    Route::post('messages/{player}', [MessageController::class, 'store'])->middleware('throttle:20,1,messages')->name('play.messages.store');
+    Route::post('messages/{player}/block', [MessageController::class, 'block'])->name('play.messages.block');
+    Route::delete('messages/{player}/block', [MessageController::class, 'unblock'])->name('play.messages.unblock');
+    Route::post('message/{message}/translate', [MessageController::class, 'translate'])->middleware('throttle:30,1,message-translate')->name('play.messages.translate');
+    Route::post('message/{message}/report', [MessageController::class, 'report'])->middleware('throttle:10,1,message-report')->name('play.messages.report');
 });
 
 Route::middleware(['auth', 'verified', 'can:staff'])->prefix('staff')->group(function () {
     Route::get('designs', [DesignController::class, 'index'])->name('staff.designs');
     Route::post('designs/{design}/approve', [DesignController::class, 'approve'])->name('staff.designs.approve');
     Route::post('designs/{design}/reject', [DesignController::class, 'reject'])->name('staff.designs.reject');
+
+    Route::get('reports', [ReportController::class, 'index'])->name('staff.reports');
+    Route::post('reports/{report}/dismiss', [ReportController::class, 'dismiss'])->name('staff.reports.dismiss');
+    Route::post('reports/{report}/mute', [ReportController::class, 'mute'])->name('staff.reports.mute');
 });
 
 require __DIR__.'/settings.php';

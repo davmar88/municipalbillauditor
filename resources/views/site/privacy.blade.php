@@ -28,7 +28,7 @@
                 ['What we collect', [
                     'Your name, email address and password, to run your account.',
                     'If you sign in with Google, Google tells us your name and email address, and that it has checked the email is yours. We get nothing else from your Google account, and never your Google password.',
-                    "Your animal and everything it does in the game: its name, faction, items, shop, chat messages and the game's records of battles, laws and crimes.",
+                    "Your animal and everything it does in the game: its name, faction, items, shop, chat messages, private messages and the game's records of battles, laws and crimes.",
                     'We do not collect your location, your phone contacts or your phone number.',
                 ]],
                 ['Why we use it', [
@@ -36,8 +36,9 @@
                 ]],
                 ['Who sees it', [
                     'Other players see your animal, its faction, its shop and what you write in chat channels they can read.',
+                    'A private message is seen by the animal you send it to. Our team reads one only when its reader reports it, together with the few messages before it.',
                     'Our team, when we moderate items, chat or reports.',
-                    'Anthropic, when a player taps Translate on a chat message: it receives that message and returns the translation.',
+                    'Anthropic, when a player taps Translate on a chat or private message: it receives that message and returns the translation.',
                     'Google, only if you choose to sign in with Google.',
                 ]],
                 ['How long we keep it', [
