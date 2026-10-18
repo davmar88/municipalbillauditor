@@ -12,6 +12,7 @@ use App\Game\GateNight;
 use App\Game\Gathering;
 use App\Game\Movement;
 use App\Game\Powers;
+use App\Game\Stock;
 use App\Game\ValleyBuilder;
 use App\Game\Wall;
 use App\Http\Controllers\Controller;
@@ -76,6 +77,7 @@ class MapController extends Controller
                 'name' => $region->name,
                 'ring' => $region->ring,
                 'produces' => $region->produces,
+                'stock' => Stock::map($region),
                 'col' => $region->col,
                 'row' => $region->row,
                 'faction' => $region->faction ? ['id' => $region->faction->id, 'name' => $region->faction->name, 'colour' => $region->faction->colour] : null,

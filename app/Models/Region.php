@@ -19,6 +19,8 @@ use Illuminate\Support\Carbon;
  * @property string $name
  * @property string $ring
  * @property string|null $produces
+ * @property int|null $stock What is left to gather; null when full
+ * @property Carbon|null $stock_at Since when it has been growing back
  * @property int $col
  * @property int $row
  * @property bool $wild Wild land round a farm, not yet grown into
@@ -36,6 +38,7 @@ class Region extends Model
         return [
             'held_since' => 'datetime',
             'settled_until' => 'datetime',
+            'stock_at' => 'datetime',
             'wild' => 'boolean',
         ];
     }

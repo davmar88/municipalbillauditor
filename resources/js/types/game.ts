@@ -214,6 +214,16 @@ export type MapRegion = {
     name: string;
     ring: 'seat' | 'inner' | 'middle' | 'outer' | 'safe' | 'farm';
     produces: string | null;
+    /** What is left to gather, and how it grows back; null where nothing grows. */
+    stock: {
+        left: number;
+        max: number;
+        perHour: number;
+        /** When more has grown, once it has run out. */
+        nextAt: string | null;
+        /** When it is full again, or null when it is. */
+        fullAt: string | null;
+    } | null;
     col: number;
     row: number;
     faction: FactionRef | null;

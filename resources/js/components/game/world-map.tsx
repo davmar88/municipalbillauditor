@@ -893,6 +893,13 @@ function subtitle(
             : { text: '🔥 Ironfield broke through', colour: '#f5a27a' };
     }
 
+    if (region.stock?.nextAt) {
+        return {
+            text: `⏳ Picked clean till ${clockTime(region.stock.nextAt)}`,
+            colour: '#c8c3d4',
+        };
+    }
+
     if (region.gatedUntil) {
         return {
             text: `🔒 Gated till ${clockTime(region.gatedUntil)}`,

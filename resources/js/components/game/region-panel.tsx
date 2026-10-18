@@ -385,6 +385,13 @@ export function RegionPanel({
                     </div>
                 ))}
 
+                {region.stock && region.produces && (
+                    <StockLine
+                        stock={region.stock}
+                        produces={region.produces}
+                    />
+                )}
+
                 {isHere ? (
                     <div className="flex flex-col gap-2 rounded-lg border border-primary/40 bg-primary/10 p-3">
                         <p className="font-semibold text-primary">
@@ -393,7 +400,10 @@ export function RegionPanel({
                         {region.produces ? (
                             <>
                                 <Button
-                                    disabled={horseshoesLeft < 1}
+                                    disabled={
+                                        horseshoesLeft < 1 ||
+                                        region.stock?.left === 0
+                                    }
                                     onClick={() => act(gather.url(region.id))}
                                 >
                                     Gather{' '}
@@ -784,5 +794,41 @@ export function RegionPanel({
                 )}
             </div>
         </section>
+    );
+}
+
+/** What is left to gather here, and when it grows back. */
+function StockLine({
+    stock,
+    produces,
+}: {
+    stock: NonNullable<MapRegion['stock']>;
+    produces: string;
+}) {
+    const name = produces === 'corn' ? 'Corn' : produces;
+
+    return (
+        <div className="flex flex-col gap-1 text-xs text-muted-foreground">
+            <span className="h-1.5 overflow-hidden rounded-full bg-muted">
+                <span
+                    className={
+                        stock.left === 0
+                            ? 'block h-full bg-orange-400'
+                            : 'block h-full bg-emerald-400'
+                    }
+                    style={{
+                        width: `${Math.round((stock.left / stock.max) * 100)}%`,
+                    }}
+                />
+            </span>
+            <span>
+                {stock.left === 0 && stock.nextAt
+                    ? `Picked clean. More ${name} grows back by ${clockTime(stock.nextAt)}.`
+                    : `${stock.left} of ${stock.max} ${name} left here.`}{' '}
+                {stock.fullAt
+                    ? `${stock.perHour} grow back an hour; full by ${clockTime(stock.fullAt)}.`
+                    : 'Full.'}
+            </span>
+        </div>
     );
 }

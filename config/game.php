@@ -47,6 +47,14 @@ return [
 
     'starting_corn' => 100,
 
+    // What each region holds to gather when full, and how much grows back
+    // an hour. Corn fields hold the most; the farms' rare crops the least.
+    'stock' => [
+        'corn' => ['max' => 400, 'per_hour' => 80],
+        'material' => ['max' => 120, 'per_hour' => 24],
+        'rare' => ['max' => 45, 'per_hour' => 9],
+    ],
+
     // How far an animal walks in a minute, in paces (the map's units): a
     // region is about 270 paces across. A Speedo doubles it for an hour.
     'walk' => [

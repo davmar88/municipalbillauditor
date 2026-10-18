@@ -11,7 +11,8 @@ use Illuminate\Support\Facades\DB;
 /**
  * Working the region you stand in for Corn or materials. One horseshoe a
  * trip. Land your own faction holds yields half as much again, and the
- * House takes its grain tax from every bushel of Corn.
+ * House takes its grain tax from every bushel of Corn. A region holds only
+ * so much at a time and grows it back: see Stock.
  */
 final class Gathering
 {
@@ -47,6 +48,14 @@ final class Gathering
                 throw new GameException("{$region->name}'s {$region->produces} belongs to {$holders}. Take the farm to gather it.");
             }
 
+            // Each region holds only so much at a time, and grows it back.
+            $region = Region::query()->lockForUpdate()->findOrFail($region->id);
+            $left = Stock::state($region)['left'];
+
+            if ($left < 1) {
+                throw new GameException("{$region->name} is picked clean. More grows back by ".Clock::local(Stock::nextAt($region))->format('H:i').'.');
+            }
+
             Horseshoes::spend($player, 1);
 
             $base = match (true) {
@@ -57,7 +66,8 @@ final class Gathering
             $own = $player->faction_id !== null && $region->faction_id === $player->faction_id;
             $workshop = $region->produces === 'corn' ? 1.0 : Bases::gathering($player, $region);
             // Gathering Gloves, a Feast Basket and the faction's Farming bring in more.
-            $amount = (int) floor($base * $player->species->gathering() * ($own ? 1.5 : 1.0) * $workshop * Powers::gathering($player, $region->produces) * Research::gathering($player));
+            $amount = min($left, (int) floor($base * $player->species->gathering() * ($own ? 1.5 : 1.0) * $workshop * Powers::gathering($player, $region->produces) * Research::gathering($player)));
+            Stock::take($region, $amount);
             $tax = 0;
 
             if ($region->produces === 'corn') {
