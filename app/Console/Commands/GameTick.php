@@ -9,7 +9,7 @@ use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
 
 #[Signature('game:tick')]
-#[Description('Move every valley on by half an hour: battles, crimes, uprisings, rations, Gate Night and season ends')]
+#[Description('Move every valley on: battles, crimes, uprisings, upkeep, rations, Gate Night and season ends, whatever is due')]
 class GameTick extends Command
 {
     public function handle(Tick $tick): int

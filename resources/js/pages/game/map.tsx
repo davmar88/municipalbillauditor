@@ -92,6 +92,33 @@ export default function MapPage({
         return () => window.clearTimeout(timer);
     }, [me.walk]);
 
+    // When the next raid lands, fetch how it went, without a reload.
+    const nextLanding = useMemo(
+        () =>
+            regions
+                .flatMap((region) =>
+                    region.incoming.map((raid) => raid.landsAt),
+                )
+                .sort()[0] ?? null,
+        [regions],
+    );
+
+    useEffect(() => {
+        if (!nextLanding) {
+            return;
+        }
+
+        const timer = window.setTimeout(
+            () =>
+                router.reload({
+                    only: ['regions', 'battles', 'recent', 'me', 'here'],
+                }),
+            Math.max(0, new Date(nextLanding).getTime() + 75_000 - Date.now()),
+        );
+
+        return () => window.clearTimeout(timer);
+    }, [nextLanding]);
+
     // Once Ironfield has raided, fetch how it went, without a reload.
     useEffect(() => {
         if (!gateNight.open) {
@@ -214,7 +241,12 @@ export default function MapPage({
                                     {fromNow(battle.landsAt)}); your side has{' '}
                                     {battle.ourHorseshoes} horseshoes in.
                                 </p>
-                                {battle.joined ? (
+                                {fromNow(battle.landsAt) === 'now' ? (
+                                    <span className="font-semibold text-primary">
+                                        Landing now: the result comes in a
+                                        minute.
+                                    </span>
+                                ) : battle.joined ? (
                                     <span className="font-semibold text-primary">
                                         You're in this battle.
                                     </span>

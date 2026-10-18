@@ -12,10 +12,11 @@ use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Every half hour the valley moves on: battles, crimes and uprisings
- * settle, secret edits nobody caught settle in, upkeep and the Night Watch
- * are paid, rations go out each morning, Ironfield raids on Sunday evening,
- * and the season ends when its time is up.
+ * Every minute the valley moves on: battles, crimes and uprisings settle
+ * when they are due, secret edits nobody caught settle in, upkeep and the
+ * Night Watch are paid each half hour, rations go out each morning,
+ * Ironfield raids on Sunday evening, and the season ends when its time is
+ * up.
  *
  * Everything here is safe to run twice: each step checks what is due.
  */
