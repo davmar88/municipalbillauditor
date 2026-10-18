@@ -283,7 +283,7 @@ final class Factions
     {
         if ($faction->entry_fee > 0) {
             $player->corn -= $faction->entry_fee;
-            $faction->increment('treasury', $faction->entry_fee);
+            Stores::addCorn($faction->id, $faction->entry_fee);
         }
 
         $this->enrol($player, $faction, FactionRole::Recruit);

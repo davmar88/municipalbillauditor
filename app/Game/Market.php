@@ -4,7 +4,6 @@ namespace App\Game;
 
 use App\Enums\ItemTemplate;
 use App\Enums\Species;
-use App\Models\Faction;
 use App\Models\Item;
 use App\Models\ItemDesign;
 use App\Models\Listing;
@@ -313,7 +312,7 @@ final class Market
                 }
 
                 if ($levy > 0) {
-                    Faction::query()->whereKey($house->id)->increment('treasury', $levy);
+                    Stores::addCorn($house->id, $levy);
                 }
             }
 

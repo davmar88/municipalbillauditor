@@ -3,13 +3,17 @@
 namespace Tests\Feature\Game;
 
 use App\Enums\BuildingKind;
+use App\Enums\CrimeKind;
 use App\Enums\Species;
 use App\Game\Bases;
 use App\Game\Battles;
 use App\Game\Clock;
+use App\Game\Crimes;
+use App\Game\Dice;
 use App\Game\GameException;
 use App\Game\Gathering;
 use App\Game\Seasons;
+use App\Game\Stores;
 use App\Game\Tick;
 use App\Models\Building;
 use App\Models\Faction;
@@ -257,14 +261,15 @@ class BasesTest extends TestCase
         $this->assertEqualsWithDelta(1.0, Bases::attack($faction->id, $this->region('stables')), 0.001, 'Only regions next to the yard.');
     }
 
-    public function test_raiders_who_take_a_den_carry_off_a_fifth_of_the_treasury(): void
+    public function test_raiders_who_take_a_building_carry_off_what_it_stored(): void
     {
         $red = [$this->player(Species::Horse), $this->player(Species::Horse), $this->player(Species::Horse)];
         $redFaction = $this->faction('Red Hooves', ...$red);
         $blueFaction = $this->faction('Blue Guard', $this->player());
-        $blueFaction->forceFill(['treasury' => 1000])->save();
+        $blueFaction->forceFill(['treasury' => 800, 'materials' => ['wood' => 200]])->save();
         $this->hold($blueFaction, 'henhouse');
         $this->raise($blueFaction, 'henhouse', BuildingKind::Den);
+        $this->assertSame(['corn' => 800, 'material' => 250], Stores::capacity($blueFaction->fresh()));
 
         $attack = app(Battles::class)->launch($red[0], $this->region('henhouse'), 1);
         $this->travel(61)->minutes();
@@ -272,8 +277,56 @@ class BasesTest extends TestCase
 
         $this->assertSame('attack', $attack->fresh()->winner);
         $this->assertSame(0, Building::count(), 'The Den fell with its region.');
-        $this->assertSame(800, $blueFaction->fresh()->treasury);
-        $this->assertSame(200, $redFaction->fresh()->treasury);
+
+        // The Den held 500 of the 800 Corn the store had room for, and 150 of 250 of each material.
+        $this->assertSame([300, 80], [$blueFaction->fresh()->treasury, $blueFaction->fresh()->material('wood')]);
+        // The raiders keep what fits in their own store: 300 Corn and 100 wood in hand.
+        $this->assertSame([300, 100], [$redFaction->fresh()->treasury, $redFaction->fresh()->material('wood')]);
+        $this->assertStringContainsString('carried off 500 Corn and 120 materials', Notice::query()->where('player_id', $red[1]->id)->where('text', 'like', '📦%')->value('text'));
+    }
+
+    public function test_a_full_store_takes_no_more_until_a_building_holds_it(): void
+    {
+        $member = $this->player(attributes: ['corn' => 1000, 'materials' => ['wood' => 500]]);
+        $leader = $this->player();
+        $faction = $this->faction('Givers', $leader, $member);
+        $this->hold($faction, 'granary');
+
+        $this->bases->give($member->fresh(), 'corn', 300);
+
+        try {
+            $this->bases->give($member->fresh(), 'corn', 1);
+            $this->fail('The store holds 300 Corn without buildings.');
+        } catch (GameException $e) {
+            $this->assertStringContainsString('room for 0 more Corn', $e->getMessage());
+        }
+
+        $this->raise($faction, 'granary', BuildingKind::Storehouse);
+        $this->bases->give($member->fresh(), 'corn', 700);
+        $this->assertSame(1000, $faction->fresh()->treasury);
+    }
+
+    public function test_a_lone_wolf_loots_materials_from_the_store_too(): void
+    {
+        $faction = $this->faction('Hoarders', $this->player());
+        $faction->forceFill(['treasury' => 100, 'materials' => ['wood' => 50, 'stone' => 30]])->save();
+        $wolf = $this->player(level: 3);
+        $crimes = app(Crimes::class);
+        $crime = $crimes->commit($wolf, CrimeKind::Loot, $faction);
+        $chance = $crimes->catchChance($this->season(), $crime);
+
+        foreach (range(1, 1000) as $seed) {
+            if (Dice::roll($seed, 'caught') >= $chance) {
+                $crime->forceFill(['seed' => $seed])->save();
+                break;
+            }
+        }
+
+        $this->travel(31)->minutes();
+        $crimes->resolveDue($this->season());
+
+        $this->assertSame([90, 45, 27], [$faction->fresh()->treasury, $faction->fresh()->material('wood'), $faction->fresh()->material('stone')]);
+        $this->assertSame([5, 3], [$wolf->fresh()->material('wood'), $wolf->fresh()->material('stone')]);
     }
 
     public function test_a_storehouse_keeps_looters_to_a_smaller_share(): void

@@ -103,7 +103,7 @@ final class Gathering
         $tax = (int) floor($amount * $law->value / 100);
 
         if ($tax > 0) {
-            Faction::query()->whereKey($house->id)->increment('treasury', $tax);
+            Stores::addCorn($house->id, $tax);
             Season::query()->whereKey($season->id)->increment('tax_collected', $tax);
         }
 

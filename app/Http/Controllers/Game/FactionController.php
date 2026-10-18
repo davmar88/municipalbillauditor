@@ -11,6 +11,7 @@ use App\Game\Bases;
 use App\Game\Clock;
 use App\Game\Factions;
 use App\Game\Research;
+use App\Game\Stores;
 use App\Http\Controllers\Controller;
 use App\Models\Building;
 use App\Models\Crime;
@@ -51,6 +52,7 @@ class FactionController extends Controller
                     'canBuild' => $player->decides(),
                     'materials' => (object) ($faction->materials ?? []),
                     'apples' => (int) $faction->apples,
+                    'capacity' => Stores::capacity($faction),
                     'memberCap' => Bases::memberCap($faction),
                     'buildings' => Bases::standing($faction)
                         ->sortBy(fn (Building $building) => [$building->kind === BuildingKind::Den ? 0 : 1, $building->region->name])

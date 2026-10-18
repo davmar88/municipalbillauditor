@@ -23,9 +23,6 @@ final class Bases
 {
     public const MATERIALS = ['wood', 'straw', 'stone', 'clay', 'wool', 'dye', 'eggs', 'honey', 'herbs', 'iron'];
 
-    /** The share of the treasury raiders carry off when they take a Den. */
-    public const DEN_PLUNDER = 0.20;
-
     /**
      * Give Corn or materials to your faction's store.
      *
@@ -59,12 +56,15 @@ final class Bases
                     throw new GameException("You have {$player->corn} Corn.");
                 }
 
+                self::ensureRoom($faction, 'corn', $amount);
                 $player->corn -= $amount;
                 $faction->treasury += $amount;
             } else {
                 if ($player->material($what) < $amount) {
                     throw new GameException("You have {$player->material($what)} {$what}.");
                 }
+
+                self::ensureRoom($faction, $what, $amount);
 
                 $player->materials = [...$player->materials, $what => $player->material($what) - $amount];
                 $faction->materials = [...($faction->materials ?? []), $what => $faction->material($what) + $amount];
@@ -183,8 +183,8 @@ final class Bases
     }
 
     /**
-     * Raiders took a region: its building falls, and if it was a Den they
-     * carry off a fifth of the losers' treasury.
+     * Raiders took a region: its building falls, and they carry off what it
+     * stored, as much as their own store has room for.
      */
     public function fall(Region $region, ?int $takenBy): void
     {
@@ -194,17 +194,36 @@ final class Bases
             return;
         }
 
-        if ($building->kind === BuildingKind::Den && $takenBy !== null) {
-            $losers = Faction::query()->lockForUpdate()->find($building->faction_id);
-            $plunder = $losers ? (int) floor($losers->treasury * self::DEN_PLUNDER) : 0;
+        $losers = Faction::query()->lockForUpdate()->find($building->faction_id);
+        $winners = $takenBy !== null ? Faction::query()->lockForUpdate()->find($takenBy) : null;
 
-            if ($plunder > 0) {
-                $losers->decrement('treasury', $plunder);
-                Faction::query()->whereKey($takenBy)->increment('treasury', $plunder);
+        if ($losers !== null && $winners !== null) {
+            ['corn' => $corn, 'materials' => $materials] = Stores::emptyOut($losers, $building);
+            Stores::add($winners, $corn, $materials);
+
+            if ($corn > 0 || $materials !== []) {
+                $what = $corn.' Corn'.($materials !== [] ? ' and '.array_sum($materials).' materials' : '');
+                $map = route('play', [], false);
+                Notices::send(Notices::members($winners->id), 'battle', "📦 Your raiders carried off {$what} from {$losers->name}'s {$building->kind->label()} in {$region->name}.", $map);
+                Notices::send(Notices::members($losers->id), 'battle', "📦 {$winners->name} carried off {$what} from your {$building->kind->label()} in {$region->name}.", $map);
             }
         }
 
         $building->delete();
+    }
+
+    /**
+     * @throws GameException
+     */
+    private static function ensureRoom(Faction $faction, string $what, int $amount): void
+    {
+        $room = Stores::room($faction, $what);
+
+        if ($amount > $room) {
+            $name = $what === 'corn' ? 'Corn' : $what;
+
+            throw new GameException("The store has room for {$room} more {$name}. Raise a Den or a Storehouse, or a bigger one, to store more.");
+        }
     }
 
     /**

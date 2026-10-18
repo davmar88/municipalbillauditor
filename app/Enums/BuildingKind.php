@@ -35,7 +35,13 @@ enum BuildingKind: string
     public function does(int $level): string
     {
         $percent = (int) round($this->bonus($level) * 100).'%';
+        ['corn' => $corn, 'material' => $material] = $this->storage($level);
 
+        return $this->purpose($level, $percent)." Stores {$corn} Corn and {$material} of each material.";
+    }
+
+    private function purpose(int $level, string $percent): string
+    {
         return match ($this) {
             self::Den => "The faction's base. Defends its region {$percent} harder and makes room for {$this->extraMembers($level)} more members.",
             self::Watchtower => "Defends its region {$percent} harder.",
@@ -63,6 +69,30 @@ enum BuildingKind: string
             self::Workshop => [0.25, 0.5, 0.75][$level - 1],
             self::HeadOffice => [0.2, 0.35, 0.5][$level - 1],
         };
+    }
+
+    /**
+     * What it stores at a level: Corn, and of each material. The Den and
+     * the Storehouse hold the most; raiders who take it carry this share off.
+     *
+     * @return array{corn: int, material: int}
+     */
+    public function storage(int $level): array
+    {
+        if ($level < 1) {
+            return ['corn' => 0, 'material' => 0];
+        }
+
+        $level = min($level, self::MAX_LEVEL);
+
+        [$corn, $material] = match ($this) {
+            self::Den => [[500, 150], [1000, 300], [2000, 600]][$level - 1],
+            self::Storehouse => [[1000, 300], [2000, 600], [4000, 1200]][$level - 1],
+            self::HeadOffice => [[800, 250], [1500, 450], [2500, 750]][$level - 1],
+            default => [150, 50],
+        };
+
+        return ['corn' => $corn, 'material' => $material];
     }
 
     public function extraMembers(int $level): int

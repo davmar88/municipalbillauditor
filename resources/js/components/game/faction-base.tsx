@@ -260,6 +260,8 @@ type Props = {
         materials: Record<string, number>;
         /** The store of Apples, which the House spends on warrant bounties. */
         apples: number;
+        /** What the faction's buildings store: Corn, and of each material. */
+        capacity: { corn: number; material: number };
         memberCap: number;
         buildings: (MapBuilding & { region: { id: number; name: string } })[];
         plots: { id: number; name: string; key: string }[];
@@ -408,10 +410,20 @@ export function FactionBase({ treasury, base, kinds }: Props) {
 
             <div className="flex flex-col gap-3 rounded-xl border bg-card p-4">
                 <h3 className="font-semibold">The store</h3>
+                <p className="text-xs text-muted-foreground">
+                    Your buildings store up to{' '}
+                    {base.capacity.corn.toLocaleString('en-ZA')} Corn and{' '}
+                    {base.capacity.material.toLocaleString('en-ZA')} of each
+                    material; a Den or a Storehouse holds the most. Raiders who
+                    take one of your buildings carry off what it holds.
+                </p>
                 <ul className="flex flex-wrap gap-2 text-sm">
                     <li className="rounded-full border px-3 py-1">
                         <span className="font-semibold">
                             {treasury.toLocaleString('en-ZA')}
+                        </span>
+                        <span className="text-muted-foreground">
+                            /{base.capacity.corn.toLocaleString('en-ZA')}
                         </span>{' '}
                         Corn
                     </li>
@@ -433,6 +445,9 @@ export function FactionBase({ treasury, base, kinds }: Props) {
                         >
                             <span className="font-semibold">
                                 {base.materials[name] ?? 0}
+                            </span>
+                            <span className="text-muted-foreground">
+                                /{base.capacity.material}
                             </span>{' '}
                             {name}
                         </li>

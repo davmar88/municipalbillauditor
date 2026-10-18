@@ -54,6 +54,7 @@ type Props = {
                   canBuild: boolean;
                   materials: Record<string, number>;
                   apples: number;
+                  capacity: { corn: number; material: number };
                   memberCap: number;
                   buildings: (MapBuilding & {
                       region: { id: number; name: string };

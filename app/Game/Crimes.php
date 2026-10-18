@@ -160,9 +160,19 @@ final class Crimes
                 $faction = Faction::query()->lockForUpdate()->find($crime->target_faction_id);
 
                 if ($faction !== null) {
-                    $loot = (int) floor($faction->treasury * Bases::lootShare($faction));
-                    $faction->decrement('treasury', $loot);
-                    $criminal->increment('corn', $loot);
+                    $share = Bases::lootShare($faction);
+                    $loot = (int) floor($faction->treasury * $share);
+                    $kept = $faction->materials ?? [];
+                    $carried = $criminal->materials ?? [];
+
+                    foreach ($kept as $name => $amount) {
+                        $stolen = (int) floor($amount * $share);
+                        $kept[$name] = $amount - $stolen;
+                        $carried[$name] = (int) ($carried[$name] ?? 0) + $stolen;
+                    }
+
+                    $faction->forceFill(['treasury' => $faction->treasury - $loot, 'materials' => $kept])->save();
+                    $criminal->forceFill(['corn' => $criminal->corn + $loot, 'materials' => $carried])->save();
                 }
             } elseif ($crime->kind === CrimeKind::Plunder && $crime->region_id !== null) {
                 // The plunderer gathers the section's crop, and takes Corn from its holders.
