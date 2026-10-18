@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { GameBar } from '@/components/game/game-bar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { act, dayMonth, dollars, rand, shortWhen } from '@/lib/game';
+import { act, dayMonth, dollars, shortWhen } from '@/lib/game';
 import { cashout } from '@/routes/play';
 import { buy, check, exchange, swap } from '@/routes/play/apples';
 import { harvest, plant } from '@/routes/play/trees';
@@ -14,9 +14,7 @@ import { join, refill } from '@/routes/play/orchard';
 type PineapplePack = {
     id: string;
     pineapples: number;
-    /** In cents. */
-    zar: number;
-    /** In cents. */
+    /** In US cents. */
     usd: number;
     /** Percent saved on the smallest pack's price per Pineapple. */
     save: number;
@@ -51,20 +49,18 @@ type ApplePack = {
     save: number;
 };
 
-type Way = 'paystack' | 'paypal';
-
 type Props = {
     pineapplePacks: PineapplePack[];
     applePacks: ApplePack[];
     trees: TreesInfo;
     onSale: boolean;
-    ways: Record<Way, boolean>;
+    /** Whether paying with PayPal is open. */
+    open: boolean;
     cornPerApple: number;
     pending: {
         id: number;
         pineapples: number;
         price: string;
-        via: Way;
         /** Paid, but not as expected: our team checks it by hand. */
         review: boolean;
         at: string;
@@ -88,16 +84,16 @@ type Props = {
 };
 
 /**
- * Pineapples bought with Paystack or PayPal and swapped for packs of
- * Apples, Orchard membership, swapping Apples for Corn, and where your Apples came
- * from and went. Cashing out has a page of its own.
+ * Pineapples bought with PayPal and swapped for packs of Apples, Orchard
+ * membership, swapping Apples for Corn, and where your Apples came from and
+ * went. Cashing out has a page of its own.
  */
 export default function ApplesPage({
     pineapplePacks,
     applePacks,
     trees,
     onSale,
-    ways,
+    open,
     cornPerApple,
     pending,
     history,
@@ -105,16 +101,15 @@ export default function ApplesPage({
     contact,
 }: Props) {
     const [buying, setBuying] = useState<string | null>(null);
-    const open = ways.paystack || ways.paypal;
 
     const { player } = usePage().props;
     const pineapples = player?.pineapples ?? 0;
 
-    function pay(pack: PineapplePack, via: Way) {
-        setBuying(`${pack.id}:${via}`);
+    function pay(pack: PineapplePack) {
+        setBuying(pack.id);
         router.post(
             buy.url(),
-            { pack: pack.id, via },
+            { pack: pack.id },
             {
                 preserveScroll: true,
                 onFinish: () => setBuying(null),
@@ -168,7 +163,7 @@ export default function ApplesPage({
                                 </span>
                             </p>
                             <p className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-                                {rand(pack.zar)} · {dollars(pack.usd)}
+                                {dollars(pack.usd)}
                                 {pack.save > 0 && (
                                     <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-bold whitespace-nowrap text-emerald-300">
                                         Save {pack.save}%
@@ -176,31 +171,15 @@ export default function ApplesPage({
                                 )}
                             </p>
                             {open && (
-                                <div className="mt-auto flex flex-col gap-2">
-                                    {ways.paystack && (
-                                        <Button
-                                            disabled={buying !== null}
-                                            onClick={() =>
-                                                pay(pack, 'paystack')
-                                            }
-                                        >
-                                            {buying === `${pack.id}:paystack`
-                                                ? 'Opening Paystack…'
-                                                : `Pay ${rand(pack.zar)} with Paystack`}
-                                        </Button>
-                                    )}
-                                    {ways.paypal && (
-                                        <Button
-                                            variant="secondary"
-                                            disabled={buying !== null}
-                                            onClick={() => pay(pack, 'paypal')}
-                                        >
-                                            {buying === `${pack.id}:paypal`
-                                                ? 'Opening PayPal…'
-                                                : `Pay ${dollars(pack.usd)} with PayPal`}
-                                        </Button>
-                                    )}
-                                </div>
+                                <Button
+                                    className="mt-auto"
+                                    disabled={buying !== null}
+                                    onClick={() => pay(pack)}
+                                >
+                                    {buying === pack.id
+                                        ? 'Opening PayPal…'
+                                        : `Pay ${dollars(pack.usd)} with PayPal`}
+                                </Button>
                             )}
                         </li>
                     ))}
@@ -229,11 +208,8 @@ export default function ApplesPage({
                                         {purchase.pineapples.toLocaleString(
                                             'en-ZA',
                                         )}{' '}
-                                        Pineapples for {purchase.price} with{' '}
-                                        {purchase.via === 'paystack'
-                                            ? 'Paystack'
-                                            : 'PayPal'}
-                                        , {shortWhen(purchase.at)}
+                                        Pineapples for {purchase.price} with
+                                        PayPal, {shortWhen(purchase.at)}
                                     </span>
                                     {purchase.review ? (
                                         <span className="ml-auto text-muted-foreground">
@@ -271,7 +247,7 @@ export default function ApplesPage({
                         <h2 className="font-bold">Cash out</h2>
                         <p className="text-sm text-muted-foreground">
                             Turn Apples you earned into money, paid to your
-                            PayPal or your bank.
+                            PayPal.
                         </p>
                     </div>
                     <Button variant="secondary" asChild>
@@ -320,9 +296,8 @@ export default function ApplesPage({
                 </section>
 
                 <p className="text-xs text-muted-foreground">
-                    Paystack takes payments in rand and PayPal in US dollars; we
-                    never see your card. Pineapples arrive as soon as the
-                    payment clears.
+                    PayPal takes payments in US dollars; we never see your card.
+                    Pineapples arrive as soon as the payment clears.
                     {contact &&
                         ` Questions about a payment? Write to ${contact} with the date and amount.`}
                 </p>

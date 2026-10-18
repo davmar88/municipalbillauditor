@@ -9,17 +9,17 @@ use Illuminate\Support\Carbon;
 
 /**
  * A pack of Pineapples an animal is buying, from the moment they pick it
- * until Paystack or PayPal says the money arrived.
+ * until PayPal says the money arrived.
  *
  * @property int $id
  * @property int|null $player_id Null once the account is deleted
  * @property string $pack
  * @property int $pineapples
- * @property string $provider paystack or paypal
- * @property string $currency ZAR or USD
+ * @property string $provider paypal, or paystack on a purchase from before PayPal only
+ * @property string $currency USD, or ZAR on a Paystack purchase
  * @property int $amount In cents
  * @property string $reference Ours, sent to the provider
- * @property string|null $provider_id PayPal's order id, or Paystack's transaction id
+ * @property string|null $provider_id PayPal's order id
  * @property string $status pending, paid, failed, or review when the money doesn't match the pack
  * @property Carbon|null $paid_at
  * @property Carbon $created_at
@@ -41,7 +41,7 @@ class ApplePurchase extends Model
         return $this->belongsTo(Player::class);
     }
 
-    /** "R95.00", "$5.70". */
+    /** "$5.70", or "R95.00" for a Paystack purchase. */
     public function price(): string
     {
         return ($this->currency === 'ZAR' ? 'R' : '$').number_format($this->amount / 100, 2, '.', ' ');

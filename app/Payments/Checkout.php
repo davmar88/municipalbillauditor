@@ -13,16 +13,15 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 /**
- * Buying a pack of Pineapples: open a payment with Paystack (rand) or PayPal
- * (dollars), then hand the Pineapples over once the provider confirms the
- * money arrived, whichever way the news comes and however often. The
- * Pineapples are paid out once, and swap for packs of Apples.
+ * Buying a pack of Pineapples: open a PayPal payment in US dollars, then hand
+ * the Pineapples over once PayPal confirms the money arrived, however often
+ * it is asked. The Pineapples are paid out once, and swap for packs of
+ * Apples.
  */
 final class Checkout
 {
     public function __construct(
         private readonly Settings $settings,
-        private readonly Paystack $paystack,
         private readonly PayPal $paypal,
     ) {}
 
@@ -32,52 +31,37 @@ final class Checkout
         return $this->settings->on('apples_on_sale');
     }
 
-    /** @return array{paystack: bool, paypal: bool} The ways to pay that are open. */
-    public function ways(): array
+    /** Whether players can pay: sales are on and the PayPal keys are in. */
+    public function open(): bool
     {
-        $open = $this->onSale();
-
-        return [
-            'paystack' => $open && $this->paystack->ready(),
-            'paypal' => $open && $this->paypal->ready(),
-        ];
+        return $this->onSale() && $this->paypal->ready();
     }
 
     /**
-     * Start buying a pack, and return the provider's page to send the
-     * player to.
+     * Start buying a pack, and return PayPal's page to send the player to.
      *
      * @throws GameException
      */
-    public function start(Player $player, string $packId, string $via): string
+    public function start(Player $player, string $packId): string
     {
-        if (! ($this->ways()[$via] ?? false)) {
-            throw new GameException(match (true) {
-                ! $this->onSale() => "Pineapples aren't on sale yet.",
-                $via === 'paypal' => "Paying with PayPal isn't open yet.",
-                default => "Paying with Paystack isn't open yet.",
-            });
+        if (! $this->open()) {
+            throw new GameException($this->onSale() ? "Paying with PayPal isn't open yet." : "Pineapples aren't on sale yet.");
         }
 
         $pack = Packs::findPineapples($packId) ?? throw new GameException('Pick one of the packs.');
-        $rand = $via === 'paystack';
 
         $purchase = ApplePurchase::create([
             'player_id' => $player->id,
             'pack' => $pack['id'],
             'pineapples' => $pack['pineapples'],
-            'provider' => $via,
-            'currency' => $rand ? 'ZAR' : 'USD',
-            'amount' => $rand ? $pack['zar'] : $pack['usd'],
+            'provider' => 'paypal',
+            'currency' => 'USD',
+            'amount' => $pack['usd'],
             'reference' => 'rg-'.Str::lower((string) Str::ulid()),
             'status' => 'pending',
         ]);
 
         try {
-            if ($rand) {
-                return $this->paystack->start($purchase, $player->user->email, route('play.apples.paystack'));
-            }
-
             $order = $this->paypal->start($purchase, route('play.apples.paypal'), route('play.apples.paypal-cancel'));
             $purchase->forceFill(['provider_id' => $order['id']])->save();
 
@@ -87,31 +71,6 @@ final class Checkout
 
             throw new GameException($e->getMessage());
         }
-    }
-
-    /**
-     * Settle a Paystack payment: from what its webhook sent, or else by
-     * asking Paystack.
-     *
-     * @param  array<string, mixed>|null  $transaction
-     *
-     * @throws PaymentException
-     */
-    public function settlePaystack(ApplePurchase $purchase, ?array $transaction = null): ApplePurchase
-    {
-        $transaction ??= $this->paystack->transaction($purchase->reference);
-
-        if ($transaction === null || ($transaction['reference'] ?? null) !== $purchase->reference) {
-            return $purchase;
-        }
-
-        return match ($transaction['status'] ?? null) {
-            'success' => (int) ($transaction['amount'] ?? 0) === $purchase->amount && Str::upper((string) ($transaction['currency'] ?? '')) === $purchase->currency
-                ? $this->credit($purchase, isset($transaction['id']) ? (string) $transaction['id'] : null)
-                : $this->review($purchase, $transaction),
-            'failed', 'abandoned', 'reversed' => $this->fail($purchase),
-            default => $purchase,
-        };
     }
 
     /**
@@ -134,7 +93,7 @@ final class Checkout
 
         return match ($capture['status'] ?? null) {
             'COMPLETED' => ($capture['amount']['value'] ?? null) === PayPal::money($purchase->amount) && ($capture['amount']['currency_code'] ?? null) === $purchase->currency
-                ? $this->credit($purchase, null)
+                ? $this->credit($purchase)
                 : $this->review($purchase, $capture),
             'DECLINED', 'FAILED' => $this->fail($purchase),
             default => $purchase,
@@ -142,9 +101,9 @@ final class Checkout
     }
 
     /** The money arrived: hand the Pineapples over, once. */
-    private function credit(ApplePurchase $purchase, ?string $providerId): ApplePurchase
+    private function credit(ApplePurchase $purchase): ApplePurchase
     {
-        return DB::transaction(function () use ($purchase, $providerId) {
+        return DB::transaction(function () use ($purchase) {
             $purchase = ApplePurchase::query()->lockForUpdate()->findOrFail($purchase->id);
 
             if ($purchase->status === 'paid') {
@@ -159,11 +118,7 @@ final class Checkout
                 return $purchase;
             }
 
-            $purchase->forceFill([
-                'status' => 'paid',
-                'paid_at' => now(),
-                'provider_id' => $purchase->provider_id ?? $providerId,
-            ])->save();
+            $purchase->forceFill(['status' => 'paid', 'paid_at' => now()])->save();
 
             $pineapples = number_format($purchase->pineapples);
             Pineapples::award($purchase->player, $purchase->pineapples, "Bought {$pineapples} Pineapples", "purchase:{$purchase->id}");

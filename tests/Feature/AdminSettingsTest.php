@@ -17,14 +17,15 @@ use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 /**
- * The owner's admin page: payment and Claude keys, stored encrypted and
- * never shown again, and the switches that open Apple sales and cash-outs.
+ * The owner's admin page: the PayPal and Claude keys, stored encrypted and
+ * never shown again, and the switches that open Pineapple sales and
+ * cash-outs.
  */
 class AdminSettingsTest extends TestCase
 {
     use RefreshDatabase;
 
-    private const SECRET = 'sk_test_supersecretkey1234';
+    private const SECRET = 'paypal-client-secret-1234';
 
     private const CLAUDE_KEY = 'sk-ant-test-key';
 
@@ -59,40 +60,42 @@ class AdminSettingsTest extends TestCase
         $this->actingAs($this->admin())->get(route('admin'))->assertInertia(fn (Assert $page) => $page
             ->component('admin/settings')
             ->where('settings.applesOnSale', false)
-            ->where('webhookUrl', route('webhooks.paystack')));
+            ->where('ready', false)
+            ->missing('webhookUrl')
+            ->missing('settings.paystackSecretKey'));
     }
 
     public function test_a_saved_key_is_encrypted_and_only_its_last_four_characters_come_back(): void
     {
         $admin = $this->admin();
 
-        $this->save($admin, ['paystack_secret_key' => self::SECRET])->assertSessionHasNoErrors();
+        $this->save($admin, ['paypal_client_id' => 'client', 'paypal_client_secret' => self::SECRET])->assertSessionHasNoErrors();
 
-        $raw = DB::table('app_settings')->where('key', 'paystack_secret_key')->value('value');
+        $raw = DB::table('app_settings')->where('key', 'paypal_client_secret')->value('value');
         $this->assertNotSame(self::SECRET, $raw);
         $this->assertSame(self::SECRET, Crypt::decryptString($raw));
 
         $this->actingAs($admin)->get(route('admin'))
             ->assertDontSee(self::SECRET)
             ->assertInertia(fn (Assert $page) => $page
-                ->where('settings.paystackSecretKey', '••••1234')
-                ->where('settings.paystackLive', false)
-                ->where('ready.paystack', true));
+                ->where('settings.paypalClientSecret', '••••1234')
+                ->where('ready', true));
 
         // Saving again with the box left empty keeps the key.
-        $this->save($admin, ['paystack_secret_key' => '']);
-        $this->assertSame(self::SECRET, app(Settings::class)->get('paystack_secret_key'));
+        $this->save($admin, ['paypal_client_id' => 'client', 'paypal_client_secret' => '']);
+        $this->assertSame(self::SECRET, app(Settings::class)->get('paypal_client_secret'));
 
-        $this->actingAs($admin)->delete(route('admin.settings.forget', 'paystack_secret_key'))->assertRedirect();
-        $this->assertNull(app(Settings::class)->get('paystack_secret_key'));
+        $this->actingAs($admin)->delete(route('admin.settings.forget', 'paypal_client_secret'))->assertRedirect();
+        $this->assertNull(app(Settings::class)->get('paypal_client_secret'));
+        $this->actingAs($admin)->delete('/admin/settings/paystack_secret_key')->assertNotFound();
     }
 
-    public function test_keys_must_look_right_and_sales_need_a_way_to_pay(): void
+    public function test_keys_must_look_right_and_sales_need_paypal(): void
     {
         $admin = $this->admin();
 
-        $this->save($admin, ['paystack_secret_key' => 'pk_live_public'])->assertSessionHasErrors('paystack_secret_key');
-        $this->save($admin, ['apples_on_sale' => '1'])->assertSessionHasErrors('apples_on_sale');
+        $this->save($admin, ['anthropic_api_key' => 'not-a-claude-key'])->assertSessionHasErrors('anthropic_api_key');
+        $this->save($admin, ['apples_on_sale' => '1'])->assertSessionHasErrors(['apples_on_sale' => 'Add the PayPal keys before opening sales. Your keys were saved.']);
         $this->assertFalse(app(Settings::class)->on('apples_on_sale'));
 
         $this->save($admin, ['apples_on_sale' => '1', 'paypal_client_id' => 'client', 'paypal_client_secret' => 'secret', 'paypal_mode' => 'live'])->assertSessionHasNoErrors();
@@ -118,27 +121,24 @@ class AdminSettingsTest extends TestCase
         $this->assertFalse(app(Settings::class)->on('cashout_open'));
     }
 
-    public function test_the_test_buttons_ask_paystack_paypal_and_claude(): void
+    public function test_the_test_buttons_ask_paypal_and_claude(): void
     {
         Http::preventStrayRequests();
         Http::fake([
-            'api.paystack.co/balance' => Http::response(['status' => true, 'data' => []]),
             'api-m.sandbox.paypal.com/v1/oauth2/token' => Http::response(['error' => 'invalid_client', 'error_description' => 'Client Authentication failed'], 401),
             'api.anthropic.com/v1/models*' => Http::response(['data' => []]),
         ]);
         $admin = $this->admin();
         $this->save($admin, [
-            'paystack_secret_key' => self::SECRET,
             'paypal_client_id' => 'client',
             'paypal_client_secret' => 'wrong',
             'anthropic_api_key' => self::CLAUDE_KEY,
         ]);
 
-        $this->actingAs($admin)->post(route('admin.settings.test', 'paystack'))->assertInertiaFlash('toast.message', 'Paystack accepted the key.');
+        $this->actingAs($admin)->post('/admin/settings/test/paystack')->assertNotFound();
         $this->actingAs($admin)->post(route('admin.settings.test', 'paypal'))->assertInertiaFlash('toast', ['type' => 'error', 'message' => 'PayPal said: Client Authentication failed']);
         $this->actingAs($admin)->post(route('admin.settings.test', 'claude'))->assertInertiaFlash('toast.message', 'Claude accepted the key.');
 
-        Http::assertSent(fn (Request $request) => $request->url() === 'https://api.paystack.co/balance' && $request->hasHeader('Authorization', 'Bearer '.self::SECRET));
         Http::assertSent(fn (Request $request) => str_starts_with($request->url(), 'https://api.anthropic.com/v1/models') && $request->hasHeader('x-api-key', self::CLAUDE_KEY));
     }
 

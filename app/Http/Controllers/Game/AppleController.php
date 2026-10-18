@@ -14,19 +14,17 @@ use App\Models\Player;
 use App\Payments\Checkout;
 use App\Payments\Packs;
 use App\Payments\PaymentException;
-use App\Payments\Paystack;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 use Symfony\Component\HttpFoundation\Response as HttpResponse;
 
 /**
- * The Apples page: buying Pineapples with Paystack or PayPal, coming back
- * from paying, swapping Pineapples for packs of Apples, swapping Apples for
- * Corn, Orchard membership, and the animal's Apple history. Cashing out has
- * a page of its own.
+ * The Apples page: buying Pineapples with PayPal, coming back from paying,
+ * swapping Pineapples for packs of Apples, swapping Apples for Corn, Orchard
+ * membership, and the animal's Apple history. Cashing out has a page of its
+ * own.
  */
 class AppleController extends Controller
 {
@@ -40,10 +38,11 @@ class AppleController extends Controller
             'applePacks' => Packs::apples(),
             'trees' => Trees::page($player),
             'onSale' => $checkout->onSale(),
-            'ways' => $checkout->ways(),
+            'open' => $checkout->open(),
             'cornPerApple' => Apples::cornPerApple(),
             'pending' => ApplePurchase::query()
                 ->where('player_id', $player->id)
+                ->where('provider', 'paypal')
                 ->whereIn('status', ['pending', 'review'])
                 ->where('created_at', '>=', now()->subDay())
                 ->latest('id')
@@ -52,7 +51,6 @@ class AppleController extends Controller
                     'id' => $purchase->id,
                     'pineapples' => $purchase->pineapples,
                     'price' => $purchase->price(),
-                    'via' => $purchase->provider,
                     'review' => $purchase->status === 'review',
                     'at' => $purchase->created_at->toIso8601String(),
                 ]),
@@ -78,39 +76,18 @@ class AppleController extends Controller
         ]);
     }
 
-    /** Off to Paystack or PayPal to pay for a pack. */
+    /** Off to PayPal to pay for a pack. */
     public function buy(Request $request, Checkout $checkout): HttpResponse
     {
-        $data = $request->validate([
-            'pack' => ['required', 'string', 'max:32'],
-            'via' => ['required', Rule::in(['paystack', 'paypal'])],
-        ]);
+        $pack = (string) $request->validate(['pack' => ['required', 'string', 'max:32']])['pack'];
 
-        return Inertia::location($checkout->start($request->user()->player, $data['pack'], $data['via']));
-    }
-
-    /** Back from Paystack's page. */
-    public function paystack(Request $request, Checkout $checkout): RedirectResponse
-    {
-        $purchase = $this->purchase($request, 'paystack', 'reference', (string) $request->query('reference', $request->query('trxref', '')));
-
-        if ($purchase === null) {
-            return $this->toApples("We couldn't find that payment.", 'error');
-        }
-
-        try {
-            $purchase = $checkout->settlePaystack($purchase);
-        } catch (PaymentException $e) {
-            return $this->toApples($e->getMessage(), 'error');
-        }
-
-        return $this->settled($purchase, 'Paystack');
+        return Inertia::location($checkout->start($request->user()->player, $pack));
     }
 
     /** Back from PayPal, having approved the order: take the money. */
     public function paypal(Request $request, Checkout $checkout): RedirectResponse
     {
-        $purchase = $this->purchase($request, 'paypal', 'provider_id', (string) $request->query('token', ''));
+        $purchase = $this->purchase($request, (string) $request->query('token', ''));
 
         if ($purchase === null) {
             return $this->toApples("We couldn't find that payment.", 'error');
@@ -122,13 +99,13 @@ class AppleController extends Controller
             return $this->toApples($e->getMessage(), 'error');
         }
 
-        return $this->settled($purchase, 'PayPal');
+        return $this->settled($purchase);
     }
 
     /** Back from PayPal without paying. */
     public function paypalCancel(Request $request): RedirectResponse
     {
-        $purchase = $this->purchase($request, 'paypal', 'provider_id', (string) $request->query('token', ''));
+        $purchase = $this->purchase($request, (string) $request->query('token', ''));
 
         if ($purchase?->status === 'pending') {
             $purchase->forceFill(['status' => 'failed'])->save();
@@ -140,15 +117,15 @@ class AppleController extends Controller
     /** Ask again about a payment that hadn't cleared. */
     public function check(Request $request, ApplePurchase $purchase, Checkout $checkout): RedirectResponse
     {
-        abort_unless($purchase->player_id === $request->user()->player->id, 404);
+        abort_unless($purchase->player_id === $request->user()->player->id && $purchase->provider === 'paypal', 404);
 
         try {
-            $purchase = $purchase->provider === 'paystack' ? $checkout->settlePaystack($purchase) : $checkout->settlePayPal($purchase);
+            $purchase = $checkout->settlePayPal($purchase);
         } catch (PaymentException $e) {
             return $this->toApples($e->getMessage(), 'error');
         }
 
-        return $this->settled($purchase, $purchase->provider === 'paystack' ? 'Paystack' : 'PayPal');
+        return $this->settled($purchase);
     }
 
     /** Pineapples for a pack of Apples. */
@@ -167,26 +144,27 @@ class AppleController extends Controller
         return $this->told('You swapped '.number_format($apples).' '.($apples === 1 ? 'Apple' : 'Apples').' for '.number_format($corn).' Corn.');
     }
 
-    private function purchase(Request $request, string $provider, string $column, string $value): ?ApplePurchase
+    /** The player's purchase PayPal's order id points to. */
+    private function purchase(Request $request, string $orderId): ?ApplePurchase
     {
-        if ($value === '') {
+        if ($orderId === '') {
             return null;
         }
 
         return ApplePurchase::query()
-            ->where('provider', $provider)
-            ->where($column, $value)
+            ->where('provider', 'paypal')
+            ->where('provider_id', $orderId)
             ->where('player_id', $request->user()->player->id)
             ->first();
     }
 
-    private function settled(ApplePurchase $purchase, string $provider): RedirectResponse
+    private function settled(ApplePurchase $purchase): RedirectResponse
     {
         return match ($purchase->status) {
             'paid' => $this->toApples('Your '.number_format($purchase->pineapples).' Pineapples arrived. Swap them for Apples below.'),
             'failed' => $this->toApples("The payment didn't go through, so nothing was charged.", 'error'),
             'review' => $this->toApples("The payment didn't match the pack, so we're checking it by hand. Your Pineapples arrive once we have.", 'error'),
-            default => $this->toApples("{$provider} is still confirming the payment. Your Pineapples arrive as soon as it does."),
+            default => $this->toApples('PayPal is still confirming the payment. Your Pineapples arrive as soon as it does.'),
         };
     }
 

@@ -55,9 +55,9 @@ return [
     | Real money buys Pineapples, and Pineapples swap for packs of Apples, so
     | what an Apple costs in money takes two steps to work out. Apples change
     | hands between players; the game never hands them out free, so every
-    | Apple was paid for by someone. Money is in cents, and bigger packs cost
-    | less. The owner puts the payment keys in and opens sales on the admin
-    | page.
+    | Apple was paid for by someone. Money is in US cents, paid through
+    | PayPal, and bigger packs cost less. The owner puts the PayPal keys in and
+    | opens sales on the admin page.
     |
     */
 
@@ -65,11 +65,11 @@ return [
         // Each money pack buys the Apple pack of the same rank, with a few
         // Pineapples to spare on some.
         'packs' => [
-            'pineapples-450' => ['pineapples' => 450, 'zar' => 5000, 'usd' => 300],
-            'pineapples-900' => ['pineapples' => 900, 'zar' => 9500, 'usd' => 570],
-            'pineapples-2200' => ['pineapples' => 2200, 'zar' => 22500, 'usd' => 1350],
-            'pineapples-4200' => ['pineapples' => 4200, 'zar' => 42500, 'usd' => 2550],
-            'pineapples-8200' => ['pineapples' => 8200, 'zar' => 80000, 'usd' => 4800],
+            'pineapples-450' => ['pineapples' => 450, 'usd' => 300],
+            'pineapples-900' => ['pineapples' => 900, 'usd' => 570],
+            'pineapples-2200' => ['pineapples' => 2200, 'usd' => 1350],
+            'pineapples-4200' => ['pineapples' => 4200, 'usd' => 2550],
+            'pineapples-8200' => ['pineapples' => 8200, 'usd' => 4800],
         ],
     ],
 
@@ -96,9 +96,9 @@ return [
 
     // Apple trees, planted with Pineapples. A tree fruits after a couple of
     // days and grows Apples until it has given them all; a full basket stops
-    // it until the animal harvests. A tree costs 900 Pineapples (R88 to R95)
-    // for 130 Apples, about 70c an Apple: less than a bought one (80c to
-    // R1), more than a cash-out pays (60c).
+    // it until the animal harvests. A tree costs 900 Pineapples ($5.27 to
+    // $5.70) for 130 Apples, about 4.2c an Apple: less than a bought one
+    // (4.8c to 6c), more than a cash-out pays (3.6c).
     'trees' => [
         'price' => 900,
         'apples' => 130,
@@ -115,13 +115,13 @@ return [
         'days' => 31,
     ],
 
-    // Cashing Apples out for real money, once the owner opens it on the
-    // admin page. The cheapest Apple costs 80c (R800 buys 8,200 Pineapples,
-    // which swap for 1,000 Apples), and a
-    // cash-out pays 60c, so every cash-out leaves the game ahead.
+    // Cashing Apples out to PayPal, once the owner opens it on the admin
+    // page. The cheapest Apple costs 4.8c ($48 buys 8,200 Pineapples, which
+    // swap for 1,000 Apples), and a cash-out pays 3.6c, so every cash-out
+    // leaves the game ahead before PayPal's fees.
     'cashout' => [
-        // What the game pays for 100 Apples, in cents.
-        'per_100' => ['ZAR' => 6000, 'USD' => 360],
+        // What the game pays for 100 Apples, in US cents.
+        'per_100' => 360,
         'min' => 500,
         'daily_cap' => 5000,
         // Apples an animal bought itself wait this long before they can be

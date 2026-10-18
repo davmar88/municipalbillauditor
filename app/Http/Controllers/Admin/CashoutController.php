@@ -6,8 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\Cashout;
 use App\Payments\Cashouts;
 use App\Payments\PayPal;
-use App\Payments\Paystack;
-use App\Support\Settings;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -15,12 +13,11 @@ use Inertia\Response;
 
 /**
  * The owner's cash-out queue. Every cash-out waits here until the owner
- * pays it through Paystack or PayPal, or turns it down and the Apples go
- * back.
+ * pays it through PayPal, or turns it down and the Apples go back.
  */
 class CashoutController extends Controller
 {
-    public function index(Cashouts $cashouts, Paystack $paystack, PayPal $paypal, Settings $settings): Response
+    public function index(Cashouts $cashouts, PayPal $paypal): Response
     {
         $queue = Cashout::query()
             ->with(['player:id,name,created_at', 'player.payoutAccount:id,player_id,updated_at'])
@@ -36,15 +33,11 @@ class CashoutController extends Controller
 
         return Inertia::render('admin/cashouts', [
             'open' => $cashouts->open(),
-            'ready' => ['paystack' => $paystack->ready(), 'paypal' => $paypal->ready()],
-            'live' => [
-                'paystack' => str_starts_with((string) $settings->get('paystack_secret_key'), 'sk_live_'),
-                'paypal' => $paypal->live(),
-            ],
+            'ready' => $paypal->ready(),
+            'live' => $paypal->live(),
             'totals' => [
                 'count' => (clone $paid)->count(),
                 'apples' => (int) (clone $paid)->sum('apples'),
-                'zar' => (int) (clone $paid)->where('currency', 'ZAR')->sum('amount'),
                 'usd' => (int) (clone $paid)->where('currency', 'USD')->sum('amount'),
             ],
             'queue' => $queue->map(fn (Cashout $cashout) => [
@@ -53,7 +46,6 @@ class CashoutController extends Controller
                 'detailsChanged' => $cashout->player?->payoutAccount?->updated_at?->toIso8601String(),
                 'sources' => $sources[$cashout->player_id] ?? null,
                 'paidBefore' => (int) ($paidBefore[$cashout->player_id] ?? 0),
-                'otp' => $cashout->note === Cashouts::OTP_NOTE,
             ]),
             'history' => Cashout::query()
                 ->with(['player:id,name', 'reviewer:id,name'])
@@ -75,20 +67,6 @@ class CashoutController extends Controller
         return $this->outcome($cashouts->check($cashout));
     }
 
-    public function otp(Request $request, Cashout $cashout, Cashouts $cashouts): RedirectResponse
-    {
-        $otp = $request->validate(['otp' => ['required', 'string', 'regex:/^\d{4,8}$/']], ['otp.regex' => 'The OTP is the 4 to 8 digits Paystack texted you.'])['otp'];
-
-        return $this->outcome($cashouts->otp($cashout, $otp));
-    }
-
-    public function resendOtp(Cashout $cashout, Cashouts $cashouts): RedirectResponse
-    {
-        $cashouts->resendOtp($cashout);
-
-        return $this->told('Paystack is texting you a new OTP.');
-    }
-
     public function reject(Request $request, Cashout $cashout, Cashouts $cashouts): RedirectResponse
     {
         $reason = $request->validate(['reason' => ['required', 'string', 'min:3', 'max:200']], ['reason.required' => 'Say why, so the animal knows.'])['reason'];
@@ -105,7 +83,6 @@ class CashoutController extends Controller
             'animal' => $cashout->player?->name ?? 'A deleted account',
             'apples' => $cashout->apples,
             'price' => $cashout->price(),
-            'method' => $cashout->method,
             'name' => $cashout->destination['name'] ?? '',
             'document' => $cashout->destination['document'] ?? '',
             'label' => $cashout->destination['label'] ?? '',

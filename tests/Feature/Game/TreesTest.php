@@ -44,15 +44,13 @@ class TreesTest extends TestCase
 
     public function test_a_grown_apple_costs_less_than_a_bought_one_and_more_than_a_cash_out_pays(): void
     {
-        foreach (['ZAR' => 'zar', 'USD' => 'usd'] as $currency => $price) {
-            $pineapple = collect(Packs::pineapples())->min(fn (array $pack) => $pack[$price] / $pack['pineapples']);
-            $grown = $pineapple * Trees::price() / Trees::apples();
-            $bought = $pineapple * collect(Packs::apples())->min(fn (array $pack) => $pack['pineapples'] / $pack['apples']);
-            $cashOut = config("game.cashout.per_100.{$currency}") / 100;
+        $pineapple = collect(Packs::pineapples())->min(fn (array $pack) => $pack['usd'] / $pack['pineapples']);
+        $grown = $pineapple * Trees::price() / Trees::apples();
+        $bought = $pineapple * collect(Packs::apples())->min(fn (array $pack) => $pack['pineapples'] / $pack['apples']);
+        $cashOut = config('game.cashout.per_100') / 100;
 
-            $this->assertLessThan($bought, $grown, "A grown Apple is cheaper than a bought one in {$currency}.");
-            $this->assertGreaterThan($cashOut * 1.1, $grown, "A grown Apple costs well over what a cash-out pays in {$currency}.");
-        }
+        $this->assertLessThan($bought, $grown, 'A grown Apple is cheaper than a bought one.');
+        $this->assertGreaterThan($cashOut * 1.1, $grown, 'A grown Apple costs well over what a cash-out pays.');
     }
 
     public function test_a_tree_is_planted_with_pineapples_and_fruits_after_two_days(): void

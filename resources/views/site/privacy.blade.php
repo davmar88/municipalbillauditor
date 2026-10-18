@@ -29,13 +29,13 @@
                     'Your name, email address and password, to run your account.',
                     'If you sign in with Google, Google tells us your name and email address, and that it has checked the email is yours. We get nothing else from your Google account, and never your Google password.',
                     "Your animal and everything it does in the game: its name, faction, items, shop, chat messages, private messages and the game's records of battles, laws and crimes.",
-                    'If you buy Apples, Paystack or PayPal takes the payment on its own page. We see the amount and whether it went through, never your card.',
-                    'If you cash Apples out, your full name, your ID or passport number, and where to send the money: a bank account or a PayPal email address. We keep these encrypted.',
+                    'If you buy Pineapples, PayPal takes the payment on its own page. We see the amount and whether it went through, never your card.',
+                    'If you cash Apples out, your full name, your ID or passport number, and the PayPal email address to send the money to. We keep these encrypted.',
                     'We do not collect your location, your phone contacts or your phone number.',
                 ]],
                 ['Why we use it', [
                     'Only to run the game, keep it fair and safe, and answer you when you contact us. We do not sell your information or use it for advertising.',
-                    'Payout details are used only to pay you, to check that the bank account is in your own name, and to stop fraud.',
+                    'Payout details are used only to pay you, to check who you are, and to stop fraud.',
                 ]],
                 ['Who sees it', [
                     'Other players see your animal, its faction, its shop and what you write in chat channels they can read. Your animal\'s profile shows players in your valley its level, Rosettes, skills, record (battles won, items sold and the like) and the items it holds, but never your Corn, Apples, Pineapples, materials or where it stands.',
@@ -43,8 +43,7 @@
                     'Our team, when we moderate items, chat or reports.',
                     'Anthropic, when a player taps Translate on a chat or private message: it receives that message and returns the translation.',
                     'Google, only if you choose to sign in with Google.',
-                    'Paystack, when you pay with it or cash out to a bank account: it asks your bank whether the account is in your name and ID number, and sends the money.',
-                    'PayPal, when you pay with it or cash out to PayPal.',
+                    'PayPal, when you buy Pineapples or cash out.',
                     'Our team, when we check a cash-out before paying it.',
                 ]],
                 ['How long we keep it', [

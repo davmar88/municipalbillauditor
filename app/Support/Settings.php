@@ -8,19 +8,18 @@ use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Support\Facades\Log;
 
 /**
- * What the owner typed in on the admin page: the payment and Claude keys,
+ * What the owner typed in on the admin page: the PayPal and Claude keys,
  * whether Pineapple packs are on sale and whether cash-outs are open. Read once
  * per request.
  */
 final class Settings
 {
     /** Keys whose values are secret: the page only ever shows their last four characters. */
-    public const SECRETS = ['paystack_secret_key', 'paypal_client_secret', 'anthropic_api_key'];
+    public const SECRETS = ['paypal_client_secret', 'anthropic_api_key'];
 
     public const KEYS = [
         'apples_on_sale',
         'cashout_open',
-        'paystack_secret_key',
         'paypal_client_id',
         'paypal_client_secret',
         'paypal_mode',

@@ -22,9 +22,6 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias(['player' => EnsurePlayer::class]);
 
-        // Paystack signs its webhooks with our secret key instead.
-        $middleware->validateCsrfTokens(except: ['webhooks/*']);
-
         $middleware->web(append: [
             HandleAppearance::class,
             HandleInertiaRequests::class,
