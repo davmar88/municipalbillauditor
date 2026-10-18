@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { act, fromNow } from '@/lib/game';
 import { cn } from '@/lib/utils';
 import { apples, rebuild } from '@/routes/play';
+import { refill } from '@/routes/play/orchard';
 
 /**
  * The strip along the top of every game screen: what you have to spend,
@@ -41,6 +42,17 @@ export function GameBar({ showNextStep = true }: { showNextStep?: boolean }) {
                         </span>
                     )}
                 </span>
+                {player.freeRefill &&
+                    player.horseshoes < player.maxHorseshoes && (
+                        <button
+                            type="button"
+                            onClick={() => act(refill.url())}
+                            className="flex items-center gap-1.5 rounded-full border border-emerald-500/50 bg-emerald-500/10 px-3 py-1.5 font-semibold hover:border-emerald-400"
+                            title="Orchard members get one free horseshoe refill a day"
+                        >
+                            <span aria-hidden>🌳</span> Free refill
+                        </button>
+                    )}
                 <span className="flex items-center gap-1.5 rounded-full border bg-card px-3 py-1.5 font-semibold">
                     <Wheat className="size-4 text-amber-300" aria-hidden />
                     {player.corn.toLocaleString('en-ZA')} Corn

@@ -36,9 +36,19 @@ type Props = {
     skills: SkillCard[];
     shop: {
         shelves: number;
+        /** Shelves in the shop: Orchard members get one more. */
+        capacity: number;
         soldToday: number;
         cornToday: number;
-        recent: { id: number; name: string; price: number; at: string }[];
+        /** What Apple sales paid today, after the game's share. */
+        applesToday: number;
+        recent: {
+            id: number;
+            name: string;
+            price: number;
+            currency: 'corn' | 'apples';
+            at: string;
+        }[];
     };
     needs: { battles: number; requests: number; gate: boolean };
 };
@@ -225,7 +235,7 @@ export default function Today({
                                     <dd className="text-2xl font-extrabold">
                                         {shop.shelves}
                                         <span className="text-sm font-normal text-muted-foreground">
-                                            /6
+                                            /{shop.capacity}
                                         </span>
                                     </dd>
                                 </div>
@@ -244,6 +254,15 @@ export default function Today({
                                     <dd className="text-2xl font-extrabold text-amber-300">
                                         {shop.cornToday.toLocaleString('en-ZA')}
                                     </dd>
+                                    {shop.applesToday > 0 && (
+                                        <dd className="text-sm font-semibold">
+                                            <span aria-hidden>🍎</span>{' '}
+                                            {shop.applesToday.toLocaleString(
+                                                'en-ZA',
+                                            )}{' '}
+                                            Apples
+                                        </dd>
+                                    )}
                                 </div>
                             </dl>
                             {shop.recent.length > 0 ? (
@@ -257,8 +276,11 @@ export default function Today({
                                                 {sale.name}
                                             </span>
                                             <span className="shrink-0 text-muted-foreground">
-                                                {sale.price} Corn ·{' '}
-                                                {clockTime(sale.at)}
+                                                {sale.price}{' '}
+                                                {sale.currency === 'apples'
+                                                    ? 'Apples'
+                                                    : 'Corn'}{' '}
+                                                · {clockTime(sale.at)}
                                             </span>
                                         </li>
                                     ))}

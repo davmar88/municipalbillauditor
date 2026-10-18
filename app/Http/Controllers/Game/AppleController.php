@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Game;
 
 use App\Game\Apples;
+use App\Game\Market;
+use App\Game\Orchard;
 use App\Http\Controllers\Controller;
 use App\Models\AppleEntry;
 use App\Models\ApplePurchase;
@@ -19,7 +21,8 @@ use Symfony\Component\HttpFoundation\Response as HttpResponse;
 
 /**
  * The Apples page: buying packs with Paystack or PayPal, coming back from
- * paying, swapping Apples for Corn, and the animal's Apple history.
+ * paying, swapping Apples for Corn, Orchard membership, and the animal's
+ * Apple history.
  */
 class AppleController extends Controller
 {
@@ -58,6 +61,13 @@ class AppleController extends Controller
                     'reason' => $entry->reason,
                     'at' => $entry->created_at?->toIso8601String(),
                 ]),
+            'orchard' => [
+                'price' => Orchard::price(),
+                'days' => Orchard::days(),
+                'until' => $player->inOrchard() ? $player->orchard_until->toIso8601String() : null,
+                'refillReady' => Orchard::refillReady($player),
+                'shelves' => Market::SHELVES + 1,
+            ],
             'contact' => config('game.contact_email'),
         ]);
     }

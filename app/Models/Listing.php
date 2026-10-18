@@ -8,19 +8,21 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
 
 /**
- * An item on a shelf in a player's shop, priced in Corn.
+ * An item on a shelf in a player's shop, priced in Corn or Apples.
  *
  * @property int $id
  * @property int $item_id
  * @property int $player_id
  * @property int $price
- * @property int $levy
+ * @property string $currency corn or apples
+ * @property int $levy The House's market levy on a Corn sale
+ * @property int $cut The Apples the game kept from an Apple sale
  * @property int|null $buyer_player_id
  * @property Carbon|null $sold_at
  * @property Item $item
  * @property Player $seller
  */
-#[Fillable(['item_id', 'player_id', 'price'])]
+#[Fillable(['item_id', 'player_id', 'price', 'currency'])]
 class Listing extends Model
 {
     protected function casts(): array

@@ -35,6 +35,8 @@ type Props = {
         held: number;
         kept: number;
         review: number;
+        /** Animals whose Orchard membership is running. */
+        members: number;
     };
     purchases: {
         id: number;
@@ -82,7 +84,7 @@ export default function AdminSettings({
                     </p>
                 </header>
 
-                <section className="grid gap-3 sm:grid-cols-3">
+                <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                     <Stat label="Money in">
                         R{(sales.zar / 100).toLocaleString('en-ZA')} · $
                         {(sales.usd / 100).toFixed(2)}
@@ -101,7 +103,14 @@ export default function AdminSettings({
                     <Stat label="Kept by the game">
                         {sales.kept.toLocaleString('en-ZA')} Apples
                         <span className="block text-xs font-normal text-muted-foreground">
-                            from bounty shares and swaps for Corn
+                            from its share of bounties and shop sales,
+                            memberships and swaps for Corn
+                        </span>
+                    </Stat>
+                    <Stat label="Orchard members">
+                        {sales.members.toLocaleString('en-ZA')}
+                        <span className="block text-xs font-normal text-muted-foreground">
+                            with a membership running now
                         </span>
                     </Stat>
                 </section>

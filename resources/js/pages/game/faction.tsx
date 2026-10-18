@@ -3,6 +3,7 @@ import { Crown, Flame, Mail, MessagesSquare, Skull } from 'lucide-react';
 import { useState } from 'react';
 import { FactionBase } from '@/components/game/faction-base';
 import { GameBar } from '@/components/game/game-bar';
+import { OrchardBadge } from '@/components/game/orchard-badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -60,6 +61,7 @@ type Props = {
                   level: number;
                   role: string | null;
                   homeClosed: boolean;
+                  orchard: boolean;
                   me: boolean;
               }[];
               requests: {
@@ -200,6 +202,7 @@ function MyFaction({
                             <span className="flex-1">
                                 <span className="font-semibold">
                                     {member.name}
+                                    <OrchardBadge member={member.orchard} />
                                 </span>{' '}
                                 <span className="text-sm text-muted-foreground">
                                     {capitalise(member.species)} · level{' '}

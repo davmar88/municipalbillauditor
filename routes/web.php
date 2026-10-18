@@ -12,6 +12,7 @@ use App\Http\Controllers\Game\MapController;
 use App\Http\Controllers\Game\MarketController;
 use App\Http\Controllers\Game\MessageController;
 use App\Http\Controllers\Game\NoticeController;
+use App\Http\Controllers\Game\OrchardController;
 use App\Http\Controllers\Game\ProfileController;
 use App\Http\Controllers\Game\RankingsController;
 use App\Http\Controllers\Game\StartController;
@@ -119,6 +120,8 @@ Route::middleware(['auth', 'verified', 'player', 'throttle:120,1'])->prefix('pla
     Route::get('apples/paypal/cancel', [AppleController::class, 'paypalCancel'])->name('play.apples.paypal-cancel');
     Route::post('apples/purchases/{purchase}/check', [AppleController::class, 'check'])->middleware('throttle:10,1,apple-check')->name('play.apples.check');
     Route::post('apples/swap', [AppleController::class, 'swap'])->name('play.apples.swap');
+    Route::post('orchard/join', [OrchardController::class, 'join'])->name('play.orchard.join');
+    Route::post('orchard/refill', [OrchardController::class, 'refill'])->name('play.orchard.refill');
 
     Route::get('me', [ProfileController::class, 'show'])->name('play.me');
     Route::put('me/language', [ProfileController::class, 'language'])->name('play.me.language');

@@ -136,8 +136,8 @@ final class Messages
             ->whereNotNull('last_message_id')
             ->with([
                 'lastMessage',
-                'playerOne:id,name,species,faction_id', 'playerOne.faction:id,name,colour',
-                'playerTwo:id,name,species,faction_id', 'playerTwo.faction:id,name,colour',
+                'playerOne:id,name,species,faction_id,orchard_until', 'playerOne.faction:id,name,colour',
+                'playerTwo:id,name,species,faction_id,orchard_until', 'playerTwo.faction:id,name,colour',
             ])
             ->orderByDesc('last_message_id')
             ->limit($limit)
@@ -234,11 +234,11 @@ final class Messages
             ->orderByRaw('name like ? desc', ["{$escaped}%"])
             ->orderBy('name')
             ->limit($limit)
-            ->get(['id', 'name', 'species', 'faction_id'])
+            ->get(['id', 'name', 'species', 'faction_id', 'orchard_until'])
             ->map(fn (Player $other) => self::card($other));
     }
 
-    /** @return array{id: int, name: string, species: string, faction: string|null, colour: string|null} */
+    /** @return array{id: int, name: string, species: string, faction: string|null, colour: string|null, orchard: bool} */
     public static function card(Player $player): array
     {
         return [
@@ -247,6 +247,7 @@ final class Messages
             'species' => $player->species->value,
             'faction' => $player->faction?->name,
             'colour' => $player->faction?->colour,
+            'orchard' => $player->inOrchard(),
         ];
     }
 

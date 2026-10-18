@@ -56,6 +56,7 @@ class SettingsController extends Controller
                 'held' => $held,
                 'kept' => max(0, $sold - $held),
                 'review' => ApplePurchase::query()->where('status', 'review')->count(),
+                'members' => Player::query()->where('orchard_until', '>', now())->count(),
             ],
             'purchases' => ApplePurchase::query()
                 ->with('player:id,name')

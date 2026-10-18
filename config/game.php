@@ -72,6 +72,18 @@ return [
         'corn_per_apple' => 10,
         // The share of a bounty the game keeps when a hunter collects it.
         'bounty_cut' => 20,
+        // The share of a shop sale in Apples the game keeps. A maker's
+        // royalty on a resale comes out of the seller's share.
+        'shop_cut' => 15,
+        'shop_min' => 5,
+        'shop_max' => 1000,
+    ],
+
+    // Orchard membership, bought with Apples: one free horseshoe refill a
+    // day, a badge by the member's name and an extra shop shelf.
+    'orchard' => [
+        'price' => 60,
+        'days' => 31,
     ],
 
     /*

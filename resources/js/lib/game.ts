@@ -79,6 +79,15 @@ export function shortWhen(iso: string, now: Date = new Date()): string {
     }).format(new Date(iso));
 }
 
+/** "18 Nov", in valley time. */
+export function dayMonth(iso: string): string {
+    return new Intl.DateTimeFormat('en-ZA', {
+        day: 'numeric',
+        month: 'short',
+        timeZone: 'Africa/Johannesburg',
+    }).format(new Date(iso));
+}
+
 export function capitalise(text: string): string {
     return text.charAt(0).toUpperCase() + text.slice(1);
 }

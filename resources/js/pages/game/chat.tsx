@@ -2,6 +2,7 @@ import { Head, Link, router, useForm, usePoll } from '@inertiajs/react';
 import { Languages, Send } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { OrchardBadge } from '@/components/game/orchard-badge';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { capitalise, clockTime, fetchTranslation } from '@/lib/game';
@@ -22,6 +23,7 @@ type Message = {
         species: string;
         faction: string | null;
         colour: string | null;
+        orchard: boolean;
     };
 };
 
@@ -143,7 +145,10 @@ export default function ChatPage({
                                         >
                                             {message.from.name}
                                         </Link>
-                                    )}{' '}
+                                    )}
+                                    <OrchardBadge
+                                        member={message.from.orchard}
+                                    />{' '}
                                     the {capitalise(message.from.species)}
                                     {message.from.faction &&
                                         ` · ${message.from.faction}`}{' '}

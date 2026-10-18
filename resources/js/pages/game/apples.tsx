@@ -1,11 +1,12 @@
-import { Head, router } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 import { Clock3, RefreshCw, Wheat } from 'lucide-react';
 import { useState } from 'react';
 import { GameBar } from '@/components/game/game-bar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { act, shortWhen } from '@/lib/game';
+import { act, dayMonth, shortWhen } from '@/lib/game';
 import { buy, check, swap } from '@/routes/play/apples';
+import { join, refill } from '@/routes/play/orchard';
 
 type Pack = {
     id: string;
@@ -40,6 +41,15 @@ type Props = {
         reason: string;
         at: string | null;
     }[];
+    orchard: {
+        price: number;
+        days: number;
+        /** When the membership ends, or null for a non-member. */
+        until: string | null;
+        refillReady: boolean;
+        /** Shelves in a member's shop. */
+        shelves: number;
+    };
     contact: string | null;
 };
 
@@ -58,7 +68,8 @@ function dollars(cents: number): string {
 
 /**
  * Apples, bought with real money: packs to buy with Paystack or PayPal,
- * swapping Apples for Corn, and where your Apples came from and went.
+ * Orchard membership, swapping Apples for Corn, and where your Apples came
+ * from and went.
  */
 export default function ApplesPage({
     packs,
@@ -67,6 +78,7 @@ export default function ApplesPage({
     cornPerApple,
     pending,
     history,
+    orchard,
     contact,
 }: Props) {
     const [buying, setBuying] = useState<string | null>(null);
@@ -94,7 +106,8 @@ export default function ApplesPage({
                         <span aria-hidden>🍎</span> Apples
                     </h1>
                     <p className="text-sm text-muted-foreground">
-                        Apples are bought with real money. Put them on the
+                        Apples are bought with real money. Spend them in shops
+                        that take Apples, join the Orchard, put them on the
                         bounty of an outlaw, give them to your faction's store,
                         or swap them for Corn. Bigger packs cost less per Apple.
                     </p>
@@ -206,6 +219,8 @@ export default function ApplesPage({
                     </section>
                 )}
 
+                <Orchard orchard={orchard} />
+
                 <Swap cornPerApple={cornPerApple} />
 
                 <section className="flex flex-col gap-2">
@@ -257,6 +272,72 @@ export default function ApplesPage({
                 </p>
             </div>
         </>
+    );
+}
+
+function Orchard({ orchard }: { orchard: Props['orchard'] }) {
+    const { player } = usePage().props;
+    const short = orchard.price - (player?.apples ?? 0);
+    const full = (player?.horseshoes ?? 0) >= (player?.maxHorseshoes ?? 0);
+
+    return (
+        <section className="flex flex-col gap-3 rounded-xl border border-emerald-500/40 bg-card p-4">
+            <h2 className="flex items-center gap-2 text-lg font-bold">
+                <span aria-hidden>🌳</span> Orchard membership
+            </h2>
+            <p className="text-sm text-muted-foreground">
+                {orchard.price} Apples for {orchard.days} days. There's no
+                monthly billing: it ends unless you renew it.
+            </p>
+            <ul className="list-disc pl-5 text-sm">
+                <li>One free horseshoe refill a day</li>
+                <li>A 🌳 badge by your name</li>
+                <li>
+                    {orchard.shelves} shelves in your shop instead of{' '}
+                    {orchard.shelves - 1}
+                </li>
+            </ul>
+            {orchard.until && (
+                <p className="text-sm font-semibold text-emerald-300">
+                    You're a member until {dayMonth(orchard.until)}.
+                </p>
+            )}
+            <div className="flex flex-wrap items-center gap-2">
+                <Button
+                    disabled={short > 0}
+                    onClick={() =>
+                        confirm(
+                            orchard.until
+                                ? `Add ${orchard.days} days to your membership for ${orchard.price} Apples?`
+                                : `Join the Orchard for ${orchard.days} days for ${orchard.price} Apples?`,
+                        ) && act(join.url())
+                    }
+                >
+                    {short > 0
+                        ? `Need ${short} more Apples`
+                        : orchard.until
+                          ? `Add ${orchard.days} days for ${orchard.price} Apples`
+                          : `Join for ${orchard.price} Apples`}
+                </Button>
+                {orchard.refillReady ? (
+                    <Button
+                        variant="secondary"
+                        disabled={full}
+                        title={full ? 'Your horseshoes are full' : undefined}
+                        onClick={() => act(refill.url())}
+                    >
+                        {full ? 'Horseshoes full' : "Take today's free refill"}
+                    </Button>
+                ) : (
+                    orchard.until && (
+                        <span className="text-sm text-muted-foreground">
+                            Today's free refill is used. The next one is ready
+                            tomorrow.
+                        </span>
+                    )
+                )}
+            </div>
+        </section>
     );
 }
 

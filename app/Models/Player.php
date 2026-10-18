@@ -25,7 +25,9 @@ use Illuminate\Support\Carbon;
  * @property int $market_skill
  * @property int $creativity_skill
  * @property int $corn
- * @property int $apples The premium currency; earned Apples stay in the game
+ * @property int $apples The premium currency, bought in packs
+ * @property Carbon|null $orchard_until When Orchard membership ends
+ * @property Carbon|null $orchard_refill_on The valley day the member last took their free refill
  * @property array<string, int> $materials
  * @property int $horseshoes
  * @property Carbon $horseshoes_at
@@ -65,6 +67,8 @@ class Player extends Model
             'muted_until' => 'datetime',
             'last_visit_on' => 'date',
             'adult_confirmed_at' => 'datetime',
+            'orchard_until' => 'datetime',
+            'orchard_refill_on' => 'date',
         ];
     }
 
@@ -139,6 +143,12 @@ class Player extends Model
     public function homeIsClosed(): bool
     {
         return $this->home_closed_until !== null && $this->home_closed_until->isFuture();
+    }
+
+    /** Whether the animal is an Orchard member, with its badge and perks. */
+    public function inOrchard(): bool
+    {
+        return $this->orchard_until !== null && $this->orchard_until->isFuture();
     }
 
     public function isMuted(): bool

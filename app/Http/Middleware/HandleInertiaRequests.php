@@ -7,6 +7,7 @@ use App\Game\Levels;
 use App\Game\Messages;
 use App\Game\Missions;
 use App\Game\Notices;
+use App\Game\Orchard;
 use App\Game\Powers;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -70,6 +71,8 @@ class HandleInertiaRequests extends Middleware
                     'nextHorseshoeIn' => Horseshoes::nextIn($player),
                     'corn' => $player->corn,
                     'apples' => (int) $player->apples,
+                    'orchard' => $player->inOrchard(),
+                    'freeRefill' => Orchard::refillReady($player),
                     'materials' => $player->materials,
                     'language' => $player->language,
                     'faction' => $player->faction ? [

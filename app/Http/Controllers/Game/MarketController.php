@@ -32,7 +32,7 @@ class MarketController extends Controller
         $ban = $season ? Wall::law($season, LawTemplate::TradeBan) : null;
 
         $listings = Listing::query()
-            ->with(['item.design', 'seller:id,name,species,faction_id,home_closed_until', 'seller.faction:id,name,colour'])
+            ->with(['item.design', 'seller:id,name,species,faction_id,home_closed_until,orchard_until', 'seller.faction:id,name,colour'])
             ->whereNull('sold_at')
             ->whereHas('seller', fn ($query) => $query->where('valley_id', $player->valley_id))
             ->latest('id')
@@ -43,6 +43,7 @@ class MarketController extends Controller
             'listings' => $listings->map(fn (Listing $listing) => [
                 'id' => $listing->id,
                 'price' => $listing->price,
+                'currency' => $listing->currency,
                 'serial' => $listing->item->serial,
                 'design' => $listing->item->design->toCard(),
                 'seller' => [
@@ -51,6 +52,7 @@ class MarketController extends Controller
                     'faction' => $listing->seller->faction?->name,
                     'colour' => $listing->seller->faction?->colour,
                     'closed' => $listing->seller->homeIsClosed(),
+                    'orchard' => $listing->seller->inOrchard(),
                 ],
                 'mine' => $listing->player_id === $player->id,
             ]),
@@ -60,7 +62,9 @@ class MarketController extends Controller
                 'id' => $item->id,
                 'serial' => $item->serial,
                 'design' => $item->design->toCard(),
-                'listing' => $item->openListing ? ['id' => $item->openListing->id, 'price' => $item->openListing->price] : null,
+                // Someone else's design: a sale pays its maker a royalty.
+                'resale' => $item->design->player_id !== $player->id,
+                'listing' => $item->openListing ? ['id' => $item->openListing->id, 'price' => $item->openListing->price, 'currency' => $item->openListing->currency] : null,
             ]),
             'designs' => $player->designs()->latest('id')->get()->map(fn (ItemDesign $design) => [
                 ...$design->toCard(),
@@ -82,10 +86,16 @@ class MarketController extends Controller
             ],
             'shop' => [
                 'level' => (int) config('game.levels.stall'),
-                'shelves' => Market::SHELVES,
+                'shelves' => Market::shelves($player),
+                'orchard' => $player->inOrchard(),
                 'used' => Listing::query()->where('player_id', $player->id)->whereNull('sold_at')->count(),
-                'minPrice' => Market::MIN_PRICE,
-                'maxPrice' => Market::MAX_PRICE,
+                'prices' => [
+                    'corn' => Market::priceRange('corn'),
+                    'apples' => Market::priceRange('apples'),
+                ],
+                // Percentages: the game's share of an Apple sale, and a maker's royalty on a resale.
+                'cut' => Market::appleCut(),
+                'royalty' => (int) round(Market::ROYALTY * 100),
             ],
         ]);
     }
@@ -124,10 +134,13 @@ class MarketController extends Controller
 
     public function list(Request $request, Item $item, Market $market): RedirectResponse
     {
-        $price = (int) $request->validate(['price' => ['required', 'integer', 'min:1']])['price'];
-        $market->list($request->user()->player, $item, $price);
+        $data = $request->validate([
+            'price' => ['required', 'integer', 'min:1'],
+            'currency' => ['sometimes', Rule::in(Market::CURRENCIES)],
+        ]);
+        $listing = $market->list($request->user()->player, $item, (int) $data['price'], $data['currency'] ?? 'corn');
 
-        return $this->told("On your shelves for {$price} Corn.");
+        return $this->told("On your shelves for {$listing->price} ".($listing->currency === 'apples' ? 'Apples.' : 'Corn.'));
     }
 
     public function unlist(Request $request, Listing $listing, Market $market): RedirectResponse
@@ -145,6 +158,11 @@ class MarketController extends Controller
     public function buy(Request $request, Listing $listing, Market $market): RedirectResponse
     {
         $result = $market->buy($request->user()->player, $listing);
+
+        if ($result['currency'] === 'apples') {
+            return $this->told("Bought for {$result['price']} Apples.");
+        }
+
         $levy = $result['levy'] > 0 ? " plus {$result['levy']} market levy to the House" : '';
 
         return $this->told("Bought for {$result['price']} Corn{$levy}.");

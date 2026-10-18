@@ -1,6 +1,7 @@
 import { Head, Link, router, usePoll } from '@inertiajs/react';
 import { PenLine, Search } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { OrchardBadge } from '@/components/game/orchard-badge';
 import { Input } from '@/components/ui/input';
 import { capitalise, shortWhen, speciesEmoji } from '@/lib/game';
 import { cn } from '@/lib/utils';
@@ -195,6 +196,7 @@ function AnimalLine({ animal }: { animal: MessageAnimal }) {
                     style={animal.colour ? { color: animal.colour } : undefined}
                 >
                     {animal.name}
+                    <OrchardBadge member={animal.orchard} />
                 </span>
                 <span className="text-xs text-muted-foreground">
                     {capitalise(animal.species)}

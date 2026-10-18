@@ -15,9 +15,10 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * The Workshop and the shops. Players design items, make numbered copies
- * from materials, and sell them from their own shop for Corn. The House's
- * market levy is paid on every sale, and a maker earns a royalty when
- * their design is resold. Real money comes in a later stage.
+ * from materials, and sell them from their own shop for Corn or Apples.
+ * The House's market levy is paid on every Corn sale, the game keeps a
+ * share of every Apple sale, and a maker earns a royalty when their design
+ * is resold.
  */
 final class Market
 {
@@ -30,6 +31,43 @@ final class Market
     public const ROYALTY = 0.05;
 
     public const APPROVED_BEFORE_TRUSTED = 3;
+
+    public const CURRENCIES = ['corn', 'apples'];
+
+    /** Shelves in an animal's shop: Orchard members get one more. */
+    public static function shelves(Player $player): int
+    {
+        return self::SHELVES + ($player->inOrchard() ? 1 : 0);
+    }
+
+    /** The share of an Apple sale the game keeps, in percent. */
+    public static function appleCut(): int
+    {
+        return (int) config('game.apples.shop_cut');
+    }
+
+    /** @return array{0: int, 1: int} The lowest and highest price, in Corn or Apples. */
+    public static function priceRange(string $currency): array
+    {
+        return $currency === 'apples'
+            ? [(int) config('game.apples.shop_min'), (int) config('game.apples.shop_max')]
+            : [self::MIN_PRICE, self::MAX_PRICE];
+    }
+
+    /**
+     * How an Apple sale splits: what the seller gets, the maker's royalty on
+     * a resale, which comes out of the seller's share, and the rest, which
+     * the game keeps. Rounding always goes the game's way.
+     *
+     * @return array{seller: int, royalty: int, cut: int}
+     */
+    public static function appleSplit(int $price, bool $resale): array
+    {
+        $royalty = $resale ? (int) floor($price * self::ROYALTY) : 0;
+        $seller = intdiv($price * (100 - self::appleCut()), 100) - $royalty;
+
+        return ['seller' => $seller, 'royalty' => $royalty, 'cut' => $price - $seller - $royalty];
+    }
 
     /**
      * @param  array<int, string>  $colours
@@ -151,9 +189,13 @@ final class Market
     /**
      * @throws GameException
      */
-    public function list(Player $player, Item $item, int $price): Listing
+    public function list(Player $player, Item $item, int $price, string $currency = 'corn'): Listing
     {
         $level = (int) config('game.levels.stall');
+
+        if (! in_array($currency, self::CURRENCIES, true)) {
+            throw new GameException('Price items in Corn or Apples.');
+        }
 
         if ($item->player_id !== $player->id || $item->used_at !== null) {
             throw new GameException("That item isn't yours to sell.");
@@ -167,19 +209,23 @@ final class Market
             throw new GameException('Your home burned down, so your shop is closed. Rebuild it or wait until it reopens.');
         }
 
-        if ($price < self::MIN_PRICE || $price > self::MAX_PRICE) {
-            throw new GameException('Price items between '.self::MIN_PRICE.' and '.number_format(self::MAX_PRICE).' Corn.');
+        [$min, $max] = self::priceRange($currency);
+
+        if ($price < $min || $price > $max) {
+            throw new GameException("Price items between {$min} and ".number_format($max).($currency === 'apples' ? ' Apples.' : ' Corn.'));
         }
 
         if ($item->openListing()->exists()) {
             throw new GameException('That item is already on your shelves.');
         }
 
-        if (Listing::query()->where('player_id', $player->id)->whereNull('sold_at')->count() >= self::SHELVES) {
-            throw new GameException('Your shop has '.self::SHELVES.' shelves and they are full.');
+        $shelves = self::shelves($player);
+
+        if (Listing::query()->where('player_id', $player->id)->whereNull('sold_at')->count() >= $shelves) {
+            throw new GameException("Your shop has {$shelves} shelves and they are full.".($player->inOrchard() ? '' : ' Orchard members get one more.'));
         }
 
-        $listing = Listing::create(['item_id' => $item->id, 'player_id' => $player->id, 'price' => $price]);
+        $listing = Listing::create(['item_id' => $item->id, 'player_id' => $player->id, 'price' => $price, 'currency' => $currency]);
         Missions::record($player, 'list');
 
         return $listing;
@@ -198,7 +244,7 @@ final class Market
     }
 
     /**
-     * @return array{price: int, levy: int}
+     * @return array{price: int, levy: int, currency: string}
      *
      * @throws GameException
      */
@@ -225,52 +271,78 @@ final class Market
             Players::ensureFree($buyer);
             $this->checkBan($season, $buyer, $seller);
 
-            $levyLaw = $season ? Wall::law($season, LawTemplate::MarketLevy) : null;
-            $house = $season?->valley->house();
-            $levy = ($levyLaw !== null && $house !== null) ? (int) floor($listing->price * $levyLaw->value / 100) : 0;
-            $total = $listing->price + $levy;
-
-            if ($buyer->corn < $total) {
-                throw new GameException("That costs {$total} Corn with the market levy. You have {$buyer->corn}.");
-            }
-
             $item = Item::query()->with('design')->findOrFail($listing->item_id);
             $maker = $item->design->player_id;
-            $royalty = $maker !== $seller->id ? (int) floor($listing->price * self::ROYALTY) : 0;
+            $resale = $maker !== $seller->id;
+            $inApples = $listing->currency === 'apples';
+            $levy = 0;
+            $cut = 0;
 
-            $buyer->decrement('corn', $total);
-            $seller->increment('corn', $listing->price - $royalty);
+            if ($inApples) {
+                // Real money: no House levy, and the game keeps its share.
+                ['seller' => $earned, 'royalty' => $royalty, 'cut' => $cut] = self::appleSplit($listing->price, $resale);
 
-            if ($royalty > 0) {
-                Player::query()->whereKey($maker)->increment('corn', $royalty);
-            }
+                if ($buyer->apples < $listing->price) {
+                    throw new GameException("That costs {$listing->price} Apples. You have {$buyer->apples}.");
+                }
 
-            if ($levy > 0) {
-                Faction::query()->whereKey($house->id)->increment('treasury', $levy);
+                Apples::spend($buyer, $listing->price, "Bought {$item->design->name} #{$item->serial}", "listing:{$listing->id}:paid");
+                Apples::award($seller, $earned, "Sold {$item->design->name} #{$item->serial}", "listing:{$listing->id}:sold");
+
+                if ($royalty > 0) {
+                    Apples::award(Player::query()->findOrFail($maker), $royalty, "Royalty on {$item->design->name} #{$item->serial}", "listing:{$listing->id}:royalty");
+                }
+            } else {
+                $levyLaw = $season ? Wall::law($season, LawTemplate::MarketLevy) : null;
+                $house = $season?->valley->house();
+                $levy = ($levyLaw !== null && $house !== null) ? (int) floor($listing->price * $levyLaw->value / 100) : 0;
+                $total = $listing->price + $levy;
+
+                if ($buyer->corn < $total) {
+                    throw new GameException("That costs {$total} Corn with the market levy. You have {$buyer->corn}.");
+                }
+
+                $royalty = $resale ? (int) floor($listing->price * self::ROYALTY) : 0;
+                $earned = $listing->price - $royalty;
+
+                $buyer->decrement('corn', $total);
+                $seller->increment('corn', $earned);
+
+                if ($royalty > 0) {
+                    Player::query()->whereKey($maker)->increment('corn', $royalty);
+                }
+
+                if ($levy > 0) {
+                    Faction::query()->whereKey($house->id)->increment('treasury', $levy);
+                }
             }
 
             $item->forceFill(['player_id' => $buyer->id])->save();
-            $listing->forceFill(['sold_at' => CarbonImmutable::now(), 'buyer_player_id' => $buyer->id, 'levy' => $levy])->save();
+            $listing->forceFill(['sold_at' => CarbonImmutable::now(), 'buyer_player_id' => $buyer->id, 'levy' => $levy, 'cut' => $cut])->save();
 
             if (Rosettes::earnedToday($seller, 'sale:') < 60) {
                 Rosettes::award($seller, 3, "Sold {$item->design->name}", "sale:{$listing->id}", $season);
             }
 
             // Selling and buying make a trader; every copy of your design that sells makes a maker.
-            Skills::award($seller->id, Skills::MARKET, self::marketPoints($listing->price), "Sold {$item->design->name}", "sold:{$listing->id}", $season);
+            // An Apple counts as the Corn it swaps for.
+            $worth = $inApples ? $listing->price * Apples::cornPerApple() : $listing->price;
+            Skills::award($seller->id, Skills::MARKET, self::marketPoints($worth), "Sold {$item->design->name}", "sold:{$listing->id}", $season);
             Skills::award($buyer->id, Skills::MARKET, 1, "Bought {$item->design->name}", "bought:{$listing->id}", $season);
-            Skills::award($maker, Skills::CREATIVITY, 2 + intdiv($listing->price, 50), "A copy of {$item->design->name} sold", "made:{$listing->id}", $season);
+            Skills::award($maker, Skills::CREATIVITY, 2 + intdiv($worth, 50), "A copy of {$item->design->name} sold", "made:{$listing->id}", $season);
             Missions::record($seller, 'sale');
             Missions::record($buyer, 'buy');
 
             $market = route('play.market', [], false);
-            Notices::send($seller->id, 'sale', "🛒 {$buyer->name} bought your {$item->design->name} #{$item->serial} for {$listing->price} Corn.", $market);
+            $money = $inApples ? 'Apples' : 'Corn';
+            $kept = $inApples ? " You got {$earned} after the game's ".self::appleCut().'%'.($royalty > 0 ? ' and the maker\'s royalty.' : '.') : '';
+            Notices::send($seller->id, 'sale', "🛒 {$buyer->name} bought your {$item->design->name} #{$item->serial} for {$listing->price} {$money}.{$kept}", $market);
 
             if ($royalty > 0) {
-                Notices::send($maker, 'sale', "Your design {$item->design->name} was resold. You earned {$royalty} Corn.", $market);
+                Notices::send($maker, 'sale', "Your design {$item->design->name} was resold. You earned {$royalty} {$money}.", $market);
             }
 
-            return ['price' => $listing->price, 'levy' => $levy];
+            return ['price' => $listing->price, 'levy' => $levy, 'currency' => $listing->currency];
         });
     }
 

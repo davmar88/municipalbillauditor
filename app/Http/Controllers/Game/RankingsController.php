@@ -46,6 +46,7 @@ class RankingsController extends Controller
             'name' => $players[$id]->name,
             'species' => $players[$id]->species->value,
             'faction' => $players[$id]->faction ? ['name' => $players[$id]->faction->name, 'colour' => $players[$id]->faction->colour] : null,
+            'orchard' => $players[$id]->inOrchard(),
             'points' => (int) $points[$id],
             'title' => $this->title($board, $players[$id]),
             'me' => $id === $player->id,

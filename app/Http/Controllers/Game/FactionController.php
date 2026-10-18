@@ -72,6 +72,7 @@ class FactionController extends Controller
                         'level' => $member->level(),
                         'role' => $member->faction_role?->value,
                         'homeClosed' => $member->homeIsClosed(),
+                        'orchard' => $member->inOrchard(),
                         'me' => $member->is($player),
                     ]),
                 'requests' => $player->decides() ? $faction->joinRequests()->with('player')->where('status', 'pending')->get()

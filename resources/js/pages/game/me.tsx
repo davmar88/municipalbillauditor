@@ -1,9 +1,11 @@
-import { Head } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
 import { Award } from 'lucide-react';
 import { GameBar } from '@/components/game/game-bar';
 import { ItemPreview } from '@/components/game/item-preview';
+import { OrchardBadge } from '@/components/game/orchard-badge';
 import { NativeSelect } from '@/components/ui/native-select';
-import { act } from '@/lib/game';
+import { act, dayMonth } from '@/lib/game';
+import { apples } from '@/routes/play';
 import { language as languageRoute } from '@/routes/play/me';
 import type { DesignCard } from '@/types';
 
@@ -24,6 +26,7 @@ type Props = {
         joined: string;
         faction: string | null;
         role_in_faction: string | null;
+        orchardUntil: string | null;
     };
     biography: string;
     rosettes: { amount: number; reason: string; at: string }[];
@@ -64,7 +67,20 @@ export default function Me({
                     </p>
                     <h1 className="text-3xl font-extrabold tracking-tight">
                         {animal.name}
+                        <OrchardBadge member={animal.orchardUntil !== null} />
                     </h1>
+                    {animal.orchardUntil && (
+                        <p className="text-sm">
+                            Orchard member until {dayMonth(animal.orchardUntil)}
+                            .{' '}
+                            <Link
+                                href={apples()}
+                                className="font-semibold text-primary"
+                            >
+                                Renew
+                            </Link>
+                        </p>
+                    )}
                     <p className="text-muted-foreground">{biography}</p>
                 </header>
 
