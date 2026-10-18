@@ -19,6 +19,7 @@ use App\Http\Controllers\Game\ProfileController;
 use App\Http\Controllers\Game\RankingsController;
 use App\Http\Controllers\Game\StartController;
 use App\Http\Controllers\Game\TodayController;
+use App\Http\Controllers\Game\TreeController;
 use App\Http\Controllers\Game\WallController;
 use App\Http\Controllers\Game\WantedController;
 use App\Http\Controllers\PageController;
@@ -124,6 +125,8 @@ Route::middleware(['auth', 'verified', 'player', 'throttle:120,1'])->prefix('pla
     Route::post('apples/purchases/{purchase}/check', [AppleController::class, 'check'])->middleware('throttle:10,1,apple-check')->name('play.apples.check');
     Route::post('apples/swap', [AppleController::class, 'swap'])->name('play.apples.swap');
     Route::post('apples/exchange', [AppleController::class, 'exchange'])->middleware('throttle:30,1,apple-exchange')->name('play.apples.exchange');
+    Route::post('trees', [TreeController::class, 'plant'])->middleware('throttle:10,1,trees')->name('play.trees.plant');
+    Route::post('trees/harvest', [TreeController::class, 'harvest'])->middleware('throttle:30,1,trees-harvest')->name('play.trees.harvest');
     Route::post('orchard/join', [OrchardController::class, 'join'])->name('play.orchard.join');
     Route::post('orchard/refill', [OrchardController::class, 'refill'])->name('play.orchard.refill');
     Route::get('cashout', [CashoutController::class, 'index'])->name('play.cashout');

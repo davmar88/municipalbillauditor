@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { act, dayMonth, dollars, rand, shortWhen } from '@/lib/game';
 import { cashout } from '@/routes/play';
 import { buy, check, exchange, swap } from '@/routes/play/apples';
+import { harvest, plant } from '@/routes/play/trees';
 import { join, refill } from '@/routes/play/orchard';
 
 /** Pineapples, bought with real money. */
@@ -19,6 +20,26 @@ type PineapplePack = {
     usd: number;
     /** Percent saved on the smallest pack's price per Pineapple. */
     save: number;
+};
+
+/** Apple trees, planted with Pineapples. */
+type TreesInfo = {
+    price: number;
+    /** The Apples a tree gives in all. */
+    apples: number;
+    perDay: number;
+    basketSize: number;
+    saplingDays: number;
+    most: number;
+    trees: {
+        id: number;
+        /** When a sapling fruits, or null once it does. */
+        fruitsAt: string | null;
+        grown: number;
+        basket: number;
+        total: number;
+        full: boolean;
+    }[];
 };
 
 /** Apples, bought with Pineapples. */
@@ -35,6 +56,7 @@ type Way = 'paystack' | 'paypal';
 type Props = {
     pineapplePacks: PineapplePack[];
     applePacks: ApplePack[];
+    trees: TreesInfo;
     onSale: boolean;
     ways: Record<Way, boolean>;
     cornPerApple: number;
@@ -73,6 +95,7 @@ type Props = {
 export default function ApplesPage({
     pineapplePacks,
     applePacks,
+    trees,
     onSale,
     ways,
     cornPerApple,
@@ -184,6 +207,8 @@ export default function ApplesPage({
                 </ul>
 
                 <ApplePacks packs={applePacks} pineapples={pineapples} />
+
+                <AppleTrees trees={trees} pineapples={pineapples} />
 
                 {pending.length > 0 && (
                     <section className="flex flex-col gap-2">
@@ -472,6 +497,93 @@ function ApplePacks({
                     </li>
                 ))}
             </ul>
+        </section>
+    );
+}
+
+/** Apple trees: plant them with Pineapples, then harvest their Apples. */
+function AppleTrees({
+    trees,
+    pineapples,
+}: {
+    trees: TreesInfo;
+    pineapples: number;
+}) {
+    const ready = trees.trees.reduce((sum, tree) => sum + tree.basket, 0);
+    const room = trees.trees.length < trees.most;
+
+    return (
+        <section className="flex flex-col gap-3 rounded-xl border bg-card p-4">
+            <div>
+                <h2 className="flex items-center gap-2 text-lg font-bold">
+                    <span aria-hidden>🌳</span> Apple trees
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                    Plant a tree for {trees.price.toLocaleString('en-ZA')}{' '}
+                    Pineapples. It fruits after {trees.saplingDays} days, then
+                    grows {trees.perDay} Apples a day until it has given{' '}
+                    {trees.apples}: the cheapest way to Apples. Its basket holds{' '}
+                    {trees.basketSize} Apples and the tree waits when it's full,
+                    so come back to harvest.
+                </p>
+            </div>
+
+            {trees.trees.length > 0 && (
+                <ul className="grid gap-2 sm:grid-cols-2">
+                    {trees.trees.map((tree) => (
+                        <li
+                            key={tree.id}
+                            className="flex flex-col gap-1.5 rounded-lg border px-3 py-2 text-sm"
+                        >
+                            <span className="flex items-center gap-2 font-semibold">
+                                <span aria-hidden>
+                                    {tree.fruitsAt ? '🌱' : '🌳'}
+                                </span>
+                                {tree.fruitsAt
+                                    ? `Fruits ${shortWhen(tree.fruitsAt)}`
+                                    : `${tree.basket} ${tree.basket === 1 ? 'Apple' : 'Apples'} in the basket`}
+                                {tree.full && (
+                                    <span className="rounded-full bg-orange-500/15 px-2 py-0.5 text-xs font-bold text-orange-300">
+                                        Full
+                                    </span>
+                                )}
+                            </span>
+                            <span className="h-1.5 overflow-hidden rounded-full bg-muted">
+                                <span
+                                    className="block h-full bg-emerald-400"
+                                    style={{
+                                        width: `${Math.round((tree.grown / tree.total) * 100)}%`,
+                                    }}
+                                />
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                                {tree.grown} of {tree.total} Apples grown
+                            </span>
+                        </li>
+                    ))}
+                </ul>
+            )}
+
+            <div className="flex flex-wrap items-center gap-2">
+                {ready > 0 && (
+                    <Button onClick={() => act(harvest.url())}>
+                        Harvest {ready} {ready === 1 ? 'Apple' : 'Apples'}
+                    </Button>
+                )}
+                <Button
+                    variant="secondary"
+                    disabled={!room || pineapples < trees.price}
+                    onClick={() => act(plant.url())}
+                >
+                    Plant a tree ({trees.price.toLocaleString('en-ZA')}{' '}
+                    Pineapples)
+                </Button>
+                <span className="text-xs text-muted-foreground">
+                    {room
+                        ? `${trees.trees.length} of ${trees.most} trees growing.`
+                        : `You have ${trees.most} trees growing.`}
+                </span>
+            </div>
         </section>
     );
 }

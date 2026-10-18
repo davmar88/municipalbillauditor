@@ -36,8 +36,8 @@ class SettingsController extends Controller
     {
         $paid = ApplePurchase::query()->where('status', 'paid');
         $sold = (int) (clone $paid)->sum('pineapples');
-        // Apples handed over for Pineapples.
-        $swapped = (int) AppleEntry::query()->where('reference', 'like', 'exchange:%')->sum('amount');
+        // Apples handed over for Pineapples, swapped or grown on trees.
+        $swapped = (int) AppleEntry::query()->where(fn ($query) => $query->where('reference', 'like', 'exchange:%')->orWhere('reference', 'like', 'tree:%'))->sum('amount');
         $held = (int) Player::query()->sum('apples') + (int) Faction::query()->sum('apples') + (int) Warrant::query()->where('status', 'open')->sum('bounty')
             + (int) Cashout::query()->whereIn('status', ['pending', 'sending'])->sum('apples');
         $cashedOut = (int) Cashout::query()->where('status', 'paid')->sum('apples');

@@ -94,6 +94,20 @@ return [
         'shop_max' => 1000,
     ],
 
+    // Apple trees, planted with Pineapples. A tree fruits after a couple of
+    // days and grows Apples until it has given them all; a full basket stops
+    // it until the animal harvests. A tree costs 900 Pineapples (R88 to R95)
+    // for 130 Apples, about 70c an Apple: less than a bought one (80c to
+    // R1), more than a cash-out pays (60c).
+    'trees' => [
+        'price' => 900,
+        'apples' => 130,
+        'per_day' => 5,
+        'basket_days' => 3,
+        'sapling_days' => 2,
+        'max' => 5,
+    ],
+
     // Orchard membership, bought with Apples: one free horseshoe refill a
     // day, a badge by the member's name and an extra shop shelf.
     'orchard' => [

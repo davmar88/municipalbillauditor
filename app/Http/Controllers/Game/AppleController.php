@@ -6,6 +6,7 @@ use App\Game\Apples;
 use App\Game\Market;
 use App\Game\Orchard;
 use App\Game\Pineapples;
+use App\Game\Trees;
 use App\Http\Controllers\Controller;
 use App\Models\AppleEntry;
 use App\Models\ApplePurchase;
@@ -37,6 +38,7 @@ class AppleController extends Controller
         return Inertia::render('game/apples', [
             'pineapplePacks' => Packs::pineapples(),
             'applePacks' => Packs::apples(),
+            'trees' => Trees::page($player),
             'onSale' => $checkout->onSale(),
             'ways' => $checkout->ways(),
             'cornPerApple' => Apples::cornPerApple(),
