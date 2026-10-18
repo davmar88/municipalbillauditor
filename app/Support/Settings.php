@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Log;
 
 /**
  * What the owner typed in on the admin page: the payment and Claude keys,
- * whether Apple packs are on sale and whether cash-outs are open. Read once
+ * whether Pineapple packs are on sale and whether cash-outs are open. Read once
  * per request.
  */
 final class Settings

@@ -6,16 +6,26 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { act, dayMonth, dollars, rand, shortWhen } from '@/lib/game';
 import { cashout } from '@/routes/play';
-import { buy, check, swap } from '@/routes/play/apples';
+import { buy, check, exchange, swap } from '@/routes/play/apples';
 import { join, refill } from '@/routes/play/orchard';
 
-type Pack = {
+/** Pineapples, bought with real money. */
+type PineapplePack = {
     id: string;
-    apples: number;
+    pineapples: number;
     /** In cents. */
     zar: number;
     /** In cents. */
     usd: number;
+    /** Percent saved on the smallest pack's price per Pineapple. */
+    save: number;
+};
+
+/** Apples, bought with Pineapples. */
+type ApplePack = {
+    id: string;
+    apples: number;
+    pineapples: number;
     /** Percent saved on the smallest pack's price per Apple. */
     save: number;
 };
@@ -23,13 +33,14 @@ type Pack = {
 type Way = 'paystack' | 'paypal';
 
 type Props = {
-    packs: Pack[];
+    pineapplePacks: PineapplePack[];
+    applePacks: ApplePack[];
     onSale: boolean;
     ways: Record<Way, boolean>;
     cornPerApple: number;
     pending: {
         id: number;
-        apples: number;
+        pineapples: number;
         price: string;
         via: Way;
         /** Paid, but not as expected: our team checks it by hand. */
@@ -55,12 +66,13 @@ type Props = {
 };
 
 /**
- * Apples, bought with real money: packs to buy with Paystack or PayPal,
- * Orchard membership, swapping Apples for Corn, and where your Apples came
+ * Pineapples bought with Paystack or PayPal and swapped for packs of
+ * Apples, Orchard membership, swapping Apples for Corn, and where your Apples came
  * from and went. Cashing out has a page of its own.
  */
 export default function ApplesPage({
-    packs,
+    pineapplePacks,
+    applePacks,
     onSale,
     ways,
     cornPerApple,
@@ -72,7 +84,10 @@ export default function ApplesPage({
     const [buying, setBuying] = useState<string | null>(null);
     const open = ways.paystack || ways.paypal;
 
-    function pay(pack: Pack, via: Way) {
+    const { player } = usePage().props;
+    const pineapples = player?.pineapples ?? 0;
+
+    function pay(pack: PineapplePack, via: Way) {
         setBuying(`${pack.id}:${via}`);
         router.post(
             buy.url(),
@@ -94,10 +109,11 @@ export default function ApplesPage({
                         <span aria-hidden>🍎</span> Apples
                     </h1>
                     <p className="text-sm text-muted-foreground">
-                        Apples are bought with real money. Spend them in shops
-                        that take Apples, join the Orchard, put them on the
-                        bounty of an outlaw, give them to your faction's store,
-                        or swap them for Corn. Bigger packs cost less per Apple.
+                        Buy Pineapples, then swap them for packs of Apples.
+                        Spend Apples in shops that take them, join the Orchard,
+                        put them on the bounty of an outlaw, give them to your
+                        faction's store, or swap them for Corn. Bigger packs
+                        cost less.
                     </p>
                 </header>
 
@@ -105,21 +121,27 @@ export default function ApplesPage({
                     <p className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">
                         {onSale
                             ? "Paying isn't open right now. Try again soon."
-                            : "Apple packs aren't on sale yet. They open soon."}
+                            : "Pineapples aren't on sale yet. They open soon."}
                     </p>
                 )}
 
+                <h2 className="-mb-3 flex items-center gap-2 text-lg font-bold">
+                    <span aria-hidden>🍍</span> Pineapples
+                    <span className="text-sm font-semibold text-muted-foreground">
+                        · you have {pineapples.toLocaleString('en-ZA')}
+                    </span>
+                </h2>
                 <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                    {packs.map((pack) => (
+                    {pineapplePacks.map((pack) => (
                         <li
                             key={pack.id}
                             className="flex flex-col gap-3 rounded-xl border bg-card p-4"
                         >
                             <p className="text-3xl font-extrabold whitespace-nowrap">
-                                <span aria-hidden>🍎</span>{' '}
-                                {pack.apples.toLocaleString('en-ZA')}
+                                <span aria-hidden>🍍</span>{' '}
+                                {pack.pineapples.toLocaleString('en-ZA')}
                                 <span className="ml-1.5 text-sm font-semibold text-muted-foreground">
-                                    Apples
+                                    Pineapples
                                 </span>
                             </p>
                             <p className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
@@ -161,6 +183,8 @@ export default function ApplesPage({
                     ))}
                 </ul>
 
+                <ApplePacks packs={applePacks} pineapples={pineapples} />
+
                 {pending.length > 0 && (
                     <section className="flex flex-col gap-2">
                         <h2 className="text-lg font-bold">
@@ -177,8 +201,10 @@ export default function ApplesPage({
                                         aria-hidden
                                     />
                                     <span>
-                                        {purchase.apples} Apples for{' '}
-                                        {purchase.price} with{' '}
+                                        {purchase.pineapples.toLocaleString(
+                                            'en-ZA',
+                                        )}{' '}
+                                        Pineapples for {purchase.price} with{' '}
                                         {purchase.via === 'paystack'
                                             ? 'Paystack'
                                             : 'PayPal'}
@@ -270,8 +296,8 @@ export default function ApplesPage({
 
                 <p className="text-xs text-muted-foreground">
                     Paystack takes payments in rand and PayPal in US dollars; we
-                    never see your card. Apples arrive as soon as the payment
-                    clears.
+                    never see your card. Pineapples arrive as soon as the
+                    payment clears.
                     {contact &&
                         ` Questions about a payment? Write to ${contact} with the date and amount.`}
                 </p>
@@ -387,6 +413,65 @@ function Swap({ cornPerApple }: { cornPerApple: number }) {
                     Swap
                 </Button>
             </div>
+        </section>
+    );
+}
+
+/** Packs of Apples, bought with Pineapples. */
+function ApplePacks({
+    packs,
+    pineapples,
+}: {
+    packs: ApplePack[];
+    pineapples: number;
+}) {
+    return (
+        <section className="flex flex-col gap-3">
+            <div>
+                <h2 className="flex items-center gap-2 text-lg font-bold">
+                    <span aria-hidden>🍎</span> Apple packs
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                    Swap your Pineapples for Apples.
+                </p>
+            </div>
+            <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {packs.map((pack) => (
+                    <li
+                        key={pack.id}
+                        className="flex flex-col gap-3 rounded-xl border bg-card p-4"
+                    >
+                        <p className="text-3xl font-extrabold whitespace-nowrap">
+                            <span aria-hidden>🍎</span>{' '}
+                            {pack.apples.toLocaleString('en-ZA')}
+                            <span className="ml-1.5 text-sm font-semibold text-muted-foreground">
+                                Apples
+                            </span>
+                        </p>
+                        <p className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                            <span aria-hidden>🍍</span>
+                            {pack.pineapples.toLocaleString('en-ZA')} Pineapples
+                            {pack.save > 0 && (
+                                <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-bold whitespace-nowrap text-emerald-300">
+                                    Save {pack.save}%
+                                </span>
+                            )}
+                        </p>
+                        <Button
+                            variant="secondary"
+                            className="mt-auto"
+                            disabled={pineapples < pack.pineapples}
+                            onClick={() =>
+                                act(exchange.url(), { pack: pack.id })
+                            }
+                        >
+                            {pineapples < pack.pineapples
+                                ? `Needs ${(pack.pineapples - pineapples).toLocaleString('en-ZA')} more Pineapples`
+                                : 'Swap for these Apples'}
+                        </Button>
+                    </li>
+                ))}
+            </ul>
         </section>
     );
 }

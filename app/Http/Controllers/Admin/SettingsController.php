@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\AppleEntry;
 use App\Models\ApplePurchase;
 use App\Models\Cashout;
 use App\Models\Faction;
@@ -34,7 +35,9 @@ class SettingsController extends Controller
     public function index(Settings $settings, Paystack $paystack, PayPal $paypal): Response
     {
         $paid = ApplePurchase::query()->where('status', 'paid');
-        $sold = (int) (clone $paid)->sum('apples');
+        $sold = (int) (clone $paid)->sum('pineapples');
+        // Apples handed over for Pineapples.
+        $swapped = (int) AppleEntry::query()->where('reference', 'like', 'exchange:%')->sum('amount');
         $held = (int) Player::query()->sum('apples') + (int) Faction::query()->sum('apples') + (int) Warrant::query()->where('status', 'open')->sum('bounty')
             + (int) Cashout::query()->whereIn('status', ['pending', 'sending'])->sum('apples');
         $cashedOut = (int) Cashout::query()->where('status', 'paid')->sum('apples');
@@ -58,9 +61,11 @@ class SettingsController extends Controller
                 'zar' => (int) (clone $paid)->where('currency', 'ZAR')->sum('amount'),
                 'usd' => (int) (clone $paid)->where('currency', 'USD')->sum('amount'),
                 'sold' => $sold,
+                'unswapped' => (int) Player::query()->sum('pineapples'),
+                'swapped' => $swapped,
                 'held' => $held,
                 'cashedOut' => $cashedOut,
-                'kept' => max(0, $sold - $held - $cashedOut),
+                'kept' => max(0, $swapped - $held - $cashedOut),
                 'review' => ApplePurchase::query()->where('status', 'review')->count(),
                 'members' => Player::query()->where('orchard_until', '>', now())->count(),
             ],
@@ -72,7 +77,7 @@ class SettingsController extends Controller
                 ->map(fn (ApplePurchase $purchase) => [
                     'id' => $purchase->id,
                     'animal' => $purchase->player?->name ?? 'A deleted account',
-                    'apples' => $purchase->apples,
+                    'pineapples' => $purchase->pineapples,
                     'price' => $purchase->price(),
                     'via' => $purchase->provider,
                     'reference' => $purchase->reference,

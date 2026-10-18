@@ -61,11 +61,22 @@ export function GameBar({ showNextStep = true }: { showNextStep?: boolean }) {
                     href={apples()}
                     prefetch
                     className="flex items-center gap-1.5 rounded-full border bg-card px-3 py-1.5 font-semibold hover:border-primary/60"
-                    title="Apples: buy packs, or swap them for Corn"
+                    title="Apples: swap Pineapples for packs, or swap Apples for Corn"
                 >
                     <span aria-hidden>🍎</span>
                     {player.apples.toLocaleString('en-ZA')} Apples
                 </Link>
+                {player.pineapples > 0 && (
+                    <Link
+                        href={apples()}
+                        prefetch
+                        className="flex items-center gap-1.5 rounded-full border bg-card px-3 py-1.5 font-semibold hover:border-primary/60"
+                        title="Pineapples: swap them for packs of Apples"
+                    >
+                        <span aria-hidden>🍍</span>
+                        {player.pineapples.toLocaleString('en-ZA')} Pineapples
+                    </Link>
+                )}
                 <span className="flex items-center gap-1.5 rounded-full border bg-card px-3 py-1.5 font-semibold">
                     <Award className="size-4 text-pink-300" aria-hidden />
                     Level {player.level}

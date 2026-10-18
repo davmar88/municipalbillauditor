@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 /**
- * Apples, the game's premium currency, bought with real money in packs.
+ * Apples, the game's premium currency, bought in packs with Pineapples.
  * Every Apple earned or spent is a ledger row with a unique reference, so
  * the balance always matches and nothing pays twice. The game never hands
  * Apples out free: they come from packs, and from other animals.

@@ -4,9 +4,11 @@ namespace Tests\Feature\Game;
 
 use App\Game\Apples;
 use App\Game\GameException;
+use App\Game\Pineapples;
 use App\Models\AppleEntry;
 use App\Models\ApplePurchase;
 use App\Models\Notice;
+use App\Models\PineappleEntry;
 use App\Payments\Packs;
 use App\Support\Settings;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -16,8 +18,9 @@ use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 /**
- * Apple packs bought with Paystack or PayPal, the webhook that confirms
- * Paystack payments, and swapping Apples for Corn.
+ * Pineapples bought with Paystack or PayPal, the webhook that confirms
+ * Paystack payments, swapping Pineapples for packs of Apples, and swapping
+ * Apples for Corn.
  */
 class ApplesTest extends TestCase
 {
@@ -94,13 +97,21 @@ class ApplesTest extends TestCase
         ]);
     }
 
-    public function test_bigger_packs_cost_less_per_apple(): void
+    public function test_bigger_packs_cost_less(): void
     {
-        $packs = collect(Packs::all())->keyBy('id');
+        $pineapples = collect(Packs::pineapples())->keyBy('id');
+        $apples = collect(Packs::apples())->keyBy('id');
 
-        $this->assertSame(0, $packs['apples-50']['save']);
-        $this->assertSame(5, $packs['apples-100']['save']);
-        $this->assertSame(20, $packs['apples-1000']['save']);
+        $this->assertSame(0, $pineapples['pineapples-450']['save']);
+        $this->assertSame(5, $pineapples['pineapples-900']['save']);
+        $this->assertSame(12, $pineapples['pineapples-8200']['save']);
+        $this->assertSame(0, $apples['apples-50']['save']);
+        $this->assertSame(9, $apples['apples-1000']['save']);
+
+        // Each money pack buys the Apple pack of the same rank.
+        foreach (array_values($apples->all()) as $rank => $pack) {
+            $this->assertGreaterThanOrEqual($pack['pineapples'], array_values($pineapples->all())[$rank]['pineapples']);
+        }
     }
 
     public function test_the_apples_page_shows_the_packs_and_says_when_they_are_not_on_sale(): void
@@ -109,7 +120,8 @@ class ApplesTest extends TestCase
 
         $this->actingAs($player->user)->get(route('play.apples'))->assertInertia(fn (Assert $page) => $page
             ->component('game/apples')
-            ->has('packs', 5)
+            ->has('pineapplePacks', 5)
+            ->has('applePacks', 5)
             ->where('onSale', false)
             ->where('ways.paystack', false)
             ->where('cornPerApple', 10));
@@ -128,26 +140,26 @@ class ApplesTest extends TestCase
         app(Settings::class)->put('paystack_secret_key', self::PAYSTACK_KEY);
 
         $this->actingAs($player->user)
-            ->post(route('play.apples.buy'), ['pack' => 'apples-100', 'via' => 'paystack'])
+            ->post(route('play.apples.buy'), ['pack' => 'pineapples-900', 'via' => 'paystack'])
             ->assertRedirect()
-            ->assertInertiaFlash('toast.message', "Apple packs aren't on sale yet.");
+            ->assertInertiaFlash('toast.message', "Pineapples aren't on sale yet.");
 
         $this->assertSame(0, ApplePurchase::count());
         Http::assertNothingSent();
     }
 
-    public function test_a_player_pays_with_paystack_and_gets_their_apples_once(): void
+    public function test_a_player_pays_with_paystack_and_gets_their_pineapples_once(): void
     {
         $this->openPaystack();
         $this->fakePaystack();
         $player = $this->player();
 
         $this->actingAs($player->user)
-            ->post(route('play.apples.buy'), ['pack' => 'apples-100', 'via' => 'paystack'])
+            ->post(route('play.apples.buy'), ['pack' => 'pineapples-900', 'via' => 'paystack'])
             ->assertRedirect('https://checkout.paystack.com/abc123');
 
         $purchase = ApplePurchase::sole();
-        $this->assertSame(['apples-100', 100, 'ZAR', 9500, 'pending'], [$purchase->pack, $purchase->apples, $purchase->currency, $purchase->amount, $purchase->status]);
+        $this->assertSame(['pineapples-900', 900, 'ZAR', 9500, 'pending'], [$purchase->pack, $purchase->pineapples, $purchase->currency, $purchase->amount, $purchase->status]);
         Http::assertSent(fn (Request $request) => $request->url() === 'https://api.paystack.co/transaction/initialize'
             && $request->hasHeader('Authorization', 'Bearer '.self::PAYSTACK_KEY)
             && $request['amount'] === 9500
@@ -158,24 +170,24 @@ class ApplesTest extends TestCase
         $this->actingAs($player->user)
             ->get(route('play.apples.paystack', ['reference' => $purchase->reference]))
             ->assertRedirect(route('play.apples'))
-            ->assertInertiaFlash('toast.message', 'Your 100 Apples arrived. Thank you!');
+            ->assertInertiaFlash('toast.message', 'Your 900 Pineapples arrived. Swap them for Apples below.');
 
         // Coming back twice, or the webhook arriving too, pays nothing more.
         $this->actingAs($player->user)->get(route('play.apples.paystack', ['reference' => $purchase->reference]));
 
-        $this->assertSame(100, $player->fresh()->apples);
+        $this->assertSame([900, 0], [$player->fresh()->pineapples, $player->fresh()->apples]);
         $this->assertSame('paid', $purchase->fresh()->status);
         $this->assertSame('4099', $purchase->fresh()->provider_id);
-        $this->assertSame(1, AppleEntry::query()->where('reference', "purchase:{$purchase->id}")->count());
-        $this->assertStringContainsString('Your 100 Apples arrived', Notice::query()->where('player_id', $player->id)->value('text'));
+        $this->assertSame(1, PineappleEntry::query()->where('reference', "purchase:{$purchase->id}")->count());
+        $this->assertStringContainsString('Your 900 Pineapples arrived', Notice::query()->where('player_id', $player->id)->value('text'));
     }
 
-    public function test_the_signed_webhook_hands_over_apples_when_the_player_never_comes_back(): void
+    public function test_the_signed_webhook_hands_over_pineapples_when_the_player_never_comes_back(): void
     {
         $this->openPaystack();
         $this->fakePaystack();
         $player = $this->player();
-        $this->actingAs($player->user)->post(route('play.apples.buy'), ['pack' => 'apples-250', 'via' => 'paystack']);
+        $this->actingAs($player->user)->post(route('play.apples.buy'), ['pack' => 'pineapples-2200', 'via' => 'paystack']);
         $purchase = ApplePurchase::sole();
 
         $payload = json_encode(['event' => 'charge.success', 'data' => [
@@ -186,7 +198,7 @@ class ApplesTest extends TestCase
             'CONTENT_TYPE' => 'application/json',
             'HTTP_X_PAYSTACK_SIGNATURE' => hash_hmac('sha512', $payload, 'sk_test_wrong'),
         ], $payload)->assertStatus(401);
-        $this->assertSame(0, $player->fresh()->apples, 'A webhook not signed with our key pays nothing.');
+        $this->assertSame(0, $player->fresh()->pineapples, 'A webhook not signed with our key pays nothing.');
 
         foreach ([1, 2] as $time) {
             $this->call('POST', route('webhooks.paystack'), [], [], [], [
@@ -195,7 +207,7 @@ class ApplesTest extends TestCase
             ], $payload)->assertOk();
         }
 
-        $this->assertSame(250, $player->fresh()->apples, 'Paystack sending it twice pays once.');
+        $this->assertSame(2200, $player->fresh()->pineapples, 'Paystack sending it twice pays once.');
         $this->assertSame('paid', $purchase->fresh()->status);
     }
 
@@ -204,13 +216,13 @@ class ApplesTest extends TestCase
         $this->openPaystack();
         $this->fakePaystack(amount: 100);
         $player = $this->player();
-        $this->actingAs($player->user)->post(route('play.apples.buy'), ['pack' => 'apples-500', 'via' => 'paystack']);
+        $this->actingAs($player->user)->post(route('play.apples.buy'), ['pack' => 'pineapples-4200', 'via' => 'paystack']);
         $purchase = ApplePurchase::sole();
 
         $this->actingAs($player->user)->get(route('play.apples.paystack', ['reference' => $purchase->reference]));
 
         $this->assertSame('review', $purchase->fresh()->status);
-        $this->assertSame(0, $player->fresh()->apples);
+        $this->assertSame(0, $player->fresh()->pineapples);
     }
 
     public function test_a_failed_paystack_payment_hands_over_nothing(): void
@@ -218,7 +230,7 @@ class ApplesTest extends TestCase
         $this->openPaystack();
         $this->fakePaystack('failed');
         $player = $this->player();
-        $this->actingAs($player->user)->post(route('play.apples.buy'), ['pack' => 'apples-50', 'via' => 'paystack']);
+        $this->actingAs($player->user)->post(route('play.apples.buy'), ['pack' => 'pineapples-450', 'via' => 'paystack']);
         $purchase = ApplePurchase::sole();
 
         $this->actingAs($player->user)
@@ -226,7 +238,7 @@ class ApplesTest extends TestCase
             ->assertInertiaFlash('toast.message', "The payment didn't go through, so nothing was charged.");
 
         $this->assertSame('failed', $purchase->fresh()->status);
-        $this->assertSame(0, $player->fresh()->apples);
+        $this->assertSame(0, $player->fresh()->pineapples);
     }
 
     public function test_another_animal_cannot_settle_your_payment(): void
@@ -234,7 +246,7 @@ class ApplesTest extends TestCase
         $this->openPaystack();
         $this->fakePaystack();
         $player = $this->player();
-        $this->actingAs($player->user)->post(route('play.apples.buy'), ['pack' => 'apples-50', 'via' => 'paystack']);
+        $this->actingAs($player->user)->post(route('play.apples.buy'), ['pack' => 'pineapples-450', 'via' => 'paystack']);
         $purchase = ApplePurchase::sole();
         $other = $this->player();
 
@@ -253,7 +265,7 @@ class ApplesTest extends TestCase
         $player = $this->player();
 
         $this->actingAs($player->user)
-            ->post(route('play.apples.buy'), ['pack' => 'apples-100', 'via' => 'paypal'])
+            ->post(route('play.apples.buy'), ['pack' => 'pineapples-900', 'via' => 'paypal'])
             ->assertRedirect('https://www.sandbox.paypal.com/checkoutnow?token=ORDER-1');
 
         $purchase = ApplePurchase::sole();
@@ -265,9 +277,9 @@ class ApplesTest extends TestCase
         $this->actingAs($player->user)
             ->get(route('play.apples.paypal', ['token' => 'ORDER-1', 'PayerID' => 'PAYER']))
             ->assertRedirect(route('play.apples'))
-            ->assertInertiaFlash('toast.message', 'Your 100 Apples arrived. Thank you!');
+            ->assertInertiaFlash('toast.message', 'Your 900 Pineapples arrived. Swap them for Apples below.');
 
-        $this->assertSame(100, $player->fresh()->apples);
+        $this->assertSame(900, $player->fresh()->pineapples);
         $this->assertSame('paid', $purchase->fresh()->status);
     }
 
@@ -276,18 +288,38 @@ class ApplesTest extends TestCase
         $this->openPayPal();
         $this->fakePayPal('PENDING');
         $player = $this->player();
-        $this->actingAs($player->user)->post(route('play.apples.buy'), ['pack' => 'apples-100', 'via' => 'paypal']);
+        $this->actingAs($player->user)->post(route('play.apples.buy'), ['pack' => 'pineapples-900', 'via' => 'paypal']);
 
         $this->actingAs($player->user)
             ->get(route('play.apples.paypal', ['token' => 'ORDER-1']))
-            ->assertInertiaFlash('toast.message', 'PayPal is still confirming the payment. Your Apples arrive as soon as it does.');
+            ->assertInertiaFlash('toast.message', 'PayPal is still confirming the payment. Your Pineapples arrive as soon as it does.');
         $this->assertSame('pending', ApplePurchase::sole()->status);
-        $this->assertSame(0, $player->fresh()->apples);
+        $this->assertSame(0, $player->fresh()->pineapples);
 
         $this->actingAs($player->user)
             ->get(route('play.apples.paypal-cancel', ['token' => 'ORDER-1']))
             ->assertInertiaFlash('toast.message', 'You left PayPal without paying. Nothing was charged.');
         $this->assertSame('failed', ApplePurchase::sole()->status);
+    }
+
+    public function test_pineapples_swap_for_packs_of_apples(): void
+    {
+        $player = $this->player();
+        Pineapples::award($player, 1000, 'Bought 1,000 Pineapples', 'purchase:test');
+
+        $this->actingAs($player->user)
+            ->post(route('play.apples.exchange'), ['pack' => 'apples-100'])
+            ->assertInertiaFlash('toast.message', 'You swapped 880 Pineapples for 100 Apples.');
+
+        $player->refresh();
+        $this->assertSame([120, 100], [$player->pineapples, $player->apples]);
+        $this->assertSame(120, (int) PineappleEntry::query()->where('player_id', $player->id)->sum('amount'));
+        $this->assertSame(100, (int) AppleEntry::query()->where('player_id', $player->id)->where('reference', 'like', 'exchange:%')->sum('amount'));
+
+        $this->actingAs($player->user)
+            ->post(route('play.apples.exchange'), ['pack' => 'apples-100'])
+            ->assertInertiaFlash('toast.message', 'You have 120 Pineapples.');
+        $this->assertSame([120, 100], [$player->fresh()->pineapples, $player->fresh()->apples]);
     }
 
     public function test_apples_swap_for_corn_one_way(): void

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Game;
 use App\Game\Apples;
 use App\Game\Market;
 use App\Game\Orchard;
+use App\Game\Pineapples;
 use App\Http\Controllers\Controller;
 use App\Models\AppleEntry;
 use App\Models\ApplePurchase;
@@ -21,9 +22,10 @@ use Inertia\Response;
 use Symfony\Component\HttpFoundation\Response as HttpResponse;
 
 /**
- * The Apples page: buying packs with Paystack or PayPal, coming back from
- * paying, swapping Apples for Corn, Orchard membership, and the animal's
- * Apple history. Cashing out has a page of its own.
+ * The Apples page: buying Pineapples with Paystack or PayPal, coming back
+ * from paying, swapping Pineapples for packs of Apples, swapping Apples for
+ * Corn, Orchard membership, and the animal's Apple history. Cashing out has
+ * a page of its own.
  */
 class AppleController extends Controller
 {
@@ -33,7 +35,8 @@ class AppleController extends Controller
         $player = $request->user()->player;
 
         return Inertia::render('game/apples', [
-            'packs' => Packs::all(),
+            'pineapplePacks' => Packs::pineapples(),
+            'applePacks' => Packs::apples(),
             'onSale' => $checkout->onSale(),
             'ways' => $checkout->ways(),
             'cornPerApple' => Apples::cornPerApple(),
@@ -45,7 +48,7 @@ class AppleController extends Controller
                 ->get()
                 ->map(fn (ApplePurchase $purchase) => [
                     'id' => $purchase->id,
-                    'apples' => $purchase->apples,
+                    'pineapples' => $purchase->pineapples,
                     'price' => $purchase->price(),
                     'via' => $purchase->provider,
                     'review' => $purchase->status === 'review',
@@ -146,6 +149,14 @@ class AppleController extends Controller
         return $this->settled($purchase, $purchase->provider === 'paystack' ? 'Paystack' : 'PayPal');
     }
 
+    /** Pineapples for a pack of Apples. */
+    public function exchange(Request $request): RedirectResponse
+    {
+        $pack = Pineapples::swap($request->user()->player, (string) $request->validate(['pack' => ['required', 'string', 'max:32']])['pack']);
+
+        return $this->told('You swapped '.number_format($pack['pineapples']).' Pineapples for '.number_format($pack['apples']).' Apples.');
+    }
+
     public function swap(Request $request): RedirectResponse
     {
         $apples = (int) $request->validate(['apples' => ['required', 'integer', 'min:1', 'max:1000000']])['apples'];
@@ -170,10 +181,10 @@ class AppleController extends Controller
     private function settled(ApplePurchase $purchase, string $provider): RedirectResponse
     {
         return match ($purchase->status) {
-            'paid' => $this->toApples("Your {$purchase->apples} Apples arrived. Thank you!"),
+            'paid' => $this->toApples('Your '.number_format($purchase->pineapples).' Pineapples arrived. Swap them for Apples below.'),
             'failed' => $this->toApples("The payment didn't go through, so nothing was charged.", 'error'),
-            'review' => $this->toApples("The payment didn't match the pack, so we're checking it by hand. Your Apples arrive once we have.", 'error'),
-            default => $this->toApples("{$provider} is still confirming the payment. Your Apples arrive as soon as it does."),
+            'review' => $this->toApples("The payment didn't match the pack, so we're checking it by hand. Your Pineapples arrive once we have.", 'error'),
+            default => $this->toApples("{$provider} is still confirming the payment. Your Pineapples arrive as soon as it does."),
         };
     }
 

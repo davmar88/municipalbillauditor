@@ -161,7 +161,9 @@ class CashoutsTest extends TestCase
     public function test_a_cash_out_always_pays_less_than_the_cheapest_apple_costs(): void
     {
         foreach (['ZAR' => 'zar', 'USD' => 'usd'] as $currency => $price) {
-            $cheapest = collect(Packs::all())->min(fn (array $pack) => $pack[$price] / $pack['apples']);
+            // The cheapest Pineapple, swapped at the cheapest Apple pack's rate.
+            $cheapest = collect(Packs::pineapples())->min(fn (array $pack) => $pack[$price] / $pack['pineapples'])
+                * collect(Packs::apples())->min(fn (array $pack) => $pack['pineapples'] / $pack['apples']);
 
             $this->assertLessThan($cheapest, config("game.cashout.per_100.{$currency}") / 100, "A cash-out in {$currency} pays less than an Apple costs.");
         }
@@ -294,7 +296,7 @@ class CashoutsTest extends TestCase
         $this->openCashouts();
         $player = $this->earner();
         $this->payoutTo($player, 'paystack');
-        Apples::award($player, 300, 'Bought 300 Apples', 'purchase:900');
+        Apples::award($player, 300, 'Swapped 2,580 Pineapples', 'exchange:900');
 
         $ask = fn (int $apples) => $this->actingAs($player->user)->post(route('play.cashout.request'), ['apples' => $apples]);
 

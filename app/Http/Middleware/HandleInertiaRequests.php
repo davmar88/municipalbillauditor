@@ -72,6 +72,7 @@ class HandleInertiaRequests extends Middleware
                     'nextHorseshoeIn' => Horseshoes::nextIn($player),
                     'corn' => $player->corn,
                     'apples' => (int) $player->apples,
+                    'pineapples' => (int) $player->pineapples,
                     'orchard' => $player->inOrchard(),
                     'freeRefill' => Orchard::refillReady($player),
                     'materials' => $player->materials,

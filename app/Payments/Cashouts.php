@@ -109,14 +109,15 @@ final class Cashouts
     }
 
     /**
-     * Apples the animal bought itself lately. They wait before they can be
-     * cashed out, in case the card payment is reversed.
+     * Apples the animal bought itself lately, by swapping Pineapples for
+     * them. They wait before they can be cashed out, in case the card
+     * payment is reversed.
      */
     public static function held(Player $player): int
     {
         $bought = (int) AppleEntry::query()
             ->where('player_id', $player->id)
-            ->where('reference', 'like', 'purchase:%')
+            ->where(fn ($query) => $query->where('reference', 'like', 'exchange:%')->orWhere('reference', 'like', 'purchase:%'))
             ->where('created_at', '>', now()->subDays(self::holdDays()))
             ->sum('amount');
 
@@ -159,7 +160,7 @@ final class Cashouts
             ->groupBy('player_id')
             ->selectRaw("player_id,
                 SUM(amount) AS total,
-                SUM(CASE WHEN reference LIKE 'purchase:%' THEN amount ELSE 0 END) AS bought,
+                SUM(CASE WHEN reference LIKE 'exchange:%' OR reference LIKE 'purchase:%' THEN amount ELSE 0 END) AS bought,
                 SUM(CASE WHEN reference LIKE 'listing:%' THEN amount ELSE 0 END) AS sales,
                 SUM(CASE WHEN reference LIKE 'bounty:%' AND reference NOT LIKE '%:back:%' THEN amount ELSE 0 END) AS bounties,
                 SUM(CASE WHEN reference LIKE '%:back%' THEN amount ELSE 0 END) AS returned")

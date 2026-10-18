@@ -2,9 +2,9 @@
 
 namespace App\Payments;
 
-use App\Game\Apples;
 use App\Game\GameException;
 use App\Game\Notices;
+use App\Game\Pineapples;
 use App\Models\ApplePurchase;
 use App\Models\Player;
 use App\Support\Settings;
@@ -13,10 +13,10 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 /**
- * Buying a pack of Apples: open a payment with Paystack (rand) or PayPal
- * (dollars), then hand the Apples over once the provider confirms the money
- * arrived, whichever way the news comes and however often. The Apples are
- * paid out once.
+ * Buying a pack of Pineapples: open a payment with Paystack (rand) or PayPal
+ * (dollars), then hand the Pineapples over once the provider confirms the
+ * money arrived, whichever way the news comes and however often. The
+ * Pineapples are paid out once, and swap for packs of Apples.
  */
 final class Checkout
 {
@@ -26,7 +26,7 @@ final class Checkout
         private readonly PayPal $paypal,
     ) {}
 
-    /** Whether the owner has opened Apple sales. */
+    /** Whether the owner has opened sales. */
     public function onSale(): bool
     {
         return $this->settings->on('apples_on_sale');
@@ -53,19 +53,19 @@ final class Checkout
     {
         if (! ($this->ways()[$via] ?? false)) {
             throw new GameException(match (true) {
-                ! $this->onSale() => "Apple packs aren't on sale yet.",
+                ! $this->onSale() => "Pineapples aren't on sale yet.",
                 $via === 'paypal' => "Paying with PayPal isn't open yet.",
                 default => "Paying with Paystack isn't open yet.",
             });
         }
 
-        $pack = Packs::find($packId) ?? throw new GameException('Pick one of the packs.');
+        $pack = Packs::findPineapples($packId) ?? throw new GameException('Pick one of the packs.');
         $rand = $via === 'paystack';
 
         $purchase = ApplePurchase::create([
             'player_id' => $player->id,
             'pack' => $pack['id'],
-            'apples' => $pack['apples'],
+            'pineapples' => $pack['pineapples'],
             'provider' => $via,
             'currency' => $rand ? 'ZAR' : 'USD',
             'amount' => $rand ? $pack['zar'] : $pack['usd'],
@@ -141,7 +141,7 @@ final class Checkout
         };
     }
 
-    /** The money arrived: hand the Apples over, once. */
+    /** The money arrived: hand the Pineapples over, once. */
     private function credit(ApplePurchase $purchase, ?string $providerId): ApplePurchase
     {
         return DB::transaction(function () use ($purchase, $providerId) {
@@ -165,8 +165,9 @@ final class Checkout
                 'provider_id' => $purchase->provider_id ?? $providerId,
             ])->save();
 
-            Apples::award($purchase->player, $purchase->apples, "Bought {$purchase->apples} Apples", "purchase:{$purchase->id}");
-            Notices::send($purchase->player_id, 'apples', "🍎 Your {$purchase->apples} Apples arrived. Thank you!", route('play.apples', [], false));
+            $pineapples = number_format($purchase->pineapples);
+            Pineapples::award($purchase->player, $purchase->pineapples, "Bought {$pineapples} Pineapples", "purchase:{$purchase->id}");
+            Notices::send($purchase->player_id, 'apples', "🍍 Your {$pineapples} Pineapples arrived. Swap them for Apples on the Apples page.", route('play.apples', [], false));
 
             return $purchase;
         });
@@ -180,14 +181,14 @@ final class Checkout
     }
 
     /**
-     * Money arrived that doesn't match the pack. Nobody gets Apples for it
+     * Money arrived that doesn't match the pack. Nobody gets Pineapples for it
      * until the owner looks.
      *
      * @param  array<string, mixed>  $payment
      */
     private function review(ApplePurchase $purchase, array $payment): ApplePurchase
     {
-        Log::error('A payment did not match its Apple pack', [
+        Log::error('A payment did not match its Pineapple pack', [
             'purchase' => $purchase->id,
             'expected' => [$purchase->amount, $purchase->currency],
             'got' => [$payment['amount'] ?? null, $payment['currency'] ?? null],

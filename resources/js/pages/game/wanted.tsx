@@ -48,8 +48,6 @@ type Props = {
         chance: number;
         dogChance: number;
         escapeMinutes: number;
-        /** The game's share of a bounty, in percent. */
-        cut: number;
     };
 };
 
@@ -86,7 +84,7 @@ export default function WantedPage({
                         {rules.horseshoes} horseshoes: it works {rules.chance}%
                         of the time, {rules.dogChance}% for dogs. A catch sends
                         them to the pound and pays you the bounty, less the
-                        game's {rules.cut}%; a miss lets them slip away for{' '}
+                        game's share; a miss lets them slip away for{' '}
                         {rules.escapeMinutes} minutes. Anyone can add Apples of
                         their own to a bounty.
                     </p>

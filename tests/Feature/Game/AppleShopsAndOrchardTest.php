@@ -86,7 +86,7 @@ class AppleShopsAndOrchardTest extends TestCase
         $this->assertSame($buyer->id, $item->fresh()->player_id);
         $this->assertSame(-100, AppleEntry::query()->where('reference', "listing:{$listing->id}:paid")->value('amount'));
         $this->assertSame(85, AppleEntry::query()->where('reference', "listing:{$listing->id}:sold")->value('amount'));
-        $this->assertStringContainsString("You got 85 after the game's 15%.", Notice::query()->where('player_id', $maker->id)->where('kind', 'sale')->latest('id')->value('text'));
+        $this->assertStringContainsString("You got 85 after the game's share.", Notice::query()->where('player_id', $maker->id)->where('kind', 'sale')->latest('id')->value('text'));
 
         // A resale pays the maker a royalty out of the seller's share.
         $resale = $this->market->list($buyer->fresh(), $item->fresh(), 200, 'apples');

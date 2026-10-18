@@ -335,7 +335,7 @@ final class Market
 
             $market = route('play.market', [], false);
             $money = $inApples ? 'Apples' : 'Corn';
-            $kept = $inApples ? " You got {$earned} after the game's ".self::appleCut().'%'.($royalty > 0 ? ' and the maker\'s royalty.' : '.') : '';
+            $kept = $inApples ? " You got {$earned} after the game's share".($royalty > 0 ? ' and the maker\'s royalty.' : '.') : '';
             Notices::send($seller->id, 'sale', "🛒 {$buyer->name} bought your {$item->design->name} #{$item->serial} for {$listing->price} {$money}.{$kept}", $market);
 
             if ($royalty > 0) {

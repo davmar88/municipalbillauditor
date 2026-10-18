@@ -33,7 +33,12 @@ type Props = {
         zar: number;
         /** In cents. */
         usd: number;
+        /** Pineapples bought. */
         sold: number;
+        /** Pineapples bought and not swapped yet. */
+        unswapped: number;
+        /** Apples handed over for Pineapples. */
+        swapped: number;
         /** Apples still with animals, factions, bounties and cash-outs waiting. */
         held: number;
         /** Apples paid out for money. */
@@ -46,7 +51,7 @@ type Props = {
     purchases: {
         id: number;
         animal: string;
-        apples: number;
+        pineapples: number;
         price: string;
         via: 'paystack' | 'paypal';
         reference: string;
@@ -63,7 +68,7 @@ const STATUS: Record<Props['purchases'][number]['status'], string> = {
 };
 
 /**
- * The owner's page: payment and Claude keys, whether Apple packs are on
+ * The owner's page: payment and Claude keys, whether Pineapple packs are on
  * sale and cash-outs open, and what the sales brought in.
  */
 export default function AdminSettings({
@@ -98,9 +103,12 @@ export default function AdminSettings({
                             {sales.count === 1 ? 'sale' : 'sales'}
                         </span>
                     </Stat>
-                    <Stat label="Apples sold">
+                    <Stat label="Pineapples sold">
                         {sales.sold.toLocaleString('en-ZA')}
                         <span className="block text-xs font-normal text-muted-foreground">
+                            {sales.unswapped.toLocaleString('en-ZA')} not
+                            swapped yet; {sales.swapped.toLocaleString('en-ZA')}{' '}
+                            Apples swapped for,{' '}
                             {sales.held.toLocaleString('en-ZA')} still in the
                             game, {sales.cashedOut.toLocaleString('en-ZA')}{' '}
                             cashed out
@@ -143,7 +151,7 @@ export default function AdminSettings({
                 >
                     {({ processing, errors }) => (
                         <>
-                            <Card title="Apple packs">
+                            <Card title="Pineapple packs">
                                 <div className="grid gap-2">
                                     <Label htmlFor="apples_on_sale">
                                         Sales
@@ -258,8 +266,8 @@ export default function AdminSettings({
                                     </div>
                                     <p className="text-xs text-muted-foreground">
                                         Paste it into Paystack's Webhook URL, so
-                                        Apples arrive even when a player closes
-                                        the page before coming back, and
+                                        Pineapples arrive even when a player
+                                        closes the page before coming back, and
                                         cash-outs settle when the bank answers.
                                     </p>
                                 </div>
@@ -370,8 +378,10 @@ export default function AdminSettings({
                                         {purchase.animal}
                                     </span>
                                     <span>
-                                        {purchase.apples} Apples ·{' '}
-                                        {purchase.price} ·{' '}
+                                        {purchase.pineapples.toLocaleString(
+                                            'en-ZA',
+                                        )}{' '}
+                                        Pineapples · {purchase.price} ·{' '}
                                         {purchase.via === 'paystack'
                                             ? 'Paystack'
                                             : 'PayPal'}

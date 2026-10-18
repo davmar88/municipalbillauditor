@@ -84,7 +84,6 @@ class WantedController extends Controller
                 'chance' => (int) round(Warrants::ARREST_CHANCE * 100),
                 'dogChance' => (int) round((Warrants::ARREST_CHANCE + Warrants::DOG_BONUS) * 100),
                 'escapeMinutes' => Warrants::ESCAPE_MINUTES,
-                'cut' => Warrants::cut(),
             ],
         ]);
     }

@@ -307,8 +307,8 @@ function MyShop({ items, shop }: Props) {
                     ? `${shop.used} of ${shop.shelves} shelves in use.`
                     : `You get a shop at level ${shop.level}.`}{' '}
                 Every sale earns you 3 Rosettes. Price in Corn, or in Apples,
-                which are bought with real money; the game keeps {shop.cut}% of
-                an Apple sale.
+                which are bought with real money; the game takes a share of an
+                Apple sale.
                 {canSell && !shop.orchard && (
                     <>
                         {' '}
@@ -472,8 +472,8 @@ function PriceTag({
             {currency === 'apples' && (
                 <p className="text-xs text-muted-foreground">
                     {asked >= min
-                        ? `You get ${money(yours, 'apples')} after the game's ${shop.cut}%${royalty > 0 ? ` and the maker's ${shop.royalty}%` : ''}.`
-                        : `Price it from ${min} to ${max.toLocaleString('en-ZA')} Apples. The game keeps ${shop.cut}%.`}
+                        ? `You get ${money(yours, 'apples')} after the game's share${royalty > 0 ? ` and the maker's ${shop.royalty}%` : ''}.`
+                        : `Price it from ${min} to ${max.toLocaleString('en-ZA')} Apples.`}
                 </p>
             )}
         </div>

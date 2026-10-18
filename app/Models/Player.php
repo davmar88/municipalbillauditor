@@ -26,6 +26,7 @@ use Illuminate\Support\Carbon;
  * @property int $market_skill
  * @property int $creativity_skill
  * @property int $corn
+ * @property int $pineapples What real money buys; they swap for packs of Apples
  * @property int $apples The premium currency, bought in packs
  * @property Carbon|null $orchard_until When Orchard membership ends
  * @property Carbon|null $orchard_refill_on The valley day the member last took their free refill

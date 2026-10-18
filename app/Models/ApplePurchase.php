@@ -8,13 +8,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
 
 /**
- * A pack of Apples an animal is buying, from the moment they pick it until
- * Paystack or PayPal says the money arrived.
+ * A pack of Pineapples an animal is buying, from the moment they pick it
+ * until Paystack or PayPal says the money arrived.
  *
  * @property int $id
  * @property int|null $player_id Null once the account is deleted
  * @property string $pack
- * @property int $apples
+ * @property int $pineapples
  * @property string $provider paystack or paypal
  * @property string $currency ZAR or USD
  * @property int $amount In cents
@@ -25,7 +25,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon $created_at
  * @property Player|null $player
  */
-#[Fillable(['player_id', 'pack', 'apples', 'provider', 'currency', 'amount', 'reference', 'provider_id', 'status', 'paid_at'])]
+#[Fillable(['player_id', 'pack', 'pineapples', 'provider', 'currency', 'amount', 'reference', 'provider_id', 'status', 'paid_at'])]
 class ApplePurchase extends Model
 {
     protected function casts(): array

@@ -69,7 +69,7 @@ final class Paystack
         try {
             $response = $this->http()->get(self::API.'/transaction/verify/'.rawurlencode($reference));
         } catch (ConnectionException) {
-            throw new PaymentException("Paystack didn't answer. Your Apples arrive as soon as it confirms the payment.");
+            throw new PaymentException("Paystack didn't answer. Your Pineapples arrive as soon as it confirms the payment.");
         }
 
         if ($response->status() === 404 || $response->status() === 400) {
@@ -81,7 +81,7 @@ final class Paystack
         if (! $response->successful() || ! is_array($data)) {
             Log::warning('Paystack verify failed', ['reference' => $reference, 'status' => $response->status(), 'message' => $response->json('message')]);
 
-            throw new PaymentException("Paystack didn't answer. Your Apples arrive as soon as it confirms the payment.");
+            throw new PaymentException("Paystack didn't answer. Your Pineapples arrive as soon as it confirms the payment.");
         }
 
         return $data;

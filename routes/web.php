@@ -123,6 +123,7 @@ Route::middleware(['auth', 'verified', 'player', 'throttle:120,1'])->prefix('pla
     Route::get('apples/paypal/cancel', [AppleController::class, 'paypalCancel'])->name('play.apples.paypal-cancel');
     Route::post('apples/purchases/{purchase}/check', [AppleController::class, 'check'])->middleware('throttle:10,1,apple-check')->name('play.apples.check');
     Route::post('apples/swap', [AppleController::class, 'swap'])->name('play.apples.swap');
+    Route::post('apples/exchange', [AppleController::class, 'exchange'])->middleware('throttle:30,1,apple-exchange')->name('play.apples.exchange');
     Route::post('orchard/join', [OrchardController::class, 'join'])->name('play.orchard.join');
     Route::post('orchard/refill', [OrchardController::class, 'refill'])->name('play.orchard.refill');
     Route::get('cashout', [CashoutController::class, 'index'])->name('play.cashout');

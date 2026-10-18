@@ -48,7 +48,7 @@ final class PayPal
                     'reference_id' => $purchase->reference,
                     'custom_id' => $purchase->reference,
                     'invoice_id' => $purchase->reference,
-                    'description' => "{$purchase->apples} Apples",
+                    'description' => number_format($purchase->pineapples).' Pineapples',
                     'amount' => ['currency_code' => $purchase->currency, 'value' => self::money($purchase->amount)],
                 ]],
                 'payment_source' => ['paypal' => ['experience_context' => [

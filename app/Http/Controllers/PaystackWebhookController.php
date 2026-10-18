@@ -11,7 +11,8 @@ use Illuminate\Http\Response;
 
 /**
  * Paystack tells us here about every payment, signed with our secret key,
- * so Apples arrive even when the player closes the page before coming back.
+ * so Pineapples arrive even when the player closes the page before coming
+ * back.
  * It tells us here too when a cash-out's transfer arrives, fails or comes
  * back. Paystack sends again until it gets a 200.
  */

@@ -49,23 +49,38 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Apples
+    | Pineapples and Apples
     |--------------------------------------------------------------------------
     |
-    | Apples are bought with real money and change hands between players. The
-    | game never hands them out free, so every Apple was paid for by someone.
-    | Prices are in cents, and bigger packs cost less per Apple. The owner
-    | puts the payment keys in and opens sales on the admin page.
+    | Real money buys Pineapples, and Pineapples swap for packs of Apples, so
+    | what an Apple costs in money takes two steps to work out. Apples change
+    | hands between players; the game never hands them out free, so every
+    | Apple was paid for by someone. Money is in cents, and bigger packs cost
+    | less. The owner puts the payment keys in and opens sales on the admin
+    | page.
     |
     */
 
-    'apples' => [
+    'pineapples' => [
+        // Each money pack buys the Apple pack of the same rank, with a few
+        // Pineapples to spare on some.
         'packs' => [
-            'apples-50' => ['apples' => 50, 'zar' => 5000, 'usd' => 300],
-            'apples-100' => ['apples' => 100, 'zar' => 9500, 'usd' => 570],
-            'apples-250' => ['apples' => 250, 'zar' => 22500, 'usd' => 1350],
-            'apples-500' => ['apples' => 500, 'zar' => 42500, 'usd' => 2550],
-            'apples-1000' => ['apples' => 1000, 'zar' => 80000, 'usd' => 4800],
+            'pineapples-450' => ['pineapples' => 450, 'zar' => 5000, 'usd' => 300],
+            'pineapples-900' => ['pineapples' => 900, 'zar' => 9500, 'usd' => 570],
+            'pineapples-2200' => ['pineapples' => 2200, 'zar' => 22500, 'usd' => 1350],
+            'pineapples-4200' => ['pineapples' => 4200, 'zar' => 42500, 'usd' => 2550],
+            'pineapples-8200' => ['pineapples' => 8200, 'zar' => 80000, 'usd' => 4800],
+        ],
+    ],
+
+    'apples' => [
+        // Bought with Pineapples.
+        'packs' => [
+            'apples-50' => ['apples' => 50, 'pineapples' => 450],
+            'apples-100' => ['apples' => 100, 'pineapples' => 880],
+            'apples-250' => ['apples' => 250, 'pineapples' => 2150],
+            'apples-500' => ['apples' => 500, 'pineapples' => 4200],
+            'apples-1000' => ['apples' => 1000, 'pineapples' => 8200],
         ],
         // One way only: Corn never turns back into Apples, or the Corn
         // everyone earns free would become money.
@@ -87,7 +102,8 @@ return [
     ],
 
     // Cashing Apples out for real money, once the owner opens it on the
-    // admin page. The cheapest Apple costs 80c (R800 for 1,000), and a
+    // admin page. The cheapest Apple costs 80c (R800 buys 8,200 Pineapples,
+    // which swap for 1,000 Apples), and a
     // cash-out pays 60c, so every cash-out leaves the game ahead.
     'cashout' => [
         // What the game pays for 100 Apples, in cents.

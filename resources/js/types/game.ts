@@ -26,8 +26,10 @@ export type PlayerSummary = {
     maxHorseshoes: number;
     nextHorseshoeIn: number | null;
     corn: number;
-    /** The premium currency, bought with real money in packs. */
+    /** The premium currency, bought with Pineapples in packs. */
     apples: number;
+    /** What real money buys; they swap for packs of Apples. */
+    pineapples: number;
     /** An Orchard member, with the badge and the extra shop shelf. */
     orchard: boolean;
     /** A member who hasn't taken today's free horseshoe refill. */
