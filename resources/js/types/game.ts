@@ -32,12 +32,33 @@ export type PlayerSummary = {
     inPoundUntil: string | null;
     homeClosedUntil: string | null;
     shieldUntil: string | null;
+    /** Powers from used items working right now. */
+    powers: { kind: string; label: string; left: string }[];
 };
+
+export type ItemShape =
+    | 'hat'
+    | 'scarf'
+    | 'sign'
+    | 'gloves'
+    | 'shoes'
+    | 'cloak'
+    | 'tonic'
+    | 'ribbon'
+    | 'banner'
+    | 'hedge'
+    | 'basket'
+    | 'bell'
+    | 'trowel'
+    | 'sheaf';
 
 export type DesignCard = {
     id: number;
-    template: 'hat' | 'scarf' | 'sign';
+    template: ItemShape;
     templateLabel: string;
+    /** What using a copy does, or null for looks. */
+    power: string | null;
+    for: 'you' | 'faction' | null;
     name: string;
     colours: string[];
     pattern: string;

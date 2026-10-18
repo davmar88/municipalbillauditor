@@ -1,5 +1,5 @@
 import { Head, Link, usePage } from '@inertiajs/react';
-import { Hammer, ShoppingBasket, Store } from 'lucide-react';
+import { Hammer, ShoppingBasket, Sparkles, Store } from 'lucide-react';
 import { useState } from 'react';
 import { GameBar } from '@/components/game/game-bar';
 import { ItemPreview } from '@/components/game/item-preview';
@@ -8,7 +8,14 @@ import { Input } from '@/components/ui/input';
 import { NativeSelect } from '@/components/ui/native-select';
 import { act, capitalise } from '@/lib/game';
 import { cn } from '@/lib/utils';
-import { buy, craft, design as designRoute, list, unlist } from '@/routes/play';
+import {
+    buy,
+    craft,
+    design as designRoute,
+    list,
+    unlist,
+    use as useItem,
+} from '@/routes/play';
 import { show as conversation } from '@/routes/play/messages';
 import type { DesignCard } from '@/types';
 
@@ -41,7 +48,11 @@ type Props = {
             value: DesignCard['template'];
             label: string;
             needs: Record<string, number>;
+            power: string | null;
+            for: DesignCard['for'];
+            creativity: number;
         }[];
+        creativity: number;
         palette: string[];
         patterns: string[];
         editions: number[];
@@ -172,6 +183,9 @@ function Browse({
                                 </Link>
                             )}
                         </p>
+                        {listing.design.power && (
+                            <PowerLine design={listing.design} />
+                        )}
                         <p className="text-sm font-semibold">
                             {listing.price} Corn
                             {levy > 0 && (
@@ -257,6 +271,23 @@ function MyShop({ items, shop }: Props) {
                                         #{item.serial}
                                     </span>
                                 </p>
+                                {item.design.power && (
+                                    <PowerLine design={item.design} />
+                                )}
+                                {item.design.power && !item.listing && (
+                                    <Button
+                                        size="sm"
+                                        variant="secondary"
+                                        className="self-start"
+                                        onClick={() =>
+                                            confirm(
+                                                `Use ${item.design.name}? ${item.design.power} It's used up.`,
+                                            ) && act(useItem.url(item.id))
+                                        }
+                                    >
+                                        <Sparkles className="size-4" /> Use it
+                                    </Button>
+                                )}
                                 {item.listing ? (
                                     <div className="flex items-center gap-2 text-sm">
                                         On sale for {item.listing.price} Corn
@@ -329,7 +360,14 @@ function Workshop({ designs, workshop }: Props) {
     ]);
     const [pattern, setPattern] = useState(workshop.patterns[0]);
     const [edition, setEdition] = useState<string>('50');
-    const needs = workshop.templates.find((t) => t.value === template)!.needs;
+    const chosen = workshop.templates.find((t) => t.value === template)!;
+    const needs = chosen.needs;
+    const locked = chosen.creativity > workshop.creativity;
+    const groups = [
+        { label: 'Looks', for: null },
+        { label: 'Powers for you', for: 'you' },
+        { label: 'Powers for your faction', for: 'faction' },
+    ] as const;
 
     return (
         <div className="flex flex-col gap-5">
@@ -357,10 +395,26 @@ function Workshop({ designs, workshop }: Props) {
                                     )
                                 }
                             >
-                                {workshop.templates.map((t) => (
-                                    <option key={t.value} value={t.value}>
-                                        {t.label}
-                                    </option>
+                                {groups.map((group) => (
+                                    <optgroup
+                                        key={group.label}
+                                        label={group.label}
+                                    >
+                                        {workshop.templates
+                                            .filter((t) => t.for === group.for)
+                                            .map((t) => (
+                                                <option
+                                                    key={t.value}
+                                                    value={t.value}
+                                                >
+                                                    {t.label}
+                                                    {t.creativity >
+                                                    workshop.creativity
+                                                        ? ` (Creativity ${t.creativity})`
+                                                        : ''}
+                                                </option>
+                                            ))}
+                                    </optgroup>
                                 ))}
                             </NativeSelect>
                         </label>
@@ -439,6 +493,26 @@ function Workshop({ designs, workshop }: Props) {
                         ))}
                     </div>
                 ))}
+                {chosen.power && (
+                    <p className="flex items-start gap-2 rounded-lg border border-primary/40 bg-primary/10 p-3 text-sm">
+                        <Sparkles
+                            className="mt-0.5 size-4 shrink-0 text-primary"
+                            aria-hidden
+                        />
+                        <span>
+                            <span className="font-semibold">
+                                {chosen.for === 'you'
+                                    ? 'For the one who uses it: '
+                                    : "For the user's faction: "}
+                            </span>
+                            {chosen.power} Each copy is used up when its owner
+                            uses it, so makers sell them, and you earn 5% each
+                            time one of your copies is resold.
+                            {locked &&
+                                ` You can design this from Creativity level ${chosen.creativity}; you're at level ${workshop.creativity}. Designing, making and selling grow it.`}
+                        </span>
+                    </p>
+                )}
                 <p className="text-sm text-muted-foreground">
                     Each copy needs{' '}
                     {Object.entries(needs)
@@ -449,6 +523,7 @@ function Workshop({ designs, workshop }: Props) {
                 </p>
                 <Button
                     className="self-start"
+                    disabled={locked}
                     onClick={() =>
                         act(designRoute.url(), {
                             template,
@@ -517,5 +592,20 @@ function Workshop({ designs, workshop }: Props) {
                 )}
             </section>
         </div>
+    );
+}
+
+/** What a powered item does, and who for. */
+function PowerLine({ design }: { design: DesignCard }) {
+    return (
+        <p className="flex items-start gap-1.5 text-xs text-primary">
+            <Sparkles className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+            <span>
+                {design.for === 'faction' && (
+                    <span className="font-semibold">For a faction: </span>
+                )}
+                {design.power}
+            </span>
+        </p>
     );
 }

@@ -6,6 +6,7 @@ use App\Game\Horseshoes;
 use App\Game\Levels;
 use App\Game\Messages;
 use App\Game\Missions;
+use App\Game\Powers;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Middleware;
@@ -78,6 +79,7 @@ class HandleInertiaRequests extends Middleware
                     'inPoundUntil' => $player->inPound() ? $player->pound_until->toIso8601String() : null,
                     'homeClosedUntil' => $player->homeIsClosed() ? $player->home_closed_until->toIso8601String() : null,
                     'shieldUntil' => $player->isShielded() ? $player->shield_until->toIso8601String() : null,
+                    'powers' => Powers::summary($player),
                 ];
             },
             // The badge on Messages. Sent with every reload, so pages that

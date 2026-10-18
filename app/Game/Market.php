@@ -58,6 +58,11 @@ final class Market
             throw new GameException('Make 10, 50 or 250 copies, or an open edition.');
         }
 
+        // Recipes with stronger powers open up as a maker's Creativity grows.
+        if (Skills::level((int) $player->creativity_skill) < $template->creativity()) {
+            throw new GameException("You can design {$template->label()} from Creativity level {$template->creativity()}. Design, make and sell to grow it.");
+        }
+
         // A new maker's first designs are checked by a person before sale.
         $trusted = $player->designs()->where('status', 'approved')->count() >= self::APPROVED_BEFORE_TRUSTED;
 
@@ -150,7 +155,7 @@ final class Market
     {
         $level = (int) config('game.levels.stall');
 
-        if ($item->player_id !== $player->id) {
+        if ($item->player_id !== $player->id || $item->used_at !== null) {
             throw new GameException("That item isn't yours to sell.");
         }
 

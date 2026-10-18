@@ -81,6 +81,7 @@ final class Crimes
                 'target_player_id' => $target?->id,
                 'settles_at' => CarbonImmutable::now()->addMinutes(30),
                 'seed' => Dice::seed(),
+                'cloaked' => Powers::cloak($locked),
             ]);
         });
     }
@@ -164,7 +165,9 @@ final class Crimes
             ->count();
 
         $watch = Wall::law($season, LawTemplate::NightWatch) !== null ? 0.25 : 0.0;
+        $chance = min(0.9, 0.3 + 0.05 * min(4, $dogs) + $watch + Powers::bell($crime->target_faction_id));
 
-        return min(0.9, 0.3 + 0.05 * min(4, $dogs) + $watch);
+        // A Night Cloak halves it.
+        return $crime->cloaked ? $chance * Powers::CLOAK : $chance;
     }
 }

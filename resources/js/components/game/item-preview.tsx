@@ -1,5 +1,8 @@
 import type { DesignCard } from '@/types';
 
+const WOOD = '#8b6b4a';
+const METAL = '#a7a2b3';
+
 /** A player's design, drawn from its shape, two colours and pattern. */
 export function ItemPreview({
     design,
@@ -14,6 +17,7 @@ export function ItemPreview({
             /[^a-z0-9-]/gi,
             '',
         );
+    const fill = `url(#${id})`;
 
     return (
         <svg
@@ -58,26 +62,34 @@ export function ItemPreview({
                     )}
                 </pattern>
             </defs>
-            {design.template === 'hat' && (
+            <Shape template={design.template} fill={fill} second={second} />
+        </svg>
+    );
+}
+
+function Shape({
+    template,
+    fill,
+    second,
+}: {
+    template: DesignCard['template'];
+    fill: string;
+    second: string;
+}) {
+    switch (template) {
+        case 'hat':
+            return (
                 <>
-                    <ellipse
-                        cx="32"
-                        cy="44"
-                        rx="26"
-                        ry="7"
-                        fill={`url(#${id})`}
-                    />
-                    <path
-                        d="M18 44c0-18 6-26 14-26s14 8 14 26z"
-                        fill={`url(#${id})`}
-                    />
+                    <ellipse cx="32" cy="44" rx="26" ry="7" fill={fill} />
+                    <path d="M18 44c0-18 6-26 14-26s14 8 14 26z" fill={fill} />
                     <rect x="18" y="36" width="28" height="5" fill={second} />
                 </>
-            )}
-            {design.template === 'scarf' && (
+            );
+        case 'scarf':
+            return (
                 <>
-                    <path d="M12 18h40v12H12z" fill={`url(#${id})`} />
-                    <path d="M38 28h12v26l-6-4-6 4z" fill={`url(#${id})`} />
+                    <path d="M12 18h40v12H12z" fill={fill} />
+                    <path d="M38 28h12v26l-6-4-6 4z" fill={fill} />
                     <path
                         d="M38 50l6-4 6 4"
                         stroke={second}
@@ -85,8 +97,9 @@ export function ItemPreview({
                         fill="none"
                     />
                 </>
-            )}
-            {design.template === 'sign' && (
+            );
+        case 'sign':
+            return (
                 <>
                     <rect
                         x="8"
@@ -94,7 +107,7 @@ export function ItemPreview({
                         width="48"
                         height="28"
                         rx="3"
-                        fill={`url(#${id})`}
+                        fill={fill}
                     />
                     <rect
                         x="8"
@@ -108,11 +121,286 @@ export function ItemPreview({
                     />
                     <path
                         d="M20 42v12M44 42v12"
-                        stroke="#8b6b4a"
+                        stroke={WOOD}
                         strokeWidth="4"
                     />
                 </>
-            )}
-        </svg>
-    );
+            );
+        case 'gloves':
+            return (
+                <>
+                    <rect
+                        x="9"
+                        y="18"
+                        width="20"
+                        height="30"
+                        rx="9"
+                        fill={fill}
+                    />
+                    <ellipse cx="9" cy="34" rx="4" ry="7" fill={fill} />
+                    <rect
+                        x="9"
+                        y="44"
+                        width="20"
+                        height="8"
+                        rx="2"
+                        fill={second}
+                    />
+                    <rect
+                        x="35"
+                        y="18"
+                        width="20"
+                        height="30"
+                        rx="9"
+                        fill={fill}
+                    />
+                    <ellipse cx="55" cy="34" rx="4" ry="7" fill={fill} />
+                    <rect
+                        x="35"
+                        y="44"
+                        width="20"
+                        height="8"
+                        rx="2"
+                        fill={second}
+                    />
+                </>
+            );
+        case 'shoes':
+            return (
+                <>
+                    <path
+                        d="M17 12v22a15 15 0 0 0 30 0V12h-9v22a6 6 0 0 1-12 0V12z"
+                        fill={fill}
+                        stroke={METAL}
+                        strokeWidth="1.5"
+                    />
+                    {[
+                        [21.5, 18],
+                        [21.5, 28],
+                        [42.5, 18],
+                        [42.5, 28],
+                    ].map(([cx, cy]) => (
+                        <circle
+                            key={`${cx}-${cy}`}
+                            cx={cx}
+                            cy={cy}
+                            r="1.8"
+                            fill={second}
+                        />
+                    ))}
+                </>
+            );
+        case 'cloak':
+            return (
+                <>
+                    <path
+                        d="M32 7c-8 0-12 6-12 12v4L9 57h46L44 23v-4c0-6-4-12-12-12z"
+                        fill={fill}
+                    />
+                    <ellipse cx="32" cy="20" rx="7" ry="8" fill="#0b0a0f" />
+                    <circle cx="32" cy="31" r="3" fill={second} />
+                </>
+            );
+        case 'tonic':
+            return (
+                <>
+                    <rect
+                        x="27"
+                        y="6"
+                        width="10"
+                        height="7"
+                        rx="1.5"
+                        fill={WOOD}
+                    />
+                    <rect
+                        x="28.5"
+                        y="13"
+                        width="7"
+                        height="9"
+                        fill={METAL}
+                        opacity="0.5"
+                    />
+                    <circle cx="32" cy="40" r="17" fill={fill} />
+                    <circle
+                        cx="32"
+                        cy="40"
+                        r="17"
+                        fill="none"
+                        stroke={METAL}
+                        strokeWidth="1.5"
+                    />
+                    <rect
+                        x="22"
+                        y="36"
+                        width="20"
+                        height="9"
+                        rx="2"
+                        fill={second}
+                    />
+                </>
+            );
+        case 'ribbon':
+            return (
+                <>
+                    <path
+                        d="M24 32l-6 26 9-5 4 8 3-29zM40 32l6 26-9-5-4 8-3-29z"
+                        fill={second}
+                    />
+                    <circle cx="32" cy="24" r="16" fill={fill} />
+                    <circle cx="32" cy="24" r="8" fill={second} />
+                    <circle
+                        cx="32"
+                        cy="24"
+                        r="16"
+                        fill="none"
+                        stroke={second}
+                        strokeWidth="2"
+                        strokeDasharray="3 2"
+                    />
+                </>
+            );
+        case 'banner':
+            return (
+                <>
+                    <path
+                        d="M15 6v54"
+                        stroke={WOOD}
+                        strokeWidth="4"
+                        strokeLinecap="round"
+                    />
+                    <path d="M17 9h36l-8 11 8 11H17z" fill={fill} />
+                    <circle cx="31" cy="20" r="5" fill={second} />
+                </>
+            );
+        case 'hedge':
+            return (
+                <>
+                    {[
+                        [18, 40, 12],
+                        [32, 34, 14],
+                        [46, 40, 12],
+                        [25, 46, 10],
+                        [40, 47, 10],
+                    ].map(([cx, cy, r]) => (
+                        <circle
+                            key={`${cx}-${cy}`}
+                            cx={cx}
+                            cy={cy}
+                            r={r}
+                            fill={fill}
+                        />
+                    ))}
+                    <path
+                        d="M12 30l-3-4M24 22l-2-5M40 22l2-5M52 30l3-4M32 18v-5M8 44H3M56 44h5"
+                        stroke={second}
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                    />
+                </>
+            );
+        case 'basket':
+            return (
+                <>
+                    <path
+                        d="M14 30c0-14 36-14 36 0"
+                        fill="none"
+                        stroke={WOOD}
+                        strokeWidth="3.5"
+                    />
+                    <circle cx="25" cy="30" r="6" fill={second} />
+                    <circle cx="37" cy="29" r="6" fill={second} />
+                    <circle
+                        cx="31"
+                        cy="25"
+                        r="5"
+                        fill={second}
+                        opacity="0.85"
+                    />
+                    <path d="M8 32h48l-6 24H14z" fill={fill} />
+                    <path
+                        d="M12 40h40M14 48h36"
+                        stroke="#0b0a0f"
+                        strokeWidth="1.5"
+                        opacity="0.35"
+                    />
+                </>
+            );
+        case 'bell':
+            return (
+                <>
+                    <path d="M28 10a4 4 0 0 1 8 0v4h-8z" fill={METAL} />
+                    <path d="M16 46c0-18 6-32 16-32s16 14 16 32z" fill={fill} />
+                    <rect
+                        x="12"
+                        y="44"
+                        width="40"
+                        height="6"
+                        rx="3"
+                        fill={fill}
+                        stroke={second}
+                        strokeWidth="1.5"
+                    />
+                    <circle cx="32" cy="54" r="4.5" fill={second} />
+                </>
+            );
+        case 'trowel':
+            return (
+                <>
+                    <path
+                        d="M14 50L36 20l10 10-30 22z"
+                        fill={fill}
+                        stroke={METAL}
+                        strokeWidth="1.5"
+                    />
+                    <rect
+                        x="40"
+                        y="13"
+                        width="7"
+                        height="10"
+                        rx="1.5"
+                        transform="rotate(45 43.5 18)"
+                        fill={second}
+                    />
+                    <path
+                        d="M45 16l9-9"
+                        stroke={WOOD}
+                        strokeWidth="6"
+                        strokeLinecap="round"
+                    />
+                </>
+            );
+        case 'sheaf':
+            return (
+                <>
+                    {[-12, -6, 0, 6, 12].map((dx) => (
+                        <path
+                            key={dx}
+                            d={`M32 56L${32 + dx} 20`}
+                            stroke={fill}
+                            strokeWidth="3"
+                            strokeLinecap="round"
+                        />
+                    ))}
+                    {[-14, -7, 0, 7, 14].map((dx) => (
+                        <ellipse
+                            key={dx}
+                            cx={32 + dx}
+                            cy={16}
+                            rx="4"
+                            ry="8"
+                            fill={fill}
+                            transform={`rotate(${dx} ${32 + dx} 16)`}
+                        />
+                    ))}
+                    <rect
+                        x="22"
+                        y="38"
+                        width="20"
+                        height="5"
+                        rx="2"
+                        fill={second}
+                    />
+                </>
+            );
+    }
 }

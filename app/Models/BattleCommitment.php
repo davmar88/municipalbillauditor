@@ -14,12 +14,18 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int $player_id
  * @property string $side
  * @property int $horseshoes
+ * @property float $boost How much more they count, from Iron Shoes.
  * @property Player $player
  */
-#[Fillable(['attack_id', 'player_id', 'side', 'horseshoes'])]
+#[Fillable(['attack_id', 'player_id', 'side', 'horseshoes', 'boost'])]
 class BattleCommitment extends Model
 {
     public const UPDATED_AT = null;
+
+    protected function casts(): array
+    {
+        return ['boost' => 'float'];
+    }
 
     /** @return BelongsTo<Player, $this> */
     public function player(): BelongsTo

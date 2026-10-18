@@ -72,7 +72,7 @@ final class Battles
                 'seed' => Dice::seed(),
             ]);
 
-            BattleCommitment::create(['attack_id' => $attack->id, 'player_id' => $locked->id, 'side' => 'attack', 'horseshoes' => $horseshoes]);
+            BattleCommitment::create(['attack_id' => $attack->id, 'player_id' => $locked->id, 'side' => 'attack', 'horseshoes' => $horseshoes, 'boost' => Powers::commitment($locked)]);
             Missions::record($locked, 'battle');
 
             return $attack;
@@ -108,7 +108,7 @@ final class Battles
             Players::ensureFree($locked);
             Horseshoes::spend($locked, $horseshoes);
 
-            $commitment = BattleCommitment::create(['attack_id' => $attack->id, 'player_id' => $locked->id, 'side' => $side, 'horseshoes' => $horseshoes]);
+            $commitment = BattleCommitment::create(['attack_id' => $attack->id, 'player_id' => $locked->id, 'side' => $side, 'horseshoes' => $horseshoes, 'boost' => Powers::commitment($locked)]);
             Missions::record($locked, 'battle');
 
             return $commitment;
@@ -154,15 +154,19 @@ final class Battles
 
             $attackStrength = $commitments->where('side', 'attack')
                 ->filter(fn (BattleCommitment $c) => $c->player->faction_id === $attack->faction_id)
-                ->sum(fn (BattleCommitment $c) => $c->horseshoes * $c->player->species->attack()) * $underdog * $pigLed;
+                ->sum(fn (BattleCommitment $c) => $c->horseshoes * $c->boost * $c->player->species->attack()) * $underdog * $pigLed;
 
             $defenceStrength = $region->faction_id === null ? 0.0 : $commitments->where('side', 'defence')
                 ->filter(fn (BattleCommitment $c) => $c->player->faction_id === $region->faction_id)
-                ->sum(fn (BattleCommitment $c) => $c->horseshoes * $c->player->species->defence()) * $region->ground() * 1.2;
+                ->sum(fn (BattleCommitment $c) => $c->horseshoes * $c->boost * $c->player->species->defence()) * $region->ground() * 1.2;
 
             // A Den or Watchtower makes its region harder to take; a Drill Yard next door hits harder.
             $defenceStrength *= Bases::defence($region);
             $attackStrength *= Bases::attack($attack->faction_id, $region);
+
+            // A War Banner and a Thorn Hedge, from the Workshop's recipes.
+            $attackStrength *= Powers::attack($attack->faction_id);
+            $defenceStrength *= Powers::defence($region);
 
             $attackStrength *= Dice::roll($attack->seed, 'attack', 0.9, 1.1);
             $defenceStrength *= Dice::roll($attack->seed, 'defence', 0.9, 1.1);

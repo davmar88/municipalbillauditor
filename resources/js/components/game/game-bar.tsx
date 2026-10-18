@@ -1,5 +1,5 @@
 import { usePage } from '@inertiajs/react';
-import { Award, Backpack, Clock3, Flame, Wheat } from 'lucide-react';
+import { Award, Backpack, Clock3, Flame, Sparkles, Wheat } from 'lucide-react';
 import { NextStep } from '@/components/game/next-step';
 import { Button } from '@/components/ui/button';
 import { act, fromNow } from '@/lib/game';
@@ -76,6 +76,22 @@ export function GameBar({ showNextStep = true }: { showNextStep?: boolean }) {
                         </span>
                     )}
                 </span>
+                {(player.powers ?? []).map((power) => (
+                    <span
+                        key={power.kind}
+                        className="flex items-center gap-1.5 rounded-full border border-primary/40 bg-primary/10 px-3 py-1.5"
+                        title={`${power.label} is working`}
+                    >
+                        <Sparkles
+                            className="size-4 shrink-0 text-primary"
+                            aria-hidden
+                        />
+                        <span className="font-semibold">{power.label}</span>
+                        <span className="text-muted-foreground">
+                            · {power.left}
+                        </span>
+                    </span>
+                ))}
             </div>
             {(player.inPoundUntil || player.homeClosedUntil) && (
                 <p

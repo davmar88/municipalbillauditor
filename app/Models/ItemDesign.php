@@ -65,6 +65,8 @@ class ItemDesign extends Model
             'id' => $this->id,
             'template' => $this->template->value,
             'templateLabel' => $this->template->label(),
+            'power' => $this->template->power(),
+            'for' => $this->template->for(),
             'name' => $this->name,
             'colours' => $this->colours,
             'pattern' => $this->pattern,

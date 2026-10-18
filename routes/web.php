@@ -86,6 +86,7 @@ Route::middleware(['auth', 'verified', 'player', 'throttle:120,1'])->prefix('pla
     Route::post('designs', [MarketController::class, 'design'])->name('play.design');
     Route::post('designs/{design}/craft', [MarketController::class, 'craft'])->name('play.craft');
     Route::post('items/{item}/list', [MarketController::class, 'list'])->name('play.list');
+    Route::post('items/{item}/use', [MarketController::class, 'use'])->name('play.use');
     Route::delete('listings/{listing}', [MarketController::class, 'unlist'])->name('play.unlist');
     Route::post('listings/{listing}/buy', [MarketController::class, 'buy'])->name('play.buy');
 

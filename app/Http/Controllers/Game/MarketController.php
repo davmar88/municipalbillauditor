@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Game;
 use App\Enums\ItemTemplate;
 use App\Game\LawTemplate;
 use App\Game\Market;
+use App\Game\Powers;
+use App\Game\Skills;
 use App\Game\Wall;
 use App\Http\Controllers\Controller;
 use App\Models\Item;
@@ -69,7 +71,11 @@ class MarketController extends Controller
                     'value' => $template->value,
                     'label' => $template->label(),
                     'needs' => $market->materials($player, $template),
+                    'power' => $template->power(),
+                    'for' => $template->for(),
+                    'creativity' => $template->creativity(),
                 ], ItemTemplate::cases()),
+                'creativity' => Skills::level((int) $player->creativity_skill),
                 'palette' => ItemDesign::PALETTE,
                 'patterns' => ItemDesign::PATTERNS,
                 'editions' => ItemDesign::EDITIONS,
@@ -129,6 +135,11 @@ class MarketController extends Controller
         $market->unlist($request->user()->player, $listing);
 
         return $this->told('Taken off your shelves.');
+    }
+
+    public function use(Request $request, Item $item, Powers $powers): RedirectResponse
+    {
+        return $this->told($powers->use($request->user()->player, $item));
     }
 
     public function buy(Request $request, Listing $listing, Market $market): RedirectResponse

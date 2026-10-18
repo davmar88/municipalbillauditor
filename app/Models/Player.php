@@ -97,10 +97,10 @@ class Player extends Model
         return $this->belongsTo(Faction::class);
     }
 
-    /** @return HasMany<Item, $this> */
+    /** @return HasMany<Item, $this> The items the animal still has: used ones are gone. */
     public function items(): HasMany
     {
-        return $this->hasMany(Item::class);
+        return $this->hasMany(Item::class)->whereNull('used_at');
     }
 
     /** @return HasMany<ItemDesign, $this> */

@@ -27,7 +27,7 @@ use Illuminate\Support\Carbon;
  * @property Faction|null $targetFaction
  * @property Player|null $targetPlayer
  */
-#[Fillable(['season_id', 'player_id', 'kind', 'target_faction_id', 'target_player_id', 'settles_at', 'seed'])]
+#[Fillable(['season_id', 'player_id', 'kind', 'target_faction_id', 'target_player_id', 'settles_at', 'seed', 'cloaked'])]
 class Crime extends Model
 {
     protected function casts(): array
@@ -37,6 +37,7 @@ class Crime extends Model
             'settles_at' => 'datetime',
             'resolved_at' => 'datetime',
             'caught' => 'boolean',
+            'cloaked' => 'boolean',
         ];
     }
 

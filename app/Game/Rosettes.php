@@ -20,6 +20,11 @@ final class Rosettes
             return false;
         }
 
+        // A Prize Ribbon doubles what an animal earns while it's pinned on.
+        if ($amount > 0) {
+            $amount *= Powers::rosettes($player->id);
+        }
+
         return DB::transaction(function () use ($player, $amount, $reason, $reference, $season) {
             if (RosetteEntry::query()->where('reference', $reference)->exists()) {
                 return false;
