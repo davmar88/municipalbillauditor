@@ -67,6 +67,7 @@ final class Bases
 
             $player->save();
             $faction->save();
+            Missions::record($player, 'give', $amount);
         });
     }
 

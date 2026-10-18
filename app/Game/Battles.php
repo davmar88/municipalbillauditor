@@ -73,6 +73,7 @@ final class Battles
             ]);
 
             BattleCommitment::create(['attack_id' => $attack->id, 'player_id' => $locked->id, 'side' => 'attack', 'horseshoes' => $horseshoes]);
+            Missions::record($locked, 'battle');
 
             return $attack;
         });
@@ -107,7 +108,10 @@ final class Battles
             Players::ensureFree($locked);
             Horseshoes::spend($locked, $horseshoes);
 
-            return BattleCommitment::create(['attack_id' => $attack->id, 'player_id' => $locked->id, 'side' => $side, 'horseshoes' => $horseshoes]);
+            $commitment = BattleCommitment::create(['attack_id' => $attack->id, 'player_id' => $locked->id, 'side' => $side, 'horseshoes' => $horseshoes]);
+            Missions::record($locked, 'battle');
+
+            return $commitment;
         });
     }
 
