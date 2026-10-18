@@ -72,6 +72,7 @@ final class Farms
             ->where('ring', 'farm')
             ->whereNotNull('faction_id')
             ->get()
-            ->each(fn (Region $farm) => Faction::query()->whereKey($farm->faction_id)->increment('treasury', self::INCOME));
+            // An Iron Plough doubles what a faction's farms pay.
+            ->each(fn (Region $farm) => Faction::query()->whereKey($farm->faction_id)->increment('treasury', self::INCOME * Powers::plough($farm->faction_id)));
     }
 }

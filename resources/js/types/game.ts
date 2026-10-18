@@ -50,7 +50,13 @@ export type ItemShape =
     | 'basket'
     | 'bell'
     | 'trowel'
-    | 'sheaf';
+    | 'sheaf'
+    | 'cake'
+    | 'pickaxe'
+    | 'lock'
+    | 'kit'
+    | 'gate'
+    | 'plough';
 
 export type DesignCard = {
     id: number;
@@ -133,6 +139,8 @@ export type MapRegion = {
     row: number;
     faction: FactionRef | null;
     settledUntil: string | null;
+    /** When an Iron Gate keeping raiders out comes down. */
+    gatedUntil: string | null;
     neighbours: number[];
     incoming: {
         id: number;

@@ -1414,9 +1414,72 @@ function farmland(key: string) {
                     stroke={INK.waterEdge}
                     strokeOpacity={0.5}
                 />
+                <Crop farm={key} centre={[cx, cy]} />
             </>
         );
     };
+}
+
+/** What makes each farm worth having: hives, herb beds or an old forge's ore. */
+function Crop({ farm, centre: [cx, cy] }: { farm: string; centre: Point }) {
+    if (farm === 'thornbury') {
+        const hives = Array.from({ length: 8 }, (_, i) => ({
+            x: cx + 40 + (i % 4) * 22,
+            y: cy - 40 + Math.floor(i / 4) * 22,
+            r: 6,
+        }));
+
+        return (
+            <>
+                <path
+                    d={discs(
+                        hives.map((h) => ({ ...h, x: h.x + 1.5, y: h.y + 2 })),
+                    )}
+                    fill={INK.shadow}
+                    opacity={0.6}
+                />
+                <path d={discs(hives)} fill="#e3b341" />
+                <path
+                    d={discs(hives.map((h) => ({ ...h, r: 2.5 })))}
+                    fill="#6b4f12"
+                />
+            </>
+        );
+    }
+
+    if (farm === 'brookside') {
+        return (
+            <path
+                d={Array.from(
+                    { length: 6 },
+                    (_, i) => `M${cx + 30} ${cy - 70 + i * 14}h90`,
+                ).join('')}
+                stroke="#3fae7a"
+                strokeWidth={6}
+                strokeLinecap="round"
+                opacity={0.85}
+            />
+        );
+    }
+
+    const ore = Array.from(
+        { length: 6 },
+        (_, i) =>
+            [cx + 50 + (i % 3) * 26, cy - 34 + Math.floor(i / 3) * 24] as Point,
+    );
+
+    return (
+        <path
+            d={ore
+                .map((point, i) =>
+                    smoothLoop(blob(point, 9, 6, `ore:${i}`, 0.3, 7)),
+                )
+                .join('')}
+            fill="#6c6f7d"
+            stroke="#9aa0b4"
+            strokeWidth={0.8}
+        />
+    );
 }
 
 function farmstead(key: string) {

@@ -7,7 +7,7 @@ The design, and the decisions behind it, are in the game design document: https:
 ## What is in the test season
 
 - **The valley:** Hollowmere, 16 regions on a 5 by 3 grid with the Paddock for newcomers (`app/Game/ValleyBuilder.php`), drawn as a street map you drag and zoom, with fields, woods, Hollow Brook, buildings and named lanes (`resources/js/components/game/world-map.tsx`, shapes in `resources/js/lib/hollowmere.ts`).
-- **Farms beyond the fences:** Thornbury, Brookside and Willowby Farms border Hollowmere. A faction's leader or council buys an unclaimed farm for 300 Corn from the treasury, or it is raided away like any land; each pays its holder 5 Corn every half hour (`app/Game/Farms.php`).
+- **Farms beyond the fences:** Thornbury, Brookside and Willowby Farms border Hollowmere. A faction's leader or council buys an unclaimed farm for 300 Corn from the treasury, or it is raided away like any land; each pays its holder 5 Corn every half hour and grows what Hollowmere doesn't: honey at Thornbury, herbs at Brookside, iron at Willowby. Anyone gathers it while a farm is unclaimed, only its holders after. Six recipes need these: Honey Cake, Iron Pickaxe, Iron Lock, Healer's Kit, Iron Gate and Iron Plough (`app/Game/Farms.php`).
 - **Walking:** every animal stands in one region and walks to a neighbour for free, one region at a time; gathering and raids cost horseshoes. You gather where you stand, and raids start from a region next to the target (`app/Game/Movement.php`).
 - **Animals:** pig, dog, horse, sheep and goat, each with a talent and a weak spot (`app/Enums/Species.php`).
 - **Horseshoes:** up to 10, one back every 45 minutes; every action costs some.

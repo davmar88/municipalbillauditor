@@ -9,6 +9,7 @@ use App\Game\Farms;
 use App\Game\GateNight;
 use App\Game\Gathering;
 use App\Game\Movement;
+use App\Game\Powers;
 use App\Game\Wall;
 use App\Http\Controllers\Controller;
 use App\Models\Attack;
@@ -66,6 +67,7 @@ class MapController extends Controller
                 'row' => $region->row,
                 'faction' => $region->faction ? ['id' => $region->faction->id, 'name' => $region->faction->name, 'colour' => $region->faction->colour] : null,
                 'settledUntil' => $region->settled_until?->isFuture() ? $region->settled_until->toIso8601String() : null,
+                'gatedUntil' => Powers::gatedUntil($region)?->toIso8601String(),
                 'neighbours' => $region->neighbours->pluck('id'),
                 'incoming' => $open->where('region_id', $region->id)->values()->map(fn (Attack $attack) => [
                     'id' => $attack->id,

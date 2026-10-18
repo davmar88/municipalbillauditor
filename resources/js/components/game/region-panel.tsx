@@ -363,6 +363,17 @@ export function RegionPanel({
                                 ? `${region.faction.name} owns this farm`
                                 : 'This farm is for sale'}
                         </p>
+                        <p>
+                            It grows{' '}
+                            <span className="font-semibold">
+                                {region.produces}
+                            </span>
+                            , which nowhere in Hollowmere does, for new recipes
+                            in the Workshop.{' '}
+                            {region.faction
+                                ? `Only ${region.faction.name} can gather it now.`
+                                : 'Anyone can gather it until a faction claims the farm.'}
+                        </p>
                         <p className="text-muted-foreground">
                             It pays {farms.income} Corn into its holder's
                             treasury every half hour.{' '}
@@ -401,7 +412,12 @@ export function RegionPanel({
                             />{' '}
                             Raid {region.name}
                         </p>
-                        {region.settledUntil ? (
+                        {region.gatedUntil ? (
+                            <p className="text-muted-foreground">
+                                It's shut behind an Iron Gate until{' '}
+                                {clockTime(region.gatedUntil)}.
+                            </p>
+                        ) : region.settledUntil ? (
                             <p className="text-muted-foreground">
                                 Wait until {clockTime(region.settledUntil)}.
                             </p>

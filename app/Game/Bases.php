@@ -20,7 +20,7 @@ use Illuminate\Support\Facades\DB;
  */
 final class Bases
 {
-    public const MATERIALS = ['wood', 'straw', 'stone', 'clay', 'wool', 'dye', 'eggs'];
+    public const MATERIALS = ['wood', 'straw', 'stone', 'clay', 'wool', 'dye', 'eggs', 'honey', 'herbs', 'iron'];
 
     /** The share of the treasury raiders carry off when they take a Den. */
     public const DEN_PLUNDER = 0.20;

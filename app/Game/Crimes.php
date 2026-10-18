@@ -62,6 +62,10 @@ final class Crimes
                 throw new GameException("{$target->name} is new to the valley and protected for now.");
             }
 
+            if (Powers::locked($target->id)) {
+                throw new GameException("{$target->name}'s home is shut with an Iron Lock. Try another.");
+            }
+
             if ($target->homeIsClosed() || ($target->home_burned_at !== null && $target->home_burned_at->gt(CarbonImmutable::now()->subDays(7)))) {
                 throw new GameException("{$target->name}'s home burned recently. A home can burn at most once a week.");
             }

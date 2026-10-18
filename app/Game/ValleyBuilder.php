@@ -38,9 +38,10 @@ final class ValleyBuilder
         'old_well' => ['Old Well', 'outer', 'clay', 4, 2],
         'paddock' => ['The Paddock', 'safe', 'corn', 2, 3],
         // Farms beyond the fences: bought with Corn or taken in raids.
-        'thornbury' => ['Thornbury Farm', 'farm', 'corn', 0, 9],
-        'brookside' => ['Brookside Farm', 'farm', 'corn', 1, 9],
-        'willowby' => ['Willowby Farm', 'farm', 'corn', 2, 9],
+        // Each grows something found nowhere in Hollowmere.
+        'thornbury' => ['Thornbury Farm', 'farm', 'honey', 0, 9],
+        'brookside' => ['Brookside Farm', 'farm', 'herbs', 1, 9],
+        'willowby' => ['Willowby Farm', 'farm', 'iron', 2, 9],
     ];
 
     /** Which Hollowmere regions each farm borders. */
@@ -56,7 +57,8 @@ final class ValleyBuilder
             $valley = Valley::query()->firstOrCreate(['slug' => str($name)->slug()->toString()], ['name' => $name]);
 
             foreach (self::REGIONS as $key => [$regionName, $ring, $produces, $col, $row]) {
-                Region::query()->firstOrCreate(
+                // Kept in step with the list, so a region's crop can change; who holds it never does here.
+                Region::query()->updateOrCreate(
                     ['valley_id' => $valley->id, 'key' => $key],
                     ['name' => $regionName, 'ring' => $ring, 'produces' => $produces, 'col' => $col, 'row' => $row],
                 );

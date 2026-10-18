@@ -53,6 +53,10 @@ final class Battles
             throw new GameException("Your faction is already marching on {$target->name}. Add your horseshoes to that attack.");
         }
 
+        if (($gate = Powers::gatedUntil($target)) !== null) {
+            throw new GameException("{$target->name} is shut behind an Iron Gate until ".Clock::local($gate)->format('H:i').'.');
+        }
+
         $this->checkReach($faction, $target);
         $this->checkFrontLine($player, $target);
         $this->checkCurfew($season, $target);

@@ -19,6 +19,11 @@ final class Gathering
 
     public const MATERIAL = 5;
 
+    /** Honey, herbs and iron from the farms beyond the fences come slower. */
+    public const RARE = 3;
+
+    public const RARE_MATERIALS = ['honey', 'herbs', 'iron'];
+
     /**
      * @return array{what: string, amount: int, tax: int}
      *
@@ -34,13 +39,25 @@ final class Gathering
             $player = Players::lock($player);
             Players::ensureFree($player);
             Movement::ensureStandingIn($player, $region, 'gather');
+
+            // A farm's rare crop is for anyone while the farm is unclaimed, and its holders' once it isn't.
+            if ($region->isFarm() && $region->faction_id !== null && $region->faction_id !== $player->faction_id) {
+                $holders = $region->faction?->name ?? 'another faction';
+
+                throw new GameException("{$region->name}'s {$region->produces} belongs to {$holders}. Take the farm to gather it.");
+            }
+
             Horseshoes::spend($player, 1);
 
-            $base = $region->produces === 'corn' ? self::CORN : self::MATERIAL;
+            $base = match (true) {
+                $region->produces === 'corn' => self::CORN,
+                in_array($region->produces, self::RARE_MATERIALS, true) => self::RARE,
+                default => self::MATERIAL,
+            };
             $own = $player->faction_id !== null && $region->faction_id === $player->faction_id;
             $workshop = $region->produces === 'corn' ? 1.0 : Bases::gathering($player, $region);
             // Gathering Gloves and a Feast Basket bring in more.
-            $amount = (int) floor($base * $player->species->gathering() * ($own ? 1.5 : 1.0) * $workshop * Powers::gathering($player));
+            $amount = (int) floor($base * $player->species->gathering() * ($own ? 1.5 : 1.0) * $workshop * Powers::gathering($player, $region->produces));
             $tax = 0;
 
             if ($region->produces === 'corn') {

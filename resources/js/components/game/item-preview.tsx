@@ -369,6 +369,150 @@ function Shape({
                     />
                 </>
             );
+        case 'cake':
+            return (
+                <>
+                    <ellipse
+                        cx="32"
+                        cy="48"
+                        rx="24"
+                        ry="6"
+                        fill="#0b0a0f"
+                        opacity="0.5"
+                    />
+                    <path d="M10 30h44v16a22 6 0 0 1-44 0z" fill={fill} />
+                    <ellipse cx="32" cy="30" rx="22" ry="7" fill={second} />
+                    <path
+                        d="M18 30c0 6 4 8 4 12M32 31c0 5 3 7 3 11M45 30c0 6-3 8-3 11"
+                        stroke="#e3b341"
+                        strokeWidth="3"
+                        strokeLinecap="round"
+                        fill="none"
+                    />
+                </>
+            );
+        case 'pickaxe':
+            return (
+                <>
+                    <path
+                        d="M18 54L42 18"
+                        stroke={WOOD}
+                        strokeWidth="6"
+                        strokeLinecap="round"
+                    />
+                    <path
+                        d="M14 22c10-12 30-14 42-6-12-2-26 2-34 10z"
+                        fill={fill}
+                        stroke={METAL}
+                        strokeWidth="1.5"
+                    />
+                    <circle cx="39" cy="21" r="3" fill={second} />
+                </>
+            );
+        case 'lock':
+            return (
+                <>
+                    <path
+                        d="M22 30v-8a10 10 0 0 1 20 0v8"
+                        fill="none"
+                        stroke={METAL}
+                        strokeWidth="5"
+                    />
+                    <rect
+                        x="14"
+                        y="28"
+                        width="36"
+                        height="28"
+                        rx="5"
+                        fill={fill}
+                        stroke={METAL}
+                        strokeWidth="1.5"
+                    />
+                    <circle cx="32" cy="40" r="4" fill={second} />
+                    <path
+                        d="M32 42v7"
+                        stroke={second}
+                        strokeWidth="3"
+                        strokeLinecap="round"
+                    />
+                </>
+            );
+        case 'kit':
+            return (
+                <>
+                    <rect
+                        x="10"
+                        y="20"
+                        width="44"
+                        height="34"
+                        rx="5"
+                        fill={fill}
+                    />
+                    <path
+                        d="M24 20v-5h16v5"
+                        fill="none"
+                        stroke={METAL}
+                        strokeWidth="3"
+                    />
+                    <path
+                        d="M32 28v18M23 37h18"
+                        stroke={second}
+                        strokeWidth="6"
+                        strokeLinecap="round"
+                    />
+                </>
+            );
+        case 'gate':
+            return (
+                <>
+                    <path
+                        d="M10 56V18M54 56V18"
+                        stroke={METAL}
+                        strokeWidth="5"
+                        strokeLinecap="round"
+                    />
+                    <path d="M12 22h40v34H12z" fill={fill} opacity="0.9" />
+                    <path
+                        d="M20 22v34M28 22v34M36 22v34M44 22v34"
+                        stroke="#0b0a0f"
+                        strokeWidth="2"
+                        opacity="0.5"
+                    />
+                    <path d="M12 38h40" stroke={second} strokeWidth="4" />
+                </>
+            );
+        case 'plough':
+            return (
+                <>
+                    <path
+                        d="M8 22h30l10 14"
+                        stroke={WOOD}
+                        strokeWidth="5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        fill="none"
+                    />
+                    <path
+                        d="M40 30l16 18-24 6z"
+                        fill={fill}
+                        stroke={METAL}
+                        strokeWidth="1.5"
+                    />
+                    <circle
+                        cx="16"
+                        cy="44"
+                        r="9"
+                        fill="none"
+                        stroke={second}
+                        strokeWidth="4"
+                    />
+                    <path
+                        d="M16 35v18M7 44h18"
+                        stroke={second}
+                        strokeWidth="2"
+                    />
+                </>
+            );
         case 'sheaf':
             return (
                 <>

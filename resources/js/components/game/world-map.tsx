@@ -867,6 +867,13 @@ const Marches = memo(function Marches({
     );
 });
 
+/** What each farm beyond the fences grows, as a sign on its label. */
+const CROPS: Record<string, string> = { honey: '🍯', herbs: '🌿', iron: '⚒' };
+
+function capitalised(text: string): string {
+    return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
 /** Label size in screen pixels: grows a little as you zoom in. */
 function labelPixels(k: number): number {
     return 11.5 * (k / 0.6) ** 0.25;
@@ -892,6 +899,13 @@ function subtitle(
         return { text: '⚔ Ironfield raids at 19:00', colour: '#f5a27a' };
     }
 
+    if (region.gatedUntil) {
+        return {
+            text: `🔒 Gated till ${clockTime(region.gatedUntil)}`,
+            colour: '#c8c3d4',
+        };
+    }
+
     if (region.settledUntil) {
         return {
             text: `🛡 Settled till ${clockTime(region.settledUntil)}`,
@@ -899,15 +913,23 @@ function subtitle(
         };
     }
 
+    const crop =
+        region.ring === 'farm'
+            ? `${CROPS[region.produces ?? ''] ?? '🌾'} `
+            : '';
+
     if (region.faction) {
         return {
-            text: `${region.faction.id === houseId ? '👑 ' : ''}${region.faction.name}`,
+            text: `${region.faction.id === houseId ? '👑 ' : ''}${crop}${region.faction.name}`,
             colour: region.faction.colour,
         };
     }
 
     if (region.ring === 'farm') {
-        return { text: '🌾 For sale or for the taking', colour: '#ffd33d' };
+        return {
+            text: `${crop}${capitalised(region.produces ?? 'corn')} · for sale or for the taking`,
+            colour: '#ffd33d',
+        };
     }
 
     if (region.ring === 'safe') {

@@ -24,6 +24,12 @@ enum ItemTemplate: string
     case Bell = 'bell';
     case Trowel = 'trowel';
     case Sheaf = 'sheaf';
+    case Cake = 'cake';
+    case Pickaxe = 'pickaxe';
+    case Lock = 'lock';
+    case Kit = 'kit';
+    case Gate = 'gate';
+    case Plough = 'plough';
 
     public function label(): string
     {
@@ -42,6 +48,12 @@ enum ItemTemplate: string
             self::Bell => 'Watch Bell',
             self::Trowel => "Mason's Trowel",
             self::Sheaf => 'Golden Sheaf',
+            self::Cake => 'Honey Cake',
+            self::Pickaxe => 'Iron Pickaxe',
+            self::Lock => 'Iron Lock',
+            self::Kit => "Healer's Kit",
+            self::Gate => 'Iron Gate',
+            self::Plough => 'Iron Plough',
         };
     }
 
@@ -63,6 +75,13 @@ enum ItemTemplate: string
             self::Ribbon => ['dye' => 4, 'wool' => 2, 'eggs' => 2],
             self::Trowel => ['stone' => 4, 'wood' => 3, 'clay' => 2],
             self::Sheaf => ['straw' => 6, 'dye' => 3, 'eggs' => 3],
+            // Recipes that need what only the farms beyond the fences grow.
+            self::Cake => ['honey' => 2, 'eggs' => 2, 'straw' => 2],
+            self::Pickaxe => ['iron' => 3, 'wood' => 2],
+            self::Lock => ['iron' => 2, 'stone' => 2],
+            self::Kit => ['herbs' => 3, 'wool' => 2, 'eggs' => 1],
+            self::Gate => ['iron' => 4, 'stone' => 3, 'wood' => 2],
+            self::Plough => ['iron' => 2, 'wood' => 3, 'honey' => 1],
         };
     }
 
@@ -71,7 +90,7 @@ enum ItemTemplate: string
     {
         return match ($this) {
             self::Hat, self::Scarf, self::Sign => null,
-            self::Gloves, self::Shoes, self::Cloak, self::Tonic, self::Ribbon => 'you',
+            self::Gloves, self::Shoes, self::Cloak, self::Tonic, self::Ribbon, self::Cake, self::Pickaxe, self::Lock => 'you',
             default => 'faction',
         };
     }
@@ -97,6 +116,12 @@ enum ItemTemplate: string
             self::Bell => 'Criminals who target your faction are a quarter likelier to be caught for 24 hours.',
             self::Trowel => "Finishes your faction's building going up in the region you stand in.",
             self::Sheaf => 'The House gets one extra law change. Only the House can use it.',
+            self::Cake => 'Your Market and Creativity skills grow twice as fast for 6 hours.',
+            self::Pickaxe => 'Your next 10 gathers of materials bring in twice as much.',
+            self::Lock => 'Nobody can burn down your home for 3 days.',
+            self::Kit => 'Everyone in your faction walks out of the pound.',
+            self::Gate => "The region you stand in can't be raided for 6 hours, if your faction holds it. Not the Farmhouse.",
+            self::Plough => "Your faction's farms pay double for 24 hours.",
         };
     }
 
@@ -104,7 +129,7 @@ enum ItemTemplate: string
     public function creativity(): int
     {
         return match ($this) {
-            self::Cloak, self::Tonic, self::Basket, self::Banner => 2,
+            self::Cloak, self::Tonic, self::Basket, self::Banner, self::Cake, self::Pickaxe, self::Lock, self::Kit, self::Gate, self::Plough => 2,
             self::Ribbon, self::Trowel, self::Sheaf => 3,
             default => 1,
         };

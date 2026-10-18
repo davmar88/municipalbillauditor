@@ -47,6 +47,16 @@ final class Powers
 
     public const BELL_HOURS = 24;
 
+    public const CAKE_HOURS = 6;
+
+    public const PICKAXE_USES = 10;
+
+    public const LOCK_HOURS = 72;
+
+    public const GATE_HOURS = 6;
+
+    public const PLOUGH_HOURS = 24;
+
     /**
      * Use a powered item. It is used up and its power starts.
      *
@@ -90,6 +100,12 @@ final class Powers
                 ItemTemplate::Hedge => $this->hedge($player),
                 ItemTemplate::Trowel => $this->trowel($player),
                 ItemTemplate::Sheaf => $this->sheaf($player),
+                ItemTemplate::Cake => $this->time(['player_id' => $player->id], 'cake', self::CAKE_HOURS, 'You ate the Honey Cake: your skills grow twice as fast'),
+                ItemTemplate::Pickaxe => $this->charge($player, 'pickaxe', self::PICKAXE_USES, 'Pickaxe in hand: your next 10 gathers of materials bring in twice as much.'),
+                ItemTemplate::Lock => $this->time(['player_id' => $player->id], 'lock', self::LOCK_HOURS, 'You fitted the Iron Lock: nobody can burn your home'),
+                ItemTemplate::Kit => $this->kit($player),
+                ItemTemplate::Gate => $this->gate($player),
+                ItemTemplate::Plough => $this->time(['faction_id' => $this->faction($player)->id], 'plough', self::PLOUGH_HOURS, "You hitched the Iron Plough: your faction's farms pay double"),
                 default => throw new GameException('That item has no power to use.'),
             };
 
@@ -100,9 +116,14 @@ final class Powers
     }
 
     /** Gathering: gloves use one of their charges; a Feast Basket helps the whole faction. */
-    public static function gathering(Player $player): float
+    public static function gathering(Player $player, ?string $produces = null): float
     {
         $boost = self::spend(['player_id' => $player->id], 'gloves') ? self::GLOVES : 1.0;
+
+        // An Iron Pickaxe works on materials, not Corn.
+        if ($produces !== null && $produces !== 'corn' && self::spend(['player_id' => $player->id], 'pickaxe')) {
+            $boost *= 2;
+        }
 
         if ($player->faction_id !== null && self::active(['faction_id' => $player->faction_id], 'basket')) {
             $boost *= self::BASKET;
@@ -173,6 +194,10 @@ final class Powers
             'banner' => 'War Banner',
             'basket' => 'Feast Basket',
             'bell' => 'Watch Bell',
+            'cake' => 'Honey Cake',
+            'pickaxe' => 'Iron Pickaxe',
+            'lock' => 'Iron Lock',
+            'plough' => 'Iron Plough',
         ];
 
         return $effects
@@ -294,6 +319,73 @@ final class Powers
         $building->forceFill(['ready_at' => CarbonImmutable::now()])->save();
 
         return "You finished the {$building->kind->label()} in {$region->name}.";
+    }
+
+    /** Skills grow twice as fast while a Honey Cake works. */
+    public static function skills(int $playerId): int
+    {
+        return self::active(['player_id' => $playerId], 'cake') ? 2 : 1;
+    }
+
+    /** Whether an Iron Lock keeps an animal's home from burning. */
+    public static function locked(int $playerId): bool
+    {
+        return self::active(['player_id' => $playerId], 'lock');
+    }
+
+    /** Farms pay double while an Iron Plough works for their faction. */
+    public static function plough(int $factionId): int
+    {
+        return self::active(['faction_id' => $factionId], 'plough') ? 2 : 1;
+    }
+
+    /** When an Iron Gate on a region comes down, or null if none stands. */
+    public static function gatedUntil(Region $region): ?CarbonImmutable
+    {
+        $gate = Effect::query()
+            ->where('region_id', $region->id)
+            ->where('kind', 'gate')
+            ->active()
+            ->first();
+
+        return $gate?->expires_at?->toImmutable();
+    }
+
+    private function kit(Player $player): string
+    {
+        $faction = $this->faction($player);
+        $freed = Player::query()
+            ->where('faction_id', $faction->id)
+            ->where('pound_until', '>', CarbonImmutable::now())
+            ->update(['pound_until' => null]);
+
+        if ($freed === 0) {
+            throw new GameException("Nobody in {$faction->name} is in the pound. Keep the kit for when they are.");
+        }
+
+        return $freed === 1
+            ? "You opened the Healer's Kit: one of your faction walked out of the pound."
+            : "You opened the Healer's Kit: {$freed} of your faction walked out of the pound.";
+    }
+
+    private function gate(Player $player): string
+    {
+        $faction = $this->faction($player);
+        $region = $player->location();
+
+        if ($region->faction_id !== $faction->id) {
+            throw new GameException('Shut a gate on land your faction holds: walk to it first.');
+        }
+
+        if ($region->isFarmhouse()) {
+            throw new GameException("The Farmhouse can't be gated: the valley must always be able to rise against it.");
+        }
+
+        if (self::gatedUntil($region) !== null) {
+            throw new GameException("{$region->name} is already behind an Iron Gate.");
+        }
+
+        return $this->time(['faction_id' => $faction->id, 'region_id' => $region->id], 'gate', self::GATE_HOURS, "You shut an Iron Gate round {$region->name}: nobody can raid it");
     }
 
     private function sheaf(Player $player): string

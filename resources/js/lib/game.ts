@@ -22,6 +22,9 @@ export const MATERIALS: { name: string; from: string }[] = [
     { name: 'wool', from: 'Sheepfold' },
     { name: 'dye', from: 'Orchard' },
     { name: 'eggs', from: 'Henhouse' },
+    { name: 'honey', from: 'Thornbury Farm' },
+    { name: 'herbs', from: 'Brookside Farm' },
+    { name: 'iron', from: 'Willowby Farm' },
 ];
 
 /** The face an animal wears on the map. */

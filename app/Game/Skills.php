@@ -28,6 +28,9 @@ final class Skills
             return false;
         }
 
+        // A Honey Cake doubles what is earned while it works.
+        $amount *= Powers::skills($playerId);
+
         return DB::transaction(function () use ($playerId, $skill, $amount, $reason, $reference, $season) {
             if (SkillEntry::query()->where('reference', $reference)->exists()) {
                 return false;
