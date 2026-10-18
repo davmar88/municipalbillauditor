@@ -159,7 +159,11 @@ class MapController extends Controller
                 ]) ?? [],
             'gate' => [
                 'open' => GateNight::isGateDay(),
+                // Tonight's raid, so the map can ask how it went once it has happened.
+                'at' => Clock::now()->setTime(GateNight::HOUR, 0)->toIso8601String(),
                 'defended' => $season !== null && GateDefence::query()->where('season_id', $season->id)->where('player_id', $player->id)->where('night_on', Clock::today())->exists(),
+                ...($season !== null && GateNight::isGateDay() ? GateNight::tonight($season) : ['defenders' => 0, 'strength' => 0, 'humans' => 0]),
+                'result' => $season !== null ? GateNight::result($season) : null,
             ],
             'yields' => ['corn' => Gathering::CORN, 'material' => Gathering::MATERIAL],
         ]);

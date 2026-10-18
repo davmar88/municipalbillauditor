@@ -16,6 +16,7 @@ use App\Game\Wall;
 use App\Models\Crime;
 use App\Models\Faction;
 use App\Models\Law;
+use App\Models\Notice;
 use App\Models\Player;
 use App\Models\UnrestEvent;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -232,11 +233,27 @@ class UprisingsAndCrimesTest extends TestCase
             app(GateNight::class)->defend($defender, 3);
         }
 
+        // The map shows how strong the gate is before the raid.
+        $this->actingAs($this->ruler->user)->get(route('play'))->assertInertia(fn (Assert $page) => $page
+            ->where('gate.open', true)
+            ->where('gate.defenders', 4)
+            ->where('gate.strength', 15.6)
+            ->where('gate.humans', 10)
+            ->where('gate.result', null));
+
         $this->travelTo(Clock::now()->setTime(19, 5));
         app(GateNight::class)->resolveIfDue($this->season(), app(Wall::class));
 
         $this->assertSame(15, $defenders[0]->fresh()->rosettes);
         $this->assertSame(Clock::today(), $this->season()->fresh()->last_gate_night_on->toDateString());
+        $this->assertSame("🛡 The gate held against Ironfield's 10 men at 19:00! You earned 15 Rosettes for defending it.", Notice::query()->where('player_id', $defenders[0]->id)->latest('id')->value('text'));
+        $this->assertSame("🛡 The gate held against Ironfield's 10 men at 19:00, thanks to its 4 defenders.", Notice::query()->where('player_id', $this->ruler->id)->latest('id')->value('text'));
+
+        // And how it went for the rest of the evening.
+        $this->actingAs($this->ruler->user)->get(route('play'))->assertInertia(fn (Assert $page) => $page
+            ->where('gate.open', false)
+            ->where('gate.result.held', true)
+            ->where('gate.result.defenders', 4));
     }
 
     public function test_when_the_gate_falls_the_humans_burn_two_outer_fields(): void
@@ -247,6 +264,24 @@ class UprisingsAndCrimesTest extends TestCase
         app(GateNight::class)->resolveIfDue($this->season(), app(Wall::class));
 
         $this->assertSame(1, $this->house->regions()->where('ring', 'outer')->count());
+        $burned = $this->season()->fresh()->last_gate_night['burned'];
+        $this->assertCount(2, $burned);
+        $this->assertSame("🔥 Ironfield's 10 men broke through the gate at 19:00, with nobody defending it. They burned {$burned[0]} and {$burned[1]}.", Notice::query()->where('player_id', $this->ruler->id)->latest('id')->value('text'));
+        $this->assertSame("Ironfield's men burned the outer fields", UnrestEvent::query()->latest('id')->value('reason'));
+    }
+
+    public function test_when_the_gate_falls_with_no_outer_field_held_nothing_burns(): void
+    {
+        $this->travelTo(Clock::now()->next('Sunday')->setTime(15, 0));
+        $defender = $this->player(Species::Pig);
+        app(GateNight::class)->defend($defender, 3);
+        $this->travelTo(Clock::now()->setTime(19, 5));
+
+        app(GateNight::class)->resolveIfDue($this->season(), app(Wall::class));
+
+        $this->assertSame(['held' => false, 'defenders' => 1, 'burned' => []], $this->season()->fresh()->last_gate_night);
+        $this->assertSame("🔥 Ironfield's 10 men broke through the gate at 19:00. No field beyond the fences was held, so nothing burned. You earned 5 Rosettes for fighting.", Notice::query()->where('player_id', $defender->id)->latest('id')->value('text'));
+        $this->assertSame("Ironfield's men broke through the gate", UnrestEvent::query()->latest('id')->value('reason'));
     }
 
     private function seedWhere(callable $wanted): int

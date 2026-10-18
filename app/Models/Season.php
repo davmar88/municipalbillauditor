@@ -26,6 +26,7 @@ use Illuminate\Support\Carbon;
  * @property int $tax_collected Grain tax since the last rations were handed out.
  * @property Carbon|null $last_rations_on
  * @property Carbon|null $last_gate_night_on
+ * @property array{held: bool, defenders: int, burned: list<string>}|null $last_gate_night How that night went
  * @property Valley $valley
  */
 #[Fillable(['valley_id', 'number', 'starts_at', 'ends_at'])]
@@ -42,6 +43,7 @@ class Season extends Model
             'last_festival_at' => 'datetime',
             'last_rations_on' => 'date',
             'last_gate_night_on' => 'date',
+            'last_gate_night' => 'array',
         ];
     }
 

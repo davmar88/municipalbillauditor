@@ -1,7 +1,8 @@
-import { Head, usePage } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 import { Flame, Shield, Swords } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { GameBar } from '@/components/game/game-bar';
+import { GateStrength } from '@/components/game/gate-strength';
 import { HorseshoePicker } from '@/components/game/horseshoe-picker';
 import { MapHud } from '@/components/game/map-hud';
 import { RegionPanel } from '@/components/game/region-panel';
@@ -11,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { act, clockTime, fromNow } from '@/lib/game';
 import { commit, gate } from '@/routes/play';
 import type {
+    GateNightInfo,
     BuildingKindCard,
     FactionRef,
     FactionStore,
@@ -28,7 +30,7 @@ type Props = {
     laws: MapLaw[];
     battles: MapBattle[];
     recent: { id: number; text: string; at: string }[];
-    gate: { open: boolean; defended: boolean };
+    gate: GateNightInfo;
     yields: { corn: number; material: number };
     base: FactionStore | null;
     buildingKinds: BuildingKindCard[];
@@ -58,6 +60,20 @@ export default function MapPage({
     const [selectedId, setSelectedId] = useState<number | null>(null);
     const [horseshoes, setHorseshoes] = useState(1);
     const selected = regions.find((region) => region.id === selectedId) ?? null;
+
+    // Once Ironfield has raided, fetch how it went, without a reload.
+    useEffect(() => {
+        if (!gateNight.open) {
+            return;
+        }
+
+        const timer = window.setTimeout(
+            () => router.reload({ only: ['gate', 'regions', 'season'] }),
+            Math.max(0, new Date(gateNight.at).getTime() + 60_000 - Date.now()),
+        );
+
+        return () => window.clearTimeout(timer);
+    }, [gateNight.open, gateNight.at]);
     const wanted = useMemo(
         () => warrants.map((warrant) => warrant.playerId),
         [warrants],
@@ -68,6 +84,8 @@ export default function MapPage({
             <Head title="Map" />
             <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 p-3 md:p-5">
                 <GameBar />
+
+                {gateNight.result && <GateResult result={gateNight.result} />}
 
                 {(gateNight.open || battles.length > 0) && (
                     <section
@@ -84,9 +102,10 @@ export default function MapPage({
                                     <span className="font-bold">
                                         Gate Night is tonight.
                                     </span>{' '}
-                                    Ironfield's men raid at 19:00. If the gate
-                                    holds, every defender earns 15 Rosettes; if
-                                    not, two outer fields burn.
+                                    Ironfield's {gateNight.humans} men raid at
+                                    19:00. If the gate holds, every defender
+                                    earns 15 Rosettes; if not, two outer fields
+                                    burn. <GateStrength gate={gateNight} />
                                 </p>
                                 {gateNight.defended ? (
                                     <span className="font-semibold text-primary">
@@ -178,6 +197,13 @@ export default function MapPage({
                     selectedId={selectedId}
                     onSelect={setSelectedId}
                     gateNight={gateNight.open}
+                    gateResult={
+                        gateNight.result === null
+                            ? null
+                            : gateNight.result.held
+                              ? 'held'
+                              : 'fell'
+                    }
                     wanted={wanted}
                 >
                     <MapHud
@@ -222,5 +248,41 @@ export default function MapPage({
                 )}
             </div>
         </>
+    );
+}
+
+/** How tonight's raid went, for the rest of the evening. */
+function GateResult({
+    result,
+}: {
+    result: NonNullable<GateNightInfo['result']>;
+}) {
+    const defenders =
+        result.defenders === 1 ? '1 defender' : `${result.defenders} defenders`;
+
+    return result.held ? (
+        <p className="flex items-center gap-2 rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-4 py-2.5 text-sm">
+            <Shield className="size-4 shrink-0 text-emerald-300" aria-hidden />
+            <span>
+                <span className="font-bold">The gate held tonight.</span>{' '}
+                Ironfield's men turned back at 19:00, and its {defenders} earned
+                15 Rosettes each.
+            </span>
+        </p>
+    ) : (
+        <p className="flex items-center gap-2 rounded-xl border border-orange-500/40 bg-orange-500/10 px-4 py-2.5 text-sm">
+            <Flame className="size-4 shrink-0 text-orange-300" aria-hidden />
+            <span>
+                <span className="font-bold">
+                    Ironfield broke through the gate at 19:00.
+                </span>{' '}
+                {result.burned.length > 0
+                    ? `They burned ${result.burned.join(' and ')}.`
+                    : 'No field beyond the fences was held, so nothing burned.'}{' '}
+                {result.defenders > 0
+                    ? `Its ${defenders} earned 5 Rosettes each for fighting.`
+                    : 'Nobody defended it.'}
+            </span>
+        </p>
     );
 }

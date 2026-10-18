@@ -28,6 +28,7 @@ import { Button } from '@/components/ui/button';
 import { act, capitalise, clockTime, fromNow, speciesEmoji } from '@/lib/game';
 import { route } from '@/lib/hollowmere';
 import { openChat } from '@/lib/pulse';
+import { GateStrength } from '@/components/game/gate-strength';
 import { arrest as arrestOutlaw } from '@/routes/play/warrant';
 import {
     attack,
@@ -43,6 +44,7 @@ import {
     wall,
 } from '@/routes/play';
 import type {
+    GateNightInfo,
     BuildingKindCard,
     FactionRef,
     FactionStore,
@@ -83,7 +85,7 @@ type Props = {
     house: FactionRef | null;
     battles: MapBattle[];
     yields: { corn: number; material: number };
-    gateNight: { open: boolean; defended: boolean };
+    gateNight: GateNightInfo;
     base: FactionStore | null;
     buildingKinds: BuildingKindCard[];
     farms: { price: number; income: number };
@@ -744,9 +746,10 @@ export function RegionPanel({
                     <div className="flex flex-col gap-2 rounded-lg border border-orange-500/40 bg-orange-500/10 p-3">
                         <p className="font-semibold">Gate Night is tonight.</p>
                         <p>
-                            Ironfield's men raid at 19:00. If the gate holds,
-                            every defender earns 15 Rosettes; if not, two outer
-                            fields burn.
+                            Ironfield's {gateNight.humans} men raid at 19:00. If
+                            the gate holds, every defender earns 15 Rosettes; if
+                            not, two outer fields burn.{' '}
+                            <GateStrength gate={gateNight} />
                         </p>
                         {gateNight.defended ? (
                             <p className="font-semibold text-primary">

@@ -897,6 +897,7 @@ function subtitle(
     region: MapRegion,
     houseId: number | null,
     gateNight: boolean,
+    gateResult: GateResult,
 ): { text: string; colour: string } | null {
     if (region.incoming.length > 0) {
         const first = [...region.incoming].sort((a, b) =>
@@ -911,6 +912,12 @@ function subtitle(
 
     if (gateNight && region.key === 'ironfield_gate') {
         return { text: '⚔ Ironfield raids at 19:00', colour: '#f5a27a' };
+    }
+
+    if (gateResult && region.key === 'ironfield_gate') {
+        return gateResult === 'held'
+            ? { text: '🛡 The gate held tonight', colour: '#8fe3b0' }
+            : { text: '🔥 Ironfield broke through', colour: '#f5a27a' };
     }
 
     if (region.gatedUntil) {
@@ -979,17 +986,22 @@ function labelPoint(region: MapRegion): Point {
     return [shape.centre[0], shape.centre[1] - 72];
 }
 
+/** How tonight's Gate Night went, once it has happened. */
+type GateResult = 'held' | 'fell' | null;
+
 /** Region names and lane names, the same size on screen at any zoom. */
 const Labels = memo(function Labels({
     regions,
     k,
     houseId,
     gateNight,
+    gateResult,
 }: {
     regions: MapRegion[];
     k: number;
     houseId: number | null;
     gateNight: boolean;
+    gateResult: GateResult;
 }) {
     const pixels = labelPixels(k);
     const lanes = k >= 0.5;
@@ -1091,7 +1103,7 @@ const Labels = memo(function Labels({
                 const room =
                     region.ring === 'safe' ? 420 : shape.box.width * 0.8;
                 const font = Math.min(pixels / k, room / (name.length * 0.72));
-                const sub = subtitle(region, houseId, gateNight);
+                const sub = subtitle(region, houseId, gateNight, gateResult);
 
                 return (
                     <g
@@ -1457,6 +1469,8 @@ type Props = {
     selectedId: number | null;
     onSelect: (id: number | null) => void;
     gateNight: boolean;
+    /** How tonight's Gate Night went, once it has happened. */
+    gateResult: GateResult;
     /** The animals with a warrant out for their arrest. */
     wanted: number[];
     children?: ReactNode;
@@ -1475,6 +1489,7 @@ export function WorldMap({
     selectedId,
     onSelect,
     gateNight,
+    gateResult,
     wanted,
     children,
 }: Props) {
@@ -1619,6 +1634,7 @@ export function WorldMap({
                             k={k}
                             houseId={house?.id ?? null}
                             gateNight={gateNight}
+                            gateResult={gateResult}
                         />
                         <Bases regions={regions} k={k} />
                         <Crowd regions={regions} k={k} wanted={wanted} />

@@ -136,6 +136,21 @@ export type FactionStore = {
     materials: Record<string, number>;
 };
 
+/** Gate Night: Ironfield's Sunday raid at 19:00, and how it went. */
+export type GateNightInfo = {
+    /** Whether animals can still put horseshoes into holding the gate. */
+    open: boolean;
+    /** Tonight's raid time. */
+    at: string;
+    defended: boolean;
+    /** Animals at the gate tonight, the men they hold back, and the men coming. */
+    defenders: number;
+    strength: number;
+    humans: number;
+    /** How tonight's raid went, once it has happened. */
+    result: { held: boolean; defenders: number; burned: string[] } | null;
+};
+
 export type MapRegion = {
     id: number;
     key: string;
