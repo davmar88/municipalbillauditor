@@ -53,6 +53,8 @@ final class Uprisings
         return DB::transaction(function () use ($player, $season, $horseshoes) {
             $uprising = $this->begin($season, $player);
             $this->pledge($player, $uprising, 'rebel', $horseshoes);
+            $house = $season->valley->house();
+            Notices::send(Notices::valley($season->valley_id)->reject(fn (int $id) => $id === $player->id), 'uprising', "✊ {$player->name} called an uprising against {$house?->name}. Pick a side on the Barn Wall.", route('play.wall', [], false));
 
             return $uprising->fresh();
         });

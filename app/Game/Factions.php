@@ -99,11 +99,13 @@ final class Factions
                     ['faction_id' => $faction->id, 'player_id' => $player->id],
                     ['status' => 'pending'],
                 );
+                Notices::send(Notices::deciders($faction->id), 'faction', "{$player->name} asks to join {$faction->name}.", route('play.faction', [], false));
 
                 return 'requested';
             }
 
             $this->admit($player, $faction);
+            Notices::send(Notices::deciders($faction->id)->reject(fn (int $id) => $id === $player->id), 'faction', "{$player->name} joined {$faction->name}.", route('play.faction', [], false));
 
             return 'joined';
         });
@@ -127,6 +129,7 @@ final class Factions
 
             if (! $accept) {
                 $request->update(['status' => 'declined']);
+                Notices::send($request->player_id, 'faction', "{$request->faction->name} turned down your request to join.", route('play.faction', [], false));
 
                 return;
             }
@@ -136,6 +139,7 @@ final class Factions
             $this->checkEntry($player, $faction);
             $this->admit($player, $faction);
             $request->update(['status' => 'accepted']);
+            Notices::send($player->id, 'faction', "You're in: {$faction->name} let you join.", route('play.faction', [], false));
         });
     }
 

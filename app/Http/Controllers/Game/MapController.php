@@ -81,6 +81,7 @@ class MapController extends Controller
                 'animals' => [
                     'count' => ($animals->get($region->id) ?? collect())->count(),
                     'sample' => ($animals->get($region->id) ?? collect())->take(12)->map(fn (Player $animal) => [
+                        'id' => $animal->id,
                         'name' => $animal->name,
                         'species' => $animal->species->value,
                         'colour' => $animal->faction?->colour,

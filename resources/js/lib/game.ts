@@ -126,3 +126,49 @@ export async function fetchTranslation(
 
     return { translation: data.translation };
 }
+
+/**
+ * A JSON request from a game screen, with the session's CSRF token. Game
+ * refusals come back as the error message to show.
+ */
+export async function gameJson<T>(
+    url: string,
+    method: 'GET' | 'POST' = 'GET',
+    body?: Record<string, unknown>,
+): Promise<
+    { ok: true; data: T } | { ok: false; error: string; status: number }
+> {
+    const token = decodeURIComponent(
+        document.cookie.match(/XSRF-TOKEN=([^;]+)/)?.[1] ?? '',
+    );
+
+    try {
+        const response = await fetch(url, {
+            method,
+            headers: {
+                Accept: 'application/json',
+                'X-XSRF-TOKEN': token,
+                'X-Requested-With': 'XMLHttpRequest',
+                ...(body ? { 'Content-Type': 'application/json' } : {}),
+            },
+            ...(body ? { body: JSON.stringify(body) } : {}),
+            credentials: 'same-origin',
+        });
+        const data = (await response.json().catch(() => ({}))) as T & {
+            message?: string;
+        };
+
+        if (!response.ok) {
+            return {
+                ok: false,
+                status: response.status,
+                error:
+                    data.message ?? "That didn't work. Try again in a moment.",
+            };
+        }
+
+        return { ok: true, data };
+    } catch {
+        return { ok: false, status: 0, error: 'You seem to be offline.' };
+    }
+}

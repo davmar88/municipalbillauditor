@@ -65,6 +65,43 @@ class MessageController extends Controller
         return back();
     }
 
+    /** The conversation for the chat window you open from any animal's name. Reading it marks it read. */
+    public function talk(Request $request, Player $player, Messages $messages): JsonResponse
+    {
+        return response()->json($this->window($request->user()->player, $player, $messages));
+    }
+
+    /** Say something from the chat window, and get the conversation back. */
+    public function say(Request $request, Player $player, Messages $messages): JsonResponse
+    {
+        $data = $request->validate([
+            'body' => ['required', 'string', 'max:'.Messages::MAX_LENGTH],
+        ]);
+
+        $messages->send($request->user()->player, $player, $data['body']);
+
+        return response()->json($this->window($request->user()->player, $player, $messages));
+    }
+
+    /** @return array<string, mixed> */
+    private function window(Player $me, Player $other, Messages $messages): array
+    {
+        abort_if($me->is($other) || $me->valley_id !== $other->valley_id, 404);
+
+        $conversation = Messages::between($me, $other);
+
+        if ($conversation !== null) {
+            $messages->markRead($me, $conversation);
+        }
+
+        return [
+            'animal' => Messages::card($other->load('faction:id,name,colour')),
+            'messages' => $conversation !== null ? $messages->thread($me, $conversation, 50) : [],
+            'cantWrite' => Messages::cantWrite($me, $other),
+            'maxLength' => Messages::MAX_LENGTH,
+        ];
+    }
+
     public function block(Request $request, Player $player, Messages $messages): RedirectResponse
     {
         $messages->block($request->user()->player, $player);

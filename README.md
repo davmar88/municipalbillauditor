@@ -16,6 +16,7 @@ The design, and the decisions behind it, are in the game design document: https:
 - **Lone wolves:** loot faction treasuries and burn homes, and risk the pound.
 - **The market:** design items in the Workshop, make numbered copies from gathered materials, sell them from your shop for Corn. Real money comes after the test season.
 - **Recipes with powers:** eleven Workshop shapes carry a power that works when the owner uses a copy up: Gathering Gloves, Iron Shoes, Night Cloak, Willow Tonic and Prize Ribbon for the animal; War Banner, Thorn Hedge, Feast Basket, Watch Bell, Mason's Trowel and Golden Sheaf for its faction or the House. Stronger recipes open at Creativity levels 2 and 3. None of them gives horseshoes (`app/Enums/ItemTemplate.php`, `app/Game/Powers.php`).
+- **Messages, pop-ups and the bell:** tap any animal's name on the map to talk in a chat window over the screen; new messages and news pop up wherever you are, and the bell at the top keeps the news (raids on your land, battles, sales, requests to join, crimes against you, new laws and uprisings) (`app/Game/Notices.php`, `resources/js/components/game/player-pulse.tsx`).
 - **Chat:** the valley square, your faction, and a channel with each other faction. The Translate button uses Claude when `ANTHROPIC_API_KEY` is set.
 - **Rosettes and levels:** profile points from playing, selling and serving the valley.
 - **Spot the Edit:** a free daily puzzle at `/spot-the-edit`.

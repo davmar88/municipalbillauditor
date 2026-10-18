@@ -1,7 +1,9 @@
 import { Link, usePage } from '@inertiajs/react';
 import { Mail } from 'lucide-react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
+import { NoticeBell } from '@/components/game/notice-bell';
 import { SidebarTrigger } from '@/components/ui/sidebar';
+import { usePulse } from '@/lib/pulse';
 import { messages } from '@/routes/play';
 import type { BreadcrumbItem as BreadcrumbItemType } from '@/types';
 
@@ -11,6 +13,9 @@ export function AppSidebarHeader({
     breadcrumbs?: BreadcrumbItemType[];
 }) {
     const { player, unreadMessages } = usePage().props;
+    // Kept fresh between pages by the pulse every game screen checks.
+    const live = usePulse((state) => state.unreadMessages);
+    const unread = live ?? unreadMessages ?? 0;
 
     return (
         <header className="flex h-16 shrink-0 items-center gap-2 border-b border-sidebar-border/50 px-6 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 md:px-4">
@@ -19,26 +24,29 @@ export function AppSidebarHeader({
                 <Breadcrumbs breadcrumbs={breadcrumbs} />
             </div>
             {player && (
-                <Link
-                    href={messages()}
-                    prefetch
-                    className="relative ml-auto flex size-10 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
-                    aria-label={
-                        unreadMessages > 0
-                            ? `Messages, ${unreadMessages} unread`
-                            : 'Messages'
-                    }
-                >
-                    <Mail className="size-5" aria-hidden />
-                    {unreadMessages > 0 && (
-                        <span
-                            className="absolute top-0.5 right-0 min-w-5 rounded-full bg-primary px-1 text-center text-[11px] leading-5 font-bold text-primary-foreground"
-                            aria-hidden
-                        >
-                            {unreadMessages > 99 ? '99+' : unreadMessages}
-                        </span>
-                    )}
-                </Link>
+                <div className="ml-auto flex items-center gap-1">
+                    <NoticeBell />
+                    <Link
+                        href={messages()}
+                        prefetch
+                        className="relative flex size-10 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
+                        aria-label={
+                            unread > 0
+                                ? `Messages, ${unread} unread`
+                                : 'Messages'
+                        }
+                    >
+                        <Mail className="size-5" aria-hidden />
+                        {unread > 0 && (
+                            <span
+                                className="absolute top-0.5 right-0 min-w-5 rounded-full bg-primary px-1 text-center text-[11px] leading-5 font-bold text-primary-foreground"
+                                aria-hidden
+                            >
+                                {unread > 99 ? '99+' : unread}
+                            </span>
+                        )}
+                    </Link>
+                </div>
             )}
         </header>
     );

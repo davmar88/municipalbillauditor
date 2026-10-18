@@ -130,7 +130,35 @@ final class Crimes
             }
 
             $crime->forceFill(['resolved_at' => CarbonImmutable::now(), 'caught' => $caught, 'loot' => $loot])->save();
+            $this->announce($crime, $criminal, $caught, $loot);
         });
+    }
+
+    /** Tell the criminal, and the victims, how a crime went. */
+    private function announce(Crime $crime, Player $criminal, bool $caught, int $loot): void
+    {
+        $underworld = route('play.faction', [], false);
+        $victims = $crime->kind === CrimeKind::Loot ? Notices::members($crime->target_faction_id) : collect([$crime->target_player_id]);
+
+        if ($caught) {
+            Notices::send($criminal->id, 'crime', '🚨 You were caught and sent to the pound until '.Clock::local($criminal->pound_until)->format('H:i').'.', $underworld);
+            Notices::send($victims, 'crime', $crime->kind === CrimeKind::Loot
+                ? "🚨 A lone wolf tried to loot your faction's treasury and was caught."
+                : '🚨 Someone tried to burn down your home and was caught.', $underworld);
+
+            return;
+        }
+
+        if ($crime->kind === CrimeKind::Loot) {
+            Notices::send($criminal->id, 'crime', "💰 You got away with {$loot} Corn.", $underworld);
+            Notices::send($victims, 'crime', "🔥 A lone wolf looted {$loot} Corn from your faction's treasury.", $underworld);
+
+            return;
+        }
+
+        $target = Player::query()->whereKey($crime->target_player_id)->value('name');
+        Notices::send($criminal->id, 'crime', "🔥 You burned down {$target}'s home.", $underworld);
+        Notices::send($victims, 'crime', '🔥 Your home was burned down. Your shop is closed for a day, or rebuild it now for '.self::REBUILD_CORN.' Corn.', route('play.market', [], false));
     }
 
     /**

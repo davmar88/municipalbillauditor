@@ -3,6 +3,7 @@ import {
     Crown,
     Footprints,
     Hammer,
+    MessageCircle,
     ScrollText,
     Shield,
     Store,
@@ -16,6 +17,7 @@ import { HorseshoePicker } from '@/components/game/horseshoe-picker';
 import { Button } from '@/components/ui/button';
 import { act, capitalise, clockTime, fromNow, speciesEmoji } from '@/lib/game';
 import { route } from '@/lib/hollowmere';
+import { openChat } from '@/lib/pulse';
 import {
     attack,
     commit,
@@ -260,18 +262,26 @@ export function RegionPanel({
                         {others.length > 0 && (
                             <ul className="flex flex-wrap gap-1.5">
                                 {others.slice(0, 8).map((animal, i) => (
-                                    <li
-                                        key={`${animal.name}-${i}`}
-                                        className="flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs"
-                                        style={{
-                                            borderColor:
-                                                animal.colour ?? undefined,
-                                        }}
-                                    >
-                                        <span aria-hidden>
-                                            {speciesEmoji(animal.species)}
-                                        </span>
-                                        {animal.name}
+                                    <li key={`${animal.name}-${i}`}>
+                                        <button
+                                            type="button"
+                                            onClick={() => openChat(animal.id)}
+                                            className="flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                                            style={{
+                                                borderColor:
+                                                    animal.colour ?? undefined,
+                                            }}
+                                            title={`Talk to ${animal.name}`}
+                                        >
+                                            <span aria-hidden>
+                                                {speciesEmoji(animal.species)}
+                                            </span>
+                                            {animal.name}
+                                            <MessageCircle
+                                                className="size-3 text-muted-foreground"
+                                                aria-hidden
+                                            />
+                                        </button>
                                     </li>
                                 ))}
                             </ul>

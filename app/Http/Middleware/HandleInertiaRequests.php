@@ -6,6 +6,7 @@ use App\Game\Horseshoes;
 use App\Game\Levels;
 use App\Game\Messages;
 use App\Game\Missions;
+use App\Game\Notices;
 use App\Game\Powers;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -88,6 +89,12 @@ class HandleInertiaRequests extends Middleware
                 $player = $request->user()?->player;
 
                 return $player !== null ? Messages::unread($player) : 0;
+            }),
+            // The badge on the bell.
+            'unreadNotices' => Inertia::always(function () use ($request) {
+                $player = $request->user()?->player;
+
+                return $player !== null ? Notices::unread($player) : 0;
             }),
             'isStaff' => fn () => (bool) $request->user()?->is_staff,
             // Finished missions waiting to be collected, for the Today badge.

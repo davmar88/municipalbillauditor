@@ -9,6 +9,7 @@ use App\Http\Controllers\Game\FactionController;
 use App\Http\Controllers\Game\MapController;
 use App\Http\Controllers\Game\MarketController;
 use App\Http\Controllers\Game\MessageController;
+use App\Http\Controllers\Game\NoticeController;
 use App\Http\Controllers\Game\ProfileController;
 use App\Http\Controllers\Game\RankingsController;
 use App\Http\Controllers\Game\StartController;
@@ -98,7 +99,14 @@ Route::middleware(['auth', 'verified', 'player', 'throttle:120,1'])->prefix('pla
     Route::get('me', [ProfileController::class, 'show'])->name('play.me');
     Route::put('me/language', [ProfileController::class, 'language'])->name('play.me.language');
 
+    // The bell, and the pulse every screen checks for pop-ups.
+    Route::get('pulse', [NoticeController::class, 'pulse'])->name('play.pulse');
+    Route::get('notices', [NoticeController::class, 'index'])->name('play.notices');
+    Route::post('notices/read', [NoticeController::class, 'read'])->name('play.notices.read');
+
     // Private messages between any two animals.
+    Route::get('talk/{player}', [MessageController::class, 'talk'])->name('play.talk');
+    Route::post('talk/{player}', [MessageController::class, 'say'])->middleware('throttle:20,1,messages')->name('play.talk.say');
     Route::get('messages', [MessageController::class, 'index'])->name('play.messages');
     Route::get('messages/{player}', [MessageController::class, 'show'])->name('play.messages.show');
     Route::post('messages/{player}', [MessageController::class, 'store'])->middleware('throttle:20,1,messages')->name('play.messages.store');

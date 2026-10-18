@@ -263,6 +263,13 @@ final class Market
             Missions::record($seller, 'sale');
             Missions::record($buyer, 'buy');
 
+            $market = route('play.market', [], false);
+            Notices::send($seller->id, 'sale', "🛒 {$buyer->name} bought your {$item->design->name} #{$item->serial} for {$listing->price} Corn.", $market);
+
+            if ($royalty > 0) {
+                Notices::send($maker, 'sale', "Your design {$item->design->name} was resold. You earned {$royalty} Corn.", $market);
+            }
+
             return ['price' => $listing->price, 'levy' => $levy];
         });
     }

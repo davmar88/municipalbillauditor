@@ -84,6 +84,7 @@ final class Wall
                 $existing->delete();
                 $this->record($season, $player, $slot, null, null, null, 'This place on the Wall was painted over.', false);
                 $this->useChange($season);
+                Notices::send(Notices::valley($season->valley_id), 'law', "📜 The House painted over the {$existing->template->label()} law on the Barn Wall.", route('play.wall', [], false));
 
                 return null;
             }
@@ -104,6 +105,7 @@ final class Wall
 
             $this->record($season, $player, $slot, $template, $value, $target, $law->wording(), false);
             $this->useChange($season);
+            Notices::send(Notices::valley($season->valley_id), 'law', "📜 New on the Barn Wall: {$law->wording()}", route('play.wall', [], false));
 
             return $law;
         });

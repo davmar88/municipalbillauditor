@@ -75,6 +75,12 @@ final class Battles
             BattleCommitment::create(['attack_id' => $attack->id, 'player_id' => $locked->id, 'side' => 'attack', 'horseshoes' => $horseshoes, 'boost' => Powers::commitment($locked)]);
             Missions::record($locked, 'battle');
 
+            // Both sides hear of it under the bell, in time to add horseshoes.
+            $lands = Clock::local($attack->lands_at)->format('H:i');
+            $map = route('play', [], false);
+            Notices::send(Notices::members($target->faction_id), 'raid', "⚔ {$faction->name} is marching on {$target->name}. The raid lands at {$lands}: add your horseshoes to defend it.", $map);
+            Notices::send(Notices::members($faction->id)->reject(fn (int $id) => $id === $locked->id), 'raid', "⚔ {$locked->name} is leading a raid on {$target->name}. Add your horseshoes before {$lands}.", $map);
+
             return $attack;
         });
     }
@@ -180,9 +186,13 @@ final class Battles
                 'defender_faction_id' => $region->faction_id,
             ])->save();
 
+            $defenderId = $region->faction_id;
+
             if ($won) {
                 $this->take($season, $region, $attack->faction_id);
             }
+
+            $this->announce($region->name, $attack->faction_id, $defenderId, $won);
 
             foreach ($commitments as $commitment) {
                 $onWinningSide = ($commitment->side === 'attack') === $won;
@@ -198,6 +208,24 @@ final class Battles
                 }
             }
         });
+    }
+
+    /** Tell both factions how a raid went. */
+    private function announce(string $region, int $attackerId, ?int $defenderId, bool $won): void
+    {
+        $attackers = Faction::query()->whereKey($attackerId)->value('name');
+        $defenders = $defenderId !== null ? Faction::query()->whereKey($defenderId)->value('name') : null;
+        $map = route('play', [], false);
+
+        if ($won) {
+            Notices::send(Notices::members($attackerId), 'battle', "🏆 Your faction took {$region}".($defenders ? " from {$defenders}" : '').'.', $map);
+            Notices::send(Notices::members($defenderId), 'battle', "{$region} fell to {$attackers}.", $map);
+
+            return;
+        }
+
+        Notices::send(Notices::members($attackerId), 'battle', "Your raid on {$region} failed: {$defenders} held it.", $map);
+        Notices::send(Notices::members($defenderId), 'battle', "🛡 Your faction held {$region} against {$attackers}.", $map);
     }
 
     /** A faction takes a region, and with the Farmhouse, the valley. */

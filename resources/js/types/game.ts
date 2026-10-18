@@ -79,6 +79,7 @@ export type MessageAnimal = {
 };
 
 export type MapAnimal = {
+    id: number;
     name: string;
     species: Species;
     colour: string | null;
