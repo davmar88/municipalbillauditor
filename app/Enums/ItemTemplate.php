@@ -30,6 +30,7 @@ enum ItemTemplate: string
     case Kit = 'kit';
     case Gate = 'gate';
     case Plough = 'plough';
+    case Speedo = 'speedo';
 
     public function label(): string
     {
@@ -54,6 +55,7 @@ enum ItemTemplate: string
             self::Kit => "Healer's Kit",
             self::Gate => 'Iron Gate',
             self::Plough => 'Iron Plough',
+            self::Speedo => 'Speedo',
         };
     }
 
@@ -82,6 +84,8 @@ enum ItemTemplate: string
             self::Kit => ['herbs' => 3, 'wool' => 2, 'eggs' => 1],
             self::Gate => ['iron' => 4, 'stone' => 3, 'wood' => 2],
             self::Plough => ['iron' => 2, 'wood' => 3, 'honey' => 1],
+            // A drink: eggs and straw shaken up in a clay cup.
+            self::Speedo => ['eggs' => 2, 'straw' => 1, 'clay' => 1],
         };
     }
 
@@ -90,7 +94,7 @@ enum ItemTemplate: string
     {
         return match ($this) {
             self::Hat, self::Scarf, self::Sign => null,
-            self::Gloves, self::Shoes, self::Cloak, self::Tonic, self::Ribbon, self::Cake, self::Pickaxe, self::Lock => 'you',
+            self::Gloves, self::Shoes, self::Cloak, self::Tonic, self::Ribbon, self::Cake, self::Pickaxe, self::Lock, self::Speedo => 'you',
             default => 'faction',
         };
     }
@@ -122,6 +126,7 @@ enum ItemTemplate: string
             self::Kit => 'Everyone in your faction walks out of the pound.',
             self::Gate => "The region you stand in can't be raided for 6 hours, if your faction holds it. Not the Farmhouse.",
             self::Plough => "Your faction's farms pay double for 24 hours.",
+            self::Speedo => 'You walk twice as fast for an hour.',
         };
     }
 

@@ -55,6 +55,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 Route::middleware(['auth', 'verified', 'player', 'throttle:120,1'])->prefix('play')->group(function () {
     Route::get('/', [MapController::class, 'index'])->name('play');
     Route::post('regions/{region}/walk', [MapController::class, 'walk'])->name('play.walk');
+    Route::post('walk', [MapController::class, 'walkTo'])->middleware('throttle:60,1,walk')->name('play.walk-to');
+    Route::post('walk/stop', [MapController::class, 'stop'])->name('play.walk-stop');
     Route::post('regions/{region}/gather', [MapController::class, 'gather'])->name('play.gather');
     Route::post('regions/{region}/buy', [MapController::class, 'buy'])->name('play.buy-farm');
     Route::post('regions/{region}/grow', [MapController::class, 'grow'])->name('play.grow-farm');

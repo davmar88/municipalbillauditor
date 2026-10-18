@@ -481,6 +481,34 @@ function Shape({
                     <path d="M12 38h40" stroke={second} strokeWidth="4" />
                 </>
             );
+        case 'speedo':
+            return (
+                <>
+                    <path
+                        d="M18 14h28l-4 42H22z"
+                        fill={fill}
+                        stroke={METAL}
+                        strokeWidth="1.5"
+                        strokeLinejoin="round"
+                    />
+                    <path d="M20 26h24" stroke={second} strokeWidth="4" />
+                    <path
+                        d="M38 6l-4 12"
+                        stroke={second}
+                        strokeWidth="3"
+                        strokeLinecap="round"
+                    />
+                    <path
+                        d="M28 34l6 6-6 6"
+                        stroke="#0b0a0f"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        fill="none"
+                        opacity="0.6"
+                    />
+                </>
+            );
         case 'plough':
             return (
                 <>

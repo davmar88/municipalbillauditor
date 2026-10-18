@@ -47,6 +47,12 @@ return [
 
     'starting_corn' => 100,
 
+    // How far an animal walks in a minute, in paces (the map's units): a
+    // region is about 270 paces across. A Speedo doubles it for an hour.
+    'walk' => [
+        'paces_per_minute' => 120,
+    ],
+
     /*
     |--------------------------------------------------------------------------
     | Pineapples and Apples

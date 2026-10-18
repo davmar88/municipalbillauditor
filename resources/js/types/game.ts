@@ -64,7 +64,8 @@ export type ItemShape =
     | 'lock'
     | 'kit'
     | 'gate'
-    | 'plough';
+    | 'plough'
+    | 'speedo';
 
 export type DesignCard = {
     id: number;
@@ -174,6 +175,22 @@ export type FactionStudies = {
             minutes: number;
         } | null;
     }[];
+};
+
+/** Where you stand on the map, and the walk you're on. */
+export type MapMe = {
+    x: number;
+    y: number;
+    /** Paces a minute: a Speedo doubles it. */
+    pace: number;
+    walk: {
+        from: [number, number];
+        to: [number, number];
+        startedAt: string;
+        arrivesAt: string;
+        /** The region at the end of the walk. */
+        region: string | null;
+    } | null;
 };
 
 /** Gate Night: Ironfield's Sunday raid at 19:00, and how it went. */

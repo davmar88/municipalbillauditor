@@ -54,6 +54,8 @@ final class Players
             'user_id' => $user->id,
             'valley_id' => $valley->id,
             'region_id' => $valley->region('paddock')->id,
+            'pos_x' => Geography::hub('paddock')[0],
+            'pos_y' => Geography::hub('paddock')[1],
             'name' => $name,
             'species' => $species,
             'language' => $language,
@@ -102,7 +104,10 @@ final class Players
      */
     public static function lock(Player $player): Player
     {
-        return Player::query()->lockForUpdate()->findOrFail($player->id);
+        $locked = Player::query()->lockForUpdate()->findOrFail($player->id);
+        Movement::settle($locked);
+
+        return $locked;
     }
 
     /** Why the animal can't write in chat or messages, or null when it can. */

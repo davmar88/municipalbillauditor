@@ -19,6 +19,14 @@ use Illuminate\Support\Carbon;
  * @property int $user_id
  * @property int $valley_id
  * @property int|null $region_id Where the animal stands; null means the Paddock.
+ * @property float|null $pos_x Where it stands on the map, when not walking
+ * @property float|null $pos_y
+ * @property float|null $walk_from_x The walk it is on, from where to where
+ * @property float|null $walk_from_y
+ * @property float|null $walk_to_x
+ * @property float|null $walk_to_y
+ * @property Carbon|null $walk_started_at
+ * @property Carbon|null $walk_arrives_at
  * @property string $name
  * @property Species $species
  * @property string $language
@@ -72,6 +80,14 @@ class Player extends Model
             'adult_confirmed_at' => 'datetime',
             'orchard_until' => 'datetime',
             'orchard_refill_on' => 'date',
+            'pos_x' => 'float',
+            'pos_y' => 'float',
+            'walk_from_x' => 'float',
+            'walk_from_y' => 'float',
+            'walk_to_x' => 'float',
+            'walk_to_y' => 'float',
+            'walk_started_at' => 'datetime',
+            'walk_arrives_at' => 'datetime',
         ];
     }
 

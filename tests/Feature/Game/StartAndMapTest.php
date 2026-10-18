@@ -2,12 +2,18 @@
 
 namespace Tests\Feature\Game;
 
+use App\Enums\ItemTemplate;
 use App\Enums\Species;
 use App\Game\Gathering;
+use App\Game\Geography;
 use App\Game\Horseshoes;
 use App\Game\LawTemplate;
 use App\Game\Movement;
+use App\Game\Players;
+use App\Game\Powers;
 use App\Game\Wall;
+use App\Models\Item;
+use App\Models\ItemDesign;
 use App\Models\Law;
 use App\Models\Player;
 use App\Models\User;
@@ -139,28 +145,94 @@ class StartAndMapTest extends TestCase
         $this->assertSame(10, Horseshoes::current($player->fresh()));
     }
 
-    public function test_animals_start_in_the_paddock_and_walk_one_region_at_a_time(): void
+    public function test_animals_start_in_the_paddock_and_walk_to_any_point_at_their_pace(): void
     {
         $player = $this->player();
         $this->assertSame('paddock', $player->location()->key);
+        [$fromX, $fromY] = Movement::position($player);
+        $this->assertEqualsWithDelta(Geography::hub('paddock')[0], $fromX, 0.01);
 
-        $this->actingAs($player->user)->post(route('play.walk', $this->region('farmhouse')))->assertRedirect();
-        $this->assertSame('paddock', $player->fresh()->location()->key, 'The Farmhouse is not next to the Paddock.');
+        // Straight to the Farmhouse, past Market Square: it isn't next door, and that's fine now.
+        [$x, $y] = Geography::hub('farmhouse');
+        $this->actingAs($player->user)->post(route('play.walk-to'), ['x' => $x, 'y' => $y])->assertRedirect();
 
-        $this->actingAs($player->user)->post(route('play.walk', $this->region('market_square')))->assertRedirect();
-        $this->assertSame('market_square', $player->fresh()->location()->key);
+        $player->refresh();
+        $minutes = hypot($x - $fromX, $y - $fromY) / 120;
+        $this->assertEqualsWithDelta($minutes * 60, $player->walk_started_at->diffInSeconds($player->walk_arrives_at), 1.5);
+        $this->assertSame('paddock', $player->location()->key, 'Still in the Paddock as it sets off.');
+
+        $this->travel((int) ceil($minutes * 60) + 1)->seconds();
+        $this->actingAs($player->user)->get(route('play'))->assertInertia(fn (Assert $page) => $page
+            ->where('me.walk', null)
+            ->where('me.pace', 120));
+
+        $this->assertSame('farmhouse', $player->fresh()->location()->key);
         $this->assertSame(10, Horseshoes::current($player->fresh()), 'Walking is free.');
     }
 
-    public function test_walking_is_free_even_with_no_horseshoes_left(): void
+    public function test_an_animal_stands_in_the_region_it_is_passing_and_can_stop_there(): void
+    {
+        $player = $this->player();
+        [$x, $y] = Geography::hub('farmhouse');
+        app(Movement::class)->walkTo($player, $x, $y);
+        $walk = $player->fresh();
+        $length = $walk->walk_started_at->diffInSeconds($walk->walk_arrives_at);
+
+        // Halfway there it is crossing Market Square.
+        $this->travel((int) ($length * 0.55))->seconds();
+        $this->assertSame('market_square', Players::lock($player->fresh())->location()->key);
+
+        app(Movement::class)->stop($player->fresh());
+        $this->travel(1)->hours();
+        $stopped = $player->fresh();
+        $this->assertNull($stopped->walk_arrives_at);
+        $this->assertSame('market_square', $stopped->location()->key);
+        $this->assertSame('market_square', Geography::regionAt(...Movement::position($stopped)));
+    }
+
+    public function test_walking_is_free_and_off_the_map_is_out_of_reach(): void
     {
         $player = $this->player();
         Horseshoes::spend($player, Horseshoes::current($player));
 
         app(Movement::class)->walk($player->fresh(), $this->region('market_square'));
+        $this->travel(10)->minutes();
 
-        $this->assertSame('market_square', $player->fresh()->location()->key);
+        $this->assertSame('market_square', Players::lock($player->fresh())->location()->key);
         $this->assertSame(0, Horseshoes::current($player->fresh()));
+
+        $this->expectExceptionMessage("There's nothing there to walk to");
+        app(Movement::class)->walkTo($player->fresh(), 2900, 2900);
+    }
+
+    private function makeItem(Player $owner, ItemTemplate $template): Item
+    {
+        $design = ItemDesign::create([
+            'player_id' => $owner->id,
+            'template' => $template,
+            'name' => $template->label(),
+            'colours' => ['#b39aff', '#41d1ff'],
+            'pattern' => 'plain',
+            'edition' => null,
+            'status' => 'approved',
+        ]);
+
+        return Item::create(['item_design_id' => $design->id, 'player_id' => $owner->id, 'serial' => 1]);
+    }
+
+    public function test_a_speedo_doubles_the_pace_even_mid_walk(): void
+    {
+        $player = $this->player();
+        $speedo = $this->makeItem($player, ItemTemplate::Speedo);
+        [$x, $y] = Geography::hub('farmhouse');
+        app(Movement::class)->walkTo($player, $x, $y);
+        $slow = $player->fresh()->walk_arrives_at;
+
+        app(Powers::class)->use($player->fresh(), $speedo);
+
+        $fast = $player->fresh();
+        $this->assertSame(240, Movement::map($fast)['pace']);
+        $this->assertTrue($fast->walk_arrives_at->lessThan($slow), 'The rest of the walk goes twice as fast.');
     }
 
     public function test_you_gather_where_you_stand(): void

@@ -35,6 +35,9 @@ class MapController extends Controller
         /** @var Player $player */
         $player = $request->user()->player;
         $valley = $player->valley;
+        // Walks that ended since anyone looked put their animals where they arrived.
+        Movement::settleArrived($valley->id);
+        Movement::settle($player);
         $season = $valley->currentSeason();
         $house = $valley->house();
 
@@ -157,6 +160,7 @@ class MapController extends Controller
                         : ($attack->defender?->name ?? 'The defenders')." held {$attack->region->name} against {$attack->faction->name}.",
                     'at' => $attack->resolved_at->toIso8601String(),
                 ]) ?? [],
+            'me' => Movement::map($player),
             'gate' => [
                 'open' => GateNight::isGateDay(),
                 // Tonight's raid, so the map can ask how it went once it has happened.
@@ -174,9 +178,36 @@ class MapController extends Controller
         $player = $request->user()->player;
         abort_unless($region->valley_id === $player->valley_id, 404);
 
-        $movement->walk($player, $region);
+        $player = $movement->walk($player, $region);
 
-        return $this->told("You walked to {$region->name}.");
+        return $this->toldWalk($player);
+    }
+
+    /** Walk in a straight line to a point on the map. */
+    public function walkTo(Request $request, Movement $movement): RedirectResponse
+    {
+        $data = $request->validate([
+            'x' => ['required', 'numeric', 'between:-2000,3000'],
+            'y' => ['required', 'numeric', 'between:-2000,3000'],
+        ]);
+
+        return $this->toldWalk($movement->walkTo($request->user()->player, (float) $data['x'], (float) $data['y']));
+    }
+
+    public function stop(Request $request, Movement $movement): RedirectResponse
+    {
+        $player = $movement->stop($request->user()->player);
+
+        return $this->told("You stopped in {$player->location()->name}.");
+    }
+
+    private function toldWalk(Player $player): RedirectResponse
+    {
+        $walk = Movement::map($player)['walk'];
+
+        return $walk === null
+            ? $this->told("You're in {$player->location()->name}.")
+            : $this->told('You set off'.($walk['region'] ? " for {$walk['region']}" : '').'. You arrive at '.Clock::local($player->walk_arrives_at)->format('H:i').'.');
     }
 
     public function buy(Request $request, Region $region, Farms $farms): RedirectResponse

@@ -29,6 +29,7 @@ import type {
     FactionRef,
     MapRegion,
     Species,
+    MapMe,
 } from '@/types/game';
 
 type View = { x: number; y: number; k: number };
@@ -159,7 +160,7 @@ function useCamera(
     container: React.RefObject<HTMLDivElement | null>,
     svg: React.RefObject<SVGSVGElement | null>,
     focus: Point | null,
-    onTap: (target: Element | null) => void,
+    onTap: (target: Element | null, world: Point) => void,
 ) {
     const [view, setView] = useState<View>({ x: 0, y: 0, k: 0 });
     const [size, setSize] = useState<Size | null>(null);
@@ -510,7 +511,11 @@ function useCamera(
             }
 
             lastTap.current = { at: now, point };
-            tapRef.current(current.target);
+            const seen = viewRef.current;
+            tapRef.current(current.target, [
+                (point[0] - seen.x) / seen.k,
+                (point[1] - seen.y) / seen.k,
+            ]);
 
             return;
         }
@@ -1357,13 +1362,85 @@ const Bases = memo(function Bases({
 });
 
 /** Your animal. It walks to its new region when you move. */
-function Me({ at, species, k }: { at: Point; species: Species; k: number }) {
+/** A clock that ticks while you walk, so your animal moves along its line. */
+function useWalkClock(walk: MapMe['walk']): number {
+    const [now, setNow] = useState(() => Date.now());
+
+    useEffect(() => {
+        if (!walk) {
+            return;
+        }
+
+        const timer = window.setInterval(() => setNow(Date.now()), 250);
+
+        return () => window.clearInterval(timer);
+    }, [walk]);
+
+    return now;
+}
+
+/** Where you are now: along your walk's line, or where you stand. */
+function walkPoint(me: MapMe, now: number): Point {
+    if (!me.walk) {
+        return [me.x, me.y];
+    }
+
+    const start = new Date(me.walk.startedAt).getTime();
+    const end = new Date(me.walk.arrivesAt).getTime();
+    const done = Math.min(
+        1,
+        Math.max(0, (now - start) / Math.max(1, end - start)),
+    );
+
+    return [
+        me.walk.from[0] + (me.walk.to[0] - me.walk.from[0]) * done,
+        me.walk.from[1] + (me.walk.to[1] - me.walk.from[1]) * done,
+    ];
+}
+
+/** The straight line still to walk, and a flag where it ends. */
+function WalkLine({ from, to, k }: { from: Point; to: Point; k: number }) {
+    return (
+        <g pointerEvents="none">
+            <line
+                x1={from[0]}
+                y1={from[1]}
+                x2={to[0]}
+                y2={to[1]}
+                stroke={VIOLET}
+                strokeWidth={3 / k}
+                strokeDasharray={`${8 / k} ${6 / k}`}
+                strokeLinecap="round"
+                opacity={0.9}
+            />
+            <g transform={`translate(${to[0]} ${to[1]}) scale(${1 / k})`}>
+                <circle r={7} fill={VIOLET} stroke={HALO} strokeWidth={2} />
+                <circle r={2.5} fill="#14121a" />
+            </g>
+        </g>
+    );
+}
+
+function Me({
+    at,
+    species,
+    k,
+    walking,
+}: {
+    at: Point;
+    species: Species;
+    k: number;
+    walking: boolean;
+}) {
     return (
         <g
             pointerEvents="none"
             style={{
                 transform: `translate(${at[0].toFixed(1)}px, ${at[1].toFixed(1)}px)`,
-                transition: 'transform 1s cubic-bezier(0.45, 0, 0.2, 1)',
+                // While walking the clock moves it; a jump eases into place.
+                transition: walking
+                    ? 'transform 0.25s linear'
+                    : 'transform 1s cubic-bezier(0.45, 0, 0.2, 1)',
             }}
         >
             <g transform={`scale(${1 / k})`}>
@@ -1469,6 +1546,10 @@ type Props = {
     selectedId: number | null;
     onSelect: (id: number | null) => void;
     gateNight: boolean;
+    /** Where you stand, and the walk you're on. */
+    me: MapMe | null;
+    /** Walk to a point on the map. */
+    onWalk?: (point: Point) => void;
     /** How tonight's Gate Night went, once it has happened. */
     gateResult: GateResult;
     /** The animals with a warrant out for their arrest. */
@@ -1489,6 +1570,8 @@ export function WorldMap({
     selectedId,
     onSelect,
     gateNight,
+    me,
+    onWalk,
     gateResult,
     wanted,
     children,
@@ -1502,14 +1585,24 @@ export function WorldMap({
     const hereRegion = here !== null ? (byId.get(here) ?? null) : null;
     const selected =
         selectedId !== null ? (byId.get(selectedId) ?? null) : null;
-    const herePoint = hereRegion ? hub(hereRegion.key) : null;
+    const now = useWalkClock(me?.walk ?? null);
+    const herePoint: Point | null = me
+        ? walkPoint(me, now)
+        : hereRegion
+          ? hub(hereRegion.key)
+          : null;
 
     const onTap = useCallback(
-        (target: Element | null) => {
+        (target: Element | null, world: Point) => {
             const id = Number(target?.getAttribute('data-region'));
             onSelect(Number.isFinite(id) && id > 0 ? id : null);
+
+            // Tapping land sets off straight for that spot.
+            if (onWalk && Number.isFinite(id) && id > 0) {
+                onWalk(world);
+            }
         },
-        [onSelect],
+        [onSelect, onWalk],
     );
 
     const camera = useCamera(containerRef, svgRef, herePoint, onTap);
@@ -1555,7 +1648,7 @@ export function WorldMap({
             bringIntoView(herePoint, selected !== null);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [here]);
+    }, [here, me?.walk?.arrivesAt]);
 
     const trailsTo = useMemo(
         () =>
@@ -1638,8 +1731,16 @@ export function WorldMap({
                         />
                         <Bases regions={regions} k={k} />
                         <Crowd regions={regions} k={k} wanted={wanted} />
+                        {me?.walk && herePoint && (
+                            <WalkLine from={herePoint} to={me.walk.to} k={k} />
+                        )}
                         {herePoint && species && (
-                            <Me at={herePoint} species={species} k={k} />
+                            <Me
+                                at={herePoint}
+                                species={species}
+                                k={k}
+                                walking={me?.walk != null}
+                            />
                         )}
                     </g>
                 )}

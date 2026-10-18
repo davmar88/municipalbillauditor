@@ -42,6 +42,8 @@ final class Tick
             return;
         }
 
+        Movement::settleArrived($valley->id);
+
         // Studies finish first, so what was learned counts this half hour.
         $this->research->finishDue($valley->id);
         $this->wall->settleSecretEdits($season);

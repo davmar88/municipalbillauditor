@@ -1,6 +1,6 @@
 import { Head, router, usePage } from '@inertiajs/react';
-import { Flame, Shield, Swords } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { Flame, Footprints, Shield, Swords } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { GameBar } from '@/components/game/game-bar';
 import { GateStrength } from '@/components/game/gate-strength';
 import { HorseshoePicker } from '@/components/game/horseshoe-picker';
@@ -10,9 +10,10 @@ import type { Plunder, Warrant } from '@/components/game/region-panel';
 import { WorldMap } from '@/components/game/world-map';
 import { Button } from '@/components/ui/button';
 import { act, clockTime, fromNow } from '@/lib/game';
-import { commit, gate } from '@/routes/play';
+import { commit, gate, walkStop, walkTo as walkToRoute } from '@/routes/play';
 import type {
     GateNightInfo,
+    MapMe,
     BuildingKindCard,
     FactionRef,
     FactionStore,
@@ -31,6 +32,7 @@ type Props = {
     battles: MapBattle[];
     recent: { id: number; text: string; at: string }[];
     gate: GateNightInfo;
+    me: MapMe;
     yields: { corn: number; material: number };
     base: FactionStore | null;
     buildingKinds: BuildingKindCard[];
@@ -49,6 +51,7 @@ export default function MapPage({
     battles,
     recent,
     gate: gateNight,
+    me,
     yields,
     base,
     buildingKinds,
@@ -60,6 +63,34 @@ export default function MapPage({
     const [selectedId, setSelectedId] = useState<number | null>(null);
     const [horseshoes, setHorseshoes] = useState(1);
     const selected = regions.find((region) => region.id === selectedId) ?? null;
+
+    const walkTo = useCallback(([x, y]: [number, number]) => {
+        router.post(
+            walkToRoute.url(),
+            { x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10 },
+            { preserveScroll: true, preserveState: true },
+        );
+    }, []);
+
+    // Once you arrive, fetch where you are and what is round you.
+    useEffect(() => {
+        if (!me.walk) {
+            return;
+        }
+
+        const timer = window.setTimeout(
+            () =>
+                router.reload({
+                    only: ['me', 'here', 'regions', 'warrants', 'plunder'],
+                }),
+            Math.max(
+                0,
+                new Date(me.walk.arrivesAt).getTime() + 500 - Date.now(),
+            ),
+        );
+
+        return () => window.clearTimeout(timer);
+    }, [me.walk]);
 
     // Once Ironfield has raided, fetch how it went, without a reload.
     useEffect(() => {
@@ -84,6 +115,30 @@ export default function MapPage({
             <Head title="Map" />
             <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 p-3 md:p-5">
                 <GameBar />
+
+                {me.walk && (
+                    <p className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-primary/40 bg-primary/10 px-4 py-2.5 text-sm">
+                        <Footprints
+                            className="size-4 shrink-0 text-primary"
+                            aria-hidden
+                        />
+                        <span className="min-w-0 flex-1">
+                            Walking
+                            {me.walk.region
+                                ? ` to ${me.walk.region}`
+                                : ''} at{' '}
+                            {me.pace} paces a minute. You arrive at{' '}
+                            {clockTime(me.walk.arrivesAt)}.
+                        </span>
+                        <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => act(walkStop.url())}
+                        >
+                            Stop here
+                        </Button>
+                    </p>
+                )}
 
                 {gateNight.result && <GateResult result={gateNight.result} />}
 
@@ -197,6 +252,8 @@ export default function MapPage({
                     selectedId={selectedId}
                     onSelect={setSelectedId}
                     gateNight={gateNight.open}
+                    me={me}
+                    onWalk={walkTo}
                     gateResult={
                         gateNight.result === null
                             ? null

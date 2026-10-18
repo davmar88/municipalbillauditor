@@ -57,6 +57,10 @@ final class Powers
 
     public const PLOUGH_HOURS = 24;
 
+    public const SPEEDO = 2.0;
+
+    public const SPEEDO_HOURS = 1;
+
     /**
      * Use a powered item. It is used up and its power starts.
      *
@@ -106,6 +110,7 @@ final class Powers
                 ItemTemplate::Kit => $this->kit($player),
                 ItemTemplate::Gate => $this->gate($player),
                 ItemTemplate::Plough => $this->time(['faction_id' => $this->faction($player)->id], 'plough', self::PLOUGH_HOURS, "You hitched the Iron Plough: your faction's farms pay double"),
+                ItemTemplate::Speedo => $this->speedo($player),
                 default => throw new GameException('That item has no power to use.'),
             };
 
@@ -165,6 +170,12 @@ final class Powers
         return $factionId !== null && self::active(['faction_id' => $factionId], 'bell') ? self::BELL : 0.0;
     }
 
+    /** How much faster an animal walks: twice as fast after a Speedo. */
+    public static function speed(Player $player): float
+    {
+        return self::active(['player_id' => $player->id], 'speedo') ? self::SPEEDO : 1.0;
+    }
+
     /** Rosettes count double while a Prize Ribbon is pinned on. */
     public static function rosettes(int $playerId): int
     {
@@ -198,6 +209,7 @@ final class Powers
             'pickaxe' => 'Iron Pickaxe',
             'lock' => 'Iron Lock',
             'plough' => 'Iron Plough',
+            'speedo' => 'Speedo',
         ];
 
         return $effects
@@ -277,6 +289,15 @@ final class Powers
         }
 
         return "{$told} until ".Clock::local($until)->format('H:i').'.';
+    }
+
+    /** A Speedo: twice as fast for an hour, starting with the walk the animal is on. */
+    private function speedo(Player $player): string
+    {
+        $told = $this->time(['player_id' => $player->id], 'speedo', self::SPEEDO_HOURS, 'You drank a Speedo: you walk twice as fast');
+        app(Movement::class)->rethink($player);
+
+        return $told;
     }
 
     private function tonic(Player $player): string
