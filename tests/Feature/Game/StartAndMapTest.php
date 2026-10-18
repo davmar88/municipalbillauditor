@@ -157,14 +157,15 @@ class StartAndMapTest extends TestCase
         $this->actingAs($player->user)->post(route('play.walk-to'), ['x' => $x, 'y' => $y])->assertRedirect();
 
         $player->refresh();
-        $minutes = hypot($x - $fromX, $y - $fromY) / 120;
+        $pace = (int) config('game.walk.paces_per_minute');
+        $minutes = hypot($x - $fromX, $y - $fromY) / $pace;
         $this->assertEqualsWithDelta($minutes * 60, $player->walk_started_at->diffInSeconds($player->walk_arrives_at), 1.5);
         $this->assertSame('paddock', $player->location()->key, 'Still in the Paddock as it sets off.');
 
         $this->travel((int) ceil($minutes * 60) + 1)->seconds();
         $this->actingAs($player->user)->get(route('play'))->assertInertia(fn (Assert $page) => $page
             ->where('me.walk', null)
-            ->where('me.pace', 120));
+            ->where('me.pace', $pace));
 
         $this->assertSame('farmhouse', $player->fresh()->location()->key);
         $this->assertSame(10, Horseshoes::current($player->fresh()), 'Walking is free.');
@@ -231,7 +232,7 @@ class StartAndMapTest extends TestCase
         app(Powers::class)->use($player->fresh(), $speedo);
 
         $fast = $player->fresh();
-        $this->assertSame(240, Movement::map($fast)['pace']);
+        $this->assertSame(2 * (int) config('game.walk.paces_per_minute'), Movement::map($fast)['pace']);
         $this->assertTrue($fast->walk_arrives_at->lessThan($slow), 'The rest of the walk goes twice as fast.');
     }
 
