@@ -4,15 +4,28 @@ namespace App\Http\Controllers\Game;
 
 use App\Game\GameException;
 use App\Http\Controllers\Controller;
+use App\Models\Cashout;
+use App\Models\Player;
 use App\Payments\Cashouts;
+use App\Payments\Paystack;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
+use Inertia\Inertia;
+use Inertia\Response;
 
 /** Cashing Apples out: where the money goes and who to, and asking for it. */
 class CashoutController extends Controller
 {
+    /** The Cash out page: payout details, asking for a cash-out, and past ones. */
+    public function index(Request $request, Cashouts $cashouts, Paystack $paystack): Response
+    {
+        return Inertia::render('game/cashout', [
+            'cashout' => $this->cashout($request->user()->player, $cashouts, $paystack),
+        ]);
+    }
+
     public function account(Request $request, Cashouts $cashouts): RedirectResponse
     {
         $data = $request->validate([
@@ -52,5 +65,50 @@ class CashoutController extends Controller
         $cashout = $cashouts->request($request->user()->player, $apples);
 
         return $this->told('You asked to cash out '.number_format($apples)." Apples for {$cashout->price()}. Our team checks every cash-out before it's sent, and we'll tell you when it's paid.");
+    }
+
+    /** @return array<string, mixed> What the Cash out part of the page needs. */
+    private function cashout(Player $player, Cashouts $cashouts, Paystack $paystack): array
+    {
+        $ways = $cashouts->ways();
+        $account = $player->payoutAccount;
+
+        return [
+            'open' => $cashouts->open(),
+            'ways' => $ways,
+            'saveable' => $cashouts->saveable(),
+            'per100' => config('game.cashout.per_100'),
+            'min' => Cashouts::min(),
+            'dailyCap' => Cashouts::dailyCap(),
+            'holdDays' => Cashouts::holdDays(),
+            'held' => Cashouts::held($player),
+            'available' => Cashouts::available($player),
+            // Their own details, with the numbers hidden: changing them means typing them again.
+            'account' => $account === null ? null : [
+                'method' => $account->method,
+                'label' => $account->describe(),
+                'name' => $account->legal_name,
+                'country' => $account->country,
+                'documentType' => $account->document_type,
+                'document' => $account->maskedDocument(),
+                'bankCode' => $account->bank_code,
+            ],
+            'banks' => $ways['paystack'] ? $paystack->banks() : [],
+            'history' => Cashout::query()
+                ->where('player_id', $player->id)
+                ->latest('id')
+                ->limit(10)
+                ->get()
+                ->map(fn (Cashout $cashout) => [
+                    'id' => $cashout->id,
+                    'apples' => $cashout->apples,
+                    'price' => $cashout->price(),
+                    'label' => $cashout->destination['label'] ?? '',
+                    'status' => $cashout->status,
+                    // Only the owner's reason for turning one down is for the animal's eyes.
+                    'reason' => $cashout->status === 'rejected' ? $cashout->note : null,
+                    'at' => $cashout->created_at->toIso8601String(),
+                ]),
+        ];
     }
 }

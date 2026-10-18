@@ -27,7 +27,14 @@ import { useCurrentUrl } from '@/hooks/use-current-url';
 import { mainNavigation } from '@/lib/navigation';
 import { admin, play, puzzle } from '@/routes';
 import { cashouts } from '@/routes/admin';
-import { apples, chat, messages, rankings, wanted } from '@/routes/play';
+import {
+    apples,
+    cashout,
+    chat,
+    messages,
+    rankings,
+    wanted,
+} from '@/routes/play';
 import { designs, reports } from '@/routes/staff';
 import type { NavItem } from '@/types';
 
@@ -37,6 +44,7 @@ const moreNavItems: NavItem[] = [
     { title: 'Rankings', href: rankings(), icon: Trophy },
     { title: 'Wanted', href: wanted(), icon: Crosshair },
     { title: 'Apples', href: apples(), icon: Apple },
+    { title: 'Cash out', href: cashout(), icon: Banknote },
 ];
 
 const staffNavItems: NavItem[] = [

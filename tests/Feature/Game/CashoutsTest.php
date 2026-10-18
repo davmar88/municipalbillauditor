@@ -179,7 +179,7 @@ class CashoutsTest extends TestCase
         $player = $this->earner();
         $this->payoutTo($player, 'bitcoin');
 
-        $this->actingAs($player->user)->get(route('play.apples'))->assertInertia(fn (Assert $page) => $page
+        $this->actingAs($player->user)->get(route('play.cashout'))->assertInertia(fn (Assert $page) => $page
             ->where('cashout.open', false)
             ->where('cashout.ways.bitcoin', false));
 
@@ -188,6 +188,29 @@ class CashoutsTest extends TestCase
 
         $this->assertSame(0, Cashout::count());
         $this->assertSame(2000, $player->fresh()->apples);
+    }
+
+    public function test_animals_save_their_paypal_details_on_the_cash_out_page_before_it_opens(): void
+    {
+        $player = $this->earner();
+
+        $this->saveDetails($player, [])
+            ->assertSessionHasNoErrors()
+            ->assertInertiaFlash('toast.message', 'Saved.');
+        $this->saveDetails($player, ['method' => 'paystack', 'paypal_email' => null, 'bank_code' => '632005', 'account_number' => '4071234567'])
+            ->assertSessionHasErrors(['details' => 'Bank accounts can be added once cashing out opens. You can save PayPal or Bitcoin details now.']);
+        $this->assertSame(0, $this->sent('/bank/validate'));
+
+        $this->actingAs($player->user)->get(route('play.cashout'))->assertOk()->assertInertia(fn (Assert $page) => $page
+            ->component('game/cashout')
+            ->where('cashout.open', false)
+            ->where('cashout.saveable.paypal', true)
+            ->where('cashout.saveable.paystack', false)
+            ->where('cashout.account.label', 'PayPal, t•••@example.com'));
+
+        $this->actingAs($player->user)->post(route('play.cashout.request'), ['apples' => 500])
+            ->assertInertiaFlash('toast.message', "Cashing out isn't open yet.");
+        $this->assertSame(0, Cashout::count());
     }
 
     public function test_payout_details_need_an_adult_id_number_and_are_kept_encrypted(): void
@@ -216,7 +239,7 @@ class CashoutsTest extends TestCase
         $this->assertStringNotContainsString('thandi', strtolower((string) $raw->paypal_email.$raw->legal_name));
         $this->assertStringNotContainsString(self::ID_NUMBER, (string) $raw->document_number);
 
-        $this->actingAs($player->user)->get(route('play.apples'))->assertInertia(fn (Assert $page) => $page
+        $this->actingAs($player->user)->get(route('play.cashout'))->assertInertia(fn (Assert $page) => $page
             ->where('cashout.account.label', 'PayPal, t•••@example.com')
             ->where('cashout.account.document', '••••9087')
             ->missing('cashout.account.paypal_email'));
@@ -239,7 +262,7 @@ class CashoutsTest extends TestCase
 
         $player = $this->earner();
 
-        $this->actingAs($player->user)->get(route('play.apples'))->assertInertia(fn (Assert $page) => $page
+        $this->actingAs($player->user)->get(route('play.cashout'))->assertInertia(fn (Assert $page) => $page
             ->where('cashout.ways.paystack', true)
             ->has('cashout.banks', 2));
 
@@ -296,7 +319,7 @@ class CashoutsTest extends TestCase
         Apples::award($player, 5000, 'Caught an outlaw', 'bounty:'.Str::uuid());
         $ask(4600)->assertInertiaFlash('toast.message', 'You can cash out 5,000 Apples a day. You can cash out 4,500 more today.');
 
-        $this->actingAs($player->fresh()->user)->get(route('play.apples'))->assertInertia(fn (Assert $page) => $page
+        $this->actingAs($player->fresh()->user)->get(route('play.cashout'))->assertInertia(fn (Assert $page) => $page
             ->where('cashout.held', 300)
             ->where('cashout.available', 4500)
             ->where('cashout.history.0.status', 'paid'));
@@ -537,7 +560,7 @@ class CashoutsTest extends TestCase
         $this->assertSame(['rejected', 2000], [$cashout->fresh()->status, $player->apples]);
         $this->assertStringContainsString('They said: The account behind these Apples was opened yesterday.', Notice::query()->where('player_id', $player->id)->value('text'));
 
-        $this->actingAs($player->user)->get(route('play.apples'))->assertInertia(fn (Assert $page) => $page
+        $this->actingAs($player->user)->get(route('play.cashout'))->assertInertia(fn (Assert $page) => $page
             ->where('cashout.history.0.status', 'rejected')
             ->where('cashout.history.0.reason', 'The account behind these Apples was opened yesterday.'));
         Http::assertNotSent(fn (Request $request) => str_contains($request->url(), '/payouts'));

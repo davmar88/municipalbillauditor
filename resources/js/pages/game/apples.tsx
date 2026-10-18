@@ -1,12 +1,11 @@
-import { Head, router, usePage } from '@inertiajs/react';
-import { Clock3, RefreshCw, Wheat } from 'lucide-react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Banknote, Clock3, RefreshCw, Wheat } from 'lucide-react';
 import { useState } from 'react';
-import { CashOut } from '@/components/game/cash-out';
-import type { CashOutInfo } from '@/components/game/cash-out';
 import { GameBar } from '@/components/game/game-bar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { act, dayMonth, dollars, rand, shortWhen } from '@/lib/game';
+import { cashout } from '@/routes/play';
 import { buy, check, swap } from '@/routes/play/apples';
 import { join, refill } from '@/routes/play/orchard';
 
@@ -52,14 +51,13 @@ type Props = {
         /** Shelves in a member's shop. */
         shelves: number;
     };
-    cashout: CashOutInfo;
     contact: string | null;
 };
 
 /**
  * Apples, bought with real money: packs to buy with Paystack or PayPal,
- * Orchard membership, swapping Apples for Corn, cashing out, and where your
- * Apples came from and went.
+ * Orchard membership, swapping Apples for Corn, and where your Apples came
+ * from and went. Cashing out has a page of its own.
  */
 export default function ApplesPage({
     packs,
@@ -69,7 +67,6 @@ export default function ApplesPage({
     pending,
     history,
     orchard,
-    cashout,
     contact,
 }: Props) {
     const [buying, setBuying] = useState<string | null>(null);
@@ -214,7 +211,22 @@ export default function ApplesPage({
 
                 <Swap cornPerApple={cornPerApple} />
 
-                <CashOut cashout={cashout} />
+                <section className="flex flex-wrap items-center gap-3 rounded-xl border bg-card p-4">
+                    <Banknote
+                        className="size-5 shrink-0 text-emerald-300"
+                        aria-hidden
+                    />
+                    <div className="min-w-0 flex-1">
+                        <h2 className="font-bold">Cash out</h2>
+                        <p className="text-sm text-muted-foreground">
+                            Turn Apples you earned into money, paid to your
+                            PayPal, your bank or in Bitcoin.
+                        </p>
+                    </div>
+                    <Button variant="secondary" asChild>
+                        <Link href={cashout()}>Cash out</Link>
+                    </Button>
+                </section>
 
                 <section className="flex flex-col gap-2">
                     <h2 className="text-lg font-bold">Your Apples</h2>

@@ -17,7 +17,10 @@ type CashoutStatus = 'pending' | 'sending' | 'paid' | 'failed' | 'rejected';
 
 export type CashOutInfo = {
     open: boolean;
+    /** The ways cash-outs can be paid right now. */
     ways: Record<PayoutMethod, boolean>;
+    /** The ways payout details can be saved for, even before cashing out opens. */
+    saveable: Record<PayoutMethod, boolean>;
     /** What 100 Apples pay, in cents. */
     per100: { ZAR: number; USD: number };
     min: number;
@@ -84,18 +87,6 @@ function quote(
  */
 export function CashOut({ cashout }: { cashout: CashOutInfo }) {
     const [editing, setEditing] = useState(cashout.account === null);
-
-    if (!cashout.open) {
-        return (
-            <section className="flex flex-col gap-1 rounded-xl border border-dashed p-4">
-                <Heading />
-                <p className="text-sm text-muted-foreground">
-                    Cashing Apples out for money isn't open yet.
-                </p>
-            </section>
-        );
-    }
-
     const { account, per100 } = cashout;
     const waiting = cashout.history.find(
         (item) => item.status === 'pending' || item.status === 'sending',
@@ -105,14 +96,23 @@ export function CashOut({ cashout }: { cashout: CashOutInfo }) {
         <section className="flex flex-col gap-4 rounded-xl border bg-card p-4">
             <div className="flex flex-col gap-1">
                 <Heading />
-                <p className="text-sm text-muted-foreground">
-                    100 Apples pay {rand(per100.ZAR)} by bank transfer or in
-                    Bitcoin, or {dollars(per100.USD)} by PayPal. Cash out{' '}
-                    {cashout.min.toLocaleString('en-ZA')} to{' '}
-                    {cashout.dailyCap.toLocaleString('en-ZA')} Apples a day. Our
-                    team checks every cash-out before it's sent.
-                </p>
-                {cashout.held > 0 && (
+                {cashout.open ? (
+                    <p className="text-sm text-muted-foreground">
+                        100 Apples pay {rand(per100.ZAR)} by bank transfer or in
+                        Bitcoin, or {dollars(per100.USD)} by PayPal. Cash out{' '}
+                        {cashout.min.toLocaleString('en-ZA')} to{' '}
+                        {cashout.dailyCap.toLocaleString('en-ZA')} Apples a day.
+                        Our team checks every cash-out before it's sent.
+                    </p>
+                ) : (
+                    <p className="text-sm text-muted-foreground">
+                        Cashing Apples out for money isn't open yet. Save your
+                        PayPal details now, and you can cash out as soon as it
+                        opens. 100 Apples will pay {dollars(per100.USD)} by
+                        PayPal.
+                    </p>
+                )}
+                {cashout.open && cashout.held > 0 && (
                     <p className="text-sm text-muted-foreground">
                         {cashout.held.toLocaleString('en-ZA')} of your Apples
                         were bought in the last {cashout.holdDays} days. Bought
@@ -164,7 +164,8 @@ export function CashOut({ cashout }: { cashout: CashOutInfo }) {
                 />
             )}
 
-            {account &&
+            {cashout.open &&
+                account &&
                 !editing &&
                 !waiting &&
                 (cashout.ways[account.method] ? (
@@ -298,7 +299,7 @@ function PayoutForm({
     onSaved: () => void;
     onCancel?: () => void;
 }) {
-    const { account, ways, banks } = cashout;
+    const { account, saveable, banks } = cashout;
     const [country, setCountry] = useState(account?.country ?? 'ZA');
     const [documentType, setDocumentType] = useState(
         account?.documentType ?? 'id',
@@ -308,7 +309,7 @@ function PayoutForm({
     );
     // A bank transfer goes to a South African account only.
     const open = WAYS.filter(
-        (way) => ways[way] && (way !== 'paystack' || country === 'ZA'),
+        (way) => saveable[way] && (way !== 'paystack' || country === 'ZA'),
     );
     const chosen = open.includes(method) ? method : open[0];
     const idType = country === 'ZA' ? documentType : 'passport';

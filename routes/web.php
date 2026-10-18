@@ -124,6 +124,7 @@ Route::middleware(['auth', 'verified', 'player', 'throttle:120,1'])->prefix('pla
     Route::post('apples/swap', [AppleController::class, 'swap'])->name('play.apples.swap');
     Route::post('orchard/join', [OrchardController::class, 'join'])->name('play.orchard.join');
     Route::post('orchard/refill', [OrchardController::class, 'refill'])->name('play.orchard.refill');
+    Route::get('cashout', [CashoutController::class, 'index'])->name('play.cashout');
     // Each bank account check costs the game R3.
     Route::post('cashout/account', [CashoutController::class, 'account'])->middleware('throttle:10,60,cashout-account')->name('play.cashout.account');
     Route::post('cashout', [CashoutController::class, 'store'])->middleware('throttle:10,1,cashout')->name('play.cashout.request');

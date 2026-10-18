@@ -69,6 +69,23 @@ final class Cashouts
         ];
     }
 
+    /**
+     * The ways an animal can save payout details for. PayPal and Bitcoin
+     * details need no outside check, so they can be saved before cashing
+     * out opens; a bank account is checked with the bank, which costs the
+     * game R3, so it waits until bank transfers are open.
+     *
+     * @return array{paystack: bool, paypal: bool, bitcoin: bool}
+     */
+    public function saveable(): array
+    {
+        return [
+            'paystack' => $this->ways()['paystack'],
+            'paypal' => true,
+            'bitcoin' => true,
+        ];
+    }
+
     public static function currency(string $method): string
     {
         return $method === 'paypal' ? 'USD' : 'ZAR';
@@ -174,8 +191,8 @@ final class Cashouts
     {
         $method = $details['method'];
 
-        if (! ($this->ways()[$method] ?? false)) {
-            throw new GameException($this->open() ? self::closedWay($method) : "Cashing out isn't open yet.");
+        if (! ($this->saveable()[$method] ?? false)) {
+            throw new GameException($this->open() ? self::closedWay($method) : 'Bank accounts can be added once cashing out opens. You can save PayPal or Bitcoin details now.');
         }
 
         $fields = [
