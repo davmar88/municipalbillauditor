@@ -1,8 +1,10 @@
-import { Check, Lock, Sparkles } from 'lucide-react';
+import { Link } from '@inertiajs/react';
+import { ArrowRight, Check, Lock, Sparkles } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Horseshoe } from '@/components/game/game-bar';
 import { Button } from '@/components/ui/button';
 import { act } from '@/lib/game';
+import { missionPlace } from '@/lib/missions';
 import { cn } from '@/lib/utils';
 import { claim } from '@/routes/play/mission';
 import type { MissionCard, MissionReward, SkillCard } from '@/types/game';
@@ -98,20 +100,28 @@ function MissionAction({ mission }: { mission: MissionCard }) {
         );
     }
 
+    if (mission.done) {
+        return (
+            <Button
+                size="sm"
+                onClick={() => act(claim.url(mission.id))}
+                className="animate-pulse"
+            >
+                Collect reward
+            </Button>
+        );
+    }
+
+    const place = missionPlace(mission.key);
+
     return (
-        <Button
-            size="sm"
-            disabled={!mission.done}
-            onClick={() => act(claim.url(mission.id))}
-            className={cn(mission.done && 'animate-pulse')}
-        >
-            {mission.done
-                ? 'Collect reward'
-                : `${mission.progress} of ${mission.target}`}
+        <Button size="sm" variant="secondary" asChild>
+            <Link href={place.href}>
+                {place.label} <ArrowRight className="size-4" />
+            </Link>
         </Button>
     );
 }
-
 /** The step of the story you're on. */
 export function StoryMission({
     mission,

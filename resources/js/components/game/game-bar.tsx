@@ -1,17 +1,25 @@
 import { usePage } from '@inertiajs/react';
-import { Award, Clock3, Flame, Wheat } from 'lucide-react';
+import { Award, Backpack, Clock3, Flame, Wheat } from 'lucide-react';
+import { NextStep } from '@/components/game/next-step';
 import { Button } from '@/components/ui/button';
 import { act, fromNow } from '@/lib/game';
 import { cn } from '@/lib/utils';
 import { rebuild } from '@/routes/play';
 
-/** The strip along the top of every game screen: what you have to spend. */
-export function GameBar() {
+/**
+ * The strip along the top of every game screen: what you have to spend,
+ * what you carry, and your next step in the story.
+ */
+export function GameBar({ showNextStep = true }: { showNextStep?: boolean }) {
     const { player } = usePage().props;
 
     if (!player) {
         return null;
     }
+
+    const carried = Object.entries(player.materials ?? {}).filter(
+        ([, count]) => count > 0,
+    );
 
     const nextAt =
         player.nextHorseshoeIn !== null
@@ -44,6 +52,30 @@ export function GameBar() {
                         · {player.rosettes} Rosettes
                     </span>
                 </span>
+                <span
+                    className="flex max-w-full items-center gap-1.5 rounded-full border bg-card px-3 py-1.5"
+                    title={
+                        carried.length > 0
+                            ? `You carry ${carried.map(([name, count]) => `${count} ${name}`).join(', ')}`
+                            : 'You carry no materials yet. Gather them on the map.'
+                    }
+                >
+                    <Backpack
+                        className="size-4 shrink-0 text-cyan-300"
+                        aria-hidden
+                    />
+                    {carried.length > 0 ? (
+                        <span className="truncate">
+                            {carried
+                                .map(([name, count]) => `${count} ${name}`)
+                                .join(' · ')}
+                        </span>
+                    ) : (
+                        <span className="text-muted-foreground">
+                            Nothing carried
+                        </span>
+                    )}
+                </span>
             </div>
             {(player.inPoundUntil || player.homeClosedUntil) && (
                 <p
@@ -74,6 +106,7 @@ export function GameBar() {
                     )}
                 </p>
             )}
+            {showNextStep && <NextStep />}
         </div>
     );
 }

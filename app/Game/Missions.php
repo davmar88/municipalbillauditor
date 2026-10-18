@@ -311,6 +311,24 @@ final class Missions
         ];
     }
 
+    /**
+     * The story step the player is on, for the Next step bar on every screen.
+     *
+     * @return array<string, mixed>|null
+     */
+    public static function current(Player $player): ?array
+    {
+        self::ensure($player);
+
+        $mission = PlayerMission::query()
+            ->where('player_id', $player->id)
+            ->where('period', 'story')
+            ->whereNull('claimed_at')
+            ->first();
+
+        return $mission ? self::present($player, $mission) : null;
+    }
+
     /** How many finished missions are waiting to be collected. */
     public static function waiting(Player $player): int
     {

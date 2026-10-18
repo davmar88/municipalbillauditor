@@ -96,7 +96,7 @@ export default function Today({
         <>
             <Head title="Today" />
             <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 p-4 md:p-6">
-                <GameBar />
+                <GameBar showNextStep={false} />
 
                 <header className="flex flex-wrap items-end justify-between gap-3">
                     <div>

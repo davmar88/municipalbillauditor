@@ -81,6 +81,8 @@ class HandleInertiaRequests extends Middleware
             'isStaff' => fn () => (bool) $request->user()?->is_staff,
             // Finished missions waiting to be collected, for the Today badge.
             'missionsWaiting' => fn () => $request->user()?->player ? Missions::waiting($request->user()->player) : 0,
+            // The story step you're on, for the Next step bar under the game bar.
+            'nextStep' => fn () => $request->user()?->player ? Missions::current($request->user()->player) : null,
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
     }

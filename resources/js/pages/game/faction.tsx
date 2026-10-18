@@ -1,4 +1,4 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import { Crown, Flame, MessagesSquare, Skull } from 'lucide-react';
 import { useState } from 'react';
 import { FactionBase } from '@/components/game/faction-base';
@@ -440,6 +440,17 @@ function LoneWolf({ factions, founding, underworld, entryModes }: Props) {
     const [name, setName] = useState('');
     const [colour, setColour] = useState(founding.colours[0]);
     const [motto, setMotto] = useState('');
+    const { player } = usePage().props;
+    const level = player?.level ?? 1;
+    const corn = player?.corn ?? 0;
+    const blocker =
+        level < founding.level
+            ? `You can found a faction from level ${founding.level}. You're level ${level}: missions and gathering earn Rosettes.`
+            : corn < founding.corn
+              ? `Founding costs ${founding.corn} Corn. You have ${corn}: gather and sell to earn more.`
+              : name.trim().length < 3
+                ? 'Give your faction a name of 3 to 30 characters.'
+                : null;
 
     return (
         <>
@@ -568,8 +579,12 @@ function LoneWolf({ factions, founding, underworld, entryModes }: Props) {
                         />
                     ))}
                 </div>
+                {blocker && (
+                    <p className="text-sm text-orange-300">{blocker}</p>
+                )}
                 <Button
                     className="self-start"
+                    disabled={blocker !== null}
                     onClick={() =>
                         act(store.url(), {
                             name,
@@ -601,6 +616,17 @@ function Underworld({
     const [factionId, setFactionId] = useState('');
     const [playerId, setPlayerId] = useState('');
     const selected = underworld.crimes.find((c) => c.value === kind)!;
+    const { player } = usePage().props;
+    const level = player?.level ?? 1;
+    const horseshoes = player?.horseshoes ?? 0;
+    const blocker =
+        level < underworld.level
+            ? `Crime opens at level ${underworld.level}. You're level ${level}.`
+            : underworld.triedToday
+              ? 'You have already tried a crime today. Lie low until tomorrow.'
+              : horseshoes < selected.horseshoes
+                ? `That needs ${selected.horseshoes} horseshoes and you have ${horseshoes}.`
+                : null;
 
     return (
         <section className="flex flex-col gap-3 rounded-xl border border-red-500/30 bg-red-500/5 p-4">
@@ -660,9 +686,12 @@ function Underworld({
                         ))}
                     </NativeSelect>
                 )}
+                {blocker && (
+                    <p className="text-sm text-orange-300">{blocker}</p>
+                )}
                 <Button
                     variant="destructive"
-                    disabled={underworld.triedToday}
+                    disabled={blocker !== null}
                     onClick={() =>
                         act(crime.url(), {
                             kind,

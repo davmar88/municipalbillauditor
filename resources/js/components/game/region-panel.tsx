@@ -73,6 +73,17 @@ export function RegionPanel({
     onClose,
 }: Props) {
     const { player } = usePage().props;
+    const horseshoesLeft = player?.horseshoes ?? 0;
+    const nextHorseshoe =
+        player?.nextHorseshoeIn != null
+            ? new Date(Date.now() + player.nextHorseshoeIn * 1000).toISOString()
+            : null;
+    const outOfHorseshoes = (
+        <p className="text-xs text-orange-300">
+            You're out of horseshoes.
+            {nextHorseshoe && ` The next one comes ${fromNow(nextHorseshoe)}.`}
+        </p>
+    );
     const [horseshoes, setHorseshoes] = useState(1);
     const byId = useMemo(
         () => new Map(regions.map((other) => [other.id, other])),
@@ -274,15 +285,21 @@ export function RegionPanel({
                             You're standing here.
                         </p>
                         {region.produces ? (
-                            <Button onClick={() => act(gather.url(region.id))}>
-                                Gather{' '}
-                                {region.produces === 'corn'
-                                    ? `${yields.corn} Corn`
-                                    : `${yields.material} ${region.produces}`}
-                                <span className="ml-auto flex items-center gap-1 opacity-80">
-                                    <Horseshoe className="size-4" />1
-                                </span>
-                            </Button>
+                            <>
+                                <Button
+                                    disabled={horseshoesLeft < 1}
+                                    onClick={() => act(gather.url(region.id))}
+                                >
+                                    Gather{' '}
+                                    {region.produces === 'corn'
+                                        ? `${yields.corn} Corn`
+                                        : `${yields.material} ${region.produces}`}
+                                    <span className="ml-auto flex items-center gap-1 opacity-80">
+                                        <Horseshoe className="size-4" />1
+                                    </span>
+                                </Button>
+                                {horseshoesLeft < 1 && outOfHorseshoes}
+                            </>
                         ) : (
                             <p className="text-muted-foreground">
                                 Nothing grows here. You gather in fields, woods
@@ -345,6 +362,7 @@ export function RegionPanel({
                                         onChange={setHorseshoes}
                                     />
                                     <Button
+                                        disabled={horseshoesLeft < horseshoes}
                                         onClick={() =>
                                             act(attack.url(region.id), {
                                                 horseshoes,
@@ -354,6 +372,15 @@ export function RegionPanel({
                                         <Swords className="size-4" /> Raid
                                     </Button>
                                 </div>
+                                {horseshoesLeft < horseshoes && (
+                                    <p className="text-xs text-orange-300">
+                                        You have {horseshoesLeft}{' '}
+                                        {horseshoesLeft === 1
+                                            ? 'horseshoe'
+                                            : 'horseshoes'}
+                                        . Put in fewer, or wait for more.
+                                    </p>
+                                )}
                             </>
                         ) : (
                             <p className="text-muted-foreground">

@@ -96,7 +96,9 @@ export default function MarketPage(props: Props) {
                         </button>
                     ))}
                 </nav>
-                {tab === 'browse' && <Browse {...props} />}
+                {tab === 'browse' && (
+                    <Browse {...props} onWorkshop={() => setTab('workshop')} />
+                )}
                 {tab === 'shop' && <MyShop {...props} />}
                 {tab === 'workshop' && <Workshop {...props} />}
             </div>
@@ -104,13 +106,27 @@ export default function MarketPage(props: Props) {
     );
 }
 
-function Browse({ listings, levy }: Props) {
+function Browse({
+    listings,
+    levy,
+    onWorkshop,
+}: Props & { onWorkshop: () => void }) {
+    const { player } = usePage().props;
+    const corn = player?.corn ?? 0;
+
     if (listings.length === 0) {
         return (
-            <p className="text-muted-foreground">
-                The shelves are empty. Design something in the Workshop and be
-                the first to sell.
-            </p>
+            <div className="flex flex-col items-start gap-3 rounded-xl border border-dashed p-6">
+                <p className="font-semibold">The shelves are empty.</p>
+                <p className="text-sm text-muted-foreground">
+                    Everything sold here is made by animals like you. Design
+                    something in the Workshop, make copies from the materials
+                    you gather, and be the first to sell.
+                </p>
+                <Button onClick={onWorkshop}>
+                    <Hammer className="size-4" /> Open the Workshop
+                </Button>
+            </div>
         );
     }
 
@@ -160,13 +176,30 @@ function Browse({ listings, levy }: Props) {
                                 Shop closed while the home is rebuilt
                             </span>
                         ) : (
-                            <Button
-                                size="sm"
-                                className="mt-auto self-start"
-                                onClick={() => act(buy.url(listing.id))}
-                            >
-                                Buy
-                            </Button>
+                            (() => {
+                                const total =
+                                    listing.price +
+                                    Math.floor((listing.price * levy) / 100);
+                                const short = total - corn;
+
+                                return (
+                                    <Button
+                                        size="sm"
+                                        className="mt-auto self-start"
+                                        disabled={short > 0}
+                                        title={
+                                            short > 0
+                                                ? `You need ${short} more Corn`
+                                                : undefined
+                                        }
+                                        onClick={() => act(buy.url(listing.id))}
+                                    >
+                                        {short > 0
+                                            ? `Need ${short} more Corn`
+                                            : 'Buy'}
+                                    </Button>
+                                );
+                            })()
                         )}
                     </div>
                 </li>

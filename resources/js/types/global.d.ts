@@ -1,4 +1,4 @@
-import type { PlayerSummary } from '@/types/game';
+import type { MissionCard, PlayerSummary } from '@/types/game';
 import type { Auth } from '@/types/auth';
 
 declare module 'react' {
@@ -15,6 +15,7 @@ declare module '@inertiajs/core' {
             player: PlayerSummary | null;
             isStaff: boolean;
             missionsWaiting: number;
+            nextStep: MissionCard | null;
             sidebarOpen: boolean;
             [key: string]: unknown;
         };
