@@ -220,7 +220,7 @@ export default function ApplesPage({
                         <h2 className="font-bold">Cash out</h2>
                         <p className="text-sm text-muted-foreground">
                             Turn Apples you earned into money, paid to your
-                            PayPal, your bank or in Bitcoin.
+                            PayPal or your bank.
                         </p>
                     </div>
                     <Button variant="secondary" asChild>

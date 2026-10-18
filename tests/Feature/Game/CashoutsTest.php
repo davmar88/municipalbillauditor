@@ -23,8 +23,8 @@ use Tests\TestCase;
 
 /**
  * Cashing Apples out: payout details and the ID check, the limits, and the
- * owner paying each cash-out through Paystack or PayPal, or by hand in
- * Bitcoin, without ever paying one twice.
+ * owner paying each cash-out through Paystack or PayPal, without ever paying
+ * one twice.
  */
 class CashoutsTest extends TestCase
 {
@@ -34,8 +34,6 @@ class CashoutsTest extends TestCase
 
     /** A valid South African ID number, for someone born on 1 January 1980. */
     private const ID_NUMBER = '8001015009087';
-
-    private const BITCOIN_ADDRESS = 'bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq';
 
     /** What Paystack answers when a transfer is sent. */
     private mixed $transfer = null;
@@ -116,7 +114,6 @@ class CashoutsTest extends TestCase
             'bank_name' => $method === 'paystack' ? 'Absa Bank' : null,
             'account_number' => $method === 'paystack' ? '4071234567' : null,
             'recipient_code' => $method === 'paystack' ? 'RCP_test123' : null,
-            'bitcoin_address' => $method === 'bitcoin' ? self::BITCOIN_ADDRESS : null,
             'verified_at' => $method === 'paystack' ? now() : null,
         ]);
     }
@@ -177,11 +174,11 @@ class CashoutsTest extends TestCase
     public function test_cashing_out_stays_closed_until_the_owner_opens_it(): void
     {
         $player = $this->earner();
-        $this->payoutTo($player, 'bitcoin');
+        $this->payoutTo($player, 'paypal');
 
         $this->actingAs($player->user)->get(route('play.cashout'))->assertInertia(fn (Assert $page) => $page
             ->where('cashout.open', false)
-            ->where('cashout.ways.bitcoin', false));
+            ->where('cashout.ways.paypal', false));
 
         $this->actingAs($player->user)->post(route('play.cashout.request'), ['apples' => 500])
             ->assertInertiaFlash('toast.message', "Cashing out isn't open yet.");
@@ -198,7 +195,7 @@ class CashoutsTest extends TestCase
             ->assertSessionHasNoErrors()
             ->assertInertiaFlash('toast.message', 'Saved.');
         $this->saveDetails($player, ['method' => 'paystack', 'paypal_email' => null, 'bank_code' => '632005', 'account_number' => '4071234567'])
-            ->assertSessionHasErrors(['details' => 'Bank accounts can be added once cashing out opens. You can save PayPal or Bitcoin details now.']);
+            ->assertSessionHasErrors(['details' => 'Bank accounts can be added once cashing out opens. You can save your PayPal details now.']);
         $this->assertSame(0, $this->sent('/bank/validate'));
 
         $this->actingAs($player->user)->get(route('play.cashout'))->assertOk()->assertInertia(fn (Assert $page) => $page
@@ -225,8 +222,7 @@ class CashoutsTest extends TestCase
         $this->saveDetails($player, ['country' => 'ZZ'])
             ->assertSessionHasErrors(['details' => 'A South African ID number is for animals living in South Africa. Use your passport number.']);
         $this->saveDetails($player, ['mine' => null])->assertSessionHasErrors('mine');
-        $this->saveDetails($player, ['method' => 'bitcoin', 'paypal_email' => null, 'bitcoin_address' => 'not-an-address'])
-            ->assertSessionHasErrors(['details' => "That isn't a Bitcoin address. Copy it from your wallet's Receive screen: it starts with bc1, 1 or 3."]);
+        $this->saveDetails($player, ['method' => 'bitcoin'])->assertSessionHasErrors('method');
         $this->assertSame(0, PayoutAccount::count());
 
         $this->saveDetails($player, ['document_number' => '800101 5009 087', 'paypal_email' => 'Thandi@Example.com'])
@@ -244,10 +240,10 @@ class CashoutsTest extends TestCase
             ->where('cashout.account.document', '••••9087')
             ->missing('cashout.account.paypal_email'));
 
-        // Someone living abroad uses a passport, and is paid in Bitcoin.
-        $this->saveDetails($player, ['country' => 'ZZ', 'document_type' => 'passport', 'document_number' => 'a1234567', 'method' => 'bitcoin', 'bitcoin_address' => self::BITCOIN_ADDRESS])
+        // Someone living abroad uses a passport.
+        $this->saveDetails($player, ['country' => 'ZZ', 'document_type' => 'passport', 'document_number' => 'a1234567', 'paypal_email' => 'thandi@example.org'])
             ->assertSessionHasNoErrors();
-        $this->assertSame(['bitcoin', 'A1234567', null], [$account->fresh()->method, $account->fresh()->document_number, $account->fresh()->paypal_email]);
+        $this->assertSame(['paypal', 'A1234567', 'thandi@example.org'], [$account->fresh()->method, $account->fresh()->document_number, $account->fresh()->paypal_email]);
     }
 
     public function test_a_bank_account_is_checked_with_the_bank_once(): void
@@ -290,7 +286,7 @@ class CashoutsTest extends TestCase
         $this->assertSame('4071234567', $account->fresh()->account_number);
 
         $this->saveDetails($player, [...$bank, 'country' => 'ZZ', 'document_type' => 'passport', 'document_number' => 'A1234567'])
-            ->assertSessionHasErrors(['details' => 'Bank transfers go to South African bank accounts. Pick PayPal or Bitcoin instead.']);
+            ->assertSessionHasErrors(['details' => 'Bank transfers go to South African bank accounts. Pick PayPal instead.']);
     }
 
     public function test_asking_to_cash_out_takes_the_apples_within_the_limits(): void
@@ -518,32 +514,6 @@ class CashoutsTest extends TestCase
         $this->assertSame(['failed', 2000], [$cashout->fresh()->status, $cashout->player->fresh()->apples]);
     }
 
-    public function test_bitcoin_is_sent_by_hand_and_marked_paid(): void
-    {
-        $this->openCashouts();
-        $cashout = $this->waiting('bitcoin');
-        $admin = $this->admin();
-        $this->assertSame(['ZAR', 30000], [$cashout->currency, $cashout->amount]);
-
-        $this->actingAs($admin)->get(route('admin.cashouts'))->assertInertia(fn (Assert $page) => $page
-            ->where('queue.0.address', self::BITCOIN_ADDRESS)
-            ->where('queue.0.label', 'Bitcoin, bc1qar…mdq'));
-
-        $this->actingAs($admin)->post(route('admin.cashouts.pay', $cashout))
-            ->assertInertiaFlash('toast.message', 'Send the Bitcoin from your wallet, then mark it paid with the transaction ID.');
-        $this->actingAs($admin)->post(route('admin.cashouts.paid', $cashout), ['transaction' => 'not a tx!'])
-            ->assertInertiaFlash('toast.message', 'Paste the transaction ID from your wallet: letters and digits, with no spaces.');
-
-        $transaction = str_repeat('ab12', 16);
-        $this->actingAs($admin)->post(route('admin.cashouts.paid', $cashout), ['transaction' => $transaction])
-            ->assertInertiaFlash('toast.message', 'Paid R300.00. We told the animal.');
-
-        $cashout->refresh();
-        $this->assertSame(['paid', $transaction, $admin->id], [$cashout->status, $cashout->provider_id, $cashout->reviewed_by]);
-        $this->assertSame(1, Notice::query()->where('player_id', $cashout->player_id)->where('text', 'like', '%cash-out was paid%')->count());
-        Http::assertNotSent(fn (Request $request) => str_contains($request->url(), '/transfer') || str_contains($request->url(), '/payouts'));
-    }
-
     public function test_the_owner_turns_a_cash_out_down_and_the_apples_come_back(): void
     {
         $this->openCashouts();
@@ -569,8 +539,8 @@ class CashoutsTest extends TestCase
     public function test_deleting_the_account_takes_the_payout_details_and_keeps_the_record_of_money_paid(): void
     {
         $this->openCashouts();
-        $cashout = $this->waiting('bitcoin');
-        $this->actingAs($this->admin())->post(route('admin.cashouts.paid', $cashout), ['transaction' => str_repeat('cd34', 16)]);
+        $cashout = $this->waiting('paypal');
+        $cashout->forceFill(['status' => 'paid'])->save();
 
         $cashout->player->user->delete();
 

@@ -18,17 +18,16 @@ use Illuminate\Support\Str;
  * @property string $document_type id or passport
  * @property string $document_number
  * @property string $country Two letters, ZZ for another country
- * @property string $method paypal, paystack or bitcoin
+ * @property string $method paypal or paystack
  * @property string|null $paypal_email
  * @property string|null $bank_code
  * @property string|null $bank_name
  * @property string|null $account_number
  * @property string|null $recipient_code Paystack's code for the bank account
- * @property string|null $bitcoin_address
  * @property Carbon|null $verified_at When Paystack confirmed the bank account is in this name and ID
  * @property Player $player
  */
-#[Fillable(['player_id', 'legal_name', 'document_type', 'document_number', 'country', 'method', 'paypal_email', 'bank_code', 'bank_name', 'account_number', 'recipient_code', 'bitcoin_address', 'verified_at'])]
+#[Fillable(['player_id', 'legal_name', 'document_type', 'document_number', 'country', 'method', 'paypal_email', 'bank_code', 'bank_name', 'account_number', 'recipient_code', 'verified_at'])]
 class PayoutAccount extends Model
 {
     protected $hidden = ['legal_name', 'document_number', 'paypal_email', 'account_number'];
@@ -50,14 +49,12 @@ class PayoutAccount extends Model
         return $this->belongsTo(Player::class);
     }
 
-    /** Where the money goes, safe to show: "PayPal, j•••@gmail.com", "Absa, ••••6789", "Bitcoin, bc1qar…mdq". */
+    /** Where the money goes, safe to show: "PayPal, j•••@gmail.com", "Absa, ••••6789". */
     public function describe(): string
     {
-        return match ($this->method) {
-            'paypal' => 'PayPal, '.self::maskEmail((string) $this->paypal_email),
-            'paystack' => ($this->bank_name ?? 'Bank').', ••••'.Str::substr((string) $this->account_number, -4),
-            default => 'Bitcoin, '.Str::substr((string) $this->bitcoin_address, 0, 6).'…'.Str::substr((string) $this->bitcoin_address, -3),
-        };
+        return $this->method === 'paypal'
+            ? 'PayPal, '.self::maskEmail((string) $this->paypal_email)
+            : ($this->bank_name ?? 'Bank').', ••••'.Str::substr((string) $this->account_number, -4);
     }
 
     /** The ID or passport number with all but its last four characters hidden. */

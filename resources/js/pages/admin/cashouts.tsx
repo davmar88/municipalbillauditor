@@ -2,7 +2,6 @@ import { Head, Link } from '@inertiajs/react';
 import { Banknote, RefreshCw, TriangleAlert } from 'lucide-react';
 import { useState } from 'react';
 import type { ReactNode } from 'react';
-import { CopyButton } from '@/components/copy-button';
 import type { PayoutMethod } from '@/components/game/cash-out';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,7 +10,6 @@ import { admin } from '@/routes';
 import {
     check,
     otp as sendOtp,
-    paid,
     pay,
     reject,
     resendOtp,
@@ -31,8 +29,6 @@ type Card = {
     document: string;
     /** "Absa, ••••6789" */
     label: string;
-    /** In full, for sending Bitcoin by hand. */
-    address: string | null;
     email: string | null;
     reference: string;
     transaction: string | null;
@@ -71,7 +67,6 @@ type Props = {
 const WAY: Record<PayoutMethod, string> = {
     paystack: 'Bank transfer',
     paypal: 'PayPal',
-    bitcoin: 'Bitcoin',
 };
 
 const STATUS: Record<Status, string> = {
@@ -100,8 +95,8 @@ function sources(from: NonNullable<Waiting['sources']>): string {
 }
 
 /**
- * The owner's cash-out queue: pay each one through Paystack or PayPal,
- * send Bitcoin by hand and mark it paid, or turn it down.
+ * The owner's cash-out queue: pay each one through Paystack or PayPal, or
+ * turn it down.
  */
 export default function AdminCashouts({
     open,
@@ -127,9 +122,8 @@ export default function AdminCashouts({
                     </h1>
                     <p className="text-sm text-muted-foreground">
                         Every cash-out waits here for you. Pay sends it through
-                        Paystack or PayPal. Bitcoin you send by hand from your
-                        own wallet, then mark it paid with the transaction ID.
-                        Turning one down gives the animal its Apples back.
+                        Paystack or PayPal. Turning one down gives the animal
+                        its Apples back.
                     </p>
                 </header>
 
@@ -180,10 +174,7 @@ export default function AdminCashouts({
                                 <QueueItem
                                     key={cashout.id}
                                     cashout={cashout}
-                                    ready={
-                                        cashout.method === 'bitcoin' ||
-                                        ready[cashout.method]
-                                    }
+                                    ready={ready[cashout.method]}
                                 />
                             ))}
                         </ul>
@@ -242,7 +233,6 @@ export default function AdminCashouts({
 function QueueItem({ cashout, ready }: { cashout: Waiting; ready: boolean }) {
     const [rejecting, setRejecting] = useState(false);
     const [reason, setReason] = useState('');
-    const [transaction, setTransaction] = useState('');
     const [code, setCode] = useState('');
     const changedLately =
         cashout.detailsChanged !== null &&
@@ -276,16 +266,6 @@ function QueueItem({ cashout, ready }: { cashout: Waiting; ready: boolean }) {
                     {cashout.name} · {cashout.document}
                 </Row>
                 <Row label="Paid to">{cashout.email ?? cashout.label}</Row>
-                {cashout.address && (
-                    <Row label="Address">
-                        <span className="flex flex-wrap items-center gap-1">
-                            <code className="rounded bg-muted px-1.5 py-0.5 text-xs break-all">
-                                {cashout.address}
-                            </code>
-                            <CopyButton value={cashout.address} />
-                        </span>
-                    </Row>
-                )}
                 {cashout.sources && (
                     <Row label="Last 30 days">{sources(cashout.sources)}</Row>
                 )}
@@ -312,7 +292,7 @@ function QueueItem({ cashout, ready }: { cashout: Waiting; ready: boolean }) {
                 </p>
             )}
 
-            {cashout.status === 'pending' && cashout.method !== 'bitcoin' && (
+            {cashout.status === 'pending' && (
                 <div className="flex flex-wrap items-center gap-2">
                     <Button
                         disabled={!ready}
@@ -333,36 +313,6 @@ function QueueItem({ cashout, ready }: { cashout: Waiting; ready: boolean }) {
                             on the admin page first.
                         </span>
                     )}
-                </div>
-            )}
-
-            {cashout.status === 'pending' && cashout.method === 'bitcoin' && (
-                <div className="flex flex-col gap-2">
-                    <p className="text-sm text-muted-foreground">
-                        Send Bitcoin worth {cashout.price} to the address above
-                        from your wallet. Then paste the transaction ID from the
-                        wallet's details of the payment.
-                    </p>
-                    <div className="flex flex-wrap items-center gap-2">
-                        <Input
-                            value={transaction}
-                            onChange={(event) =>
-                                setTransaction(event.target.value)
-                            }
-                            placeholder="Transaction ID"
-                            aria-label="Transaction ID"
-                            autoComplete="off"
-                            className="min-w-0 flex-1"
-                        />
-                        <Button
-                            disabled={transaction.trim().length < 6}
-                            onClick={() =>
-                                act(paid.url(cashout.id), { transaction })
-                            }
-                        >
-                            Mark paid
-                        </Button>
-                    </div>
                 </div>
             )}
 

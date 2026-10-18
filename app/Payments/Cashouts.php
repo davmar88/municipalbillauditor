@@ -20,12 +20,11 @@ use Illuminate\Support\Str;
 
 /**
  * Cashing Apples out for real money: into a South African bank account
- * through Paystack, to a PayPal email, or in Bitcoin that the owner sends
- * by hand. The Apples leave the animal's balance when it asks, every
- * cash-out waits for the owner's approval, and the Apples come back when the
- * owner turns it down or the payout fails. A cash-out pays less per Apple
- * than the cheapest pack costs, so every Apple cashed out leaves the game
- * ahead.
+ * through Paystack, or to a PayPal email. The Apples leave the animal's
+ * balance when it asks, every cash-out waits for the owner's approval, and
+ * the Apples come back when the owner turns it down or the payout fails. A
+ * cash-out pays less per Apple than the cheapest pack costs, so every Apple
+ * cashed out leaves the game ahead.
  *
  * A cash-out's reference goes to Paystack and PayPal with it, and both
  * refuse a second payout with the same reference. So when we don't hear
@@ -33,7 +32,7 @@ use Illuminate\Support\Str;
  */
 final class Cashouts
 {
-    public const METHODS = ['paystack', 'paypal', 'bitcoin'];
+    public const METHODS = ['paystack', 'paypal'];
 
     /** The note on a Paystack transfer that waits for the owner's OTP. */
     public const OTP_NOTE = 'Paystack texted you an OTP for this transfer. Type it in to send the money, or turn off OTP for transfers in Paystack.';
@@ -56,7 +55,7 @@ final class Cashouts
         return $this->settings->on('cashout_open');
     }
 
-    /** @return array{paystack: bool, paypal: bool, bitcoin: bool} The ways to be paid that are open. */
+    /** @return array{paystack: bool, paypal: bool} The ways to be paid that are open. */
     public function ways(): array
     {
         $open = $this->open();
@@ -64,25 +63,22 @@ final class Cashouts
         return [
             'paystack' => $open && $this->paystack->ready(),
             'paypal' => $open && $this->paypal->ready(),
-            // The owner sends Bitcoin by hand, so it needs no key.
-            'bitcoin' => $open,
         ];
     }
 
     /**
-     * The ways an animal can save payout details for. PayPal and Bitcoin
-     * details need no outside check, so they can be saved before cashing
-     * out opens; a bank account is checked with the bank, which costs the
-     * game R3, so it waits until bank transfers are open.
+     * The ways an animal can save payout details for. A PayPal email needs
+     * no outside check, so it can be saved before cashing out opens; a bank
+     * account is checked with the bank, which costs the game R3, so it waits
+     * until bank transfers are open.
      *
-     * @return array{paystack: bool, paypal: bool, bitcoin: bool}
+     * @return array{paystack: bool, paypal: bool}
      */
     public function saveable(): array
     {
         return [
             'paystack' => $this->ways()['paystack'],
             'paypal' => true,
-            'bitcoin' => true,
         ];
     }
 
@@ -183,7 +179,7 @@ final class Cashouts
      * bank account is checked with the bank first: it has to be in the
      * animal's own name and ID number.
      *
-     * @param  array{legal_name: string, country: string, document_type: string, document_number: string, method: string, paypal_email?: string|null, bank_code?: string|null, account_number?: string|null, bitcoin_address?: string|null}  $details
+     * @param  array{legal_name: string, country: string, document_type: string, document_number: string, method: string, paypal_email?: string|null, bank_code?: string|null, account_number?: string|null}  $details
      *
      * @throws GameException
      */
@@ -192,7 +188,7 @@ final class Cashouts
         $method = $details['method'];
 
         if (! ($this->saveable()[$method] ?? false)) {
-            throw new GameException($this->open() ? self::closedWay($method) : 'Bank accounts can be added once cashing out opens. You can save PayPal or Bitcoin details now.');
+            throw new GameException($this->open() ? self::closedWay($method) : 'Bank accounts can be added once cashing out opens. You can save your PayPal details now.');
         }
 
         $fields = [
@@ -206,7 +202,6 @@ final class Cashouts
             'bank_name' => null,
             'account_number' => null,
             'recipient_code' => null,
-            'bitcoin_address' => null,
             'verified_at' => null,
         ];
 
@@ -222,8 +217,6 @@ final class Cashouts
 
         if ($method === 'paypal') {
             $fields['paypal_email'] = Str::lower(trim((string) ($details['paypal_email'] ?? '')));
-        } elseif ($method === 'bitcoin') {
-            $fields['bitcoin_address'] = self::checkBitcoinAddress(trim((string) ($details['bitcoin_address'] ?? '')));
         } else {
             $fields = [...$fields, ...$this->bankAccount($player->payoutAccount()->first(), (int) $player->apples, $fields, (string) ($details['bank_code'] ?? ''), (string) ($details['account_number'] ?? ''))];
         }
@@ -302,16 +295,11 @@ final class Cashouts
 
     /**
      * The owner approves a cash-out: send it through Paystack or PayPal.
-     * Bitcoin is sent by hand from the owner's wallet, then marked paid.
      *
      * @throws GameException
      */
     public function pay(Cashout $cashout, User $by): Cashout
     {
-        if ($cashout->method === 'bitcoin') {
-            throw new GameException('Send the Bitcoin from your wallet, then mark it paid with the transaction ID.');
-        }
-
         if (! ($cashout->method === 'paystack' ? $this->paystack->ready() : $this->paypal->ready())) {
             throw new GameException($cashout->method === 'paystack' ? 'Add the Paystack secret key first.' : 'Add the PayPal client ID and secret first.');
         }
@@ -338,7 +326,7 @@ final class Cashouts
      */
     public function check(Cashout $cashout): Cashout
     {
-        if ($cashout->status !== 'sending' || $cashout->method === 'bitcoin') {
+        if ($cashout->status !== 'sending') {
             throw new GameException('Only a cash-out on its way through Paystack or PayPal can be checked.');
         }
 
@@ -410,38 +398,6 @@ final class Cashouts
         } catch (PaymentException $e) {
             throw new GameException($e->getMessage());
         }
-    }
-
-    /**
-     * The owner sent a Bitcoin cash-out from their wallet: keep the
-     * transaction, and tell the animal.
-     *
-     * @throws GameException
-     */
-    public function markPaid(Cashout $cashout, User $by, string $transaction): Cashout
-    {
-        if ($cashout->method !== 'bitcoin') {
-            throw new GameException('Only Bitcoin cash-outs are marked paid by hand. Press Pay to send this one.');
-        }
-
-        $transaction = trim($transaction);
-
-        if (! preg_match('/^[A-Za-z0-9_:-]{6,100}$/', $transaction)) {
-            throw new GameException('Paste the transaction ID from your wallet: letters and digits, with no spaces.');
-        }
-
-        $claimed = Cashout::query()->whereKey($cashout->id)->where('status', 'pending')->update([
-            'status' => 'sending',
-            'reviewed_by' => $by->id,
-            'reviewed_at' => now(),
-            'provider_id' => $transaction,
-        ]);
-
-        if ($claimed === 0) {
-            throw new GameException('That cash-out was dealt with already.');
-        }
-
-        return $this->paid($cashout->refresh());
     }
 
     /**
@@ -544,7 +500,7 @@ final class Cashouts
     private function bankAccount(?PayoutAccount $saved, int $apples, array $fields, string $bankCode, string $accountNumber): array
     {
         if ($fields['country'] !== 'ZA') {
-            throw new GameException('Bank transfers go to South African bank accounts. Pick PayPal or Bitcoin instead.');
+            throw new GameException('Bank transfers go to South African bank accounts. Pick PayPal instead.');
         }
 
         $bank = collect($this->paystack->banks())->firstWhere('code', $bankCode)
@@ -713,36 +669,15 @@ final class Cashouts
             'name' => $account->legal_name,
             'label' => $account->describe(),
             'document' => ($account->document_type === 'id' ? 'SA ID ' : 'Passport ').$account->maskedDocument(),
-            ...match ($account->method) {
-                'paypal' => ['email' => (string) $account->paypal_email],
-                'paystack' => ['recipient' => (string) $account->recipient_code],
-                default => ['address' => (string) $account->bitcoin_address],
-            },
+            ...($account->method === 'paypal'
+                ? ['email' => (string) $account->paypal_email]
+                : ['recipient' => (string) $account->recipient_code]),
         ];
-    }
-
-    /** @throws GameException */
-    private static function checkBitcoinAddress(string $address): string
-    {
-        $lower = Str::lower($address);
-        // Bech32 addresses are all one case; older ones are case-sensitive.
-        $bech32 = preg_match('/^bc1[02-9ac-hj-np-z]{11,71}$/', $lower) === 1 && ($address === $lower || $address === Str::upper($address));
-        $legacy = preg_match('/^[13][a-km-zA-HJ-NP-Z1-9]{25,34}$/', $address) === 1;
-
-        if (! $bech32 && ! $legacy) {
-            throw new GameException("That isn't a Bitcoin address. Copy it from your wallet's Receive screen: it starts with bc1, 1 or 3.");
-        }
-
-        return $bech32 ? $lower : $address;
     }
 
     private static function closedWay(string $method): string
     {
-        return match ($method) {
-            'paystack' => "Bank transfers aren't open right now.",
-            'paypal' => "Cashing out to PayPal isn't open right now.",
-            default => "Cashing out in Bitcoin isn't open right now.",
-        };
+        return $method === 'paystack' ? "Bank transfers aren't open right now." : "Cashing out to PayPal isn't open right now.";
     }
 
     private static function luhn(string $digits): bool

@@ -90,8 +90,7 @@ return [
     // admin page. The cheapest Apple costs 80c (R800 for 1,000), and a
     // cash-out pays 60c, so every cash-out leaves the game ahead.
     'cashout' => [
-        // What the game pays for 100 Apples, in cents. Bitcoin is worked
-        // out in rand.
+        // What the game pays for 100 Apples, in cents.
         'per_100' => ['ZAR' => 6000, 'USD' => 360],
         'min' => 500,
         'daily_cap' => 5000,

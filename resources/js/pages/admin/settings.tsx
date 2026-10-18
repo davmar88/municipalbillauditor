@@ -215,9 +215,8 @@ export default function AdminSettings({
                                     </p>
                                     <p className="text-xs text-muted-foreground">
                                         Animals cash out by bank transfer
-                                        through Paystack, by PayPal, or in
-                                        Bitcoin you send by hand. Each one waits
-                                        for you on the Cash-outs page.
+                                        through Paystack or by PayPal. Each one
+                                        waits for you on the Cash-outs page.
                                     </p>
                                 </div>
                             </Card>

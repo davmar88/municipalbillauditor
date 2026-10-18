@@ -16,12 +16,12 @@ use Illuminate\Support\Carbon;
  * @property int|null $player_id Null once the account is deleted
  * @property string $reference Ours, sent to PayPal or Paystack
  * @property int $apples
- * @property string $method paypal, paystack or bitcoin
+ * @property string $method paypal or paystack
  * @property string $currency USD for PayPal, ZAR otherwise
  * @property int $amount In cents
  * @property array{name: string, label: string, document: string, email?: string, recipient?: string, address?: string} $destination
  * @property string $status pending, sending, paid, failed or rejected
- * @property string|null $provider_id PayPal's payout batch, Paystack's transfer code, or the Bitcoin transaction
+ * @property string|null $provider_id PayPal's payout batch, or Paystack's transfer code
  * @property string|null $note What went wrong, or why the owner turned it down
  * @property int|null $reviewed_by
  * @property Carbon|null $reviewed_at

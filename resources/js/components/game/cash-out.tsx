@@ -11,7 +11,7 @@ import { NativeSelect } from '@/components/ui/native-select';
 import { act, dollars, rand, shortWhen } from '@/lib/game';
 import { account as saveAccount, request } from '@/routes/play/cashout';
 
-export type PayoutMethod = 'paystack' | 'paypal' | 'bitcoin';
+export type PayoutMethod = 'paystack' | 'paypal';
 
 type CashoutStatus = 'pending' | 'sending' | 'paid' | 'failed' | 'rejected';
 
@@ -54,12 +54,11 @@ export type CashOutInfo = {
     }[];
 };
 
-const WAYS: PayoutMethod[] = ['paystack', 'paypal', 'bitcoin'];
+const WAYS: PayoutMethod[] = ['paystack', 'paypal'];
 
 const WAY: Record<PayoutMethod, string> = {
     paystack: 'Bank transfer',
     paypal: 'PayPal',
-    bitcoin: 'Bitcoin',
 };
 
 const STATUS: Record<CashoutStatus, string> = {
@@ -82,8 +81,8 @@ function quote(
 }
 
 /**
- * Cashing Apples out for money: by bank transfer, PayPal or Bitcoin, once
- * our team has checked each one.
+ * Cashing Apples out for money: by bank transfer or PayPal, once our team
+ * has checked each one.
  */
 export function CashOut({ cashout }: { cashout: CashOutInfo }) {
     const [editing, setEditing] = useState(cashout.account === null);
@@ -98,8 +97,8 @@ export function CashOut({ cashout }: { cashout: CashOutInfo }) {
                 <Heading />
                 {cashout.open ? (
                     <p className="text-sm text-muted-foreground">
-                        100 Apples pay {rand(per100.ZAR)} by bank transfer or in
-                        Bitcoin, or {dollars(per100.USD)} by PayPal. Cash out{' '}
+                        100 Apples pay {rand(per100.ZAR)} by bank transfer or{' '}
+                        {dollars(per100.USD)} by PayPal. Cash out{' '}
                         {cashout.min.toLocaleString('en-ZA')} to{' '}
                         {cashout.dailyCap.toLocaleString('en-ZA')} Apples a day.
                         Our team checks every cash-out before it's sent.
@@ -278,12 +277,6 @@ function Request({
             {apples > cashout.available && (
                 <p className="text-xs text-muted-foreground">
                     That's more than you can cash out now.
-                </p>
-            )}
-            {method === 'bitcoin' && (
-                <p className="text-xs text-muted-foreground">
-                    Paid in Bitcoin worth the rand amount on the day our team
-                    sends it.
                 </p>
             )}
         </div>
@@ -509,24 +502,6 @@ function PayoutForm({
                                         name="paypal_email"
                                         type="email"
                                         autoComplete="email"
-                                        required
-                                    />
-                                </Field>
-                            )}
-
-                            {chosen === 'bitcoin' && (
-                                <Field
-                                    id="bitcoin_address"
-                                    label="Your Bitcoin address"
-                                    error={errors.bitcoin_address}
-                                    note="Copy it from your wallet's Receive screen. Bitcoin sent to a wrong address can't be got back."
-                                >
-                                    <Input
-                                        id="bitcoin_address"
-                                        name="bitcoin_address"
-                                        autoComplete="off"
-                                        spellCheck={false}
-                                        placeholder="bc1…"
                                         required
                                     />
                                 </Field>

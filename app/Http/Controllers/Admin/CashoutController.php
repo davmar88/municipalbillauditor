@@ -15,8 +15,8 @@ use Inertia\Response;
 
 /**
  * The owner's cash-out queue. Every cash-out waits here until the owner
- * pays it through Paystack or PayPal, marks a Bitcoin one paid after sending
- * it by hand, or turns it down and the Apples go back.
+ * pays it through Paystack or PayPal, or turns it down and the Apples go
+ * back.
  */
 class CashoutController extends Controller
 {
@@ -89,13 +89,6 @@ class CashoutController extends Controller
         return $this->told('Paystack is texting you a new OTP.');
     }
 
-    public function paid(Request $request, Cashout $cashout, Cashouts $cashouts): RedirectResponse
-    {
-        $transaction = $request->validate(['transaction' => ['required', 'string', 'max:100']])['transaction'];
-
-        return $this->outcome($cashouts->markPaid($cashout, $request->user(), $transaction));
-    }
-
     public function reject(Request $request, Cashout $cashout, Cashouts $cashouts): RedirectResponse
     {
         $reason = $request->validate(['reason' => ['required', 'string', 'min:3', 'max:200']], ['reason.required' => 'Say why, so the animal knows.'])['reason'];
@@ -116,8 +109,7 @@ class CashoutController extends Controller
             'name' => $cashout->destination['name'] ?? '',
             'document' => $cashout->destination['document'] ?? '',
             'label' => $cashout->destination['label'] ?? '',
-            // The owner needs these in full to send Bitcoin by hand, or to look a payout up in PayPal.
-            'address' => $cashout->destination['address'] ?? null,
+            // The owner needs it in full to look a payout up in PayPal.
             'email' => $cashout->destination['email'] ?? null,
             'reference' => $cashout->reference,
             'transaction' => $cashout->provider_id,

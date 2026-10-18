@@ -174,7 +174,6 @@ Route::middleware(['auth', 'verified', 'can:admin'])->prefix('admin')->group(fun
         Route::post('cashouts/{cashout}/check', [CashoutQueueController::class, 'check'])->name('admin.cashouts.check');
         Route::post('cashouts/{cashout}/otp', [CashoutQueueController::class, 'otp'])->name('admin.cashouts.otp');
         Route::post('cashouts/{cashout}/otp/resend', [CashoutQueueController::class, 'resendOtp'])->name('admin.cashouts.resend-otp');
-        Route::post('cashouts/{cashout}/paid', [CashoutQueueController::class, 'paid'])->name('admin.cashouts.paid');
         Route::post('cashouts/{cashout}/reject', [CashoutQueueController::class, 'reject'])->name('admin.cashouts.reject');
     });
 });

@@ -204,11 +204,6 @@ Every cash-out then waits for you at https://revenueguard.co.za/admin/cashouts.
 2. **PayPal** has to turn on Payouts for your business account first. Ask
    PayPal for it, then tick Payouts in the app's features on
    developer.paypal.com. Try a cash-out in Sandbox before going live.
-3. **Bitcoin** is sent by hand from your own wallet. Under South Africa's
-   travel rule, Luno makes the first send to any new address go through its
-   app, and asks for the name of the person being paid; the Cash-outs page
-   shows the address and the animal's legal name. Send Bitcoin worth the rand
-   amount shown, then paste the transaction ID and press Mark paid.
 
 Turning a cash-out down gives the animal its Apples back, with your reason.
 

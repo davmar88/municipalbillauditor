@@ -37,7 +37,6 @@ class CashoutController extends Controller
             'paypal_email' => ['nullable', 'required_if:method,paypal', 'email', 'max:200'],
             'bank_code' => ['nullable', 'required_if:method,paystack', 'string', 'max:16'],
             'account_number' => ['nullable', 'required_if:method,paystack', 'regex:/^\d{6,16}$/'],
-            'bitcoin_address' => ['nullable', 'required_if:method,bitcoin', 'string', 'max:100'],
             'mine' => ['accepted'],
         ], [
             'legal_name.regex' => 'Write your name as it is on your ID, in letters.',
@@ -45,7 +44,6 @@ class CashoutController extends Controller
             'bank_code.required_if' => 'Pick your bank.',
             'account_number.required_if' => 'Add your account number.',
             'account_number.regex' => 'An account number is 6 to 16 digits.',
-            'bitcoin_address.required_if' => 'Add your Bitcoin address.',
             'mine.accepted' => 'Confirm these are your own details.',
         ]);
 
