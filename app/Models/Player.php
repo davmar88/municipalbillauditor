@@ -22,6 +22,8 @@ use Illuminate\Support\Carbon;
  * @property Species $species
  * @property string $language
  * @property int $rosettes
+ * @property int $market_skill
+ * @property int $creativity_skill
  * @property int $corn
  * @property array<string, int> $materials
  * @property int $horseshoes

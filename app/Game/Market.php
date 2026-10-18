@@ -61,7 +61,7 @@ final class Market
         // A new maker's first designs are checked by a person before sale.
         $trusted = $player->designs()->where('status', 'approved')->count() >= self::APPROVED_BEFORE_TRUSTED;
 
-        return ItemDesign::create([
+        $design = ItemDesign::create([
             'player_id' => $player->id,
             'template' => $template,
             'name' => $name,
@@ -70,6 +70,14 @@ final class Market
             'edition' => $edition,
             'status' => $trusted ? 'approved' : 'pending',
         ]);
+
+        Missions::record($player, 'design');
+
+        if ($trusted) {
+            self::approved($design);
+        }
+
+        return $design;
     }
 
     /**
@@ -118,8 +126,11 @@ final class Market
             $player->save();
 
             $design->increment('made');
+            $item = Item::create(['item_design_id' => $design->id, 'player_id' => $player->id, 'serial' => $design->made]);
+            Missions::record($player, 'craft');
+            Skills::award($player->id, Skills::CREATIVITY, 1, "Made a copy of {$design->name}", "craft:{$item->id}", $player->valley->currentSeason());
 
-            return Item::create(['item_design_id' => $design->id, 'player_id' => $player->id, 'serial' => $design->made]);
+            return $item;
         });
     }
 
@@ -163,7 +174,10 @@ final class Market
             throw new GameException('Your shop has '.self::SHELVES.' shelves and they are full.');
         }
 
-        return Listing::create(['item_id' => $item->id, 'player_id' => $player->id, 'price' => $price]);
+        $listing = Listing::create(['item_id' => $item->id, 'player_id' => $player->id, 'price' => $price]);
+        Missions::record($player, 'list');
+
+        return $listing;
     }
 
     /**
@@ -237,6 +251,13 @@ final class Market
                 Rosettes::award($seller, 3, "Sold {$item->design->name}", "sale:{$listing->id}", $season);
             }
 
+            // Selling and buying make a trader; every copy of your design that sells makes a maker.
+            Skills::award($seller->id, Skills::MARKET, self::marketPoints($listing->price), "Sold {$item->design->name}", "sold:{$listing->id}", $season);
+            Skills::award($buyer->id, Skills::MARKET, 1, "Bought {$item->design->name}", "bought:{$listing->id}", $season);
+            Skills::award($maker, Skills::CREATIVITY, 2 + intdiv($listing->price, 50), "A copy of {$item->design->name} sold", "made:{$listing->id}", $season);
+            Missions::record($seller, 'sale');
+            Missions::record($buyer, 'buy');
+
             return ['price' => $listing->price, 'levy' => $levy];
         });
     }
@@ -251,6 +272,22 @@ final class Market
         }
 
         $design->update(['status' => $approve ? 'approved' : 'rejected']);
+
+        if ($approve) {
+            self::approved($design);
+        }
+    }
+
+    /** Market points for a sale: more for a bigger sale, up to 40. */
+    public static function marketPoints(int $price): int
+    {
+        return min(40, 4 + intdiv($price, 25));
+    }
+
+    /** A design passed its check, or needed none: Creativity for its maker. */
+    private static function approved(ItemDesign $design): void
+    {
+        Skills::award($design->player_id, Skills::CREATIVITY, 10, "{$design->name} was approved", "design:{$design->id}", $design->player->valley->currentSeason());
     }
 
     /**

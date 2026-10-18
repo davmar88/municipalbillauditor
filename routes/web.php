@@ -10,7 +10,9 @@ use App\Http\Controllers\Game\MapController;
 use App\Http\Controllers\Game\MarketController;
 use App\Http\Controllers\Game\MessageController;
 use App\Http\Controllers\Game\ProfileController;
+use App\Http\Controllers\Game\RankingsController;
 use App\Http\Controllers\Game\StartController;
+use App\Http\Controllers\Game\TodayController;
 use App\Http\Controllers\Game\WallController;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\PuzzleController;
@@ -86,6 +88,11 @@ Route::middleware(['auth', 'verified', 'player', 'throttle:120,1'])->prefix('pla
     Route::post('items/{item}/list', [MarketController::class, 'list'])->name('play.list');
     Route::delete('listings/{listing}', [MarketController::class, 'unlist'])->name('play.unlist');
     Route::post('listings/{listing}/buy', [MarketController::class, 'buy'])->name('play.buy');
+
+    // Growing a player: missions, skills and rankings.
+    Route::get('today', [TodayController::class, 'index'])->name('play.today');
+    Route::post('missions/{mission}/claim', [TodayController::class, 'claim'])->name('play.mission.claim');
+    Route::get('rankings', [RankingsController::class, 'index'])->name('play.rankings');
 
     Route::get('me', [ProfileController::class, 'show'])->name('play.me');
     Route::put('me/language', [ProfileController::class, 'language'])->name('play.me.language');

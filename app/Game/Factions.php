@@ -293,6 +293,8 @@ final class Factions
             'faction_role' => $role,
             'faction_joined_at' => CarbonImmutable::now(),
         ])->save();
+
+        Missions::record($player, 'join_faction');
     }
 
     /**

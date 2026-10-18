@@ -109,12 +109,16 @@ final class Chat
             throw new GameException('Keep messages to '.self::MAX_LENGTH.' characters.');
         }
 
-        return ChatMessage::create([
+        $message = ChatMessage::create([
             'valley_id' => $player->valley_id,
             'channel' => $channel,
             'player_id' => $player->id,
             'body' => $body,
         ]);
+
+        Missions::record($player, 'chat');
+
+        return $message;
     }
 
     /** @return Collection<int, array<string, mixed>> */

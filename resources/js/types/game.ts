@@ -133,3 +133,39 @@ export type MapBattle = {
 };
 
 export type MapLaw = { label: string; wording: string };
+
+/** What a mission pays when it's collected. */
+export type MissionReward = {
+    corn?: number;
+    rosettes?: number;
+    horseshoes?: number;
+    materials?: Record<string, number>;
+};
+
+export type MissionCard = {
+    id: number;
+    key: string;
+    chapter: string | null;
+    title: string;
+    story: string | null;
+    goal: string;
+    progress: number;
+    target: number;
+    done: boolean;
+    claimed: boolean;
+    locked: string | null;
+    reward: MissionReward;
+    favourite: boolean;
+};
+
+export type SkillName = 'market' | 'creativity';
+
+/** A player's Market or Creativity skill: points, level and title. */
+export type SkillCard = {
+    skill: SkillName;
+    points: number;
+    level: number;
+    title: string;
+    from: number;
+    to: number;
+};

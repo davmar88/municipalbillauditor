@@ -36,6 +36,7 @@ final class Movement
             }
 
             $player->forceFill(['region_id' => $target->id])->save();
+            Missions::record($player, 'walk');
         });
     }
 

@@ -69,4 +69,14 @@ final class Horseshoes
         $player->horseshoes_at = $current >= self::max() ? CarbonImmutable::now() : $clock;
         $player->save();
     }
+
+    /** Give horseshoes to a player whose row is already locked, up to the most they can hold. */
+    public static function give(Player $player, int $count): void
+    {
+        [$current, $clock] = self::settle($player);
+
+        $player->horseshoes = min(self::max(), $current + max(0, $count));
+        $player->horseshoes_at = $player->horseshoes >= self::max() ? CarbonImmutable::now() : $clock;
+        $player->save();
+    }
 }

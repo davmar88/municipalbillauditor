@@ -5,6 +5,7 @@ import {
     MessagesSquare,
     Puzzle,
     ShieldAlert,
+    Trophy,
 } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavMain } from '@/components/nav-main';
@@ -20,13 +21,14 @@ import {
 } from '@/components/ui/sidebar';
 import { mainNavigation } from '@/lib/navigation';
 import { play, puzzle } from '@/routes';
-import { chat, messages } from '@/routes/play';
+import { chat, messages, rankings } from '@/routes/play';
 import { designs, reports } from '@/routes/staff';
 import type { NavItem } from '@/types';
 
 const moreNavItems: NavItem[] = [
     { title: 'Chat', href: chat(), icon: MessagesSquare },
     { title: 'Spot the Edit', href: puzzle(), icon: Puzzle },
+    { title: 'Rankings', href: rankings(), icon: Trophy },
 ];
 
 const staffNavItems: NavItem[] = [
@@ -35,7 +37,8 @@ const staffNavItems: NavItem[] = [
 ];
 
 export function AppSidebar() {
-    const { player, isStaff, unreadMessages } = usePage().props;
+    const { player, isStaff, missionsWaiting, unreadMessages } =
+        usePage().props;
     const messagesNavItem: NavItem = {
         title: 'Messages',
         href: messages(),
@@ -68,7 +71,7 @@ export function AppSidebar() {
             </SidebarHeader>
 
             <SidebarContent>
-                {player && <NavMain items={mainNavigation()} />}
+                {player && <NavMain items={mainNavigation(missionsWaiting)} />}
                 {player && (
                     <NavMain
                         label="More"

@@ -71,6 +71,7 @@ final class Crimes
             $locked = Players::lock($player);
             Players::ensureFree($locked);
             Horseshoes::spend($locked, $kind->horseshoes());
+            Missions::record($locked, 'crime');
 
             return Crime::create([
                 'season_id' => $season->id,
