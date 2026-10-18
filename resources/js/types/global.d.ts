@@ -13,6 +13,7 @@ declare module '@inertiajs/core' {
             name: string;
             auth: Auth;
             player: PlayerSummary | null;
+            unreadMessages: number;
             isStaff: boolean;
             missionsWaiting: number;
             sidebarOpen: boolean;

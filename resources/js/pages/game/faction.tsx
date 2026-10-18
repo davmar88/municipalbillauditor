@@ -1,5 +1,5 @@
 import { Head, Link } from '@inertiajs/react';
-import { Crown, Flame, MessagesSquare, Skull } from 'lucide-react';
+import { Crown, Flame, Mail, MessagesSquare, Skull } from 'lucide-react';
 import { useState } from 'react';
 import { FactionBase } from '@/components/game/faction-base';
 import { GameBar } from '@/components/game/game-bar';
@@ -10,6 +10,7 @@ import { NativeSelect } from '@/components/ui/native-select';
 import { act, capitalise, clockTime } from '@/lib/game';
 import { cn } from '@/lib/utils';
 import { chat, crime } from '@/routes/play';
+import { show as conversation } from '@/routes/play/messages';
 import {
     answer,
     join,
@@ -208,6 +209,17 @@ function MyFaction({
                             <span className="font-mono text-xs tracking-[0.1em] text-primary">
                                 {member.role?.toUpperCase()}
                             </span>
+                            {!member.me && (
+                                <Button size="icon" variant="ghost" asChild>
+                                    <Link
+                                        href={conversation(member.id)}
+                                        aria-label={`Write to ${member.name}`}
+                                        title={`Write to ${member.name}`}
+                                    >
+                                        <Mail className="size-4" />
+                                    </Link>
+                                </Button>
+                            )}
                             {leader && !member.me && (
                                 <NativeSelect
                                     value=""
@@ -521,7 +533,8 @@ function LoneWolf({ factions, founding, underworld, entryModes }: Props) {
             <section className="flex flex-col gap-3 rounded-xl border bg-card p-4">
                 <h2 className="text-lg font-bold">Found a faction</h2>
                 <p className="text-sm text-muted-foreground">
-                    From level {founding.level}, for {founding.corn} Corn. A
+                    Costs {founding.corn} Corn
+                    {founding.level > 1 && `, from level ${founding.level}`}. A
                     faction needs 3 members to raid. You can set its joining
                     rules once it exists.
                 </p>

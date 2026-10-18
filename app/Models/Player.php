@@ -36,6 +36,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $home_burned_at
  * @property Carbon|null $pound_until
  * @property int $wanted
+ * @property Carbon|null $muted_until Our team stopped the animal writing until then.
  * @property Carbon|null $last_visit_on
  * @property Carbon $adult_confirmed_at
  * @property User $user
@@ -60,6 +61,7 @@ class Player extends Model
             'home_closed_until' => 'datetime',
             'home_burned_at' => 'datetime',
             'pound_until' => 'datetime',
+            'muted_until' => 'datetime',
             'last_visit_on' => 'date',
             'adult_confirmed_at' => 'datetime',
         ];
@@ -136,6 +138,11 @@ class Player extends Model
     public function homeIsClosed(): bool
     {
         return $this->home_closed_until !== null && $this->home_closed_until->isFuture();
+    }
+
+    public function isMuted(): bool
+    {
+        return $this->muted_until !== null && $this->muted_until->isFuture();
     }
 
     public function decides(): bool

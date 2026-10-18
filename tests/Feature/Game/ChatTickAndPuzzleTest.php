@@ -110,6 +110,27 @@ class ChatTickAndPuzzleTest extends TestCase
         $this->assertSame(2, ChatMessage::count());
     }
 
+    public function test_opening_pages_does_not_use_up_the_limit_on_writing(): void
+    {
+        $player = $this->player();
+        $friend = $this->player();
+
+        for ($i = 0; $i < 30; $i++) {
+            $this->actingAs($player->user)->get(route('play'))->assertOk();
+        }
+
+        $this->actingAs($player->user)->post(route('play.chat.store'), ['channel' => 'valley', 'body' => 'Hello valley'])->assertRedirect();
+        $this->actingAs($player->user)->post(route('play.messages.store', $friend), ['body' => 'Hello friend'])->assertRedirect();
+        $this->assertSame(1, ChatMessage::count());
+
+        // Chat keeps its own limit of 20 a minute.
+        for ($i = 1; $i < 20; $i++) {
+            $this->actingAs($player->user)->post(route('play.chat.store'), ['channel' => 'valley', 'body' => "Message {$i}"])->assertRedirect();
+        }
+
+        $this->actingAs($player->user)->post(route('play.chat.store'), ['channel' => 'valley', 'body' => 'One too many'])->assertTooManyRequests();
+    }
+
     public function test_rations_go_out_each_morning_and_favoured_species_get_a_fifth_more(): void
     {
         $this->travelTo(Clock::now()->setTime(5, 0));

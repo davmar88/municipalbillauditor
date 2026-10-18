@@ -97,6 +97,10 @@ final class Chat
             throw new GameException("You can't write in that channel.");
         }
 
+        if (($silenced = Players::silenced($player)) !== null) {
+            throw new GameException($silenced);
+        }
+
         if ($body === '') {
             throw new GameException('Write something first.');
         }
@@ -137,6 +141,7 @@ final class Chat
                 'at' => $message->created_at->toIso8601String(),
                 'mine' => $message->player_id === $player->id,
                 'from' => [
+                    'id' => $message->player->id,
                     'name' => $message->player->name,
                     'species' => $message->player->species->value,
                     'faction' => $message->player->faction?->name,

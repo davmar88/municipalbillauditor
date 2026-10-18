@@ -1,4 +1,4 @@
-import { Head, usePage } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import { Hammer, ShoppingBasket, Store } from 'lucide-react';
 import { useState } from 'react';
 import { GameBar } from '@/components/game/game-bar';
@@ -9,6 +9,7 @@ import { NativeSelect } from '@/components/ui/native-select';
 import { act, capitalise } from '@/lib/game';
 import { cn } from '@/lib/utils';
 import { buy, craft, design as designRoute, list, unlist } from '@/routes/play';
+import { show as conversation } from '@/routes/play/messages';
 import type { DesignCard } from '@/types';
 
 type Props = {
@@ -18,6 +19,7 @@ type Props = {
         serial: number;
         design: DesignCard;
         seller: {
+            id: number;
             name: string;
             faction: string | null;
             colour: string | null;
@@ -129,15 +131,30 @@ function Browse({ listings, levy }: Props) {
                             {listing.design.edition &&
                                 ` of ${listing.design.edition}`}{' '}
                             · by{' '}
-                            <span
-                                style={
-                                    listing.seller.colour
-                                        ? { color: listing.seller.colour }
-                                        : undefined
-                                }
-                            >
-                                {listing.seller.name}
-                            </span>
+                            {listing.mine ? (
+                                <span
+                                    style={
+                                        listing.seller.colour
+                                            ? { color: listing.seller.colour }
+                                            : undefined
+                                    }
+                                >
+                                    {listing.seller.name}
+                                </span>
+                            ) : (
+                                <Link
+                                    href={conversation(listing.seller.id)}
+                                    className="no-underline hover:underline"
+                                    style={
+                                        listing.seller.colour
+                                            ? { color: listing.seller.colour }
+                                            : undefined
+                                    }
+                                    title={`Write to ${listing.seller.name}`}
+                                >
+                                    {listing.seller.name}
+                                </Link>
+                            )}
                         </p>
                         <p className="text-sm font-semibold">
                             {listing.price} Corn

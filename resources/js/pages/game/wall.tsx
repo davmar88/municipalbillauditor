@@ -79,6 +79,7 @@ type Props = {
         gatheringUntil: string;
         closesAt: string | null;
         myPledge: 'rebel' | 'loyal' | null;
+        houseMember: boolean;
     } | null;
     canCallUprising: boolean;
     festivalReady: boolean;
@@ -252,22 +253,30 @@ export default function WallPage(props: Props) {
                                     : 'loyalist'}
                                 .
                             </p>
+                        ) : uprising.houseMember &&
+                          uprising.status === 'gathering' ? (
+                            <p className="text-sm text-muted-foreground">
+                                You can stand with the House if the uprising
+                                gathers its rebels and opens.
+                            </p>
                         ) : (
                             <div className="flex flex-wrap items-center gap-2">
                                 <HorseshoeCount
                                     value={horseshoes}
                                     onChange={setHorseshoes}
                                 />
-                                <Button
-                                    onClick={() =>
-                                        act(pledge.url(uprising.id), {
-                                            side: 'rebel',
-                                            horseshoes,
-                                        })
-                                    }
-                                >
-                                    Rise up
-                                </Button>
+                                {!uprising.houseMember && (
+                                    <Button
+                                        onClick={() =>
+                                            act(pledge.url(uprising.id), {
+                                                side: 'rebel',
+                                                horseshoes,
+                                            })
+                                        }
+                                    >
+                                        Rise up
+                                    </Button>
+                                )}
                                 {uprising.status === 'open' && (
                                     <Button
                                         variant="secondary"
@@ -382,10 +391,12 @@ function HouseControls({
     const template = templates.find((t) => t.value === templateValue)!;
     const [value, setValue] = useState<number | ''>(template.default ?? '');
     const [target, setTarget] = useState('');
-    const [secretSlot, setSecretSlot] = useState(
-        laws.find((law) => law.value != null)?.slot ?? 1,
-    );
+    const [secretSlot, setSecretSlot] = useState<number | null>(null);
     const [secretValue, setSecretValue] = useState<number | ''>('');
+    // Only a law with a number can be changed quietly.
+    const numbered = laws.filter((law) => law.value != null);
+    const secretLaw =
+        numbered.find((law) => law.slot === secretSlot) ?? numbered[0];
 
     return (
         <section className="flex flex-col gap-4 rounded-xl border bg-card p-4">
@@ -535,27 +546,31 @@ function HouseControls({
                         <p className="text-sm">
                             Come back between midnight and 04:00.
                         </p>
+                    ) : !secretLaw ? (
+                        <p className="text-sm">
+                            No law on the Wall has a number to change yet.
+                        </p>
                     ) : (
                         <div className="flex flex-wrap items-end gap-2">
                             <NativeSelect
-                                value={secretSlot}
+                                value={secretLaw.slot}
                                 onChange={(e) =>
                                     setSecretSlot(Number(e.target.value))
                                 }
                                 className="w-48"
+                                aria-label="Law to change"
                             >
-                                {laws
-                                    .filter((law) => law.value != null)
-                                    .map((law) => (
-                                        <option key={law.slot} value={law.slot}>
-                                            {law.slot}. {law.label} ({law.value}
-                                            )
-                                        </option>
-                                    ))}
+                                {numbered.map((law) => (
+                                    <option key={law.slot} value={law.slot}>
+                                        {law.slot}. {law.label} ({law.value})
+                                    </option>
+                                ))}
                             </NativeSelect>
                             <Input
                                 type="number"
                                 className="w-24"
+                                aria-label="New number"
+                                placeholder={String(secretLaw.value)}
                                 value={secretValue}
                                 onChange={(e) =>
                                     setSecretValue(
@@ -569,7 +584,7 @@ function HouseControls({
                                 variant="destructive"
                                 onClick={() =>
                                     act(secret.url(), {
-                                        slot: secretSlot,
+                                        slot: secretLaw.slot,
                                         value: secretValue,
                                     })
                                 }
