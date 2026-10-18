@@ -46,6 +46,30 @@
 }
 
 @layer components {
+    /* The front-page poster fades into the page on every side, so it has no edge. */
+    .poster-melt {
+        -webkit-mask-image:
+            linear-gradient(to bottom, transparent 0%, #000 12%, #000 66%, transparent 100%),
+            linear-gradient(to right, transparent 0%, #000 12%, #000 88%, transparent 100%);
+        -webkit-mask-composite: source-in;
+        mask-image:
+            linear-gradient(to bottom, transparent 0%, #000 12%, #000 66%, transparent 100%),
+            linear-gradient(to right, transparent 0%, #000 12%, #000 88%, transparent 100%);
+        mask-composite: intersect;
+    }
+
+    /* A phone shows the whole width, so only a sliver of each side fades. */
+    @media (max-width: 700px) {
+        .poster-melt {
+            -webkit-mask-image:
+                linear-gradient(to bottom, transparent 0%, #000 8%, #000 72%, transparent 100%),
+                linear-gradient(to right, transparent 0%, #000 3%, #000 97%, transparent 100%);
+            mask-image:
+                linear-gradient(to bottom, transparent 0%, #000 8%, #000 72%, transparent 100%),
+                linear-gradient(to right, transparent 0%, #000 3%, #000 97%, transparent 100%);
+        }
+    }
+
     /* The Vite logo's sweep, cyan through violet to orchid. */
     .text-gradient {
         color: var(--color-action);
