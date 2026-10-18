@@ -58,6 +58,29 @@ class MissionsAndSkillsTest extends TestCase
         $this->assertSame('arrival.first_harvest', $this->storyStep($player)->key);
     }
 
+    public function test_joining_a_faction_early_still_finishes_the_pick_a_side_step(): void
+    {
+        $player = $this->player();
+        $this->faction('Early Birds', $this->player(), $player);
+
+        foreach (['walk', 'gather', 'gather', 'gather', 'chat'] as $event) {
+            Missions::record($player->fresh(), $event);
+
+            $step = $this->storyStep($player);
+
+            if ($step->completed_at !== null) {
+                Missions::claim($player->fresh(), $step);
+            }
+        }
+
+        $step = $this->storyStep($player);
+        $this->assertSame('herd.belong', $step->key);
+        $this->assertNotNull($step->completed_at, 'Already in a faction, so the step opens finished.');
+
+        Missions::claim($player->fresh(), $step);
+        $this->assertSame('herd.pull_weight', $this->storyStep($player)->key);
+    }
+
     public function test_a_mission_pays_once_and_only_when_finished(): void
     {
         $player = $this->player();

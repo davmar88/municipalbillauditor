@@ -333,9 +333,12 @@ final class Missions
             $next = collect(array_keys(self::STORY))->first(fn (string $key) => ! $story->contains('key', $key));
 
             if ($next !== null) {
+                $target = self::STORY[$next]['target'];
+                $done = self::alreadyDone($player, $next);
+
                 PlayerMission::query()->firstOrCreate(
                     ['player_id' => $player->id, 'key' => $next, 'period' => 'story'],
-                    ['target' => self::STORY[$next]['target']],
+                    ['target' => $target, 'progress' => $done ? $target : 0, 'completed_at' => $done ? CarbonImmutable::now() : null],
                 );
             }
         }
@@ -390,6 +393,18 @@ final class Missions
     public static function dailyKeys(): array
     {
         return array_keys(self::DAILY);
+    }
+
+    /**
+     * A step the player finished before it opened, like joining a faction
+     * early, opens finished and ready to collect. It can't be done again.
+     */
+    private static function alreadyDone(Player $player, string $key): bool
+    {
+        return match ($key) {
+            'herd.belong' => $player->faction_id !== null,
+            default => false,
+        };
     }
 
     private static function eligible(Player $player, string $for): bool
