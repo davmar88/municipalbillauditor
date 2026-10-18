@@ -125,7 +125,7 @@ final class Chat
     public function messages(Player $player, string $channel, int $limit = 60): Collection
     {
         return ChatMessage::query()
-            ->with(['player:id,name,species,faction_id', 'player.faction:id,name,colour'])
+            ->with(['player:id,name,species,faction_id,orchard_until', 'player.faction:id,name,colour'])
             ->with(['translations' => fn ($query) => $query->where('language', $player->language)])
             ->where('valley_id', $player->valley_id)
             ->where('channel', $channel)
@@ -146,6 +146,7 @@ final class Chat
                     'species' => $message->player->species->value,
                     'faction' => $message->player->faction?->name,
                     'colour' => $message->player->faction?->colour,
+                    'orchard' => $message->player->inOrchard(),
                 ],
             ]);
     }

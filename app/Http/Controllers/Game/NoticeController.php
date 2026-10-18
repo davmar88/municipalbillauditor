@@ -28,7 +28,7 @@ class NoticeController extends Controller
         $noticesAfter = $request->has('notices') ? max(0, (int) $request->query('notices')) : null;
 
         $messages = $messagesAfter === null ? collect() : DirectMessage::query()
-            ->with(['sender:id,name,species,faction_id', 'sender.faction:id,name,colour'])
+            ->with(['sender:id,name,species,faction_id,orchard_until', 'sender.faction:id,name,colour'])
             ->where('recipient_id', $player->id)
             ->where('id', '>', $messagesAfter)
             ->whereNull('read_at')

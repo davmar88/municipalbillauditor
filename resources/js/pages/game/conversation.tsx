@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
+import { OrchardBadge } from '@/components/game/orchard-badge';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -131,6 +132,7 @@ export default function ConversationPage({
                             }
                         >
                             {animal.name}
+                            <OrchardBadge member={animal.orchard} />
                         </h1>
                         <p className="text-sm text-muted-foreground">
                             {capitalise(animal.species)}

@@ -43,6 +43,7 @@ class ProfileController extends Controller
                 'joined' => $player->created_at->toIso8601String(),
                 'faction' => $player->faction?->name,
                 'role_in_faction' => $player->faction_role?->label(),
+                'orchardUntil' => $player->inOrchard() ? $player->orchard_until->toIso8601String() : null,
             ],
             'biography' => $this->biography($player),
             'rosettes' => RosetteEntry::query()->where('player_id', $player->id)->latest('id')->limit(12)->get(['amount', 'reason', 'created_at'])

@@ -3,12 +3,14 @@ import { Hammer, ShoppingBasket, Sparkles, Store } from 'lucide-react';
 import { useState } from 'react';
 import { GameBar } from '@/components/game/game-bar';
 import { ItemPreview } from '@/components/game/item-preview';
+import { OrchardBadge } from '@/components/game/orchard-badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { NativeSelect } from '@/components/ui/native-select';
 import { act, capitalise } from '@/lib/game';
 import { cn } from '@/lib/utils';
 import {
+    apples,
     buy,
     craft,
     design as designRoute,
@@ -19,10 +21,13 @@ import {
 import { show as conversation } from '@/routes/play/messages';
 import type { DesignCard } from '@/types';
 
+type Currency = 'corn' | 'apples';
+
 type Props = {
     listings: {
         id: number;
         price: number;
+        currency: Currency;
         serial: number;
         design: DesignCard;
         seller: {
@@ -31,6 +36,7 @@ type Props = {
             faction: string | null;
             colour: string | null;
             closed: boolean;
+            orchard: boolean;
         };
         mine: boolean;
     }[];
@@ -40,7 +46,8 @@ type Props = {
         id: number;
         serial: number;
         design: DesignCard;
-        listing: { id: number; price: number } | null;
+        resale: boolean;
+        listing: { id: number; price: number; currency: Currency } | null;
     }[];
     designs: (DesignCard & { needs: Record<string, number> })[];
     workshop: {
@@ -60,11 +67,25 @@ type Props = {
     shop: {
         level: number;
         shelves: number;
+        orchard: boolean;
         used: number;
-        minPrice: number;
-        maxPrice: number;
+        /** The lowest and highest price, in each currency. */
+        prices: Record<Currency, [number, number]>;
+        /** The game's share of an Apple sale, in percent. */
+        cut: number;
+        /** A maker's royalty on a resale, in percent. */
+        royalty: number;
     };
 };
+
+/** "12 Corn", "1 Apple", "30 Apples". */
+function money(amount: number, currency: Currency): string {
+    if (currency === 'corn') {
+        return `${amount.toLocaleString('en-ZA')} Corn`;
+    }
+
+    return `${amount.toLocaleString('en-ZA')} ${amount === 1 ? 'Apple' : 'Apples'}`;
+}
 
 const tabs = [
     { key: 'browse', label: 'Market Square', icon: ShoppingBasket },
@@ -88,7 +109,7 @@ export default function MarketPage(props: Props) {
                         Everything here is made by players. Prices are in Corn
                         {props.levy > 0 &&
                             `, plus the House's ${props.levy}% market levy`}
-                        . Real money comes after the test season.
+                        , or in Apples.
                     </p>
                 </header>
                 <nav className="flex gap-2" aria-label="Market sections">
@@ -125,7 +146,10 @@ function Browse({
     onWorkshop,
 }: Props & { onWorkshop: () => void }) {
     const { player } = usePage().props;
-    const corn = player?.corn ?? 0;
+    const held: Record<Currency, number> = {
+        corn: player?.corn ?? 0,
+        apples: player?.apples ?? 0,
+    };
 
     if (listings.length === 0) {
         return (
@@ -167,6 +191,9 @@ function Browse({
                                     }
                                 >
                                     {listing.seller.name}
+                                    <OrchardBadge
+                                        member={listing.seller.orchard}
+                                    />
                                 </span>
                             ) : (
                                 <Link
@@ -180,6 +207,9 @@ function Browse({
                                     title={`Write to ${listing.seller.name}`}
                                 >
                                     {listing.seller.name}
+                                    <OrchardBadge
+                                        member={listing.seller.orchard}
+                                    />
                                 </Link>
                             )}
                         </p>
@@ -187,8 +217,11 @@ function Browse({
                             <PowerLine design={listing.design} />
                         )}
                         <p className="text-sm font-semibold">
-                            {listing.price} Corn
-                            {levy > 0 && (
+                            {listing.currency === 'apples' && (
+                                <span aria-hidden>🍎 </span>
+                            )}
+                            {money(listing.price, listing.currency)}
+                            {listing.currency === 'corn' && levy > 0 && (
                                 <span className="font-normal text-muted-foreground">
                                     {' '}
                                     + {Math.floor(
@@ -209,9 +242,31 @@ function Browse({
                         ) : (
                             (() => {
                                 const total =
-                                    listing.price +
-                                    Math.floor((listing.price * levy) / 100);
-                                const short = total - corn;
+                                    listing.currency === 'apples'
+                                        ? listing.price
+                                        : listing.price +
+                                          Math.floor(
+                                              (listing.price * levy) / 100,
+                                          );
+                                const short = total - held[listing.currency];
+
+                                if (
+                                    short > 0 &&
+                                    listing.currency === 'apples'
+                                ) {
+                                    return (
+                                        <Button
+                                            asChild
+                                            size="sm"
+                                            variant="secondary"
+                                            className="mt-auto self-start"
+                                        >
+                                            <Link href={apples()}>
+                                                Get {money(short, 'apples')}
+                                            </Link>
+                                        </Button>
+                                    );
+                                }
 
                                 return (
                                     <Button
@@ -242,6 +297,7 @@ function Browse({
 function MyShop({ items, shop }: Props) {
     const { player } = usePage().props;
     const [prices, setPrices] = useState<Record<number, number>>({});
+    const [currencies, setCurrencies] = useState<Record<number, Currency>>({});
     const canSell = (player?.level ?? 1) >= shop.level;
 
     return (
@@ -250,7 +306,18 @@ function MyShop({ items, shop }: Props) {
                 {canSell
                     ? `${shop.used} of ${shop.shelves} shelves in use.`
                     : `You get a shop at level ${shop.level}.`}{' '}
-                Every sale earns you 3 Rosettes.
+                Every sale earns you 3 Rosettes. Price in Corn, or in Apples,
+                which are bought with real money; the game keeps {shop.cut}% of
+                an Apple sale.
+                {canSell && !shop.orchard && (
+                    <>
+                        {' '}
+                        <Link href={apples()} className="text-primary">
+                            Orchard members
+                        </Link>{' '}
+                        get one more shelf.
+                    </>
+                )}
             </p>
             {items.length === 0 ? (
                 <p className="text-muted-foreground">
@@ -290,7 +357,11 @@ function MyShop({ items, shop }: Props) {
                                 )}
                                 {item.listing ? (
                                     <div className="flex items-center gap-2 text-sm">
-                                        On sale for {item.listing.price} Corn
+                                        On sale for{' '}
+                                        {money(
+                                            item.listing.price,
+                                            item.listing.currency,
+                                        )}
                                         <Button
                                             size="sm"
                                             variant="ghost"
@@ -309,36 +380,33 @@ function MyShop({ items, shop }: Props) {
                                     </div>
                                 ) : (
                                     canSell && (
-                                        <div className="flex items-center gap-2">
-                                            <Input
-                                                type="number"
-                                                min={shop.minPrice}
-                                                max={shop.maxPrice}
-                                                className="w-28"
-                                                placeholder="Corn"
-                                                value={prices[item.id] ?? ''}
-                                                onChange={(e) =>
-                                                    setPrices({
-                                                        ...prices,
-                                                        [item.id]: Number(
-                                                            e.target.value,
-                                                        ),
-                                                    })
-                                                }
-                                            />
-                                            <Button
-                                                size="sm"
-                                                onClick={() =>
-                                                    act(list.url(item.id), {
-                                                        price:
-                                                            prices[item.id] ??
-                                                            0,
-                                                    })
-                                                }
-                                            >
-                                                Put on a shelf
-                                            </Button>
-                                        </div>
+                                        <PriceTag
+                                            shop={shop}
+                                            resale={item.resale}
+                                            name={item.design.name}
+                                            price={prices[item.id]}
+                                            currency={
+                                                currencies[item.id] ?? 'corn'
+                                            }
+                                            onPrice={(price) =>
+                                                setPrices({
+                                                    ...prices,
+                                                    [item.id]: price,
+                                                })
+                                            }
+                                            onCurrency={(currency) =>
+                                                setCurrencies({
+                                                    ...currencies,
+                                                    [item.id]: currency,
+                                                })
+                                            }
+                                            onList={(price, currency) =>
+                                                act(list.url(item.id), {
+                                                    price,
+                                                    currency,
+                                                })
+                                            }
+                                        />
                                     )
                                 )}
                             </div>
@@ -347,6 +415,68 @@ function MyShop({ items, shop }: Props) {
                 </ul>
             )}
         </section>
+    );
+}
+
+/** Pricing an item for a shelf, in Corn or Apples. */
+function PriceTag({
+    shop,
+    resale,
+    name,
+    price,
+    currency,
+    onPrice,
+    onCurrency,
+    onList,
+}: {
+    shop: Props['shop'];
+    resale: boolean;
+    name: string;
+    price: number | undefined;
+    currency: Currency;
+    onPrice: (price: number) => void;
+    onCurrency: (currency: Currency) => void;
+    onList: (price: number, currency: Currency) => void;
+}) {
+    const [min, max] = shop.prices[currency];
+    const asked = price ?? 0;
+    const royalty = resale ? Math.floor((asked * shop.royalty) / 100) : 0;
+    const yours = Math.floor((asked * (100 - shop.cut)) / 100) - royalty;
+
+    return (
+        <div className="flex flex-col gap-1">
+            <div className="flex flex-wrap items-center gap-2">
+                <Input
+                    type="number"
+                    min={min}
+                    max={max}
+                    className="w-24"
+                    placeholder={currency === 'apples' ? 'Apples' : 'Corn'}
+                    aria-label={`Price for ${name}`}
+                    value={price ?? ''}
+                    onChange={(e) => onPrice(Number(e.target.value))}
+                />
+                <NativeSelect
+                    value={currency}
+                    onChange={(e) => onCurrency(e.target.value as Currency)}
+                    aria-label={`Sell ${name} for`}
+                    className="w-28"
+                >
+                    <option value="corn">Corn</option>
+                    <option value="apples">Apples</option>
+                </NativeSelect>
+                <Button size="sm" onClick={() => onList(asked, currency)}>
+                    Put on a shelf
+                </Button>
+            </div>
+            {currency === 'apples' && (
+                <p className="text-xs text-muted-foreground">
+                    {asked >= min
+                        ? `You get ${money(yours, 'apples')} after the game's ${shop.cut}%${royalty > 0 ? ` and the maker's ${shop.royalty}%` : ''}.`
+                        : `Price it from ${min} to ${max.toLocaleString('en-ZA')} Apples. The game keeps ${shop.cut}%.`}
+                </p>
+            )}
+        </div>
     );
 }
 

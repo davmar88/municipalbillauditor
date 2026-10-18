@@ -231,8 +231,8 @@ class OutlawsTest extends TestCase
 
         $this->assertTrue($caught);
         $this->assertTrue($suspect->fresh()->inPound());
-        $this->assertSame(250, $hunter->fresh()->apples, 'The hunter collects every Apple on the bounty.');
-        $this->assertSame(250, (int) AppleEntry::query()->where('player_id', $hunter->id)->sum('amount'));
+        $this->assertSame(200, $hunter->fresh()->apples, 'The hunter collects the bounty less the game\'s 20%.');
+        $this->assertSame(200, (int) AppleEntry::query()->where('player_id', $hunter->id)->sum('amount'));
         $this->assertSame(8, Horseshoes::current($hunter->fresh()));
         $this->assertSame('served', $warrant->fresh()->status);
         $this->assertSame($hunter->id, $warrant->fresh()->hunter_id);

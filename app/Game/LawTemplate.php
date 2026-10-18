@@ -34,7 +34,7 @@ enum LawTemplate: string
     {
         return match ($this) {
             self::GrainTax => 'A share of all Corn gathered goes to the House treasury.',
-            self::MarketLevy => 'Buyers pay a Corn fee on every sale, into the House treasury.',
+            self::MarketLevy => 'Buyers pay a Corn fee on every sale priced in Corn, into the House treasury.',
             self::Rations => 'Every morning the House hands back part of its grain tax to everyone. Without this law it keeps it all, which angers the valley.',
             self::Curfew => 'No raids on House land for some hours after 22:00.',
             self::TradeBan => 'One named faction may not buy or sell in the market, for 72 hours.',

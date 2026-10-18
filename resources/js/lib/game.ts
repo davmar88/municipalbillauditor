@@ -79,6 +79,28 @@ export function shortWhen(iso: string, now: Date = new Date()): string {
     }).format(new Date(iso));
 }
 
+/** "18 Nov", in valley time. */
+export function dayMonth(iso: string): string {
+    return new Intl.DateTimeFormat('en-ZA', {
+        day: 'numeric',
+        month: 'short',
+        timeZone: 'Africa/Johannesburg',
+    }).format(new Date(iso));
+}
+
+/** "R95", "R95.50", from cents. */
+export function rand(cents: number): string {
+    return `R${(cents / 100).toLocaleString('en-ZA', {
+        minimumFractionDigits: cents % 100 === 0 ? 0 : 2,
+        maximumFractionDigits: 2,
+    })}`;
+}
+
+/** "$5.70", from cents. */
+export function dollars(cents: number): string {
+    return `$${(cents / 100).toFixed(2)}`;
+}
+
 export function capitalise(text: string): string {
     return text.charAt(0).toUpperCase() + text.slice(1);
 }

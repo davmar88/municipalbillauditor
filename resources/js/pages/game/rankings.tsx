@@ -2,6 +2,7 @@ import { Head, Link } from '@inertiajs/react';
 import { Award, Coins, Palette, Trophy } from 'lucide-react';
 import { GameBar } from '@/components/game/game-bar';
 import { SkillMeter } from '@/components/game/missions';
+import { OrchardBadge } from '@/components/game/orchard-badge';
 import { speciesEmoji } from '@/lib/game';
 import { cn } from '@/lib/utils';
 import { rankings } from '@/routes/play';
@@ -15,6 +16,7 @@ type Row = {
     name: string;
     species: Species;
     faction: { name: string; colour: string } | null;
+    orchard: boolean;
     points: number;
     title: string;
     me: boolean;
@@ -77,6 +79,7 @@ function RankRow({ row }: { row: Row }) {
             <span className="min-w-0 flex-1">
                 <span className="block truncate font-semibold">
                     {row.name}
+                    <OrchardBadge member={row.orchard} />
                     {row.me && (
                         <span className="ml-1.5 text-xs font-bold text-primary">
                             YOU

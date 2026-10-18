@@ -49,6 +49,7 @@ class WantedController extends Controller
                     'id' => $warrant->id,
                     'animal' => Messages::card($warrant->wanted),
                     'bounty' => $warrant->bounty,
+                    'payout' => Warrants::payout($warrant->bounty),
                     'issuedBy' => $warrant->faction?->name,
                     'lastSeen' => $where->name,
                     'inPound' => $warrant->wanted->inPound(),
@@ -59,7 +60,7 @@ class WantedController extends Controller
             }),
             'caught' => $closed->map(fn (Warrant $warrant) => [
                 'id' => $warrant->id,
-                'text' => "{$warrant->hunter?->name} caught {$warrant->wanted->name} for {$warrant->bounty} Apples.",
+                'text' => "{$warrant->hunter?->name} caught {$warrant->wanted->name} and collected ".Warrants::payout($warrant->bounty).' Apples.',
                 'at' => $warrant->served_at?->toIso8601String(),
             ]),
             'house' => $decides ? [
@@ -83,6 +84,7 @@ class WantedController extends Controller
                 'chance' => (int) round(Warrants::ARREST_CHANCE * 100),
                 'dogChance' => (int) round((Warrants::ARREST_CHANCE + Warrants::DOG_BONUS) * 100),
                 'escapeMinutes' => Warrants::ESCAPE_MINUTES,
+                'cut' => Warrants::cut(),
             ],
         ]);
     }
@@ -115,7 +117,7 @@ class WantedController extends Controller
         $warrant->refresh();
 
         return $caught
-            ? $this->told("You caught {$warrant->wanted->name}! The bounty of {$warrant->bounty} Apples is yours.")
+            ? $this->told("You caught {$warrant->wanted->name}! You collected ".Warrants::payout($warrant->bounty).' Apples.')
             : $this->told("{$warrant->wanted->name} slipped away. You can pick up the trail at ".Clock::local($warrant->escaped_until)->format('H:i').'.', 'error');
     }
 }

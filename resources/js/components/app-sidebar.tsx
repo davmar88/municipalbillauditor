@@ -1,7 +1,10 @@
 import { Link, usePage } from '@inertiajs/react';
 import {
+    Apple,
+    Banknote,
     Crosshair,
     Hammer,
+    KeyRound,
     Mail,
     MessagesSquare,
     Puzzle,
@@ -20,9 +23,11 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
+import { useCurrentUrl } from '@/hooks/use-current-url';
 import { mainNavigation } from '@/lib/navigation';
-import { play, puzzle } from '@/routes';
-import { chat, messages, rankings, wanted } from '@/routes/play';
+import { admin, play, puzzle } from '@/routes';
+import { cashouts } from '@/routes/admin';
+import { apples, chat, messages, rankings, wanted } from '@/routes/play';
 import { designs, reports } from '@/routes/staff';
 import type { NavItem } from '@/types';
 
@@ -31,6 +36,7 @@ const moreNavItems: NavItem[] = [
     { title: 'Spot the Edit', href: puzzle(), icon: Puzzle },
     { title: 'Rankings', href: rankings(), icon: Trophy },
     { title: 'Wanted', href: wanted(), icon: Crosshair },
+    { title: 'Apples', href: apples(), icon: Apple },
 ];
 
 const staffNavItems: NavItem[] = [
@@ -39,8 +45,15 @@ const staffNavItems: NavItem[] = [
 ];
 
 export function AppSidebar() {
-    const { player, isStaff, missionsWaiting, unreadMessages } =
-        usePage().props;
+    const {
+        player,
+        isStaff,
+        isAdmin,
+        cashoutsWaiting,
+        missionsWaiting,
+        unreadMessages,
+    } = usePage().props;
+    const { isCurrentUrl } = useCurrentUrl();
     const messagesNavItem: NavItem = {
         title: 'Messages',
         href: messages(),
@@ -81,6 +94,26 @@ export function AppSidebar() {
                     />
                 )}
                 {isStaff && <NavMain label="Our team" items={staffNavItems} />}
+                {isAdmin && (
+                    <NavMain
+                        label="Admin"
+                        items={[
+                            {
+                                title: 'Payments and keys',
+                                href: admin(),
+                                icon: KeyRound,
+                                // Not lit up on the Cash-outs page under it.
+                                isActive: isCurrentUrl(admin()),
+                            },
+                            {
+                                title: 'Cash-outs',
+                                href: cashouts(),
+                                icon: Banknote,
+                                badge: cashoutsWaiting,
+                            },
+                        ]}
+                    />
+                )}
             </SidebarContent>
 
             <SidebarFooter>

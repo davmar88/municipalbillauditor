@@ -14,8 +14,10 @@ import type { MessageAnimal } from '@/types/game';
 type Warrant = {
     id: number;
     animal: MessageAnimal;
-    /** In Apples, which the hunter who catches them collects. */
+    /** In Apples. */
     bounty: number;
+    /** What the hunter who catches them collects: the bounty less the game's share. */
+    payout: number;
     issuedBy: string | null;
     lastSeen: string;
     inPound: boolean;
@@ -46,6 +48,8 @@ type Props = {
         chance: number;
         dogChance: number;
         escapeMinutes: number;
+        /** The game's share of a bounty, in percent. */
+        cut: number;
     };
 };
 
@@ -81,8 +85,8 @@ export default function WantedPage({
                         to where an outlaw stands and try an arrest for{' '}
                         {rules.horseshoes} horseshoes: it works {rules.chance}%
                         of the time, {rules.dogChance}% for dogs. A catch sends
-                        them to the pound and pays you every Apple on the
-                        bounty; a miss lets them slip away for{' '}
+                        them to the pound and pays you the bounty, less the
+                        game's {rules.cut}%; a miss lets them slip away for{' '}
                         {rules.escapeMinutes} minutes. Anyone can add Apples of
                         their own to a bounty.
                     </p>
@@ -167,7 +171,8 @@ function WarrantCard({
                         {warrant.bounty.toLocaleString('en-ZA')}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                        bounty in Apples
+                        bounty in Apples · pays{' '}
+                        {warrant.payout.toLocaleString('en-ZA')}
                     </p>
                 </div>
             </div>

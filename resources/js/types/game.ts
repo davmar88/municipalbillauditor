@@ -26,8 +26,12 @@ export type PlayerSummary = {
     maxHorseshoes: number;
     nextHorseshoeIn: number | null;
     corn: number;
-    /** The premium currency; earned Apples stay in the game. */
+    /** The premium currency, bought with real money in packs. */
     apples: number;
+    /** An Orchard member, with the badge and the extra shop shelf. */
+    orchard: boolean;
+    /** A member who hasn't taken today's free horseshoe refill. */
+    freeRefill: boolean;
     materials: Record<string, number>;
     language: string;
     faction: FactionBadge | null;
@@ -84,6 +88,7 @@ export type MessageAnimal = {
     species: Species;
     faction: string | null;
     colour: string | null;
+    orchard: boolean;
 };
 
 export type MapAnimal = {

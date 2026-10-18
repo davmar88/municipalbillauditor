@@ -7,7 +7,9 @@ use App\Game\Levels;
 use App\Game\Messages;
 use App\Game\Missions;
 use App\Game\Notices;
+use App\Game\Orchard;
 use App\Game\Powers;
+use App\Models\Cashout;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Middleware;
@@ -70,6 +72,8 @@ class HandleInertiaRequests extends Middleware
                     'nextHorseshoeIn' => Horseshoes::nextIn($player),
                     'corn' => $player->corn,
                     'apples' => (int) $player->apples,
+                    'orchard' => $player->inOrchard(),
+                    'freeRefill' => Orchard::refillReady($player),
                     'materials' => $player->materials,
                     'language' => $player->language,
                     'faction' => $player->faction ? [
@@ -98,6 +102,9 @@ class HandleInertiaRequests extends Middleware
                 return $player !== null ? Notices::unread($player) : 0;
             }),
             'isStaff' => fn () => (bool) $request->user()?->is_staff,
+            'isAdmin' => fn () => (bool) $request->user()?->is_admin,
+            // The badge on the owner's Cash-outs page.
+            'cashoutsWaiting' => fn () => $request->user()?->is_admin ? Cashout::query()->where('status', 'pending')->count() : 0,
             // Finished missions waiting to be collected, for the Today badge.
             'missionsWaiting' => fn () => $request->user()?->player ? Missions::waiting($request->user()->player) : 0,
             // The story step you're on, for the Next step bar under the game bar.

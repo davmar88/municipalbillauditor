@@ -4,9 +4,11 @@ namespace App\Http\Controllers\Game;
 
 use App\Game\Clock;
 use App\Game\GateNight;
+use App\Game\Market;
 use App\Game\Missions;
 use App\Game\Skills;
 use App\Http\Controllers\Controller;
+use App\Models\AppleEntry;
 use App\Models\Attack;
 use App\Models\FactionJoinRequest;
 use App\Models\GateDefence;
@@ -59,12 +61,16 @@ class TodayController extends Controller
             'skills' => array_map(fn (string $skill) => Skills::card($player, $skill), Skills::ALL),
             'shop' => [
                 'shelves' => Listing::query()->where('player_id', $player->id)->whereNull('sold_at')->count(),
+                'capacity' => Market::shelves($player),
                 'soldToday' => (int) Listing::query()->where('player_id', $player->id)->where('sold_at', '>=', $since)->count(),
-                'cornToday' => (int) Listing::query()->where('player_id', $player->id)->where('sold_at', '>=', $since)->sum('price'),
+                'cornToday' => (int) Listing::query()->where('player_id', $player->id)->where('currency', 'corn')->where('sold_at', '>=', $since)->sum('price'),
+                // What Apple sales paid the seller, after the game's share.
+                'applesToday' => (int) AppleEntry::query()->where('player_id', $player->id)->where('reference', 'like', 'listing:%:sold')->where('created_at', '>=', $since)->sum('amount'),
                 'recent' => $sold->map(fn (Listing $listing) => [
                     'id' => $listing->id,
                     'name' => $listing->item->design->name,
                     'price' => $listing->price,
+                    'currency' => $listing->currency,
                     'at' => $listing->sold_at->toIso8601String(),
                 ]),
             ],

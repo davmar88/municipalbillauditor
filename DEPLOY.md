@@ -77,7 +77,7 @@ nano /var/www/revenueguard/.env
 
 ```
 MAIL_PASSWORD=          # the info@revenueguard.co.za mailbox
-ANTHROPIC_API_KEY=      # translates chat
+ANTHROPIC_API_KEY=      # translates chat; or paste it on the admin page instead
 COMPANY_NAME=
 INFORMATION_OFFICER=
 ```
@@ -159,6 +159,58 @@ staff access away again.
 
 Finally, register with a Gmail address too and check the verification email
 arrives, and not in spam.
+
+## 7. Selling Apples
+
+The payment keys live on the admin page, not in `.env`, so nobody types them
+on the server. Only an admin can open that page, and only from the server
+does an account become one:
+
+```bash
+/var/www/revenueguard/deploy/artisan app:make-admin you@example.com
+```
+
+Then, on https://revenueguard.co.za/admin:
+
+1. **Paystack** (rand): paste the secret key from Paystack's Settings → API
+   Keys & Webhooks, and paste the page's webhook URL
+   (`https://revenueguard.co.za/webhooks/paystack`) into Paystack's Webhook
+   URL there. Start with the test key (`sk_test_`), buy a pack with
+   Paystack's test card, then swap in the live key.
+2. **PayPal** (US dollars): paste the client ID and secret from
+   developer.paypal.com → Apps & Credentials. Leave the mode on Sandbox while
+   you try it, then switch to Live with the live app's keys. PayPal needs no
+   webhook.
+3. Press **Test** next to each, set Sales to **On sale** and save.
+
+Keys are encrypted with `APP_KEY`. If `APP_KEY` ever changes, type the keys
+in again.
+
+### Cash-outs
+
+Cash-outs stay closed until you open them on the admin page. Open them only
+once a lawyer has confirmed the game may pay out real money: dice decide raids
+and crimes, and Apples pass between animals in bounties and shop sales, so it
+may need a gambling or payments licence.
+
+Every cash-out then waits for you at https://revenueguard.co.za/admin/cashouts.
+
+1. **Bank transfers (Paystack)** are paid from your Paystack balance, so keep
+   money in it. Unless you turn OTP for transfers off in Paystack's settings,
+   Paystack texts you a code for each transfer: type it on the Cash-outs
+   page. The webhook URL above also tells the game when a transfer arrives or
+   fails. Each bank account an animal saves costs R3 to check. If Paystack
+   says transfers aren't enabled, ask Paystack to turn them on.
+2. **PayPal** has to turn on Payouts for your business account first. Ask
+   PayPal for it, then tick Payouts in the app's features on
+   developer.paypal.com. Try a cash-out in Sandbox before going live.
+3. **Bitcoin** is sent by hand from your own wallet. Under South Africa's
+   travel rule, Luno makes the first send to any new address go through its
+   app, and asks for the name of the person being paid; the Cash-outs page
+   shows the address and the animal's legal name. Send Bitcoin worth the rand
+   amount shown, then paste the transaction ID and press Mark paid.
+
+Turning a cash-out down gives the animal its Apples back, with your reason.
 
 ---
 
@@ -265,7 +317,7 @@ Keep the copies as private as the server: they hold players' accounts and chat.
 - Never enable `PasswordAuthentication` in sshd. If you're locked out, use the
   Horizon console and add a key.
 - Never commit `.env`, and never paste its secrets into a chat.
-- Never give an account staff access by editing the database.
-  `app:make-staff` checks the address is verified.
+- Never give an account staff or admin access by editing the database.
+  `app:make-staff` and `app:make-admin` check the address is verified.
 - Never change Cable Elite's pool, crontab or files from here. RevenueGuard
   has its own.

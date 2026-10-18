@@ -5,14 +5,46 @@ namespace App\Game;
 use App\Models\AppleEntry;
 use App\Models\Player;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 /**
- * Apples, the game's premium currency. Every Apple earned is a ledger row
- * with a unique reference, so the balance always matches and nothing pays
- * twice. Earned Apples stay in the game: there is no cashing out.
+ * Apples, the game's premium currency, bought with real money in packs.
+ * Every Apple earned or spent is a ledger row with a unique reference, so
+ * the balance always matches and nothing pays twice. The game never hands
+ * Apples out free: they come from packs, and from other animals.
  */
 final class Apples
 {
+    public static function cornPerApple(): int
+    {
+        return (int) config('game.apples.corn_per_apple');
+    }
+
+    /**
+     * Swap Apples for Corn. It only goes this way: Corn never turns back
+     * into Apples.
+     *
+     * @return int The Corn the animal got.
+     *
+     * @throws GameException
+     */
+    public static function swapForCorn(Player $player, int $apples): int
+    {
+        if ($apples < 1) {
+            throw new GameException('Swap at least 1 Apple.');
+        }
+
+        $corn = $apples * self::cornPerApple();
+
+        DB::transaction(function () use ($player, $apples, $corn) {
+            self::spend($player, $apples, "Swapped for {$corn} Corn", 'swap:'.Str::uuid());
+            Player::query()->whereKey($player->id)->increment('corn', $corn);
+            $player->corn += $corn;
+        });
+
+        return $corn;
+    }
+
     /** @return bool Whether this award was new. */
     public static function award(Player $player, int $amount, string $reason, string $reference): bool
     {
