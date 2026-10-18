@@ -46,6 +46,7 @@ type Props = {
               base: {
                   canBuild: boolean;
                   materials: Record<string, number>;
+                  apples: number;
                   memberCap: number;
                   buildings: (MapBuilding & {
                       region: { id: number; name: string };

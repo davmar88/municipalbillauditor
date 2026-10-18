@@ -13,9 +13,6 @@ use Illuminate\Support\Facades\DB;
  */
 final class Apples
 {
-    /** What a Corn bounty pays the hunter who serves it: one Apple for every ten Corn. */
-    public const CORN_PER_APPLE = 10;
-
     /** @return bool Whether this award was new. */
     public static function award(Player $player, int $amount, string $reason, string $reference): bool
     {
@@ -42,9 +39,33 @@ final class Apples
         });
     }
 
-    /** The Apples a bounty of Corn pays out. */
-    public static function forBounty(int $corn): int
+    /**
+     * Spend an animal's Apples, or say how many they have.
+     *
+     * @throws GameException
+     */
+    public static function spend(Player $player, int $amount, string $reason, string $reference): void
     {
-        return intdiv($corn, self::CORN_PER_APPLE);
+        if ($amount <= 0) {
+            return;
+        }
+
+        DB::transaction(function () use ($player, $amount, $reason, $reference) {
+            $balance = (int) Player::query()->whereKey($player->id)->lockForUpdate()->value('apples');
+
+            if ($balance < $amount) {
+                throw new GameException($balance === 1 ? 'You have 1 Apple.' : "You have {$balance} Apples.");
+            }
+
+            AppleEntry::create([
+                'player_id' => $player->id,
+                'amount' => -$amount,
+                'reason' => $reason,
+                'reference' => $reference,
+            ]);
+
+            Player::query()->whereKey($player->id)->decrement('apples', $amount);
+            $player->apples = $balance - $amount;
+        });
     }
 }

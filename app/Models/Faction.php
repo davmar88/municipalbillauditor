@@ -19,6 +19,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string $colour
  * @property string|null $motto
  * @property int $treasury
+ * @property int $apples The faction's store of Apples, for the House's warrant bounties
  * @property array<string, int>|null $materials
  * @property EntryMode $entry_mode
  * @property int $min_level

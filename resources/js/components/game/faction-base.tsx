@@ -224,6 +224,8 @@ type Props = {
     base: {
         canBuild: boolean;
         materials: Record<string, number>;
+        /** The store of Apples, which the House spends on warrant bounties. */
+        apples: number;
         memberCap: number;
         buildings: (MapBuilding & { region: { id: number; name: string } })[];
         plots: { id: number; name: string }[];
@@ -249,7 +251,11 @@ export function FactionBase({ treasury, base, kinds }: Props) {
     const [amount, setAmount] = useState(10);
     const short = kind ? shortOf(kind.levels[0], store) : [];
     const have =
-        what === 'corn' ? (player?.corn ?? 0) : (player?.materials[what] ?? 0);
+        what === 'corn'
+            ? (player?.corn ?? 0)
+            : what === 'apples'
+              ? (player?.apples ?? 0)
+              : (player?.materials[what] ?? 0);
 
     return (
         <section className="flex flex-col gap-3">
@@ -373,6 +379,16 @@ export function FactionBase({ treasury, base, kinds }: Props) {
                         </span>{' '}
                         Corn
                     </li>
+                    <li
+                        className="rounded-full border px-3 py-1"
+                        title="Whoever rules the Farmhouse spends its Apples on warrant bounties"
+                    >
+                        <span aria-hidden>🍎</span>{' '}
+                        <span className="font-semibold">
+                            {base.apples.toLocaleString('en-ZA')}
+                        </span>{' '}
+                        Apples
+                    </li>
                     {MATERIALS.map(({ name, from }) => (
                         <li
                             key={name}
@@ -401,6 +417,7 @@ export function FactionBase({ treasury, base, kinds }: Props) {
                             onChange={(event) => setWhat(event.target.value)}
                         >
                             <option value="corn">Corn</option>
+                            <option value="apples">Apples</option>
                             {MATERIALS.map(({ name }) => (
                                 <option key={name} value={name}>
                                     {name[0].toUpperCase() + name.slice(1)}

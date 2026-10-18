@@ -4,6 +4,7 @@ namespace App\Game;
 
 use App\Enums\CrimeKind;
 use App\Enums\Species;
+use App\Models\AppleEntry;
 use App\Models\Crime;
 use App\Models\Faction;
 use App\Models\Player;
@@ -12,19 +13,22 @@ use App\Models\Warrant;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 /**
  * The House's justice. Its informants know who has been committing crimes;
- * its leader and council put out warrants with a Corn bounty from the
- * treasury, anyone can add to a bounty, and any animal who catches the
- * outlaw where they stand sends them to the pound and collects it, paid
- * out in Apples: one for every ten Corn of bounty.
+ * its leader and council put out warrants with a bounty of Apples from the
+ * House's store, anyone can add Apples of their own, and any animal who
+ * catches the outlaw where they stand sends them to the pound and collects
+ * every Apple. A warrant nobody serves by the season's end hands its Apples
+ * back to whoever put them up.
  */
 final class Warrants
 {
-    public const MIN_BOUNTY = 50;
+    /** Bounties are in Apples. */
+    public const MIN_BOUNTY = 5;
 
-    public const MAX_BOUNTY = 2000;
+    public const MAX_BOUNTY = 500;
 
     /** How long a crime keeps an animal on the House's list of suspects. */
     public const SUSPECT_DAYS = 3;
@@ -92,16 +96,16 @@ final class Warrants
             }
 
             if ($bounty < self::MIN_BOUNTY || $bounty > self::MAX_BOUNTY) {
-                throw new GameException('Put a bounty of '.self::MIN_BOUNTY.' to '.number_format(self::MAX_BOUNTY).' Corn on a warrant.');
+                throw new GameException('Put a bounty of '.self::MIN_BOUNTY.' to '.self::MAX_BOUNTY.' Apples on a warrant.');
             }
 
             $house = Faction::query()->lockForUpdate()->findOrFail($house->id);
 
-            if ($house->treasury < $bounty) {
-                throw new GameException("The treasury holds {$house->treasury} Corn.");
+            if ($house->apples < $bounty) {
+                throw new GameException("The House's store holds ".self::apples($house->apples).'. Members can give Apples from the Faction page.');
             }
 
-            $house->decrement('treasury', $bounty);
+            $house->decrement('apples', $bounty);
 
             $warrant = Warrant::create([
                 'season_id' => $season->id,
@@ -112,15 +116,15 @@ final class Warrants
             ]);
 
             $wanted = route('play.wanted', [], false);
-            Notices::send($suspect->id, 'warrant', "🎯 {$house->name} put a {$bounty} Corn warrant out for your arrest. Bounty hunters are coming.", $wanted);
-            Notices::send(Notices::valley($player->valley_id)->reject(fn (int $id) => $id === $suspect->id), 'warrant', "🎯 Wanted: {$suspect->name}, with a {$bounty} Corn bounty from {$house->name}.", $wanted);
+            Notices::send($suspect->id, 'warrant', "🎯 {$house->name} put a warrant out for your arrest, with a bounty of {$bounty} Apples. Bounty hunters are coming.", $wanted);
+            Notices::send(Notices::valley($player->valley_id)->reject(fn (int $id) => $id === $suspect->id), 'warrant', "🎯 Wanted: {$suspect->name}, with a bounty of {$bounty} Apples from {$house->name}.", $wanted);
 
             return $warrant;
         });
     }
 
     /**
-     * Add Corn of your own to a bounty.
+     * Add Apples of your own to a bounty.
      *
      * @throws GameException
      */
@@ -138,15 +142,11 @@ final class Warrants
                 throw new GameException("You can't put a bounty on yourself.");
             }
 
-            if ($amount < 10) {
-                throw new GameException('Add at least 10 Corn.');
+            if ($amount < 1) {
+                throw new GameException('Add at least 1 Apple.');
             }
 
-            if ($player->corn < $amount) {
-                throw new GameException("You have {$player->corn} Corn.");
-            }
-
-            $player->decrement('corn', $amount);
+            Apples::spend($player, $amount, "Added to the bounty on {$warrant->wanted->name}", "bounty:{$warrant->id}:raise:".Str::uuid());
             $warrant->increment('bounty', $amount);
         });
     }
@@ -207,8 +207,8 @@ final class Warrants
                 'pound_until' => CarbonImmutable::now()->addHours(Crimes::POUND_HOURS),
                 'wanted' => $wanted->wanted + 1,
             ])->save();
-            // Bounties are put up in Corn and paid out to the hunter as Apples.
-            $apples = Apples::forBounty($warrant->bounty);
+            // The hunter collects every Apple on the bounty.
+            $apples = $warrant->bounty;
             Apples::award($hunter, $apples, "Caught {$wanted->name}", "bounty:{$warrant->id}");
             $warrant->forceFill(['status' => 'served', 'hunter_id' => $hunter->id, 'served_at' => CarbonImmutable::now()])->save();
             Rosettes::award($hunter, 15, "Caught {$wanted->name}", "arrest:{$warrant->id}", $hunter->valley->currentSeason());
@@ -220,9 +220,45 @@ final class Warrants
         });
     }
 
-    /** A new season closes the old season's warrants. */
+    /**
+     * A new season closes the old season's warrants. Nobody collected their
+     * bounties, so every Apple goes back: what animals added to them, and
+     * the rest to the store of the House that put them out.
+     */
     public function lapse(Season $season): void
     {
-        Warrant::query()->where('season_id', $season->id)->where('status', 'open')->update(['status' => 'lapsed']);
+        $warrants = Warrant::query()->with('wanted:id,name')->where('season_id', $season->id)->where('status', 'open')->lockForUpdate()->get();
+
+        foreach ($warrants as $warrant) {
+            /** @var Collection<int, int> $added Apples each animal added, by player id. */
+            $added = AppleEntry::query()
+                ->where('reference', 'like', "bounty:{$warrant->id}:raise:%")
+                ->groupBy('player_id')
+                ->selectRaw('player_id, -SUM(amount) as apples')
+                ->pluck('apples', 'player_id')
+                ->map(fn ($apples) => (int) $apples);
+
+            foreach ($added as $playerId => $apples) {
+                $player = Player::find($playerId);
+
+                if ($player !== null && Apples::award($player, $apples, "The warrant on {$warrant->wanted->name} lapsed", "bounty:{$warrant->id}:back:{$playerId}")) {
+                    Notices::send($playerId, 'warrant', "🍎 Nobody caught {$warrant->wanted->name} before the season ended. The ".self::apples($apples).' you added to the bounty came back to you.', route('play.wanted', [], false));
+                }
+            }
+
+            $house = $warrant->bounty - $added->sum();
+
+            if ($house > 0) {
+                Faction::query()->whereKey($warrant->faction_id)->increment('apples', $house);
+            }
+
+            $warrant->forceFill(['status' => 'lapsed'])->save();
+        }
+    }
+
+    /** "1 Apple", "12 Apples". */
+    private static function apples(int $count): string
+    {
+        return $count === 1 ? '1 Apple' : "{$count} Apples";
     }
 }

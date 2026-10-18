@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\Game;
 
-use App\Game\Apples;
 use App\Game\Clock;
 use App\Game\Messages;
 use App\Game\Warrants;
@@ -50,7 +49,6 @@ class WantedController extends Controller
                     'id' => $warrant->id,
                     'animal' => Messages::card($warrant->wanted),
                     'bounty' => $warrant->bounty,
-                    'apples' => Apples::forBounty($warrant->bounty),
                     'issuedBy' => $warrant->faction?->name,
                     'lastSeen' => $where->name,
                     'inPound' => $warrant->wanted->inPound(),
@@ -61,12 +59,12 @@ class WantedController extends Controller
             }),
             'caught' => $closed->map(fn (Warrant $warrant) => [
                 'id' => $warrant->id,
-                'text' => "{$warrant->hunter?->name} caught {$warrant->wanted->name} for ".Apples::forBounty($warrant->bounty).' Apples.',
+                'text' => "{$warrant->hunter?->name} caught {$warrant->wanted->name} for {$warrant->bounty} Apples.",
                 'at' => $warrant->served_at?->toIso8601String(),
             ]),
             'house' => $decides ? [
                 'name' => $house->name,
-                'treasury' => $house->treasury,
+                'apples' => $house->apples,
                 'suspects' => Warrants::suspects($season)
                     ->reject(fn (array $suspect) => $suspect['player']->id === $player->id)
                     ->map(fn (array $suspect) => [
@@ -85,7 +83,6 @@ class WantedController extends Controller
                 'chance' => (int) round(Warrants::ARREST_CHANCE * 100),
                 'dogChance' => (int) round((Warrants::ARREST_CHANCE + Warrants::DOG_BONUS) * 100),
                 'escapeMinutes' => Warrants::ESCAPE_MINUTES,
-                'cornPerApple' => Apples::CORN_PER_APPLE,
             ],
         ]);
     }
@@ -101,7 +98,7 @@ class WantedController extends Controller
         $suspect = Player::query()->where('valley_id', $player->valley_id)->findOrFail($data['player_id']);
         $warrants->issue($player, $suspect, (int) $data['bounty']);
 
-        return $this->told("The warrant for {$suspect->name} is out, with a {$data['bounty']} Corn bounty.");
+        return $this->told("The warrant for {$suspect->name} is out, with a bounty of {$data['bounty']} Apples.");
     }
 
     public function raise(Request $request, Warrant $warrant, Warrants $warrants): RedirectResponse
@@ -109,7 +106,7 @@ class WantedController extends Controller
         $amount = (int) $request->validate(['amount' => ['required', 'integer', 'min:1']])['amount'];
         $warrants->raise($request->user()->player, $warrant, $amount);
 
-        return $this->told("You added {$amount} Corn to the bounty on {$warrant->wanted->name}.");
+        return $this->told("You added {$amount} Apples to the bounty on {$warrant->wanted->name}.");
     }
 
     public function arrest(Request $request, Warrant $warrant, Warrants $warrants): RedirectResponse
@@ -118,7 +115,7 @@ class WantedController extends Controller
         $warrant->refresh();
 
         return $caught
-            ? $this->told("You caught {$warrant->wanted->name}! The bounty paid you ".Apples::forBounty($warrant->bounty).' Apples.')
+            ? $this->told("You caught {$warrant->wanted->name}! The bounty of {$warrant->bounty} Apples is yours.")
             : $this->told("{$warrant->wanted->name} slipped away. You can pick up the trail at ".Clock::local($warrant->escaped_until)->format('H:i').'.', 'error');
     }
 }

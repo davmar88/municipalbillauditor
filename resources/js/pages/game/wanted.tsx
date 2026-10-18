@@ -7,14 +7,15 @@ import { Input } from '@/components/ui/input';
 import { act, clockTime, fromNow, speciesEmoji } from '@/lib/game';
 import { openChat } from '@/lib/pulse';
 import { play } from '@/routes';
+import { faction } from '@/routes/play';
 import { arrest, issue, raise } from '@/routes/play/warrant';
 import type { MessageAnimal } from '@/types/game';
 
 type Warrant = {
     id: number;
     animal: MessageAnimal;
+    /** In Apples, which the hunter who catches them collects. */
     bounty: number;
-    apples: number;
     issuedBy: string | null;
     lastSeen: string;
     inPound: boolean;
@@ -28,7 +29,8 @@ type Props = {
     caught: { id: number; text: string; at: string | null }[];
     house: {
         name: string;
-        treasury: number;
+        /** The House's store of Apples, for bounties. */
+        apples: number;
         suspects: {
             animal: MessageAnimal;
             deed: string;
@@ -44,7 +46,6 @@ type Props = {
         chance: number;
         dogChance: number;
         escapeMinutes: number;
-        cornPerApple: number;
     };
 };
 
@@ -80,10 +81,10 @@ export default function WantedPage({
                         to where an outlaw stands and try an arrest for{' '}
                         {rules.horseshoes} horseshoes: it works {rules.chance}%
                         of the time, {rules.dogChance}% for dogs. A catch sends
-                        them to the pound and pays you the bounty; a miss lets
-                        them slip away for {rules.escapeMinutes} minutes.
-                        Bounties are put up in Corn and paid out as Apples, one
-                        for every {rules.cornPerApple} Corn.
+                        them to the pound and pays you every Apple on the
+                        bounty; a miss lets them slip away for{' '}
+                        {rules.escapeMinutes} minutes. Anyone can add Apples of
+                        their own to a bounty.
                     </p>
                 </header>
 
@@ -130,7 +131,7 @@ function WarrantCard({
     warrant: Warrant;
     horseshoes: number;
 }) {
-    const [amount, setAmount] = useState(20);
+    const [amount, setAmount] = useState(5);
 
     return (
         <li className="flex flex-col gap-3 rounded-xl border border-orange-500/40 bg-orange-500/5 p-4">
@@ -162,10 +163,11 @@ function WarrantCard({
                 </div>
                 <div className="text-right">
                     <p className="text-2xl font-extrabold">
-                        🍎 {warrant.apples}
+                        <span aria-hidden>🍎</span>{' '}
+                        {warrant.bounty.toLocaleString('en-ZA')}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                        Apples, from {warrant.bounty} Corn
+                        bounty in Apples
                     </p>
                 </div>
             </div>
@@ -228,13 +230,13 @@ function WarrantCard({
                     <div className="ml-auto flex items-center gap-1.5">
                         <Input
                             type="number"
-                            min={10}
+                            min={1}
                             value={amount}
                             onChange={(event) =>
                                 setAmount(Number(event.target.value))
                             }
                             className="h-8 w-20"
-                            aria-label="Corn to add to the bounty"
+                            aria-label="Apples to add to the bounty"
                         />
                         <Button
                             size="sm"
@@ -243,7 +245,7 @@ function WarrantCard({
                                 act(raise.url(warrant.id), { amount })
                             }
                         >
-                            Add to bounty
+                            Add Apples
                         </Button>
                     </div>
                 </div>
@@ -267,8 +269,17 @@ function Suspects({
                 <h2 className="text-lg font-bold">The House's informants</h2>
                 <p className="text-sm text-muted-foreground">
                     Animals seen breaking the law in the last three days. A
-                    warrant's bounty comes out of the treasury, which holds{' '}
-                    {house.treasury.toLocaleString('en-ZA')} Corn.
+                    warrant's bounty comes out of the House's store of Apples,
+                    which holds {house.apples.toLocaleString('en-ZA')}{' '}
+                    {house.apples === 1 ? 'Apple' : 'Apples'}. Members give
+                    Apples to it on the{' '}
+                    <Link
+                        href={faction()}
+                        className="underline underline-offset-2"
+                    >
+                        Faction page
+                    </Link>
+                    .
                 </p>
             </div>
             {house.suspects.length === 0 ? (
@@ -278,7 +289,12 @@ function Suspects({
             ) : (
                 <ul className="divide-y rounded-lg border">
                     {house.suspects.map((suspect) => {
-                        const bounty = bounties[suspect.animal.id] ?? 100;
+                        const bounty =
+                            bounties[suspect.animal.id] ??
+                            Math.max(
+                                rules.minBounty,
+                                Math.min(20, house.apples),
+                            );
 
                         return (
                             <li
@@ -319,11 +335,15 @@ function Suspects({
                                                 })
                                             }
                                             className="h-8 w-24"
-                                            aria-label={`Bounty on ${suspect.animal.name}`}
+                                            aria-label={`Bounty in Apples on ${suspect.animal.name}`}
                                         />
+                                        <span aria-hidden>🍎</span>
                                         <Button
                                             size="sm"
-                                            disabled={bounty > house.treasury}
+                                            disabled={
+                                                bounty < rules.minBounty ||
+                                                bounty > house.apples
+                                            }
                                             onClick={() =>
                                                 act(issue.url(), {
                                                     player_id:

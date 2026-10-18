@@ -49,6 +49,7 @@ class FactionController extends Controller
                 'base' => [
                     'canBuild' => $player->decides(),
                     'materials' => (object) ($faction->materials ?? []),
+                    'apples' => (int) $faction->apples,
                     'memberCap' => Bases::memberCap($faction),
                     'buildings' => Bases::standing($faction)
                         ->sortBy(fn (Building $building) => [$building->kind === BuildingKind::Den ? 0 : 1, $building->region->name])

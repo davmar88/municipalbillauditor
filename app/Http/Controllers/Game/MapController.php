@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Game;
 
 use App\Enums\BuildingKind;
 use App\Enums\CrimeKind;
-use App\Game\Apples;
 use App\Game\Bases;
 use App\Game\Clock;
 use App\Game\Crimes;
@@ -131,7 +130,6 @@ class MapController extends Controller
                     'id' => $warrant->id,
                     'playerId' => $warrant->player_id,
                     'bounty' => $warrant->bounty,
-                    'apples' => Apples::forBounty($warrant->bounty),
                     'escapedUntil' => $warrant->escaped_until?->isFuture() ? $warrant->escaped_until->toIso8601String() : null,
                 ]) : [],
             'plunder' => ['crop' => Crimes::PLUNDER_CROP, 'corn' => Crimes::PLUNDER_CORN, 'level' => (int) config('game.levels.crime'), 'horseshoes' => CrimeKind::Plunder->horseshoes()],

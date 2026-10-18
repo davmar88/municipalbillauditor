@@ -11,6 +11,7 @@ use App\Models\Valley;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 /**
  * Faction bases. A faction raises buildings on land it holds, paid from its
@@ -32,8 +33,8 @@ final class Bases
      */
     public function give(Player $player, string $what, int $amount): void
     {
-        if ($what !== 'corn' && ! in_array($what, self::MATERIALS, true)) {
-            throw new GameException('Pick Corn or one of the materials to give.');
+        if ($what !== 'corn' && $what !== 'apples' && ! in_array($what, self::MATERIALS, true)) {
+            throw new GameException('Pick Corn, Apples or one of the materials to give.');
         }
 
         if ($amount < 1) {
@@ -49,7 +50,11 @@ final class Bases
                 throw new GameException('Join a faction to give to its store.');
             }
 
-            if ($what === 'corn') {
+            if ($what === 'apples') {
+                // The House spends its store of Apples on warrant bounties.
+                Apples::spend($player, $amount, "Gave to {$faction->name}'s store", "give:{$faction->id}:".Str::uuid());
+                $faction->apples += $amount;
+            } elseif ($what === 'corn') {
                 if ($player->corn < $amount) {
                     throw new GameException("You have {$player->corn} Corn.");
                 }

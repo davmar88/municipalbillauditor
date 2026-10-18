@@ -3,6 +3,8 @@
 namespace Tests\Feature\Game;
 
 use App\Enums\CrimeKind;
+use App\Enums\FactionRole;
+use App\Game\Apples;
 use App\Game\Clock;
 use App\Game\Crimes;
 use App\Game\Dice;
@@ -71,7 +73,7 @@ class OutlawsTest extends TestCase
     {
         $ruler = $this->player();
         $house = $this->faction('The House', $ruler);
-        $house->forceFill(['treasury' => 1000])->save();
+        $house->forceFill(['apples' => 500])->save();
         $this->hold($house, 'farmhouse');
         $suspect = $this->player(level: 3);
         $victims = $this->faction('Victims', $this->player());
@@ -138,7 +140,7 @@ class OutlawsTest extends TestCase
         $this->assertNotNull($keepers);
     }
 
-    public function test_the_house_puts_a_warrant_on_a_suspect_with_a_bounty_from_its_treasury(): void
+    public function test_the_house_puts_a_warrant_on_a_suspect_with_a_bounty_from_its_store_of_apples(): void
     {
         [$house, $ruler, $suspect] = $this->houseAndSuspect();
         $bystander = $this->player();
@@ -147,12 +149,46 @@ class OutlawsTest extends TestCase
 
         $warrant = Warrant::sole();
         $this->assertSame(200, $warrant->bounty);
-        $this->assertSame(800, $house->fresh()->treasury);
-        $this->assertStringContainsString('put a 200 Corn warrant out for your arrest', Notice::query()->where('player_id', $suspect->id)->latest('id')->value('text'));
-        $this->assertSame("🎯 Wanted: {$suspect->name}, with a 200 Corn bounty from The House.", Notice::query()->where('player_id', $bystander->id)->value('text'));
+        $this->assertSame(300, $house->fresh()->apples, "The bounty comes out of the House's store of Apples.");
+        $this->assertStringContainsString('with a bounty of 200 Apples', Notice::query()->where('player_id', $suspect->id)->latest('id')->value('text'));
+        $this->assertSame("🎯 Wanted: {$suspect->name}, with a bounty of 200 Apples from The House.", Notice::query()->where('player_id', $bystander->id)->value('text'));
 
         $this->expectExceptionMessage('already a warrant');
         $this->warrants->issue($ruler->fresh(), $suspect, 100);
+    }
+
+    public function test_a_bounty_needs_the_apples_in_the_house_store(): void
+    {
+        [$house, $ruler, $suspect] = $this->houseAndSuspect();
+        $house->forceFill(['apples' => 30])->save();
+
+        try {
+            $this->warrants->issue($ruler, $suspect, 40);
+            $this->fail('The store holds 30 Apples.');
+        } catch (GameException $e) {
+            $this->assertStringContainsString("The House's store holds 30 Apples", $e->getMessage());
+        }
+
+        $this->assertSame(30, $house->fresh()->apples);
+        $this->assertSame(0, Warrant::count());
+    }
+
+    public function test_members_give_apples_to_the_house_store_and_anyone_adds_their_own(): void
+    {
+        [$house, $ruler, $suspect] = $this->houseAndSuspect();
+        $member = $this->player();
+        $member->forceFill(['faction_id' => $house->id, 'faction_role' => FactionRole::Member, 'faction_joined_at' => now()->subDays(3)])->save();
+        Apples::award($member, 25, 'Test', 'test:member');
+
+        $this->actingAs($member->user)->post(route('play.give'), ['what' => 'apples', 'amount' => 20])->assertRedirect();
+
+        $this->assertSame(5, $member->fresh()->apples);
+        $this->assertSame(520, $house->fresh()->apples);
+        $this->assertSame(5, (int) AppleEntry::query()->where('player_id', $member->id)->sum('amount'));
+
+        $warrant = $this->warrants->issue($ruler, $suspect, 100);
+        $this->expectExceptionMessage('You have 5 Apples');
+        $this->warrants->raise($member->fresh(), $warrant, 6);
     }
 
     public function test_only_the_house_warrants_and_only_suspects(): void
@@ -176,8 +212,10 @@ class OutlawsTest extends TestCase
     {
         [, $ruler, $suspect] = $this->houseAndSuspect();
         $warrant = $this->warrants->issue($ruler, $suspect, 200);
-        $helper = $this->player(attributes: ['corn' => 100]);
-        $this->warrants->raise($helper, $warrant, 50);
+        $helper = $this->player();
+        Apples::award($helper, 60, 'Test', 'test:helper');
+        $this->warrants->raise($helper->fresh(), $warrant, 50);
+        $this->assertSame(10, $helper->fresh()->apples);
         $hunter = $this->player();
         $this->stand($suspect, 'granary');
 
@@ -193,9 +231,8 @@ class OutlawsTest extends TestCase
 
         $this->assertTrue($caught);
         $this->assertTrue($suspect->fresh()->inPound());
-        $this->assertSame(100, $hunter->fresh()->corn, 'Bounties are paid in Apples, not Corn.');
-        $this->assertSame(25, $hunter->fresh()->apples, '250 Corn of bounty pays 25 Apples.');
-        $this->assertSame(25, (int) AppleEntry::query()->where('player_id', $hunter->id)->sum('amount'));
+        $this->assertSame(250, $hunter->fresh()->apples, 'The hunter collects every Apple on the bounty.');
+        $this->assertSame(250, (int) AppleEntry::query()->where('player_id', $hunter->id)->sum('amount'));
         $this->assertSame(8, Horseshoes::current($hunter->fresh()));
         $this->assertSame('served', $warrant->fresh()->status);
         $this->assertSame($hunter->id, $warrant->fresh()->hunter_id);
@@ -221,14 +258,24 @@ class OutlawsTest extends TestCase
         $this->assertTrue($this->warrants->arrest($hunter->fresh(), $warrant->fresh(), 0.0));
     }
 
-    public function test_a_new_season_lapses_open_warrants(): void
+    public function test_a_new_season_lapses_open_warrants_and_hands_their_apples_back(): void
     {
-        [, $ruler, $suspect] = $this->houseAndSuspect();
-        $this->warrants->issue($ruler, $suspect, 100);
+        [$house, $ruler, $suspect] = $this->houseAndSuspect();
+        $warrant = $this->warrants->issue($ruler, $suspect, 100);
+        $helper = $this->player();
+        Apples::award($helper, 30, 'Test', 'test:helper');
+        $this->warrants->raise($helper->fresh(), $warrant, 20);
+        $this->warrants->raise($helper->fresh(), $warrant, 5);
+        $this->assertSame(400, $house->fresh()->apples);
+        $this->assertSame(5, $helper->fresh()->apples);
 
         app(Seasons::class)->end($this->valley, $this->season());
 
         $this->assertSame('lapsed', Warrant::sole()->status);
+        $this->assertSame(500, $house->fresh()->apples, 'The House gets its 100 Apples back.');
+        $this->assertSame(30, $helper->fresh()->apples, 'The helper gets the 25 Apples they added back.');
+        $this->assertSame(30, (int) AppleEntry::query()->where('player_id', $helper->id)->sum('amount'));
+        $this->assertTrue(Notice::query()->where('player_id', $helper->id)->where('text', 'like', '%25 Apples you added to the bounty came back%')->exists());
     }
 
     public function test_the_wanted_board_and_the_map_show_warrants(): void

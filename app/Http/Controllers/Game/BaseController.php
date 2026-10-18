@@ -17,12 +17,16 @@ class BaseController extends Controller
     public function give(Request $request, Bases $bases): RedirectResponse
     {
         $data = $request->validate([
-            'what' => ['required', Rule::in(['corn', ...Bases::MATERIALS])],
+            'what' => ['required', Rule::in(['corn', 'apples', ...Bases::MATERIALS])],
             'amount' => ['required', 'integer', 'between:1,100000'],
         ]);
 
         $bases->give($request->user()->player, $data['what'], (int) $data['amount']);
-        $what = $data['what'] === 'corn' ? 'Corn' : $data['what'];
+        $what = match ($data['what']) {
+            'corn' => 'Corn',
+            'apples' => 'Apples',
+            default => $data['what'],
+        };
 
         return $this->told("You gave {$data['amount']} {$what} to your faction's store.");
     }

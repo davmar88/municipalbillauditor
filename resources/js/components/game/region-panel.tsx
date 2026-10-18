@@ -54,8 +54,8 @@ import type {
 export type Warrant = {
     id: number;
     playerId: number;
+    /** In Apples. */
     bounty: number;
-    apples: number;
     escapedUntil: string | null;
 };
 
@@ -345,7 +345,8 @@ export function RegionPanel({
                                 aria-hidden
                             />
                             {animal.name} is wanted: a bounty of{' '}
-                            {warrant.apples} Apples
+                            {warrant.bounty}{' '}
+                            {warrant.bounty === 1 ? 'Apple' : 'Apples'}
                         </p>
                         {isHere ? (
                             warrant.escapedUntil ? (
