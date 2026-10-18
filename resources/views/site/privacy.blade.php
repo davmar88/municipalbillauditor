@@ -30,7 +30,7 @@
                     'If you sign in with Google, Google tells us your name and email address, and that it has checked the email is yours. We get nothing else from your Google account, and never your Google password.',
                     "Your animal and everything it does in the game: its name, faction, items, shop, chat messages, private messages and the game's records of battles, laws and crimes.",
                     'If you buy Apples, Paystack or PayPal takes the payment on its own page. We see the amount and whether it went through, never your card.',
-                    'If you cash Apples out, your full name, your ID or passport number, and where to send the money: a bank account, a PayPal email address or a Bitcoin address. We keep these encrypted.',
+                    'If you cash Apples out, your full name, your ID or passport number, and where to send the money: a bank account or a PayPal email address. We keep these encrypted.',
                     'We do not collect your location, your phone contacts or your phone number.',
                 ]],
                 ['Why we use it', [
