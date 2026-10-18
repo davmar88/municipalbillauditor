@@ -13,7 +13,6 @@ import {
     FARM,
     FIELDS,
     REACH,
-    ROADS,
     WORLD,
     anchor,
     hub,
@@ -21,7 +20,6 @@ import {
     shapeOf,
     smoothPath,
     toPath,
-    walkPath,
 } from '@/lib/hollowmere';
 import { cn } from '@/lib/utils';
 import type {
@@ -738,36 +736,6 @@ const Borders = memo(function Borders({
     );
 });
 
-/** Dotted trails from your animal to the regions it can walk to. */
-const Trails = memo(function Trails({
-    from,
-    to,
-    selected,
-}: {
-    from: string;
-    to: string[];
-    selected: string | null;
-}) {
-    return (
-        <g pointerEvents="none">
-            {to.map((key) => (
-                <path
-                    key={key}
-                    d={smoothPath(walkPath(from, key))}
-                    fill="none"
-                    stroke={VIOLET}
-                    strokeOpacity={key === selected ? 1 : 0.65}
-                    strokeWidth={key === selected ? 4 : 2.6}
-                    strokeDasharray="2 7"
-                    strokeLinecap="round"
-                    vectorEffect="non-scaling-stroke"
-                    className="map-march"
-                />
-            ))}
-        </g>
-    );
-});
-
 function quadAt(a: Point, c: Point, b: Point, t: number): Point {
     const u = 1 - t;
 
@@ -1014,52 +982,8 @@ const Labels = memo(function Labels({
     return (
         <g pointerEvents="none" fontFamily="inherit">
             <defs>
-                {ROADS.map((road, i) => {
-                    const [a, b] = road.labelBetween;
-                    const points = walkPath(a, b);
-                    const ordered =
-                        Math.abs(points[2][0] - points[0][0]) >
-                        Math.abs(points[2][1] - points[0][1])
-                            ? points[0][0] <= points[2][0]
-                                ? points
-                                : [...points].reverse()
-                            : points[0][1] <= points[2][1]
-                              ? points
-                              : [...points].reverse();
-
-                    return (
-                        <path
-                            key={road.name}
-                            id={`lane-${i}`}
-                            d={smoothPath(ordered)}
-                        />
-                    );
-                })}
                 <path id="brook-label" d={smoothPath(BROOK.slice(1, 5))} />
             </defs>
-            {lanes &&
-                ROADS.map((road, i) => (
-                    <text
-                        key={road.name}
-                        fontSize={9.5 / k}
-                        fontStyle="italic"
-                        fontWeight={600}
-                        fill="#b5afc4"
-                        stroke={HALO}
-                        strokeWidth={3 / k}
-                        paintOrder="stroke"
-                        strokeLinejoin="round"
-                        dy={3.2 / k}
-                    >
-                        <textPath
-                            href={`#lane-${i}`}
-                            startOffset="50%"
-                            textAnchor="middle"
-                        >
-                            {road.name}
-                        </textPath>
-                    </text>
-                ))}
             {lanes && (
                 <text
                     fontSize={10 / k}
@@ -1650,16 +1574,6 @@ export function WorldMap({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [here, me?.walk?.arrivesAt]);
 
-    const trailsTo = useMemo(
-        () =>
-            hereRegion
-                ? hereRegion.neighbours
-                      .map((id) => byId.get(id)?.key)
-                      .filter((key): key is string => key !== undefined)
-                : [],
-        [hereRegion, byId],
-    );
-
     const pick = useCallback((id: number) => onSelect(id), [onSelect]);
     const k = view.k || 1;
     const scale = (() => {
@@ -1705,13 +1619,6 @@ export function WorldMap({
                             houseColour={house?.colour ?? null}
                             selectedId={selectedId}
                         />
-                        {hereRegion && (
-                            <Trails
-                                from={hereRegion.key}
-                                to={trailsTo}
-                                selected={selected?.key ?? null}
-                            />
-                        )}
                         <HitAreas
                             regions={regions}
                             selectedId={selectedId}

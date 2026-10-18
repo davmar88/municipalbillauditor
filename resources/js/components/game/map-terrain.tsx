@@ -4,22 +4,17 @@ import {
     BROOK,
     FIELD_SHAPES,
     FIELDS,
-    LINKS,
-    ROAD_LINKS,
-    ROADS,
     SHAPES,
     WORLD,
     blob,
     fits,
     hub,
-    pairKey,
     scatter,
     scatterBox,
     seeded,
     smoothLoop,
     smoothPath,
     toPath,
-    walkPath,
 } from '@/lib/hollowmere';
 
 /**
@@ -1660,91 +1655,10 @@ export const MapGround = memo(function MapGround() {
     );
 });
 
-/** The lanes, footpaths, the bridge and the buildings. */
+/** The buildings. Animals go anywhere, so there are no roads. */
 export const MapFeatures = memo(function MapFeatures() {
-    const footpaths = LINKS.filter(([a, b]) => !ROAD_LINKS.has(pairKey(a, b)))
-        .map(([a, b]) => smoothPath(walkPath(a, b)))
-        .join('');
-    const lanes = ROADS.filter((road) => !road.major)
-        .map((road) => smoothPath(road.points))
-        .join('');
-    const majors = ROADS.filter((road) => road.major)
-        .map((road) => smoothPath(road.points))
-        .join('');
-
     return (
         <g>
-            <path
-                d={footpaths}
-                fill="none"
-                stroke={INK.roadCasing}
-                strokeWidth={5}
-                strokeLinecap="round"
-                opacity={0.6}
-            />
-            <path
-                d={footpaths}
-                fill="none"
-                stroke={INK.path}
-                strokeWidth={2.4}
-                strokeDasharray="1 6"
-                strokeLinecap="round"
-            />
-            <path
-                d={lanes}
-                fill="none"
-                stroke={INK.roadCasing}
-                strokeWidth={14}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-            />
-            <path
-                d={majors}
-                fill="none"
-                stroke={INK.roadCasing}
-                strokeWidth={19}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-            />
-            <path
-                d={lanes}
-                fill="none"
-                stroke={INK.road}
-                strokeWidth={9}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-            />
-            <path
-                d={majors}
-                fill="none"
-                stroke={INK.roadMajor}
-                strokeWidth={13}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-            />
-            <path
-                d={majors}
-                fill="none"
-                stroke={INK.roadLine}
-                strokeWidth={1.1}
-                strokeDasharray="10 12"
-            />
-            {/* The bridge where Harrow Lane crosses Hollow Brook. */}
-            <rect
-                x={777}
-                y={996}
-                width={38}
-                height={46}
-                rx={3}
-                fill={INK.roadMajor}
-                stroke={INK.roadCasing}
-                strokeWidth={2}
-            />
-            <path
-                d="M779 994v50M813 994v50"
-                stroke="#8a8399"
-                strokeWidth={2.4}
-            />
             {Object.entries(OVER).map(([key, Over]) => (
                 <g key={key}>
                     <Over />
