@@ -4,7 +4,6 @@ import {
     Crown,
     Flame,
     Gavel,
-    Footprints,
     Hammer,
     MessageCircle,
     ScrollText,
@@ -15,7 +14,7 @@ import {
     Wheat,
     X,
 } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import {
     BuildingDetails,
     BuildOptions,
@@ -27,7 +26,6 @@ import { HorseshoePicker } from '@/components/game/horseshoe-picker';
 import { ProfileLink } from '@/components/game/profile-link';
 import { Button } from '@/components/ui/button';
 import { act, capitalise, clockTime, fromNow, speciesEmoji } from '@/lib/game';
-import { route } from '@/lib/hollowmere';
 import { openChat } from '@/lib/pulse';
 import { GateStrength } from '@/components/game/gate-strength';
 import { arrest as arrestOutlaw } from '@/routes/play/warrant';
@@ -41,7 +39,6 @@ import {
     gate,
     gather,
     market,
-    walk,
     wall,
 } from '@/routes/play';
 import type {
@@ -81,7 +78,6 @@ const RINGS: Record<MapRegion['ring'], string> = {
 
 type Props = {
     region: MapRegion;
-    regions: MapRegion[];
     here: number | null;
     house: FactionRef | null;
     battles: MapBattle[];
@@ -102,7 +98,6 @@ type Props = {
  */
 export function RegionPanel({
     region,
-    regions,
     here,
     house,
     battles,
@@ -128,22 +123,11 @@ export function RegionPanel({
         </p>
     );
     const [horseshoes, setHorseshoes] = useState(1);
-    const byId = useMemo(
-        () => new Map(regions.map((other) => [other.id, other])),
-        [regions],
-    );
-    const graph = useMemo(
-        () => new Map(regions.map((other) => [other.id, other.neighbours])),
-        [regions],
-    );
 
     const myFaction = player?.faction ?? null;
     const holds = (other?: MapRegion) =>
         myFaction !== null && other?.faction?.id === myFaction.id;
     const isHere = region.id === here;
-    const path =
-        here !== null && !isHere ? route(here, region.id, graph) : null;
-    const next = path && path.length > 1 ? byId.get(path[1]) : undefined;
     const frontLine = here !== null && region.neighbours.includes(here);
     const raidable =
         myFaction !== null && region.ring !== 'safe' && !holds(region);
@@ -392,7 +376,7 @@ export function RegionPanel({
                     />
                 )}
 
-                {isHere ? (
+                {isHere && (
                     <div className="flex flex-col gap-2 rounded-lg border border-primary/40 bg-primary/10 p-3">
                         <p className="font-semibold text-primary">
                             You're standing here.
@@ -423,34 +407,6 @@ export function RegionPanel({
                             </p>
                         )}
                     </div>
-                ) : (
-                    path &&
-                    next && (
-                        <div className="flex flex-col gap-2">
-                            {path.length > 2 && (
-                                <p className="text-muted-foreground">
-                                    {path.length - 1} walks away, by way of{' '}
-                                    {path
-                                        .slice(1, -1)
-                                        .map((id) => byId.get(id)?.name)
-                                        .join(', ')}
-                                    .
-                                </p>
-                            )}
-                            <Button
-                                variant={
-                                    path.length === 2 ? 'default' : 'secondary'
-                                }
-                                onClick={() => act(walk.url(next.id))}
-                            >
-                                <Footprints className="size-4" />
-                                {path.length === 2
-                                    ? 'Walk here'
-                                    : `Walk to ${next.name}`}
-                                <span className="ml-auto opacity-80">free</span>
-                            </Button>
-                        </div>
-                    )
                 )}
 
                 {region.ring === 'farm' && (

@@ -307,7 +307,6 @@ export default function MapPage({
                         <RegionPanel
                             key={selected.id}
                             region={selected}
-                            regions={regions}
                             here={here}
                             house={house}
                             battles={battles}
