@@ -25,6 +25,7 @@ use Illuminate\Support\Carbon;
  * @property int $market_skill
  * @property int $creativity_skill
  * @property int $corn
+ * @property int $apples The premium currency; earned Apples stay in the game
  * @property array<string, int> $materials
  * @property int $horseshoes
  * @property Carbon $horseshoes_at

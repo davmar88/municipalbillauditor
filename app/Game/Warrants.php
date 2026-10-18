@@ -17,7 +17,8 @@ use Illuminate\Support\Facades\DB;
  * The House's justice. Its informants know who has been committing crimes;
  * its leader and council put out warrants with a Corn bounty from the
  * treasury, anyone can add to a bounty, and any animal who catches the
- * outlaw where they stand sends them to the pound and collects it.
+ * outlaw where they stand sends them to the pound and collects it, paid
+ * out in Apples: one for every ten Corn of bounty.
  */
 final class Warrants
 {
@@ -206,12 +207,14 @@ final class Warrants
                 'pound_until' => CarbonImmutable::now()->addHours(Crimes::POUND_HOURS),
                 'wanted' => $wanted->wanted + 1,
             ])->save();
-            $hunter->increment('corn', $warrant->bounty);
+            // Bounties are put up in Corn and paid out to the hunter as Apples.
+            $apples = Apples::forBounty($warrant->bounty);
+            Apples::award($hunter, $apples, "Caught {$wanted->name}", "bounty:{$warrant->id}");
             $warrant->forceFill(['status' => 'served', 'hunter_id' => $hunter->id, 'served_at' => CarbonImmutable::now()])->save();
             Rosettes::award($hunter, 15, "Caught {$wanted->name}", "arrest:{$warrant->id}", $hunter->valley->currentSeason());
 
             Notices::send($wanted->id, 'warrant', "🚨 {$hunter->name} caught you in {$where->name}. You're in the pound until ".Clock::local($wanted->pound_until)->format('H:i').'.', $wantedPage);
-            Notices::send(Notices::valley($hunter->valley_id)->reject(fn (int $id) => in_array($id, [$hunter->id, $wanted->id], true)), 'warrant', "🎯 {$hunter->name} caught {$wanted->name} and collected the {$warrant->bounty} Corn bounty.", $wantedPage);
+            Notices::send(Notices::valley($hunter->valley_id)->reject(fn (int $id) => in_array($id, [$hunter->id, $wanted->id], true)), 'warrant', "🎯 {$hunter->name} caught {$wanted->name} and collected a bounty of {$apples} Apples.", $wantedPage);
 
             return true;
         });

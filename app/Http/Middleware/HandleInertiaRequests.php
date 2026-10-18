@@ -69,6 +69,7 @@ class HandleInertiaRequests extends Middleware
                     'maxHorseshoes' => Horseshoes::max(),
                     'nextHorseshoeIn' => Horseshoes::nextIn($player),
                     'corn' => $player->corn,
+                    'apples' => (int) $player->apples,
                     'materials' => $player->materials,
                     'language' => $player->language,
                     'faction' => $player->faction ? [

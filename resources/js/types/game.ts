@@ -26,6 +26,8 @@ export type PlayerSummary = {
     maxHorseshoes: number;
     nextHorseshoeIn: number | null;
     corn: number;
+    /** The premium currency; earned Apples stay in the game. */
+    apples: number;
     materials: Record<string, number>;
     language: string;
     faction: FactionBadge | null;

@@ -45,6 +45,15 @@ export function GameBar({ showNextStep = true }: { showNextStep?: boolean }) {
                     <Wheat className="size-4 text-amber-300" aria-hidden />
                     {player.corn.toLocaleString('en-ZA')} Corn
                 </span>
+                {player.apples > 0 && (
+                    <span
+                        className="flex items-center gap-1.5 rounded-full border bg-card px-3 py-1.5 font-semibold"
+                        title="Apples: the valley's premium currency"
+                    >
+                        <span aria-hidden>🍎</span>
+                        {player.apples.toLocaleString('en-ZA')} Apples
+                    </span>
+                )}
                 <span className="flex items-center gap-1.5 rounded-full border bg-card px-3 py-1.5 font-semibold">
                     <Award className="size-4 text-pink-300" aria-hidden />
                     Level {player.level}

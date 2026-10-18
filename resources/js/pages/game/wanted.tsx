@@ -14,6 +14,7 @@ type Warrant = {
     id: number;
     animal: MessageAnimal;
     bounty: number;
+    apples: number;
     issuedBy: string | null;
     lastSeen: string;
     inPound: boolean;
@@ -43,6 +44,7 @@ type Props = {
         chance: number;
         dogChance: number;
         escapeMinutes: number;
+        cornPerApple: number;
     };
 };
 
@@ -80,6 +82,8 @@ export default function WantedPage({
                         of the time, {rules.dogChance}% for dogs. A catch sends
                         them to the pound and pays you the bounty; a miss lets
                         them slip away for {rules.escapeMinutes} minutes.
+                        Bounties are put up in Corn and paid out as Apples, one
+                        for every {rules.cornPerApple} Corn.
                     </p>
                 </header>
 
@@ -157,8 +161,12 @@ function WarrantCard({
                     )}
                 </div>
                 <div className="text-right">
-                    <p className="text-2xl font-extrabold">{warrant.bounty}</p>
-                    <p className="text-xs text-muted-foreground">Corn bounty</p>
+                    <p className="text-2xl font-extrabold">
+                        🍎 {warrant.apples}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                        Apples, from {warrant.bounty} Corn
+                    </p>
                 </div>
             </div>
 

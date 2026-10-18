@@ -10,6 +10,7 @@ use App\Game\GameException;
 use App\Game\Horseshoes;
 use App\Game\Seasons;
 use App\Game\Warrants;
+use App\Models\AppleEntry;
 use App\Models\Crime;
 use App\Models\Faction;
 use App\Models\Notice;
@@ -192,7 +193,9 @@ class OutlawsTest extends TestCase
 
         $this->assertTrue($caught);
         $this->assertTrue($suspect->fresh()->inPound());
-        $this->assertSame(100 + 250, $hunter->fresh()->corn);
+        $this->assertSame(100, $hunter->fresh()->corn, 'Bounties are paid in Apples, not Corn.');
+        $this->assertSame(25, $hunter->fresh()->apples, '250 Corn of bounty pays 25 Apples.');
+        $this->assertSame(25, (int) AppleEntry::query()->where('player_id', $hunter->id)->sum('amount'));
         $this->assertSame(8, Horseshoes::current($hunter->fresh()));
         $this->assertSame('served', $warrant->fresh()->status);
         $this->assertSame($hunter->id, $warrant->fresh()->hunter_id);

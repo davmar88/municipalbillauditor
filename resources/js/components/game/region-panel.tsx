@@ -55,6 +55,7 @@ export type Warrant = {
     id: number;
     playerId: number;
     bounty: number;
+    apples: number;
     escapedUntil: string | null;
 };
 
@@ -343,8 +344,8 @@ export function RegionPanel({
                                 className="size-4 text-orange-300"
                                 aria-hidden
                             />
-                            {animal.name} is wanted: {warrant.bounty} Corn
-                            bounty
+                            {animal.name} is wanted: a bounty of{' '}
+                            {warrant.apples} Apples
                         </p>
                         {isHere ? (
                             warrant.escapedUntil ? (

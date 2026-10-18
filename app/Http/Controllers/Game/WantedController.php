@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Game;
 
+use App\Game\Apples;
 use App\Game\Clock;
 use App\Game\Messages;
 use App\Game\Warrants;
@@ -49,6 +50,7 @@ class WantedController extends Controller
                     'id' => $warrant->id,
                     'animal' => Messages::card($warrant->wanted),
                     'bounty' => $warrant->bounty,
+                    'apples' => Apples::forBounty($warrant->bounty),
                     'issuedBy' => $warrant->faction?->name,
                     'lastSeen' => $where->name,
                     'inPound' => $warrant->wanted->inPound(),
@@ -59,7 +61,7 @@ class WantedController extends Controller
             }),
             'caught' => $closed->map(fn (Warrant $warrant) => [
                 'id' => $warrant->id,
-                'text' => "{$warrant->hunter?->name} caught {$warrant->wanted->name} for {$warrant->bounty} Corn.",
+                'text' => "{$warrant->hunter?->name} caught {$warrant->wanted->name} for ".Apples::forBounty($warrant->bounty).' Apples.',
                 'at' => $warrant->served_at?->toIso8601String(),
             ]),
             'house' => $decides ? [
@@ -83,6 +85,7 @@ class WantedController extends Controller
                 'chance' => (int) round(Warrants::ARREST_CHANCE * 100),
                 'dogChance' => (int) round((Warrants::ARREST_CHANCE + Warrants::DOG_BONUS) * 100),
                 'escapeMinutes' => Warrants::ESCAPE_MINUTES,
+                'cornPerApple' => Apples::CORN_PER_APPLE,
             ],
         ]);
     }
@@ -115,7 +118,7 @@ class WantedController extends Controller
         $warrant->refresh();
 
         return $caught
-            ? $this->told("You caught {$warrant->wanted->name}! The {$warrant->bounty} Corn bounty is yours.")
+            ? $this->told("You caught {$warrant->wanted->name}! The bounty paid you ".Apples::forBounty($warrant->bounty).' Apples.')
             : $this->told("{$warrant->wanted->name} slipped away. You can pick up the trail at ".Clock::local($warrant->escaped_until)->format('H:i').'.', 'error');
     }
 }
