@@ -14,14 +14,14 @@ use Illuminate\Support\Carbon;
  *
  * @property int $id
  * @property int|null $player_id Null once the account is deleted
- * @property string $reference Ours, sent to PayPal or Paystack
+ * @property string $reference Ours, sent to PayPal
  * @property int $apples
- * @property string $method paypal or paystack
- * @property string $currency USD for PayPal, ZAR otherwise
+ * @property string $method paypal
+ * @property string $currency USD
  * @property int $amount In cents
- * @property array{name: string, label: string, document: string, email?: string, recipient?: string, address?: string} $destination
+ * @property array{name: string, label: string, document: string, email: string} $destination
  * @property string $status pending, sending, paid, failed or rejected
- * @property string|null $provider_id PayPal's payout batch, or Paystack's transfer code
+ * @property string|null $provider_id PayPal's payout batch
  * @property string|null $note What went wrong, or why the owner turned it down
  * @property int|null $reviewed_by
  * @property Carbon|null $reviewed_at
@@ -58,9 +58,9 @@ class Cashout extends Model
         return $this->belongsTo(User::class, 'reviewed_by');
     }
 
-    /** "R300.00", "$18.00". */
+    /** "$18.00". */
     public function price(): string
     {
-        return ($this->currency === 'ZAR' ? 'R' : '$').number_format($this->amount / 100, 2, '.', ' ');
+        return '$'.number_format($this->amount / 100, 2, '.', ' ');
     }
 }

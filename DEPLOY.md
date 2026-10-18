@@ -172,16 +172,11 @@ does an account become one:
 
 Then, on https://revenueguard.co.za/admin:
 
-1. **Paystack** (rand): paste the secret key from Paystack's Settings → API
-   Keys & Webhooks, and paste the page's webhook URL
-   (`https://revenueguard.co.za/webhooks/paystack`) into Paystack's Webhook
-   URL there. Start with the test key (`sk_test_`), buy a pack with
-   Paystack's test card, then swap in the live key.
-2. **PayPal** (US dollars): paste the client ID and secret from
+1. **PayPal** (US dollars): paste the client ID and secret from
    developer.paypal.com → Apps & Credentials. Leave the mode on Sandbox while
    you try it, then switch to Live with the live app's keys. PayPal needs no
    webhook.
-3. Press **Test** next to each, set Sales to **On sale** and save.
+2. Press **Test** next to it, set Sales to **On sale** and save.
 
 Keys are encrypted with `APP_KEY`. If `APP_KEY` ever changes, type the keys
 in again.
@@ -193,17 +188,11 @@ once a lawyer has confirmed the game may pay out real money: dice decide raids
 and crimes, and Apples pass between animals in bounties and shop sales, so it
 may need a gambling or payments licence.
 
-Every cash-out then waits for you at https://revenueguard.co.za/admin/cashouts.
-
-1. **Bank transfers (Paystack)** are paid from your Paystack balance, so keep
-   money in it. Unless you turn OTP for transfers off in Paystack's settings,
-   Paystack texts you a code for each transfer: type it on the Cash-outs
-   page. The webhook URL above also tells the game when a transfer arrives or
-   fails. Each bank account an animal saves costs R3 to check. If Paystack
-   says transfers aren't enabled, ask Paystack to turn them on.
-2. **PayPal** has to turn on Payouts for your business account first. Ask
-   PayPal for it, then tick Payouts in the app's features on
-   developer.paypal.com. Try a cash-out in Sandbox before going live.
+Every cash-out then waits for you at https://revenueguard.co.za/admin/cashouts,
+and Pay sends it to the animal's PayPal email. PayPal has to turn on Payouts
+for your business account first. Ask PayPal for it, then tick Payouts in the
+app's features on developer.paypal.com. Try a cash-out in Sandbox before going
+live.
 
 Turning a cash-out down gives the animal its Apples back, with your reason.
 

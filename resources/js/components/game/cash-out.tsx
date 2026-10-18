@@ -8,21 +8,16 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { NativeSelect } from '@/components/ui/native-select';
-import { act, dollars, rand, shortWhen } from '@/lib/game';
+import { act, dollars, shortWhen } from '@/lib/game';
 import { account as saveAccount, request } from '@/routes/play/cashout';
-
-export type PayoutMethod = 'paystack' | 'paypal';
 
 type CashoutStatus = 'pending' | 'sending' | 'paid' | 'failed' | 'rejected';
 
 export type CashOutInfo = {
+    /** Whether cash-outs can be asked for and paid right now. */
     open: boolean;
-    /** The ways cash-outs can be paid right now. */
-    ways: Record<PayoutMethod, boolean>;
-    /** The ways payout details can be saved for, even before cashing out opens. */
-    saveable: Record<PayoutMethod, boolean>;
-    /** What 100 Apples pay, in cents. */
-    per100: { ZAR: number; USD: number };
+    /** What 100 Apples pay, in US cents. */
+    per100: number;
     min: number;
     dailyCap: number;
     holdDays: number;
@@ -31,17 +26,14 @@ export type CashOutInfo = {
     /** The most the animal can cash out right now. */
     available: number;
     account: {
-        method: PayoutMethod;
-        /** "Absa, ••••6789" */
+        /** "PayPal, t•••@example.com" */
         label: string;
         name: string;
         country: 'ZA' | 'ZZ';
         documentType: 'id' | 'passport';
         /** "••••9087" */
         document: string;
-        bankCode: string | null;
     } | null;
-    banks: { code: string; name: string }[];
     history: {
         id: number;
         apples: number;
@@ -54,13 +46,6 @@ export type CashOutInfo = {
     }[];
 };
 
-const WAYS: PayoutMethod[] = ['paystack', 'paypal'];
-
-const WAY: Record<PayoutMethod, string> = {
-    paystack: 'Bank transfer',
-    paypal: 'PayPal',
-};
-
 const STATUS: Record<CashoutStatus, string> = {
     pending: 'Waiting for our team',
     sending: 'On its way',
@@ -69,21 +54,12 @@ const STATUS: Record<CashoutStatus, string> = {
     rejected: 'Turned down, Apples back',
 };
 
-/** What cashing out this many Apples pays, in cents, rounded down as the game does. */
-function quote(
-    apples: number,
-    method: PayoutMethod,
-    per100: CashOutInfo['per100'],
-): string {
-    return method === 'paypal'
-        ? dollars(Math.floor((apples * per100.USD) / 100))
-        : rand(Math.floor((apples * per100.ZAR) / 100));
+/** What cashing out this many Apples pays, rounded down to the cent as the game does. */
+function quote(apples: number, per100: number): string {
+    return dollars(Math.floor((apples * per100) / 100));
 }
 
-/**
- * Cashing Apples out for money: by bank transfer or PayPal, once our team
- * has checked each one.
- */
+/** Cashing Apples out for money, to PayPal, once our team has checked each one. */
 export function CashOut({ cashout }: { cashout: CashOutInfo }) {
     const [editing, setEditing] = useState(cashout.account === null);
     const { account, per100 } = cashout;
@@ -97,8 +73,7 @@ export function CashOut({ cashout }: { cashout: CashOutInfo }) {
                 <Heading />
                 {cashout.open ? (
                     <p className="text-sm text-muted-foreground">
-                        100 Apples pay {rand(per100.ZAR)} by bank transfer or{' '}
-                        {dollars(per100.USD)} by PayPal. Cash out{' '}
+                        100 Apples pay {dollars(per100)} by PayPal. Cash out{' '}
                         {cashout.min.toLocaleString('en-ZA')} to{' '}
                         {cashout.dailyCap.toLocaleString('en-ZA')} Apples a day.
                         Our team checks every cash-out before it's sent.
@@ -107,8 +82,7 @@ export function CashOut({ cashout }: { cashout: CashOutInfo }) {
                     <p className="text-sm text-muted-foreground">
                         Cashing Apples out for money isn't open yet. Save your
                         PayPal details now, and you can cash out as soon as it
-                        opens. 100 Apples will pay {dollars(per100.USD)} by
-                        PayPal.
+                        opens. 100 Apples will pay {dollars(per100)} by PayPal.
                     </p>
                 )}
                 {cashout.open && cashout.held > 0 && (
@@ -163,18 +137,9 @@ export function CashOut({ cashout }: { cashout: CashOutInfo }) {
                 />
             )}
 
-            {cashout.open &&
-                account &&
-                !editing &&
-                !waiting &&
-                (cashout.ways[account.method] ? (
-                    <Request cashout={cashout} method={account.method} />
-                ) : (
-                    <p className="text-sm text-muted-foreground">
-                        Cashing out by {WAY[account.method]} isn't open right
-                        now. Change your payout details to another way.
-                    </p>
-                ))}
+            {cashout.open && account && !editing && !waiting && (
+                <Request cashout={cashout} />
+            )}
 
             {cashout.history.length > 0 && (
                 <ul className="flex flex-col divide-y rounded-lg border text-sm">
@@ -213,13 +178,7 @@ function Heading() {
     );
 }
 
-function Request({
-    cashout,
-    method,
-}: {
-    cashout: CashOutInfo;
-    method: PayoutMethod;
-}) {
+function Request({ cashout }: { cashout: CashOutInfo }) {
     const [apples, setApples] = useState(cashout.min);
     const whole = Number.isInteger(apples) && apples > 0;
     const valid = whole && apples >= cashout.min && apples <= cashout.available;
@@ -235,7 +194,7 @@ function Request({
         );
     }
 
-    const price = quote(whole ? apples : 0, method, cashout.per100);
+    const price = quote(whole ? apples : 0, cashout.per100);
 
     return (
         <div className="flex flex-col gap-2">
@@ -292,19 +251,11 @@ function PayoutForm({
     onSaved: () => void;
     onCancel?: () => void;
 }) {
-    const { account, saveable, banks } = cashout;
+    const { account } = cashout;
     const [country, setCountry] = useState(account?.country ?? 'ZA');
     const [documentType, setDocumentType] = useState(
         account?.documentType ?? 'id',
     );
-    const [method, setMethod] = useState<PayoutMethod>(
-        account?.method ?? 'paystack',
-    );
-    // A bank transfer goes to a South African account only.
-    const open = WAYS.filter(
-        (way) => saveable[way] && (way !== 'paystack' || country === 'ZA'),
-    );
-    const chosen = open.includes(method) ? method : open[0];
     const idType = country === 'ZA' ? documentType : 'passport';
 
     return (
@@ -412,102 +363,20 @@ function PayoutForm({
                         </Field>
                     </div>
 
-                    {open.length === 0 || chosen === undefined ? (
-                        <p className="text-sm text-muted-foreground">
-                            Bank transfers are for South African accounts, and
-                            no other way to be paid is open right now.
-                        </p>
-                    ) : (
-                        <>
-                            <Field
-                                id="method"
-                                label="How you want to be paid"
-                                error={errors.method}
-                            >
-                                <NativeSelect
-                                    id="method"
-                                    name="method"
-                                    value={chosen}
-                                    onChange={(event) =>
-                                        setMethod(
-                                            event.target.value as PayoutMethod,
-                                        )
-                                    }
-                                >
-                                    {open.map((way) => (
-                                        <option key={way} value={way}>
-                                            {WAY[way]}
-                                        </option>
-                                    ))}
-                                </NativeSelect>
-                            </Field>
-
-                            {chosen === 'paystack' && (
-                                <div className="grid gap-4 sm:grid-cols-2">
-                                    <Field
-                                        id="bank_code"
-                                        label="Your bank"
-                                        error={errors.bank_code}
-                                    >
-                                        <NativeSelect
-                                            id="bank_code"
-                                            name="bank_code"
-                                            defaultValue={
-                                                account?.bankCode ?? ''
-                                            }
-                                            required
-                                        >
-                                            <option value="" disabled>
-                                                Pick your bank
-                                            </option>
-                                            {banks.map((bank) => (
-                                                <option
-                                                    key={bank.code}
-                                                    value={bank.code}
-                                                >
-                                                    {bank.name}
-                                                </option>
-                                            ))}
-                                        </NativeSelect>
-                                    </Field>
-                                    <Field
-                                        id="account_number"
-                                        label="Account number"
-                                        error={errors.account_number}
-                                    >
-                                        <Input
-                                            id="account_number"
-                                            name="account_number"
-                                            inputMode="numeric"
-                                            autoComplete="off"
-                                            required
-                                        />
-                                    </Field>
-                                    <p className="text-xs text-muted-foreground sm:col-span-2">
-                                        The bank checks the account is in your
-                                        name and ID number before we save it.
-                                    </p>
-                                </div>
-                            )}
-
-                            {chosen === 'paypal' && (
-                                <Field
-                                    id="paypal_email"
-                                    label="Your PayPal email"
-                                    error={errors.paypal_email}
-                                    note="Paid in US dollars. PayPal may charge you to change them into rand."
-                                >
-                                    <Input
-                                        id="paypal_email"
-                                        name="paypal_email"
-                                        type="email"
-                                        autoComplete="email"
-                                        required
-                                    />
-                                </Field>
-                            )}
-                        </>
-                    )}
+                    <Field
+                        id="paypal_email"
+                        label="Your PayPal email"
+                        error={errors.paypal_email}
+                        note="Paid in US dollars. PayPal may charge you to change them into rand."
+                    >
+                        <Input
+                            id="paypal_email"
+                            name="paypal_email"
+                            type="email"
+                            autoComplete="email"
+                            required
+                        />
+                    </Field>
 
                     <div className="flex items-start gap-3">
                         <Checkbox id="mine" name="mine" value="1" />
@@ -522,7 +391,7 @@ function PayoutForm({
                     <InputError message={errors.details} />
 
                     <div className="flex flex-wrap gap-2">
-                        <Button disabled={processing || chosen === undefined}>
+                        <Button disabled={processing}>
                             {processing ? 'Saving…' : 'Save payout details'}
                         </Button>
                         {onCancel && (

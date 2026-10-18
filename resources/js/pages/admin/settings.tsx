@@ -1,13 +1,12 @@
 import { Form, Head, Link } from '@inertiajs/react';
 import { FlaskConical, KeyRound, Trash2 } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { CopyButton } from '@/components/copy-button';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { NativeSelect } from '@/components/ui/native-select';
-import { act, shortWhen } from '@/lib/game';
+import { act, dollars, shortWhen } from '@/lib/game';
 import { cashouts } from '@/routes/admin';
 import { forget, test, update } from '@/routes/admin/settings';
 
@@ -15,23 +14,19 @@ type Props = {
     settings: {
         applesOnSale: boolean;
         cashoutOpen: boolean;
-        /** "••••7a3f" when saved: the key itself never comes back. */
-        paystackSecretKey: string | null;
-        paystackLive: boolean;
         paypalClientId: string | null;
+        /** "••••7a3f" when saved: the key itself never comes back. */
         paypalClientSecret: string | null;
         paypalMode: 'sandbox' | 'live';
         anthropicApiKey: string | null;
         /** No key saved here, but the server's .env has one. */
         anthropicFromServer: boolean;
     };
-    ready: { paystack: boolean; paypal: boolean };
-    webhookUrl: string;
+    /** Whether the PayPal keys are in. */
+    ready: boolean;
     sales: {
         count: number;
-        /** In cents. */
-        zar: number;
-        /** In cents. */
+        /** In US cents. */
         usd: number;
         /** Pineapples bought. */
         sold: number;
@@ -53,7 +48,6 @@ type Props = {
         animal: string;
         pineapples: number;
         price: string;
-        via: 'paystack' | 'paypal';
         reference: string;
         status: 'pending' | 'paid' | 'failed' | 'review';
         at: string;
@@ -68,13 +62,12 @@ const STATUS: Record<Props['purchases'][number]['status'], string> = {
 };
 
 /**
- * The owner's page: payment and Claude keys, whether Pineapple packs are on
+ * The owner's page: the PayPal and Claude keys, whether Pineapple packs are on
  * sale and cash-outs open, and what the sales brought in.
  */
 export default function AdminSettings({
     settings,
     ready,
-    webhookUrl,
     sales,
     purchases,
 }: Props) {
@@ -88,7 +81,7 @@ export default function AdminSettings({
                         Admin
                     </h1>
                     <p className="text-sm text-muted-foreground">
-                        Payment keys, Apple sales and cash-outs, and what the
+                        PayPal keys, Pineapple sales and cash-outs, and what the
                         sales brought in. Keys are stored encrypted, and once
                         saved this page only shows their last four characters.
                     </p>
@@ -96,8 +89,7 @@ export default function AdminSettings({
 
                 <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                     <Stat label="Money in">
-                        R{(sales.zar / 100).toLocaleString('en-ZA')} · $
-                        {(sales.usd / 100).toFixed(2)}
+                        {dollars(sales.usd)}
                         <span className="block text-xs font-normal text-muted-foreground">
                             from {sales.count}{' '}
                             {sales.count === 1 ? 'sale' : 'sales'}
@@ -134,8 +126,8 @@ export default function AdminSettings({
                         {sales.review === 1
                             ? "payment didn't"
                             : "payments didn't"}{' '}
-                        match its pack. Look it up in Paystack or PayPal by its
-                        reference below.
+                        match its pack. Look it up in PayPal by its reference
+                        below.
                     </p>
                 )}
 
@@ -143,7 +135,6 @@ export default function AdminSettings({
                     {...update.form()}
                     options={{ preserveScroll: true }}
                     resetOnSuccess={[
-                        'paystack_secret_key',
                         'paypal_client_secret',
                         'anthropic_api_key',
                     ]}
@@ -170,15 +161,8 @@ export default function AdminSettings({
                                         message={errors.apples_on_sale}
                                     />
                                     <p className="text-xs text-muted-foreground">
-                                        Players can buy with Paystack{' '}
-                                        {ready.paystack
-                                            ? '(ready)'
-                                            : '(no key yet)'}{' '}
-                                        and PayPal{' '}
-                                        {ready.paypal
-                                            ? '(ready)'
-                                            : '(no keys yet)'}
-                                        .
+                                        Players buy with PayPal{' '}
+                                        {ready ? '(ready)' : '(no keys yet)'}.
                                     </p>
                                 </div>
                             </Card>
@@ -222,53 +206,8 @@ export default function AdminSettings({
                                         gambling or payments licence.
                                     </p>
                                     <p className="text-xs text-muted-foreground">
-                                        Animals cash out by bank transfer
-                                        through Paystack or by PayPal. Each one
+                                        Animals cash out to PayPal. Each one
                                         waits for you on the Cash-outs page.
-                                    </p>
-                                </div>
-                            </Card>
-
-                            <Card
-                                title="Paystack, in rand"
-                                actions={
-                                    <KeyActions
-                                        service="paystack"
-                                        removable={
-                                            settings.paystackSecretKey
-                                                ? 'paystack_secret_key'
-                                                : null
-                                        }
-                                    />
-                                }
-                            >
-                                <SecretField
-                                    name="paystack_secret_key"
-                                    label="Secret key"
-                                    saved={settings.paystackSecretKey}
-                                    placeholder="sk_live_…"
-                                    error={errors.paystack_secret_key}
-                                    note={
-                                        settings.paystackSecretKey
-                                            ? settings.paystackLive
-                                                ? 'A live key: real money.'
-                                                : 'A test key: no real money moves.'
-                                            : 'From Paystack: Settings, API Keys & Webhooks.'
-                                    }
-                                />
-                                <div className="grid gap-1">
-                                    <Label>Webhook URL</Label>
-                                    <div className="flex items-center gap-2">
-                                        <code className="min-w-0 flex-1 truncate rounded-md bg-muted px-2 py-1.5 text-xs">
-                                            {webhookUrl}
-                                        </code>
-                                        <CopyButton value={webhookUrl} />
-                                    </div>
-                                    <p className="text-xs text-muted-foreground">
-                                        Paste it into Paystack's Webhook URL, so
-                                        Pineapples arrive even when a player
-                                        closes the page before coming back, and
-                                        cash-outs settle when the bank answers.
                                     </p>
                                 </div>
                             </Card>
@@ -381,10 +320,7 @@ export default function AdminSettings({
                                         {purchase.pineapples.toLocaleString(
                                             'en-ZA',
                                         )}{' '}
-                                        Pineapples · {purchase.price} ·{' '}
-                                        {purchase.via === 'paystack'
-                                            ? 'Paystack'
-                                            : 'PayPal'}
+                                        Pineapples · {purchase.price}
                                     </span>
                                     <span className="text-xs text-muted-foreground">
                                         {purchase.reference}
@@ -473,7 +409,7 @@ function KeyActions({
     service,
     removable,
 }: {
-    service: 'paystack' | 'paypal' | 'claude';
+    service: 'paypal' | 'claude';
     removable: string | null;
 }) {
     return (

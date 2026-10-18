@@ -2,18 +2,11 @@ import { Head, Link } from '@inertiajs/react';
 import { Banknote, RefreshCw, TriangleAlert } from 'lucide-react';
 import { useState } from 'react';
 import type { ReactNode } from 'react';
-import type { PayoutMethod } from '@/components/game/cash-out';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { act, dollars, rand, shortWhen } from '@/lib/game';
+import { act, dollars, shortWhen } from '@/lib/game';
 import { admin } from '@/routes';
-import {
-    check,
-    otp as sendOtp,
-    pay,
-    reject,
-    resendOtp,
-} from '@/routes/admin/cashouts';
+import { check, pay, reject } from '@/routes/admin/cashouts';
 
 type Status = 'pending' | 'sending' | 'paid' | 'failed' | 'rejected';
 
@@ -22,12 +15,11 @@ type Card = {
     animal: string;
     apples: number;
     price: string;
-    method: PayoutMethod;
     /** The animal's legal name. */
     name: string;
     /** "SA ID ••••9087" */
     document: string;
-    /** "Absa, ••••6789" */
+    /** "PayPal, t•••@example.com" */
     label: string;
     email: string | null;
     reference: string;
@@ -51,22 +43,18 @@ type Waiting = Card & {
         other: number;
     } | null;
     paidBefore: number;
-    /** Paystack is waiting for the OTP it texted you. */
-    otp: boolean;
 };
 
 type Props = {
     open: boolean;
-    ready: { paystack: boolean; paypal: boolean };
-    live: { paystack: boolean; paypal: boolean };
-    totals: { count: number; apples: number; zar: number; usd: number };
+    /** Whether the PayPal keys are in. */
+    ready: boolean;
+    /** Whether PayPal is on live keys: real money. */
+    live: boolean;
+    /** Paid out, in US cents. */
+    totals: { count: number; apples: number; usd: number };
     queue: Waiting[];
     history: (Card & { by: string | null })[];
-};
-
-const WAY: Record<PayoutMethod, string> = {
-    paystack: 'Bank transfer',
-    paypal: 'PayPal',
 };
 
 const STATUS: Record<Status, string> = {
@@ -94,10 +82,7 @@ function sources(from: NonNullable<Waiting['sources']>): string {
     return parts.length > 0 ? parts.join(', ') : 'none came in';
 }
 
-/**
- * The owner's cash-out queue: pay each one through Paystack or PayPal, or
- * turn it down.
- */
+/** The owner's cash-out queue: pay each one through PayPal, or turn it down. */
 export default function AdminCashouts({
     open,
     ready,
@@ -106,11 +91,6 @@ export default function AdminCashouts({
     queue,
     history,
 }: Props) {
-    const testing = [
-        ready.paystack && !live.paystack ? 'Paystack' : null,
-        ready.paypal && !live.paypal ? 'PayPal' : null,
-    ].filter((name) => name !== null);
-
     return (
         <>
             <Head title="Cash-outs" />
@@ -122,8 +102,8 @@ export default function AdminCashouts({
                     </h1>
                     <p className="text-sm text-muted-foreground">
                         Every cash-out waits here for you. Pay sends it through
-                        Paystack or PayPal. Turning one down gives the animal
-                        its Apples back.
+                        PayPal. Turning one down gives the animal its Apples
+                        back.
                     </p>
                 </header>
 
@@ -138,17 +118,15 @@ export default function AdminCashouts({
                         .
                     </p>
                 )}
-                {testing.length > 0 && (
+                {ready && !live && (
                     <p className="rounded-md border border-orange-500/40 bg-orange-500/10 px-3 py-2 text-sm text-orange-200">
-                        {testing.join(' and ')}{' '}
-                        {testing.length === 1 ? 'is' : 'are'} on test keys, so
-                        no real money moves there.
+                        PayPal is on sandbox keys, so no real money moves.
                     </p>
                 )}
 
                 <section className="grid gap-3 sm:grid-cols-3">
                     <Stat label="Paid out">
-                        {rand(totals.zar)} · {dollars(totals.usd)}
+                        {dollars(totals.usd)}
                         <span className="block text-xs font-normal text-muted-foreground">
                             in {totals.count}{' '}
                             {totals.count === 1 ? 'cash-out' : 'cash-outs'}
@@ -174,7 +152,7 @@ export default function AdminCashouts({
                                 <QueueItem
                                     key={cashout.id}
                                     cashout={cashout}
-                                    ready={ready[cashout.method]}
+                                    ready={ready}
                                 />
                             ))}
                         </ul>
@@ -200,7 +178,7 @@ export default function AdminCashouts({
                                     <span>
                                         {cashout.animal} ·{' '}
                                         {cashout.apples.toLocaleString('en-ZA')}{' '}
-                                        Apples · {WAY[cashout.method]}
+                                        Apples to {cashout.label}
                                     </span>
                                     <span className="ml-auto text-xs">
                                         {STATUS[cashout.status]}
@@ -233,7 +211,6 @@ export default function AdminCashouts({
 function QueueItem({ cashout, ready }: { cashout: Waiting; ready: boolean }) {
     const [rejecting, setRejecting] = useState(false);
     const [reason, setReason] = useState('');
-    const [code, setCode] = useState('');
     const changedLately =
         cashout.detailsChanged !== null &&
         Date.now() - new Date(cashout.detailsChanged).getTime() <
@@ -245,8 +222,8 @@ function QueueItem({ cashout, ready }: { cashout: Waiting; ready: boolean }) {
                 <p className="text-lg font-extrabold">
                     {cashout.price}{' '}
                     <span className="text-sm font-semibold text-muted-foreground">
-                        for {cashout.apples.toLocaleString('en-ZA')} Apples by{' '}
-                        {WAY[cashout.method]}
+                        for {cashout.apples.toLocaleString('en-ZA')} Apples by
+                        PayPal
                     </span>
                 </p>
                 <span className="text-xs text-muted-foreground">
@@ -306,11 +283,7 @@ function QueueItem({ cashout, ready }: { cashout: Waiting; ready: boolean }) {
                     </Button>
                     {!ready && (
                         <span className="text-sm text-muted-foreground">
-                            Add the{' '}
-                            {cashout.method === 'paystack'
-                                ? 'Paystack key'
-                                : 'PayPal keys'}{' '}
-                            on the admin page first.
+                            Add the PayPal keys on the admin page first.
                         </span>
                     )}
                 </div>
@@ -318,35 +291,6 @@ function QueueItem({ cashout, ready }: { cashout: Waiting; ready: boolean }) {
 
             {cashout.status === 'sending' && (
                 <div className="flex flex-wrap items-center gap-2">
-                    {cashout.otp && (
-                        <>
-                            <Input
-                                value={code}
-                                onChange={(event) =>
-                                    setCode(event.target.value)
-                                }
-                                inputMode="numeric"
-                                autoComplete="one-time-code"
-                                placeholder="OTP"
-                                aria-label="OTP from Paystack"
-                                className="w-28"
-                            />
-                            <Button
-                                disabled={!/^\d{4,8}$/.test(code)}
-                                onClick={() =>
-                                    act(sendOtp.url(cashout.id), { otp: code })
-                                }
-                            >
-                                Send
-                            </Button>
-                            <Button
-                                variant="ghost"
-                                onClick={() => act(resendOtp.url(cashout.id))}
-                            >
-                                Text me a new OTP
-                            </Button>
-                        </>
-                    )}
                     <Button
                         variant="secondary"
                         onClick={() => act(check.url(cashout.id))}
