@@ -241,6 +241,9 @@ function Patterns() {
             {rows('rows-windmill_hill', -26, INK.field, INK.fieldRow)}
             {rows('rows-ironfield_gate', 66, INK.field, INK.fieldRow)}
             {rows('rows-hayfield', -10, INK.hay, INK.hayRow)}
+            {rows('rows-thornbury', 8, INK.field, INK.fieldRow)}
+            {rows('rows-brookside', -40, INK.hay, INK.hayRow)}
+            {rows('rows-willowby', 30, INK.field, INK.fieldRow)}
             <pattern
                 id="meadow"
                 width="36"
@@ -316,6 +319,9 @@ const GROUND: Record<string, string> = {
     stables: 'url(#meadow)',
     old_well: 'url(#meadow)',
     paddock: 'url(#meadow)',
+    thornbury: 'url(#rows-thornbury)',
+    brookside: 'url(#rows-brookside)',
+    willowby: 'url(#rows-willowby)',
 };
 
 /** The land around the farm: the Ridge, Hollow Brook and Ironfield. */
@@ -337,6 +343,47 @@ function Surroundings() {
                 46,
                 'south',
             ),
+            // The wild land round the farms beyond the fences.
+            ...scatterBox(
+                { x: -460, y: -400, width: 2200, height: 130 },
+                130,
+                'far-north',
+            ),
+            ...scatterBox(
+                { x: -460, y: -280, width: 90, height: 1760 },
+                70,
+                'far-west',
+            ),
+            ...scatterBox(
+                { x: -460, y: 1390, width: 2200, height: 90 },
+                110,
+                'far-south',
+            ),
+            ...scatterBox(
+                { x: -370, y: -280, width: 360, height: 360 },
+                60,
+                'north-west',
+            ),
+            ...scatterBox(
+                { x: -370, y: 900, width: 360, height: 480 },
+                70,
+                'south-west',
+            ),
+            ...scatterBox(
+                { x: 1270, y: -280, width: 220, height: 370 },
+                45,
+                'north-east',
+            ),
+            ...scatterBox(
+                { x: 1220, y: 1080, width: 280, height: 300 },
+                45,
+                'south-east',
+            ),
+            ...scatterBox(
+                { x: 110, y: 1080, width: 270, height: 300 },
+                45,
+                'south-middle',
+            ),
         ],
         'edge',
         [8, 7],
@@ -344,11 +391,17 @@ function Surroundings() {
 
     return (
         <g>
-            <rect width={WORLD.width} height={WORLD.height} fill={INK.beyond} />
+            <rect
+                x={WORLD.x}
+                y={WORLD.y}
+                width={WORLD.width}
+                height={WORLD.height}
+                fill={INK.beyond}
+            />
             <rect
                 x={1490}
-                y={0}
-                width={WORLD.width - 1490}
+                y={WORLD.y}
+                width={WORLD.x + WORLD.width - 1490}
                 height={WORLD.height}
                 fill="url(#ironfield)"
             />
@@ -1319,7 +1372,77 @@ function Paddock() {
 }
 
 /** Ground details, drawn under the lanes. */
+/** A farm beyond the fences: its fields, a few trees and a duck pond or two. */
+function farmland(key: string) {
+    return function Farmland() {
+        const s = SHAPES[key];
+        const [cx, cy] = s.centre;
+
+        return (
+            <>
+                <path
+                    d={smoothLoop(
+                        blob(
+                            [cx - 40, cy + 40],
+                            120,
+                            70,
+                            `${key}:meadow`,
+                            0.12,
+                        ),
+                    )}
+                    fill="url(#meadow)"
+                />
+                <Trees
+                    list={trees(
+                        scatter(s, 14, `${key}:trees`, 26),
+                        key,
+                        [8, 6],
+                    )}
+                />
+                <path
+                    d={smoothLoop(
+                        blob(
+                            [cx + 110, cy + 60],
+                            26,
+                            16,
+                            `${key}:pond`,
+                            0.2,
+                            10,
+                        ),
+                    )}
+                    fill={INK.water}
+                    stroke={INK.waterEdge}
+                    strokeOpacity={0.5}
+                />
+            </>
+        );
+    };
+}
+
+function farmstead(key: string) {
+    return function Farmstead() {
+        const [cx, cy] = SHAPES[key].centre;
+
+        return (
+            <>
+                <Building at={[cx - 70, cy - 10]} w={70} h={40} angle={-4} />
+                <Building at={[cx - 10, cy + 6]} w={34} h={26} angle={3} />
+                <path
+                    d={`M${cx - 120} ${cy - 50}h110v100h-110z`}
+                    fill="none"
+                    stroke={INK.stone}
+                    strokeWidth={2}
+                    strokeDasharray="4 3"
+                />
+            </>
+        );
+    };
+}
+
 const UNDER: Record<string, () => React.ReactNode> = {
+    thornbury: farmland('thornbury'),
+    brookside: farmland('brookside'),
+    willowby: farmland('willowby'),
     wildwood: Wildwood,
     orchard: Orchard,
     big_barn: BigBarn,
@@ -1339,6 +1462,9 @@ const UNDER: Record<string, () => React.ReactNode> = {
 
 /** Buildings, drawn over the lanes. */
 const OVER: Record<string, () => React.ReactNode> = {
+    thornbury: farmstead('thornbury'),
+    brookside: farmstead('brookside'),
+    willowby: farmstead('willowby'),
     big_barn: BigBarnBuildings,
     granary: GranaryBuildings,
     farmhouse: FarmhouseBuildings,

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Game;
 use App\Enums\BuildingKind;
 use App\Game\Bases;
 use App\Game\Clock;
+use App\Game\Farms;
 use App\Game\GateNight;
 use App\Game\Gathering;
 use App\Game\Movement;
@@ -96,6 +97,7 @@ class MapController extends Controller
                 'treasury' => $player->faction->treasury,
                 'materials' => (object) ($player->faction->materials ?? []),
             ] : null,
+            'farms' => ['price' => Farms::PRICE, 'income' => Farms::INCOME],
             'buildingKinds' => array_map(fn (BuildingKind $kind) => $kind->card(), BuildingKind::cases()),
             'laws' => $season ? Wall::laws($season)->map(fn (Law $law) => [
                 'label' => $law->template->label(),
@@ -136,6 +138,14 @@ class MapController extends Controller
         $movement->walk($player, $region);
 
         return $this->told("You walked to {$region->name}.");
+    }
+
+    public function buy(Request $request, Region $region, Farms $farms): RedirectResponse
+    {
+        abort_unless($region->valley_id === $request->user()->player->valley_id, 404);
+        $farms->buy($request->user()->player, $region);
+
+        return $this->told("{$region->name} is your faction's now. It pays ".Farms::INCOME.' Corn into the treasury every half hour.');
     }
 
     public function gather(Request $request, Region $region, Gathering $gathering): RedirectResponse

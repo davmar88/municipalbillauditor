@@ -49,6 +49,7 @@ Route::middleware(['auth', 'verified', 'player', 'throttle:120,1'])->prefix('pla
     Route::get('/', [MapController::class, 'index'])->name('play');
     Route::post('regions/{region}/walk', [MapController::class, 'walk'])->name('play.walk');
     Route::post('regions/{region}/gather', [MapController::class, 'gather'])->name('play.gather');
+    Route::post('regions/{region}/buy', [MapController::class, 'buy'])->name('play.buy-farm');
     Route::post('regions/{region}/attack', [BattleController::class, 'launch'])->name('play.attack');
     Route::post('attacks/{attack}/commit', [BattleController::class, 'commit'])->name('play.commit');
     Route::post('gate', [BattleController::class, 'gate'])->name('play.gate');

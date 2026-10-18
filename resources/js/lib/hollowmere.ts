@@ -8,7 +8,11 @@
 
 export type Point = [number, number];
 
-export const WORLD = { width: 1600, height: 1080 };
+/** Everything drawn: Hollowmere, the farms beyond its fences and the land round them. */
+export const WORLD = { x: -460, y: -400, width: 2200, height: 1880 };
+
+/** Hollowmere and its farms, for seeing everything at once. */
+export const REACH = { x: -380, y: -300, width: 2020, height: 1700 };
 
 /** The farm without the land around it, for fitting it on screen. */
 export const FARM = { x: 96, y: 92, width: 1408, height: 904 };
@@ -162,9 +166,60 @@ export function regionShape(
     return shape(polygon);
 }
 
+/** The farms beyond the fences, and the Hollowmere regions each borders, as ValleyBuilder has them. */
+export const FARMS: Record<string, { polygon: Point[]; borders: string[] }> = {
+    thornbury: {
+        polygon: [
+            [392, 96],
+            [560, 86],
+            [800, 98],
+            [1040, 88],
+            [1212, 96],
+            [1250, -40],
+            [1190, -230],
+            [800, -268],
+            [410, -232],
+            [352, -60],
+        ],
+        borders: ['orchard', 'big_barn', 'hayfield'],
+    },
+    brookside: {
+        polygon: [
+            [22, 112],
+            [32, 330],
+            [12, 560],
+            [26, 846],
+            [-150, 890],
+            [-330, 770],
+            [-366, 480],
+            [-330, 200],
+            [-160, 88],
+        ],
+        borders: ['wildwood', 'sheepfold', 'duck_pond'],
+    },
+    willowby: {
+        polygon: [
+            [430, 1074],
+            [620, 1062],
+            [800, 1080],
+            [980, 1064],
+            [1170, 1078],
+            [1204, 1220],
+            [1124, 1342],
+            [800, 1374],
+            [480, 1338],
+            [398, 1212],
+        ],
+        borders: ['paddock'],
+    },
+};
+
 /** Which regions border which, by the same rule as ValleyBuilder. */
-export const LINKS: [string, string][] = Object.keys(LAYOUT).flatMap(
-    (a, i, keys) =>
+export const LINKS: [string, string][] = [
+    ...Object.entries(FARMS).flatMap(([farm, { borders }]) =>
+        borders.map((key): [string, string] => [key, farm]),
+    ),
+    ...Object.keys(LAYOUT).flatMap((a, i, keys) =>
         keys.slice(i + 1).flatMap((b): [string, string][] => {
             const [ac, ar] = LAYOUT[a];
             const [bc, br] = LAYOUT[b];
@@ -175,7 +230,8 @@ export const LINKS: [string, string][] = Object.keys(LAYOUT).flatMap(
 
             return touches ? [[a, b]] : [];
         }),
-);
+    ),
+];
 
 /** A wobbly ring of points around an ellipse, for ponds, pits and hills. */
 export function blob(
@@ -214,12 +270,13 @@ export function smoothLoop(points: Point[]): string {
 }
 
 /** Every region's outline, worked out once. */
-export const SHAPES: Record<string, RegionShape> = Object.fromEntries(
-    Object.entries(LAYOUT).map(([key, [col, row]]) => [
+export const SHAPES: Record<string, RegionShape> = Object.fromEntries([
+    ...Object.entries(LAYOUT).map(([key, [col, row]]) => [
         key,
         regionShape(col, row, key === 'paddock'),
     ]),
-);
+    ...Object.entries(FARMS).map(([key, farm]) => [key, shape(farm.polygon)]),
+]);
 
 export function shapeOf(
     key: string,
@@ -350,6 +407,9 @@ const HUBS: Record<string, Point> = {
 
 /** Where a faction's building goes in each region, as a nudge from its middle. */
 const PLOTS: Record<string, Point> = {
+    thornbury: [150, 40],
+    brookside: [60, 150],
+    willowby: [170, 30],
     wildwood: [-62, -8],
     orchard: [-72, -12],
     big_barn: [-96, 52],
@@ -470,7 +530,7 @@ export const ROADS: Road[] = [
         {
             major: true,
             before: [
-                [792, 1100],
+                [800, 1218],
                 [796, 1010],
             ],
         },
@@ -518,15 +578,18 @@ export function pairKey(a: string, b: string): string {
     return a < b ? `${a}|${b}` : `${b}|${a}`;
 }
 
-/** Pairs of regions joined by a lane, so footpaths skip them. */
-export const ROAD_LINKS = new Set(
-    ROADS.flatMap((lane) =>
+/** Pairs of regions joined by a lane, so footpaths skip them. Harrow Lane runs on to Willowby Farm. */
+export const ROAD_LINKS = new Set([
+    ...ROADS.flatMap((lane) =>
         lane.keys.slice(1).map((key, i) => pairKey(lane.keys[i], key)),
     ),
-);
+    pairKey('paddock', 'willowby'),
+]);
 
 /** Hollow Brook, running down the west side and along the south. */
 export const BROOK: Point[] = [
+    [70, -420],
+    [56, -200],
     [74, -20],
     [60, 150],
     [88, 320],
@@ -539,6 +602,7 @@ export const BROOK: Point[] = [
     [1080, 1038],
     [1400, 1018],
     [1640, 1040],
+    [1760, 1030],
 ];
 
 /** The shortest walk between two regions, as region ids, both ends included. */

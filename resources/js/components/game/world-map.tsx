@@ -7,6 +7,7 @@ import type { Point } from '@/lib/hollowmere';
 import {
     BROOK,
     FARM,
+    REACH,
     ROADS,
     WORLD,
     anchor,
@@ -43,8 +44,10 @@ function shapeFor(region: MapRegion) {
 
 function zoomLimits(size: Size) {
     const fit = Math.min(size.width / FARM.width, size.height / FARM.height);
+    const all = Math.min(size.width / REACH.width, size.height / REACH.height);
 
-    return { fit, min: fit * 0.92, max: MAX_ZOOM };
+    // You start on Hollowmere and can zoom out to see the farms round it.
+    return { fit, all, min: all * 0.95, max: MAX_ZOOM };
 }
 
 function clampView(view: View, size: Size | null): View {
@@ -56,17 +59,19 @@ function clampView(view: View, size: Size | null): View {
     const k = Math.min(max, Math.max(min, view.k));
     const width = WORLD.width * k;
     const height = WORLD.height * k;
+    const left = -WORLD.x * k;
+    const top = -WORLD.y * k;
 
     return {
         k,
         x:
             width <= size.width
-                ? (size.width - width) / 2
-                : Math.min(0, Math.max(size.width - width, view.x)),
+                ? (size.width - width) / 2 + left
+                : Math.min(left, Math.max(size.width - width + left, view.x)),
         y:
             height <= size.height
-                ? (size.height - height) / 2
-                : Math.min(0, Math.max(size.height - height, view.y)),
+                ? (size.height - height) / 2 + top
+                : Math.min(top, Math.max(size.height - height + top, view.y)),
     };
 }
 
@@ -282,8 +287,8 @@ function useCamera(
             return;
         }
 
-        const { fit: k } = zoomLimits(size);
-        lookAt([FARM.x + FARM.width / 2, FARM.y + FARM.height / 2], k);
+        const { all: k } = zoomLimits(size);
+        lookAt([REACH.x + REACH.width / 2, REACH.y + REACH.height / 2], k);
     }, [lookAt]);
 
     useEffect(() => {
@@ -901,6 +906,10 @@ function subtitle(
         };
     }
 
+    if (region.ring === 'farm') {
+        return { text: '🌾 For sale or for the taking', colour: '#ffd33d' };
+    }
+
     if (region.ring === 'safe') {
         return {
             text: 'Safe ground · newcomers start here',
@@ -1019,8 +1028,8 @@ const Labels = memo(function Labels({
             )}
             {(
                 [
-                    ['THE RIDGE', [800, 54], 0],
-                    ['IRONFIELD', [1546, 560], 90],
+                    ['THE RIDGE', [800, -330], 0],
+                    ['IRONFIELD', [1600, 560], 90],
                 ] as const
             ).map(([text, [x, y], angle]) => (
                 <text
@@ -1590,7 +1599,7 @@ export function WorldMap({
                         </MapButton>
                     )}
                     <MapButton
-                        label="See the whole farm"
+                        label="See the whole valley"
                         onClick={camera.fit}
                         divided={herePoint !== null}
                     >

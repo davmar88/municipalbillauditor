@@ -31,6 +31,7 @@ type Props = {
     yields: { corn: number; material: number };
     base: FactionStore | null;
     buildingKinds: BuildingKindCard[];
+    farms: { price: number; income: number };
 };
 
 export default function MapPage({
@@ -46,6 +47,7 @@ export default function MapPage({
     yields,
     base,
     buildingKinds,
+    farms,
 }: Props) {
     const { player } = usePage().props;
     const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -188,6 +190,7 @@ export default function MapPage({
                             gateNight={gateNight}
                             base={base}
                             buildingKinds={buildingKinds}
+                            farms={farms}
                             onClose={() => setSelectedId(null)}
                         />
                     )}

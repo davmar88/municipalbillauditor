@@ -127,7 +127,7 @@ export type MapRegion = {
     id: number;
     key: string;
     name: string;
-    ring: 'seat' | 'inner' | 'middle' | 'outer' | 'safe';
+    ring: 'seat' | 'inner' | 'middle' | 'outer' | 'safe' | 'farm';
     produces: string | null;
     col: number;
     row: number;

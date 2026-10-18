@@ -10,8 +10,9 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * Lays out a valley: the sixteen regions of Hollowmere on a five by three
- * grid with the Paddock along the bottom, which regions border which, and
- * the first season. Running it again changes nothing.
+ * grid with the Paddock along the bottom, the farms beyond its fences,
+ * which regions border which, and the first season. Running it again adds
+ * only what is missing, so a new farm reaches a running valley.
  */
 final class ValleyBuilder
 {
@@ -36,6 +37,17 @@ final class ValleyBuilder
         'stables' => ['Stables', 'middle', 'straw', 3, 2],
         'old_well' => ['Old Well', 'outer', 'clay', 4, 2],
         'paddock' => ['The Paddock', 'safe', 'corn', 2, 3],
+        // Farms beyond the fences: bought with Corn or taken in raids.
+        'thornbury' => ['Thornbury Farm', 'farm', 'corn', 0, 9],
+        'brookside' => ['Brookside Farm', 'farm', 'corn', 1, 9],
+        'willowby' => ['Willowby Farm', 'farm', 'corn', 2, 9],
+    ];
+
+    /** Which Hollowmere regions each farm borders. */
+    public const FARM_LINKS = [
+        'thornbury' => ['orchard', 'big_barn', 'hayfield'],
+        'brookside' => ['wildwood', 'sheepfold', 'duck_pond'],
+        'willowby' => ['paddock'],
     ];
 
     public function build(string $name = 'Hollowmere'): Valley
@@ -94,6 +106,11 @@ final class ValleyBuilder
 
     private function touches(Region $a, Region $b): bool
     {
+        if ($a->isFarm() || $b->isFarm()) {
+            return in_array($b->key, self::FARM_LINKS[$a->key] ?? [], true)
+                || in_array($a->key, self::FARM_LINKS[$b->key] ?? [], true);
+        }
+
         if ($a->isSafe() || $b->isSafe()) {
             $other = $a->isSafe() ? $b : $a;
 

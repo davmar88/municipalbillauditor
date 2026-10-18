@@ -30,6 +30,7 @@ final class Tick
         private readonly Factions $factions,
         private readonly Seasons $seasons,
         private readonly Bases $bases,
+        private readonly Farms $farms,
     ) {}
 
     public function run(Valley $valley): void
@@ -53,6 +54,7 @@ final class Tick
         if ($this->claim($season)) {
             $this->battles->upkeep($season);
             $this->payNightWatch($season);
+            $this->farms->payIncome($season);
         }
 
         $this->handOutRations($season->fresh());

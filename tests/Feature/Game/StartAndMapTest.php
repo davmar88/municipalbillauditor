@@ -68,13 +68,13 @@ class StartAndMapTest extends TestCase
         $this->assertNull($user->fresh()->player);
     }
 
-    public function test_the_map_shows_the_sixteen_regions_and_the_first_visit_earns_rosettes(): void
+    public function test_the_map_shows_the_regions_and_farms_and_the_first_visit_earns_rosettes(): void
     {
         $player = $this->player(attributes: ['last_visit_on' => null]);
 
         $this->actingAs($player->user)->get(route('play'))->assertInertia(fn (Assert $page) => $page
             ->component('game/map')
-            ->has('regions', 16)
+            ->has('regions', 19)
             ->where('player.name', $player->name));
 
         $this->assertSame(5, $player->fresh()->rosettes);

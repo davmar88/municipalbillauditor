@@ -67,6 +67,12 @@ class Region extends Model
         return $this->ring === 'safe';
     }
 
+    /** One of the farms beyond Hollowmere's fences. */
+    public function isFarm(): bool
+    {
+        return $this->ring === 'farm';
+    }
+
     public function isFarmhouse(): bool
     {
         return $this->key === 'farmhouse';

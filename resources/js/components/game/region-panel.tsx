@@ -8,6 +8,7 @@ import {
     Shield,
     Store,
     Swords,
+    Wheat,
     X,
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
@@ -20,6 +21,7 @@ import { route } from '@/lib/hollowmere';
 import { openChat } from '@/lib/pulse';
 import {
     attack,
+    buyFarm,
     commit,
     faction as factionPage,
     gate,
@@ -42,6 +44,7 @@ const RINGS: Record<MapRegion['ring'], string> = {
     middle: 'Middle ring',
     outer: 'Outer ring',
     safe: 'Safe ground',
+    farm: 'Farm beyond the fences',
 };
 
 type Props = {
@@ -54,6 +57,7 @@ type Props = {
     gateNight: { open: boolean; defended: boolean };
     base: FactionStore | null;
     buildingKinds: BuildingKindCard[];
+    farms: { price: number; income: number };
     onClose: () => void;
 };
 
@@ -72,6 +76,7 @@ export function RegionPanel({
     gateNight,
     base,
     buildingKinds,
+    farms,
     onClose,
 }: Props) {
     const { player } = usePage().props;
@@ -345,6 +350,46 @@ export function RegionPanel({
                             </Button>
                         </div>
                     )
+                )}
+
+                {region.ring === 'farm' && (
+                    <div className="flex flex-col gap-2 rounded-lg border border-yellow-400/40 bg-yellow-400/10 p-3">
+                        <p className="flex items-center gap-2 font-semibold">
+                            <Wheat
+                                className="size-4 text-yellow-300"
+                                aria-hidden
+                            />
+                            {region.faction
+                                ? `${region.faction.name} owns this farm`
+                                : 'This farm is for sale'}
+                        </p>
+                        <p className="text-muted-foreground">
+                            It pays {farms.income} Corn into its holder's
+                            treasury every half hour.{' '}
+                            {region.faction
+                                ? 'Rivals take it in a raid from a region next to it.'
+                                : `Your faction can buy it for ${farms.price} Corn from the treasury, or raid for it.`}
+                        </p>
+                        {!region.faction &&
+                            (base?.canBuild ? (
+                                <Button
+                                    className="self-start"
+                                    disabled={base.treasury < farms.price}
+                                    onClick={() => act(buyFarm.url(region.id))}
+                                >
+                                    <Wheat className="size-4" />
+                                    {base.treasury < farms.price
+                                        ? `Treasury needs ${farms.price - base.treasury} more Corn`
+                                        : `Buy it for ${farms.price} Corn`}
+                                </Button>
+                            ) : (
+                                <p className="text-xs text-muted-foreground">
+                                    {base
+                                        ? "Your faction's leader and council can buy it."
+                                        : 'Join or found a faction to buy farms.'}
+                                </p>
+                            ))}
+                    </div>
                 )}
 
                 {raidable && (
