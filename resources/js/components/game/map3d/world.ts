@@ -2084,6 +2084,27 @@ function homeModel(home: MapHome): THREE.Group {
         });
     const wall = look(home.skin?.colours[1] ?? '#cfc3ad');
     const roof = look(home.skin?.colours[0] ?? '#6a6479');
+    if (home.level === 0) {
+        const tent = new THREE.Mesh(
+            new THREE.ConeGeometry(0.42, 0.6, 3),
+            look(home.skin?.colours[0] ?? '#b9a57c'),
+        );
+        tent.position.y = 0.3;
+        g.add(tent);
+        if (home.mine) {
+            const ring = new THREE.Mesh(
+                new THREE.RingGeometry(0.5, 0.6, 24),
+                new THREE.MeshBasicMaterial({
+                    color: VIOLET,
+                    depthWrite: false,
+                }),
+            );
+            ring.rotation.x = -Math.PI / 2;
+            ring.position.y = 0.02;
+            g.add(ring);
+        }
+        return g;
+    }
     const walls = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.45, 0.55), wall);
     walls.position.y = 0.225;
     g.add(walls);

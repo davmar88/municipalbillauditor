@@ -13,18 +13,21 @@ class HomeController extends Controller
 {
     public function build(Request $request, Homes $homes): RedirectResponse
     {
-        $home = $homes->build($request->user()->player);
+        $data = $request->validate(['level' => ['nullable', 'integer', 'in:0,1']]);
+        $home = $homes->build($request->user()->player, (int) ($data['level'] ?? 1));
 
-        return $this->told('Your Hut is going up. It stands at '.$home->ready_at?->timezone(config('game.timezone'))->format('H:i').'.');
+        return $this->told('Your '.Homes::name($home->level).' is going up. It stands at '.$home->ready_at?->timezone(config('game.timezone'))->format('H:i').'.');
     }
 
     public function camp(Request $request, Homes $homes): RedirectResponse
     {
-        $data = $request->validate(['x' => ['required', 'numeric'], 'y' => ['required', 'numeric']]);
+        $data = $request->validate(['x' => ['required', 'numeric'], 'y' => ['required', 'numeric'], 'level' => ['nullable', 'integer', 'in:0,1']]);
+        $level = (int) ($data['level'] ?? 1);
+        $name = Homes::name($level);
 
-        return $homes->campAt($request->user()->player, (float) $data['x'], (float) $data['y'])
-            ? $this->told('You set up camp. Your Hut is going up.')
-            : $this->told('You set off to set up camp. Your Hut goes up when you get there.');
+        return $homes->campAt($request->user()->player, (float) $data['x'], (float) $data['y'], $level)
+            ? $this->told("You set up camp. Your {$name} is going up.")
+            : $this->told("You set off to set up camp. Your {$name} goes up when you get there.");
     }
 
     public function upgrade(Request $request, Homes $homes): RedirectResponse

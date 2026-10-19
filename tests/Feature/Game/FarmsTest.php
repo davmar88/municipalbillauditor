@@ -239,7 +239,7 @@ class FarmsTest extends TestCase
 
         // Far off: the animal walks there, and the Hut goes up on arrival.
         $this->assertFalse(app(Homes::class)->campAt($player, $x, $y));
-        $this->assertTrue($player->fresh()->camp_on_arrival);
+        $this->assertSame(1, $player->fresh()->camp_level);
         $this->assertNull(Homes::of($player->fresh()));
 
         $this->travel(8)->hours();
@@ -249,10 +249,32 @@ class FarmsTest extends TestCase
         $this->assertNotNull($home);
         $this->assertSame('scrubland', $home->region->key);
         $this->assertEqualsWithDelta($x, $home->x, 1);
-        $this->assertFalse($player->fresh()->camp_on_arrival);
+        $this->assertNull($player->fresh()->camp_level);
 
         // One home each.
         $this->expectExceptionMessage('already have a home');
         app(Homes::class)->campAt($player, $x + 200, $y);
+    }
+
+    public function test_a_tent_is_pitched_quick_and_cheap_and_raised_to_a_hut(): void
+    {
+        $player = $this->player(attributes: ['corn' => 500, 'materials' => ['wool' => 20, 'wood' => 30, 'straw' => 30]]);
+        [$x, $y] = [-2400.0, -2600.0];
+
+        $this->assertFalse(app(Homes::class)->campAt($player, $x, $y, 0));
+        $this->travel(8)->hours();
+        app(Tick::class)->run($this->valley->fresh());
+
+        $tent = Homes::of($player->fresh());
+        $this->assertSame(0, $tent->level);
+        $this->assertSame('Tent', Homes::name(0));
+        $this->assertSame(500, $player->fresh()->corn, 'A Tent costs no Corn.');
+        $this->assertSame(10, $player->fresh()->materials['wool']);
+        $this->assertSame(0.0, Homes::arrestCut(0, 0.6), 'A Tent hides you but holds nobody off.');
+
+        $this->travel(10)->minutes();
+        $hut = app(Homes::class)->upgrade($player->fresh());
+        $this->assertSame(1, $hut->level);
+        $this->assertSame('Hut', Homes::name($hut->level));
     }
 }

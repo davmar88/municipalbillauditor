@@ -8,7 +8,7 @@ import type { HomeInfo, MapHome, MapMe } from '@/types/game';
 
 function cost(level: HomeInfo['levels'][number]): string {
     return [
-        `${level.corn} Corn`,
+        ...(level.corn > 0 ? [`${level.corn} Corn`] : []),
         ...Object.entries(level.materials).map(([name, n]) => `${n} ${name}`),
     ].join(', ');
 }
@@ -37,12 +37,12 @@ export function HomeCard({
     const next = info.levels.find((l) => l.level === (home?.level ?? 0) + 1);
     const corn = player?.corn ?? 0;
     const materials = (player?.materials ?? {}) as Record<string, number>;
-    const affordable =
-        next !== undefined &&
-        corn >= next.corn &&
-        Object.entries(next.materials).every(
+    const canPay = (level: HomeInfo['levels'][number]) =>
+        corn >= level.corn &&
+        Object.entries(level.materials).every(
             ([name, n]) => (materials[name] ?? 0) >= n,
         );
+    const affordable = next !== undefined && canPay(next);
 
     return (
         <section className="flex flex-col gap-2 rounded-2xl border bg-card p-4 text-sm">
@@ -53,24 +53,48 @@ export function HomeCard({
             {home === null ? (
                 <>
                     <p className="text-muted-foreground">
-                        Build a Hut right where you stand: somewhere to hide
-                        from bounty hunters, and walls burners have to get past.
-                        Not in the Farmhouse, the Paddock or Irongate.
+                        Set up camp right where you stand: pitch a Tent, quick
+                        and cheap, or build a Hut with walls burners have to get
+                        past. Either hides you from bounty hunters, and a Tent
+                        can be raised to a Hut later. Not in the Farmhouse, the
+                        Paddock, Irongate or Ironfield.
                     </p>
-                    {next && (
-                        <div className="flex flex-wrap items-center gap-2">
-                            <Button
-                                size="sm"
-                                disabled={!affordable || me.walk !== null}
-                                onClick={() => act(build.url())}
-                            >
-                                Build a Hut here
-                            </Button>
-                            <span className="text-xs text-muted-foreground">
-                                {cost(next)} · {next.minutes} minutes
-                            </span>
-                        </div>
-                    )}
+                    <div className="flex flex-wrap gap-2">
+                        {[0, 1].map((level) => {
+                            const option = info.levels.find(
+                                (l) => l.level === level,
+                            );
+
+                            return option ? (
+                                <Button
+                                    key={level}
+                                    size="sm"
+                                    variant={
+                                        level === 0 ? 'secondary' : 'default'
+                                    }
+                                    disabled={
+                                        !canPay(option) || me.walk !== null
+                                    }
+                                    onClick={() => act(build.url(), { level })}
+                                    title={`${cost(option)} · ${option.minutes} minutes`}
+                                >
+                                    {level === 0
+                                        ? '⛺ Pitch a Tent'
+                                        : '🛖 Build a Hut'}{' '}
+                                    here
+                                </Button>
+                            ) : null;
+                        })}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                        {info.levels
+                            .filter((l) => l.level <= 1)
+                            .map(
+                                (l) =>
+                                    `A ${l.name}: ${cost(l)}, ${l.minutes} minutes.`,
+                            )
+                            .join(' ')}
+                    </p>
                 </>
             ) : (
                 <>
@@ -103,7 +127,7 @@ export function HomeCard({
                             <Button
                                 size="sm"
                                 disabled={
-                                    home.level === 1 && home.readyAt !== null
+                                    home.level <= 1 && home.readyAt !== null
                                 }
                                 onClick={() => act(enter.url())}
                             >

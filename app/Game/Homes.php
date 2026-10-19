@@ -26,6 +26,7 @@ final class Homes
      * @var array<int, array{name: string, corn: int, materials: array<string, int>, minutes: int}>
      */
     public const LEVELS = [
+        0 => ['name' => 'Tent', 'corn' => 0, 'materials' => ['wool' => 10, 'wood' => 5], 'minutes' => 5],
         1 => ['name' => 'Hut', 'corn' => 60, 'materials' => ['wood' => 10, 'straw' => 10], 'minutes' => 30],
         2 => ['name' => 'Cottage', 'corn' => 150, 'materials' => ['wood' => 20, 'stone' => 15, 'clay' => 10], 'minutes' => 90],
         3 => ['name' => 'Fort', 'corn' => 300, 'materials' => ['stone' => 40, 'wood' => 25, 'iron' => 4], 'minutes' => 180],
@@ -81,7 +82,7 @@ final class Homes
     public static function name(int $level): string
     {
         return match (true) {
-            $level <= 3 => self::LEVELS[max(1, $level)]['name'],
+            $level <= 3 => self::LEVELS[max(0, $level)]['name'],
             $level === 4 => 'Keep',
             $level === 5 => 'Castle',
             default => 'Castle '.($level - 4),
@@ -107,13 +108,17 @@ final class Homes
     }
 
     /**
-     * Build a Hut where you stand.
+     * Pitch a Tent or build a Hut where you stand.
      *
      * @throws GameException
      */
-    public function build(Player $player): Home
+    public function build(Player $player, int $level = 1): Home
     {
-        return DB::transaction(function () use ($player) {
+        if (! in_array($level, [0, 1], true)) {
+            throw new GameException('Start with a Tent or a Hut.');
+        }
+
+        return DB::transaction(function () use ($player, $level) {
             $player = Players::lock($player);
             Players::ensureFree($player);
             $this->ensureStill($player);
@@ -138,15 +143,15 @@ final class Homes
                 throw new GameException('Another home stands right here. Walk a little further off.');
             }
 
-            $this->pay($player, 1);
+            $this->pay($player, $level);
 
             return Home::create([
                 'player_id' => $player->id,
                 'region_id' => $region->id,
                 'x' => round($x, 1),
                 'y' => round($y, 1),
-                'level' => 1,
-                'ready_at' => CarbonImmutable::now()->addMinutes(self::LEVELS[1]['minutes']),
+                'level' => $level,
+                'ready_at' => CarbonImmutable::now()->addMinutes(self::LEVELS[$level]['minutes']),
             ]);
         });
     }
@@ -159,9 +164,13 @@ final class Homes
      *
      * @throws GameException
      */
-    public function campAt(Player $player, float $x, float $y): bool
+    public function campAt(Player $player, float $x, float $y, int $level = 1): bool
     {
         $player = $player->fresh();
+
+        if (! in_array($level, [0, 1], true)) {
+            throw new GameException('Start with a Tent or a Hut.');
+        }
 
         if (self::of($player) !== null) {
             throw new GameException('You already have a home. Raise it to the next level instead.');
@@ -174,20 +183,20 @@ final class Homes
             throw new GameException("Homes can't go in {$region->name}. Pick a spot in another region.");
         }
 
-        if (($short = self::short($player, 1)) !== null) {
+        if (($short = self::short($player, $level)) !== null) {
             throw new GameException($short);
         }
 
         [$px, $py] = Movement::position($player);
 
         if ($player->walk_arrives_at === null && hypot($px - $x, $py - $y) < self::DOOR) {
-            $this->build($player);
+            $this->build($player, $level);
 
             return true;
         }
 
         app(Movement::class)->walkTo($player, $x, $y);
-        $player->fresh()->forceFill(['camp_on_arrival' => true])->save();
+        $player->fresh()->forceFill(['camp_level' => $level])->save();
 
         return false;
     }
@@ -197,15 +206,16 @@ final class Homes
     {
         Player::query()
             ->where('valley_id', $valleyId)
-            ->where('camp_on_arrival', true)
+            ->whereNotNull('camp_level')
             ->whereNull('walk_arrives_at')
             ->get()
             ->each(function (Player $player) {
-                $player->forceFill(['camp_on_arrival' => false])->save();
+                $level = (int) $player->camp_level;
+                $player->forceFill(['camp_level' => null])->save();
 
                 try {
-                    $this->build($player);
-                    Notices::send($player->id, 'home', '🏕 You set up camp. Your Hut is going up.', route('play', [], false));
+                    $this->build($player, $level);
+                    Notices::send($player->id, 'home', '🏕 You set up camp. Your '.self::name($level).' is going up.', route('play', [], false));
                 } catch (GameException $e) {
                     Notices::send($player->id, 'home', "🏕 You couldn't set up camp: {$e->getMessage()}", route('play', [], false));
                 }
@@ -250,8 +260,8 @@ final class Homes
             $this->ensureStill($player);
             $this->ensureAtDoor($player, $home);
 
-            if ($home->level === 1 && $home->building()) {
-                throw new GameException('Your Hut is still going up. You can go in once it stands.');
+            if ($home->level <= 1 && $home->building()) {
+                throw new GameException('Your '.self::name($home->level).' is still going up. You can go in once it stands.');
             }
 
             $player->forceFill(['inside_home_at' => CarbonImmutable::now()])->save();

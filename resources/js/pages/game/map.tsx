@@ -351,9 +351,7 @@ export default function MapPage({
                     {ground && !selected && (
                         <GroundCard
                             point={ground}
-                            hasHome={homes.some(
-                                (home) => home.owner.id === player?.id,
-                            )}
+                            hasHome={homes.some((home) => home.mine)}
                             onWalk={walkTo}
                             onClose={() => setGround(null)}
                         />
@@ -497,7 +495,9 @@ function GroundCard({
                 </button>
             </div>
             <p className="text-xs text-muted-foreground">
-                Nobody holds it. Anyone can walk here, gather and set up camp.
+                Nobody holds it. Anyone can walk here, gather and set up camp: a
+                Tent is quick and cheap, a Hut keeps burners out. From afar, you
+                walk there and it goes up when you arrive.
             </p>
             <div className="flex flex-wrap gap-2">
                 <Button
@@ -511,16 +511,28 @@ function GroundCard({
                     <Footprints className="size-4" />
                     Walk here
                 </Button>
-                <Button
-                    size="sm"
-                    disabled={hasHome}
-                    onClick={() => {
-                        act(campRoute.url(), { x: point[0], y: point[1] });
-                        onClose();
-                    }}
-                >
-                    🏕 Set up camp here
-                </Button>
+                {(
+                    [
+                        [0, '⛺ Pitch a Tent'],
+                        [1, '🛖 Build a Hut'],
+                    ] as const
+                ).map(([level, label]) => (
+                    <Button
+                        key={level}
+                        size="sm"
+                        disabled={hasHome}
+                        onClick={() => {
+                            act(campRoute.url(), {
+                                x: point[0],
+                                y: point[1],
+                                level,
+                            });
+                            onClose();
+                        }}
+                    >
+                        {label} here
+                    </Button>
+                ))}
             </div>
             {hasHome && (
                 <p className="text-xs text-muted-foreground">

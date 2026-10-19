@@ -276,7 +276,7 @@ class MapController extends Controller
             'home' => [
                 'inside' => $player->inside_home_at !== null,
                 // The levels so far and the next one: homes grow without end.
-                'levels' => collect(range(1, max(3, (int) (Homes::of($player)?->level ?? 0) + 1)))->map(fn (int $n) => ['level' => $n, ...Homes::level($n)])->values(),
+                'levels' => collect(range(0, max(3, (int) (Homes::of($player)?->level ?? 0) + 1)))->map(fn (int $n) => ['level' => $n, ...Homes::level($n)])->values(),
                 'door' => Homes::DOOR,
                 'skins' => $player->items()->with('design')->whereDoesntHave('openListing')->get()
                     ->filter(fn ($item) => $item->design->template === ItemTemplate::Skin)

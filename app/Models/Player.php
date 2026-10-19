@@ -41,7 +41,7 @@ use Illuminate\Support\Carbon;
  * @property array<string, int> $materials
  * @property int $horseshoes
  * @property Carbon $horseshoes_at
- * @property bool $camp_on_arrival Walking off to set up camp: the Hut goes up on arrival.
+ * @property int|null $camp_level Walking off to set up camp: the home that goes up on arrival, 0 a Tent or 1 a Hut.
  * @property int|null $faction_id
  * @property FactionRole|null $faction_role
  * @property Carbon|null $faction_joined_at
@@ -81,7 +81,6 @@ class Player extends Model
             'muted_until' => 'datetime',
             'left_faction_at' => 'datetime',
             'inside_home_at' => 'datetime',
-            'camp_on_arrival' => 'boolean',
             'last_visit_on' => 'date',
             'adult_confirmed_at' => 'datetime',
             'orchard_until' => 'datetime',

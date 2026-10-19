@@ -1400,38 +1400,57 @@ const Homes = memo(function Homes({
                         opacity={home.readyAt ? 0.6 : 1}
                     >
                         <title>{`${home.owner.name}'s ${home.name}`}</title>
-                        <rect
-                            x={-w / 2}
-                            y={-w * 0.3}
-                            width={w}
-                            height={w * 0.75}
-                            fill={wall}
-                            stroke={home.mine ? VIOLET : HALO}
-                            strokeWidth={home.mine ? 2.4 : 1.2}
-                            strokeDasharray={home.readyAt ? '3 2' : undefined}
-                        />
-                        {home.level === 3 ? (
-                            <path
-                                d={`M${-w / 2} ${-w * 0.3}v${-w * 0.3}h${w / 5}v${w * 0.15}h${w / 5}v${-w * 0.15}h${w / 5}v${w * 0.15}h${w / 5}v${-w * 0.15}h${w / 5}v${w * 0.3}z`}
-                                fill={roof}
-                                stroke={HALO}
-                                strokeWidth={1}
-                            />
+                        {home.level === 0 ? (
+                            <>
+                                <path
+                                    d="M-11 8L0 -10L11 8z"
+                                    fill={roof === '#6a6479' ? '#b9a57c' : roof}
+                                    stroke={home.mine ? VIOLET : HALO}
+                                    strokeWidth={home.mine ? 2.4 : 1.2}
+                                    strokeDasharray={
+                                        home.readyAt ? '3 2' : undefined
+                                    }
+                                />
+                                <path d="M-2 8L0 0L2 8z" fill="#3a2a1e" />
+                            </>
                         ) : (
-                            <path
-                                d={`M${-w / 2 - 2} ${-w * 0.3}L0 ${-w * 0.85}L${w / 2 + 2} ${-w * 0.3}z`}
-                                fill={roof}
-                                stroke={HALO}
-                                strokeWidth={1}
-                            />
+                            <>
+                                <rect
+                                    x={-w / 2}
+                                    y={-w * 0.3}
+                                    width={w}
+                                    height={w * 0.75}
+                                    fill={wall}
+                                    stroke={home.mine ? VIOLET : HALO}
+                                    strokeWidth={home.mine ? 2.4 : 1.2}
+                                    strokeDasharray={
+                                        home.readyAt ? '3 2' : undefined
+                                    }
+                                />
+                                {home.level === 3 ? (
+                                    <path
+                                        d={`M${-w / 2} ${-w * 0.3}v${-w * 0.3}h${w / 5}v${w * 0.15}h${w / 5}v${-w * 0.15}h${w / 5}v${w * 0.15}h${w / 5}v${-w * 0.15}h${w / 5}v${w * 0.3}z`}
+                                        fill={roof}
+                                        stroke={HALO}
+                                        strokeWidth={1}
+                                    />
+                                ) : (
+                                    <path
+                                        d={`M${-w / 2 - 2} ${-w * 0.3}L0 ${-w * 0.85}L${w / 2 + 2} ${-w * 0.3}z`}
+                                        fill={roof}
+                                        stroke={HALO}
+                                        strokeWidth={1}
+                                    />
+                                )}
+                                <rect
+                                    x={-w * 0.1}
+                                    y={w * 0.1}
+                                    width={w * 0.2}
+                                    height={w * 0.35}
+                                    fill="#3a2a1e"
+                                />
+                            </>
                         )}
-                        <rect
-                            x={-w * 0.1}
-                            y={w * 0.1}
-                            width={w * 0.2}
-                            height={w * 0.35}
-                            fill="#3a2a1e"
-                        />
                     </g>
                 );
             })}

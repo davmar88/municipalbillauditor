@@ -196,7 +196,7 @@ final class Movement
         $seconds = (int) ceil(hypot($to[0] - $from[0], $to[1] - $from[1]) / self::pace($player) * 60);
         // Setting off means stepping out of your home, and calls off any camp you were walking to set up.
         $player->inside_home_at = null;
-        $player->camp_on_arrival = false;
+        $player->camp_level = null;
 
         if ($seconds < 1) {
             $changes = self::still($to[0], $to[1]);
