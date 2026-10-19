@@ -112,6 +112,24 @@ class MapController extends Controller
                 'settledUntil' => $region->settled_until?->isFuture() ? $region->settled_until->toIso8601String() : null,
                 // Farms need water: until when this one is watered, or null where it doesn't matter.
                 'wateredUntil' => $region->isFarm() && ! $region->wild ? ($region->watered_until?->isFuture() ? $region->watered_until->toIso8601String() : '') : null,
+                // The regions its trench runs through, from the water to the farm.
+                'trench' => $region->trench === null ? null : [
+                    'keys' => $region->trench,
+                    'from' => $regions->firstWhere('key', $region->trench[0])?->name ?? 'the water',
+                ],
+                // Where a trench to this farm would run from, and what it would cost, for the faction holding it.
+                'trenchPlan' => $region->isFarm() && ! $region->wild && $region->trench === null && $player->faction_id !== null && $region->faction_id === $player->faction_id
+                    ? (function () use ($region, $regions) {
+                        $path = Farms::trenchPath($region);
+
+                        return $path === null ? ['from' => null, 'stretches' => 0, 'cost' => null] : [
+                            'from' => $regions->firstWhere('key', $path[0])?->name ?? 'the water',
+                            'stretches' => count($path) - 1,
+                            'cost' => Farms::trenchCost(count($path) - 1),
+                        ];
+                    })()
+                    : null,
+                'irrigated' => $region->isFarm() && ! $region->wild && ($region->trench !== null || $regions->contains(fn (Region $farm) => $farm->trench !== null && $farm->key === (ValleyBuilder::FIELD_OF[$region->key] ?? null))),
                 'gatedUntil' => Powers::gatedUntil($region)?->toIso8601String(),
                 'partOf' => isset(ValleyBuilder::FIELD_OF[$region->key]) ? $regions->firstWhere('key', ValleyBuilder::FIELD_OF[$region->key])?->name : null,
                 'growth' => Farms::fieldKeys($region->key) === [] ? null : (function () use ($region) {
@@ -156,7 +174,7 @@ class MapController extends Controller
                 'treasury' => $player->faction->treasury,
                 'materials' => (object) ($player->faction->materials ?? []),
             ] : null,
-            'farms' => ['price' => Farms::PRICE, 'income' => Farms::INCOME, 'water' => Farms::WATER, 'waterHours' => Farms::WATER_HOURS],
+            'farms' => ['price' => Farms::PRICE, 'income' => Farms::INCOME, 'water' => Farms::WATER, 'waterHours' => Farms::WATER_HOURS, 'fill' => Farms::FILL],
             // Open warrants, so the map can mark outlaws and offer arrests.
             'warrants' => $season ? Warrant::query()
                 ->with('wanted:id,name')
@@ -313,6 +331,22 @@ class MapController extends Controller
         $farm = $farms->water($request->user()->player, $region);
 
         return $this->told("{$region->name} is watered until ".Clock::local($farm->watered_until)->format('D H:i').'.');
+    }
+
+    public function dig(Request $request, Region $region, Farms $farms): RedirectResponse
+    {
+        abort_unless($region->valley_id === $request->user()->player->valley_id, 404);
+        $farms->dig($request->user()->player, $region);
+
+        return $this->told("Water runs to {$region->name} now. It won't run dry while the trench holds.");
+    }
+
+    public function fill(Request $request, Region $region, Farms $farms): RedirectResponse
+    {
+        abort_unless($region->valley_id === $request->user()->player->valley_id, 404);
+        $farms->fill($request->user()->player, $region);
+
+        return $this->told("You filled in the trench to {$region->name}.");
     }
 
     public function gather(Request $request, Region $region, Gathering $gathering): RedirectResponse

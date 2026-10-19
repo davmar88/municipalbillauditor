@@ -1366,6 +1366,28 @@ export class World {
             // Ironfield's men march out of the Garrison.
             draw(hub('irongate_garrison'), hub('ironfield_gate'), FLAG);
         }
+        // Irrigation trenches: water running through the regions' hubs from the source to the farm.
+        for (const farm of data.regions) {
+            if (!farm.trench) {
+                continue;
+            }
+            const curve = new THREE.CatmullRomCurve3(
+                farm.trench.keys.map((key) => {
+                    const [x, z] = hub(key);
+
+                    return new THREE.Vector3(x, 3, z);
+                }),
+            );
+            const flat = curve
+                .getPoints(24 * farm.trench.keys.length)
+                .flatMap((p) => [p.x, p.y, p.z]);
+            const bank = new LineGeometry();
+            bank.setPositions(flat);
+            this.raids.add(new Line2(bank, this.lineMaterial('#3b2a1a', 9)));
+            const water = new LineGeometry();
+            water.setPositions(flat);
+            this.raids.add(new Line2(water, this.lineMaterial('#5cc8ff', 4)));
+        }
     }
 
     // ---- animals -------------------------------------------------------------------------------------------

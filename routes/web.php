@@ -64,6 +64,8 @@ Route::middleware(['auth', 'verified', 'player', 'throttle:120,1'])->prefix('pla
     Route::post('regions/{region}/buy', [MapController::class, 'buy'])->name('play.buy-farm');
     Route::post('regions/{region}/grow', [MapController::class, 'grow'])->name('play.grow-farm');
     Route::post('regions/{region}/water', [MapController::class, 'water'])->middleware('throttle:30,1,water')->name('play.water-farm');
+    Route::post('regions/{region}/trench', [MapController::class, 'dig'])->middleware('throttle:30,1,trench')->name('play.dig-trench');
+    Route::post('regions/{region}/fill', [MapController::class, 'fill'])->middleware('throttle:30,1,fill')->name('play.fill-trench');
     Route::post('regions/{region}/attack', [BattleController::class, 'launch'])->name('play.attack');
     Route::post('attacks/{attack}/commit', [BattleController::class, 'commit'])->name('play.commit');
     Route::post('gate', [BattleController::class, 'gate'])->name('play.gate');

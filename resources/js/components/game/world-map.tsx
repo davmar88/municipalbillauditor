@@ -896,6 +896,44 @@ function March({
     );
 }
 
+/** Irrigation trenches, drawn as water running from its source to the farm. */
+const Trenches = memo(function Trenches({ regions }: { regions: MapRegion[] }) {
+    return (
+        <g pointerEvents="none">
+            {regions.flatMap((farm) => {
+                if (!farm.trench) {
+                    return [];
+                }
+
+                const points = farm.trench.keys.map((key) => hub(key));
+                const d = smoothPath(points);
+
+                return [
+                    <g key={farm.id}>
+                        <path
+                            d={d}
+                            fill="none"
+                            stroke="#3b2a1a"
+                            strokeOpacity={0.7}
+                            strokeWidth={9}
+                            strokeLinecap="round"
+                            vectorEffect="non-scaling-stroke"
+                        />
+                        <path
+                            d={d}
+                            fill="none"
+                            stroke="#5cc8ff"
+                            strokeWidth={4}
+                            strokeLinecap="round"
+                            vectorEffect="non-scaling-stroke"
+                        />
+                    </g>,
+                ];
+            })}
+        </g>
+    );
+});
+
 /** Raids on the march, drawn as arrows from the attackers' land. */
 const Marches = memo(function Marches({
     regions,
@@ -989,7 +1027,7 @@ export function subtitle(
             : { text: '🔥 Ironfield broke through', colour: '#f5a27a' };
     }
 
-    if (region.wateredUntil === '') {
+    if (region.wateredUntil === '' && !region.irrigated) {
         return { text: '💧 Parched · needs water', colour: '#8fd3ff' };
     }
 
@@ -1938,6 +1976,7 @@ export function WorldMap({
                             selectedId={selectedId}
                             onPick={pick}
                         />
+                        <Trenches regions={regions} />
                         <Marches
                             regions={regions}
                             k={k}

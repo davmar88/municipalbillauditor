@@ -268,6 +268,16 @@ export type MapRegion = {
     settledUntil: string | null;
     /** Farms need water: until when it's watered, '' when parched, null where it doesn't matter. */
     wateredUntil: string | null;
+    /** The trench running water to this farm: the regions it runs through, from the water. */
+    trench: { keys: string[]; from: string } | null;
+    /** Fed by a trench, its own or its farm's: it never runs dry. */
+    irrigated: boolean;
+    /** For the faction holding it: where a trench would run from and what it costs. */
+    trenchPlan: {
+        from: string | null;
+        stretches: number;
+        cost: { corn: number; materials: Record<string, number> } | null;
+    } | null;
     /** When an Iron Gate keeping raiders out comes down. */
     gatedUntil: string | null;
     /** The farm a cleared patch of land belongs to. */

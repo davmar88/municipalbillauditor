@@ -144,4 +144,52 @@ class FarmsTest extends TestCase
         // Water fetched from a mere or a spring.
         $this->assertSame('water', $this->region('heron_mere')->produces);
     }
+
+    public function test_a_faction_digs_a_trench_from_the_water_and_a_rival_fills_it_in(): void
+    {
+        // A farm with water near enough to dig from.
+        $farm = $this->valley->regions()->where('ring', 'farm')->where('wild', false)->get()
+            ->first(fn ($region) => Farms::fieldKeys($region->key) !== [] && Farms::trenchPath($region) !== null);
+        $this->assertNotNull($farm, 'Some farm has water within reach.');
+        $path = Farms::trenchPath($farm);
+        $this->assertSame('water', $this->region($path[0])->produces);
+        $this->assertSame($farm->key, end($path));
+        $this->assertLessThanOrEqual(Farms::TRENCH_REACH + 1, count($path));
+
+        $leader = $this->player();
+        $member = $this->player();
+        $faction = $this->faction('Diggers', $leader, $member);
+        $faction->forceFill(['treasury' => 1000, 'materials' => ['wood' => 100, 'stone' => 100]])->save();
+        $this->hold($faction, $farm->key);
+        $this->stand($leader, $farm->key);
+        $this->stand($member, $farm->key);
+
+        try {
+            app(Farms::class)->dig($member->fresh(), $farm->fresh());
+            $this->fail('A member dug a trench.');
+        } catch (GameException $e) {
+            $this->assertStringContainsString('leader and council', $e->getMessage());
+        }
+
+        app(Farms::class)->dig($leader->fresh(), $farm->fresh());
+        $stretches = count($path) - 1;
+        $this->assertSame($path, $farm->fresh()->trench);
+        $this->assertSame(1000 - Farms::TRENCH_CORN * $stretches, $faction->fresh()->treasury);
+        $this->assertSame(100 - Farms::TRENCH_WOOD * $stretches, $faction->fresh()->materials['wood']);
+
+        // It never runs dry, and the patches it grows into are fed too.
+        $farm->forceFill(['watered_until' => now()->subDay()])->save();
+        $this->assertFalse($farm->fresh()->isParched());
+        $field = $this->region(Farms::fieldKeys($farm->key)[0]);
+        $field->forceFill(['wild' => false, 'watered_until' => null])->save();
+        $this->assertFalse($field->fresh()->isParched());
+
+        // A rival standing where it runs fills it in.
+        $rival = $this->player();
+        $this->stand($rival, $path[0]);
+        app(Farms::class)->fill($rival->fresh(), $farm->fresh());
+        $this->assertNull($farm->fresh()->trench);
+        $this->assertTrue($farm->fresh()->isParched());
+        $this->assertTrue($field->fresh()->isParched());
+    }
 }

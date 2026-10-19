@@ -35,6 +35,8 @@ import {
     buyFarm,
     growFarm,
     waterFarm,
+    digTrench,
+    fillTrench,
     commit,
     crime,
     faction as factionPage,
@@ -91,7 +93,13 @@ type Props = {
     gateNight: GateNightInfo;
     base: FactionStore | null;
     buildingKinds: BuildingKindCard[];
-    farms: { price: number; income: number; water: number; waterHours: number };
+    farms: {
+        price: number;
+        income: number;
+        water: number;
+        waterHours: number;
+        fill: number;
+    };
     warrants: Warrant[];
     plunder: Plunder;
     /** Irongate's people, for the town's districts. */
@@ -139,6 +147,7 @@ export function RegionPanel({
     const holds = (other?: MapRegion) =>
         myFaction !== null && other?.faction?.id === myFaction.id;
     const isHere = region.id === here;
+    const hereKey = regions.find((other) => other.id === here)?.key ?? null;
     const frontLine = here !== null && region.neighbours.includes(here);
     const raidable =
         myFaction !== null &&
@@ -459,7 +468,47 @@ export function RegionPanel({
                                 ? `Only ${region.faction.name} can gather it now.`
                                 : 'Anyone can gather it until a faction claims the farm.'}
                         </p>
-                        {region.wateredUntil !== null && (
+                        {region.wateredUntil !== null && region.irrigated && (
+                            <div className="flex flex-col gap-2 rounded-lg border border-sky-400/30 bg-sky-400/10 p-3">
+                                <p>
+                                    💧{' '}
+                                    {region.trench
+                                        ? `A trench runs water here from ${region.trench.from}.`
+                                        : 'The trench to its farm waters it too.'}{' '}
+                                    It never runs dry while the trench holds.
+                                </p>
+                                {region.trench &&
+                                    (holds(region) ? (
+                                        <p className="text-xs text-muted-foreground">
+                                            Rivals can fill it in for{' '}
+                                            {farms.fill} horseshoes where it
+                                            runs. Keep an eye on it.
+                                        </p>
+                                    ) : hereKey !== null &&
+                                      region.trench.keys.includes(hereKey) ? (
+                                        <Button
+                                            size="sm"
+                                            variant="secondary"
+                                            className="self-start"
+                                            disabled={
+                                                horseshoesLeft < farms.fill
+                                            }
+                                            onClick={() =>
+                                                act(fillTrench.url(region.id))
+                                            }
+                                        >
+                                            Fill it in ({farms.fill} horseshoes)
+                                        </Button>
+                                    ) : (
+                                        <p className="text-xs text-muted-foreground">
+                                            Rivals can fill it in for{' '}
+                                            {farms.fill} horseshoes, standing
+                                            anywhere it runs.
+                                        </p>
+                                    ))}
+                            </div>
+                        )}
+                        {region.wateredUntil !== null && !region.irrigated && (
                             <div className="flex flex-col gap-2 rounded-lg border border-sky-400/30 bg-sky-400/10 p-3">
                                 <p>
                                     {region.wateredUntil
@@ -496,6 +545,73 @@ export function RegionPanel({
                                         Walk here with {farms.water} water to
                                         water it. Ponds, meres and springs give
                                         water.
+                                    </p>
+                                )}
+                            </div>
+                        )}
+                        {region.trenchPlan && !region.irrigated && (
+                            <div className="flex flex-col gap-2 rounded-lg border border-sky-400/30 p-3">
+                                <p className="font-semibold">Dig a trench</p>
+                                {region.trenchPlan.from &&
+                                region.trenchPlan.cost ? (
+                                    <>
+                                        <p className="text-muted-foreground">
+                                            Run water from{' '}
+                                            {region.trenchPlan.from},{' '}
+                                            {region.trenchPlan.stretches}{' '}
+                                            {region.trenchPlan.stretches === 1
+                                                ? 'region'
+                                                : 'regions'}{' '}
+                                            away, and it never runs dry again.
+                                            The patches it grows into get water
+                                            too.
+                                        </p>
+                                        {base?.canBuild ? (
+                                            <>
+                                                <CostList
+                                                    cost={
+                                                        region.trenchPlan.cost
+                                                    }
+                                                    store={base}
+                                                />
+                                                {isHere ? (
+                                                    <Button
+                                                        className="self-start"
+                                                        disabled={
+                                                            shortOf(
+                                                                region
+                                                                    .trenchPlan
+                                                                    .cost,
+                                                                base,
+                                                            ).length > 0
+                                                        }
+                                                        onClick={() =>
+                                                            act(
+                                                                digTrench.url(
+                                                                    region.id,
+                                                                ),
+                                                            )
+                                                        }
+                                                    >
+                                                        Dig the trench
+                                                    </Button>
+                                                ) : (
+                                                    <p className="text-xs text-muted-foreground">
+                                                        Walk here to dig it.
+                                                    </p>
+                                                )}
+                                            </>
+                                        ) : (
+                                            <p className="text-xs text-muted-foreground">
+                                                Your faction's leader and
+                                                council can dig it.
+                                            </p>
+                                        )}
+                                    </>
+                                ) : (
+                                    <p className="text-muted-foreground">
+                                        No pond, mere or spring is near enough
+                                        to dig a trench from.
                                     </p>
                                 )}
                             </div>

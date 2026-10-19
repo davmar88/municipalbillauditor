@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Game\ValleyBuilder;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -27,6 +28,7 @@ use Illuminate\Support\Carbon;
  * @property int|null $faction_id
  * @property Carbon|null $held_since
  * @property Carbon|null $settled_until
+ * @property list<string>|null $trench The regions its irrigation trench runs through, from the water to the farm.
  * @property Carbon|null $watered_until Until when a farm is watered; a parched farm grows nothing.
  * @property Faction|null $faction
  * @property Building|null $building
@@ -39,6 +41,7 @@ class Region extends Model
         return [
             'held_since' => 'datetime',
             'watered_until' => 'datetime',
+            'trench' => 'array',
             'settled_until' => 'datetime',
             'stock_at' => 'datetime',
             'wild' => 'boolean',
@@ -77,7 +80,19 @@ class Region extends Model
     /** A farm that has run out of water: it can't be gathered and pays nothing. */
     public function isParched(): bool
     {
-        return $this->isFarm() && ! $this->wild && ($this->watered_until === null || $this->watered_until->isPast());
+        return $this->isFarm() && ! $this->wild && ! $this->irrigated() && ($this->watered_until === null || $this->watered_until->isPast());
+    }
+
+    /** Fed by a trench: its own, or the farm's it was grown from. */
+    public function irrigated(): bool
+    {
+        if ($this->trench !== null) {
+            return true;
+        }
+
+        $farm = ValleyBuilder::FIELD_OF[$this->key] ?? null;
+
+        return $farm !== null && self::query()->where('valley_id', $this->valley_id)->where('key', $farm)->whereNotNull('trench')->exists();
     }
 
     /** One of the farms beyond Hollowmere's fences. */

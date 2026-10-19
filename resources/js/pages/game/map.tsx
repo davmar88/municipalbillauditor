@@ -43,7 +43,13 @@ type Props = {
     yields: { corn: number; material: number };
     base: FactionStore | null;
     buildingKinds: BuildingKindCard[];
-    farms: { price: number; income: number; water: number; waterHours: number };
+    farms: {
+        price: number;
+        income: number;
+        water: number;
+        waterHours: number;
+        fill: number;
+    };
     warrants: Warrant[];
     plunder: Plunder;
     irongate: IrongateInfo;
