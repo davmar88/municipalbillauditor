@@ -8,11 +8,11 @@
 
 export type Point = [number, number];
 
-/** Everything drawn: Hollowmere, the farms beyond its fences and the land round them. */
-export const WORLD = { x: -1380, y: -1240, width: 3160, height: 3530 };
+/** Everything drawn: Hollowmere, the farms beyond its fences, Irongate and the land round them. */
+export const WORLD = { x: -1380, y: -1240, width: 3760, height: 3530 };
 
-/** Hollowmere and its farms, for seeing everything at once. */
-export const REACH = { x: -1340, y: -1200, width: 2900, height: 3450 };
+/** Hollowmere, its farms and Irongate, for seeing everything at once. */
+export const REACH = { x: -1340, y: -1200, width: 3380, height: 3450 };
 
 /** The farm without the land around it, for fitting it on screen. */
 export const FARM = { x: 96, y: 92, width: 1408, height: 904 };
@@ -315,6 +315,41 @@ export function smoothLoop(points: Point[]): string {
     return `${d}Z`;
 }
 
+/**
+ * Irongate, the humans' town just past Ironfield Gate, in three walled
+ * districts down the far side of the east fence. Nobody holds it.
+ */
+export const CITY: Record<string, Point[]> = {
+    irongate_rookery: [
+        [1518, 132],
+        [1640, 112],
+        [1780, 122],
+        [1888, 150],
+        [1906, 258],
+        [1880, 350],
+        [1700, 364],
+        [1520, 348],
+    ],
+    irongate_yards: [
+        [1520, 348],
+        [1700, 364],
+        [1880, 350],
+        [1932, 470],
+        [1914, 592],
+        [1720, 606],
+        [1522, 598],
+    ],
+    irongate_garrison: [
+        [1522, 598],
+        [1720, 606],
+        [1914, 592],
+        [1902, 722],
+        [1862, 850],
+        [1682, 870],
+        [1524, 846],
+    ],
+};
+
 /** Every region's outline, worked out once. */
 export const SHAPES: Record<string, RegionShape> = Object.fromEntries([
     ...Object.entries(LAYOUT).map(([key, [col, row]]) => [
@@ -322,6 +357,7 @@ export const SHAPES: Record<string, RegionShape> = Object.fromEntries([
         regionShape(col, row, key === 'paddock'),
     ]),
     ...Object.entries(FARMS).map(([key, farm]) => [key, shape(farm.polygon)]),
+    ...Object.entries(CITY).map(([key, polygon]) => [key, shape(polygon)]),
 ]);
 
 /**
@@ -682,6 +718,10 @@ const HUBS: Record<string, Point> = {
     stables: [18, 28],
     old_well: [-20, 18],
     paddock: [0, 6],
+    // Gate Road ends in the Iron Yards.
+    irongate_rookery: [-60, 20],
+    irongate_yards: [-110, 6],
+    irongate_garrison: [-60, -10],
 };
 
 /** Where a faction's building goes in each region, as a nudge from its middle. */

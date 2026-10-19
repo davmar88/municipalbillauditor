@@ -31,6 +31,12 @@ final class Chat
         return "faction:{$id}";
     }
 
+    /** The Rookery board in Irongate, where lone wolves talk among themselves. */
+    public static function rookery(): string
+    {
+        return 'rookery';
+    }
+
     public static function between(int $a, int $b): string
     {
         return 'between:'.min($a, $b).':'.max($a, $b);
@@ -38,13 +44,17 @@ final class Chat
 
     /**
      * The channels a player can read: the square, their faction, and one
-     * with each other faction.
+     * with each other faction; a lone wolf reads the Rookery board instead.
      *
      * @return array<int, array{key: string, label: string, colour: string|null}>
      */
     public function channels(Player $player): array
     {
         $channels = [['key' => self::valley(), 'label' => 'Valley square', 'colour' => null]];
+
+        if ($player->isLoneWolf()) {
+            $channels[] = ['key' => self::rookery(), 'label' => 'The Rookery board', 'colour' => '#f5a27a'];
+        }
 
         if ($player->faction !== null) {
             $channels[] = ['key' => self::faction($player->faction_id), 'label' => $player->faction->name, 'colour' => $player->faction->colour];
@@ -69,7 +79,7 @@ final class Chat
         }
 
         if ($player->faction_id === null) {
-            return false;
+            return $channel === self::rookery();
         }
 
         if ($channel === self::faction($player->faction_id)) {

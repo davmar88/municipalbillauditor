@@ -78,6 +78,12 @@ class Region extends Model
         return $this->ring === 'farm';
     }
 
+    /** One of Irongate's districts: the humans' town, which nobody holds. */
+    public function isCity(): bool
+    {
+        return $this->ring === 'city';
+    }
+
     public function isFarmhouse(): bool
     {
         return $this->key === 'farmhouse';

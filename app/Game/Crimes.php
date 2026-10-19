@@ -35,6 +35,9 @@ final class Crimes
 
     public const PLUNDER_WATCH_MINUTES = 120;
 
+    /** How long an animal that left a faction waits before its first crime. */
+    public const LONE_WOLF_HOURS = 24;
+
     /**
      * @throws GameException
      */
@@ -51,6 +54,11 @@ final class Crimes
 
         if ($player->level() < $level) {
             throw new GameException("Crime opens up at level {$level}.");
+        }
+
+        // Leaving a faction to steal and coming straight back doesn't work: a day as a lone wolf first.
+        if ($player->left_faction_at !== null && $player->left_faction_at->gt(now()->subHours(self::LONE_WOLF_HOURS))) {
+            throw new GameException('You only just left your faction. Lie low as a lone wolf until '.Clock::local($player->left_faction_at->copy()->addHours(self::LONE_WOLF_HOURS))->format('j M \a\t H:i').' before your first crime.');
         }
 
         // Plunder runs on its own clock; looting and burning are once a day.

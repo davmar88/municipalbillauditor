@@ -200,7 +200,10 @@ final class Warrants
             $where = $wanted->location();
 
             if ($hunter->location()->id !== $where->id) {
-                throw new GameException("{$wanted->name} is in {$where->name}. Walk there to make the arrest.");
+                // Lying low in Irongate: the town is all anyone knows, unless they ask Wick.
+                throw new GameException($where->isCity()
+                    ? "{$wanted->name} is hiding somewhere in Irongate. Find the district, or pay Wick in the Iron Yards to tell you."
+                    : "{$wanted->name} is in {$where->name}. Walk there to make the arrest.");
             }
 
             Horseshoes::spend($hunter, self::ARREST_HORSESHOES);

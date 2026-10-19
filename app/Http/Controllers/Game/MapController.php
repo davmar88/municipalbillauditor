@@ -10,6 +10,7 @@ use App\Game\Crimes;
 use App\Game\Farms;
 use App\Game\GateNight;
 use App\Game\Gathering;
+use App\Game\Irongate;
 use App\Game\Movement;
 use App\Game\Powers;
 use App\Game\Stock;
@@ -70,8 +71,16 @@ class MapController extends Controller
                 in_array($animal->id, $wanted, true) => 1,
                 default => 2,
             })
-            ->groupBy(fn (Player $animal) => $animal->region_id ?? $paddock?->id)
-            ->map(fn ($group) => $group->values());
+            ->groupBy(fn (Player $animal) => $animal->region_id ?? $paddock?->id);
+        // Outlaws lying low in Irongate show only to animals in the same district, or a Dog in the town.
+        $hereRegion = $regions->firstWhere('id', $player->region_id ?? $paddock?->id) ?? $paddock;
+        $animals = $animals->map(function ($group, $regionId) use ($regions, $player, $hereRegion, $wanted) {
+            $where = $regions->firstWhere('id', $regionId);
+
+            return $where === null || $hereRegion === null
+                ? $group->values()
+                : $group->reject(fn (Player $animal) => Irongate::hidden($animal->id, $where, $player, $hereRegion, $wanted))->values();
+        });
         // What the animals the map shows are wearing, in one query.
         $wearing = Wardrobe::wornBy([$player->id, ...$animals->flatMap(fn ($group) => $group->take(12)->pluck('id'))]);
 
@@ -187,6 +196,19 @@ class MapController extends Controller
                 'result' => $season !== null ? GateNight::result($season) : null,
             ],
             'yields' => ['corn' => Gathering::CORN, 'material' => Gathering::MATERIAL],
+            // Irongate's people and their prices, for the city's cards.
+            'irongate' => [
+                'folk' => collect(Irongate::FOLK)->map(fn (array $folk, string $key) => ['key' => $key, ...$folk])->values(),
+                'muster' => Irongate::muster($valley),
+                'fence' => [
+                    'price' => Irongate::FENCE_PRICE,
+                    'rarePrice' => Irongate::FENCE_RARE_PRICE,
+                    'rare' => Irongate::RARE,
+                    'left' => Irongate::fenceLeft($player),
+                    'daily' => Irongate::FENCE_DAILY_CORN,
+                ],
+                'tip' => Irongate::TIP_CORN,
+            ],
         ]);
     }
 

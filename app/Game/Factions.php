@@ -5,6 +5,7 @@ namespace App\Game;
 use App\Enums\EntryMode;
 use App\Enums\FactionRole;
 use App\Enums\Species;
+use App\Models\Crime;
 use App\Models\Faction;
 use App\Models\FactionJoinRequest;
 use App\Models\Player;
@@ -157,7 +158,7 @@ final class Factions
             }
 
             $wasLeader = $player->faction_role === FactionRole::Leader;
-            $player->forceFill(['faction_id' => null, 'faction_role' => null, 'faction_joined_at' => null])->save();
+            $player->forceFill(['faction_id' => null, 'faction_role' => null, 'faction_joined_at' => null, 'left_faction_at' => now()])->save();
 
             $successor = $faction->members()
                 ->orderByRaw("case faction_role when 'council' then 0 when 'member' then 1 else 2 end")
@@ -213,7 +214,10 @@ final class Factions
             throw new GameException("Only the leader or council can remove a member, and the leader can't be removed.");
         }
 
-        $member->forceFill(['faction_id' => null, 'faction_role' => null, 'faction_joined_at' => null])->save();
+        $faction = $member->faction;
+        $member->forceFill(['faction_id' => null, 'faction_role' => null, 'faction_joined_at' => null, 'left_faction_at' => now()])->save();
+        // An outcast should hear it, not find out on the map.
+        Notices::send($member->id, 'faction', "{$leader->name} threw you out of {$faction?->name}. You're a lone wolf now: Irongate's Rookery takes anyone.", route('play.faction', [], false));
     }
 
     /**
@@ -272,6 +276,11 @@ final class Factions
 
         if (! $faction->accepts_criminals && $player->wanted > 0) {
             throw new GameException("{$faction->name} doesn't take animals with a criminal record.");
+        }
+
+        // No hiding a crime behind a faction badge before it has played out.
+        if (Crime::query()->where('player_id', $player->id)->whereNull('resolved_at')->exists()) {
+            throw new GameException('You have a crime still playing out. Join a faction once you know whether you got away with it.');
         }
 
         if ($player->corn < $faction->entry_fee) {

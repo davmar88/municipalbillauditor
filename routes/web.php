@@ -11,6 +11,7 @@ use App\Http\Controllers\Game\ChatController;
 use App\Http\Controllers\Game\CrimeController;
 use App\Http\Controllers\Game\FactionController;
 use App\Http\Controllers\Game\GiftController;
+use App\Http\Controllers\Game\IrongateController;
 use App\Http\Controllers\Game\MapController;
 use App\Http\Controllers\Game\MarketController;
 use App\Http\Controllers\Game\MessageController;
@@ -139,6 +140,10 @@ Route::middleware(['auth', 'verified', 'player', 'throttle:120,1'])->prefix('pla
     // Giving another animal an item from your bag.
     Route::get('gifts', [GiftController::class, 'index'])->name('play.gifts');
     Route::post('animals/{player}/gift', [GiftController::class, 'store'])->middleware('throttle:20,1,gifts')->name('play.gift');
+
+    // Irongate's people: the fence and the informer.
+    Route::post('irongate/fence', [IrongateController::class, 'fence'])->middleware('throttle:20,1,irongate')->name('play.irongate.fence');
+    Route::post('irongate/tip/{warrant}', [IrongateController::class, 'tip'])->middleware('throttle:20,1,irongate')->name('play.irongate.tip');
 
     // The bell, and the pulse every screen checks for pop-ups.
     Route::get('pulse', [NoticeController::class, 'pulse'])->name('play.pulse');

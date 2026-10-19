@@ -48,6 +48,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $home_closed_until
  * @property Carbon|null $home_burned_at
  * @property Carbon|null $pound_until
+ * @property Carbon|null $left_faction_at When it last left or was thrown out of a faction.
  * @property int $wanted
  * @property Carbon|null $muted_until Our team stopped the animal writing until then.
  * @property Carbon|null $last_visit_on
@@ -76,6 +77,7 @@ class Player extends Model
             'home_burned_at' => 'datetime',
             'pound_until' => 'datetime',
             'muted_until' => 'datetime',
+            'left_faction_at' => 'datetime',
             'last_visit_on' => 'date',
             'adult_confirmed_at' => 'datetime',
             'orchard_until' => 'datetime',

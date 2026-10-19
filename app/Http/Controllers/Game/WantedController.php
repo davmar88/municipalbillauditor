@@ -51,7 +51,8 @@ class WantedController extends Controller
                     'bounty' => $warrant->bounty,
                     'payout' => Warrants::payout($warrant->bounty),
                     'issuedBy' => $warrant->faction?->name,
-                    'lastSeen' => $where->name,
+                    // An outlaw lying low in Irongate is only known to be somewhere in the town.
+                    'lastSeen' => $where->isCity() ? 'Irongate' : $where->name,
                     'inPound' => $warrant->wanted->inPound(),
                     'escapedUntil' => $warrant->escaped_until?->isFuture() ? $warrant->escaped_until->toIso8601String() : null,
                     'mine' => $warrant->player_id === $player->id,

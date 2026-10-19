@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\DB;
 /**
  * Lays out a valley: the sixteen regions of Hollowmere on a five by three
  * grid with the Paddock along the bottom, the farms beyond its fences,
+ * Irongate's three districts past the east fence,
  * which regions border which, and the first season. Running it again adds
  * only what is missing, so a new farm reaches a running valley.
  */
@@ -65,6 +66,15 @@ final class ValleyBuilder
         'marlow_glen' => ['Marlow Glen', 'farm', 'herbs', 21, 9],
         'marlow_leas' => ['Marlow Leas', 'farm', 'herbs', 22, 9],
         'marlow_mill' => ['Marlow Mill', 'farm', 'herbs', 23, 9],
+        // Irongate, the humans' town past Ironfield Gate: nobody holds it and nothing grows there.
+        'irongate_rookery' => ['The Rookery', 'city', null, 0, 10],
+        'irongate_yards' => ['The Iron Yards', 'city', null, 1, 10],
+        'irongate_garrison' => ['The Garrison', 'city', null, 2, 10],
+    ];
+
+    /** Irongate's districts and what each borders: the Yards open onto Ironfield Gate and the other two. */
+    public const CITY_LINKS = [
+        'irongate_yards' => ['ironfield_gate', 'irongate_rookery', 'irongate_garrison'],
     ];
 
     /** Which farm each patch of wild land belongs to, in the order it is cleared. */
@@ -180,6 +190,11 @@ final class ValleyBuilder
 
     private function touches(Region $a, Region $b): bool
     {
+        if ($a->isCity() || $b->isCity()) {
+            return in_array($b->key, self::CITY_LINKS[$a->key] ?? [], true)
+                || in_array($a->key, self::CITY_LINKS[$b->key] ?? [], true);
+        }
+
         if ($a->isFarm() || $b->isFarm()) {
             return in_array($b->key, self::FARM_LINKS[$a->key] ?? [], true)
                 || in_array($a->key, self::FARM_LINKS[$b->key] ?? [], true);

@@ -45,6 +45,10 @@ final class Battles
             throw new GameException("{$target->name} is safe ground. Nobody can attack it.");
         }
 
+        if ($target->isCity()) {
+            throw new GameException("{$target->name} is part of Irongate, the humans' town. No faction can take it.");
+        }
+
         if ($target->faction_id === $faction->id) {
             throw new GameException("Your faction already holds {$target->name}.");
         }

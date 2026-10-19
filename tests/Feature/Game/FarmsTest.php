@@ -29,7 +29,7 @@ class FarmsTest extends TestCase
 
     public function test_the_valley_has_six_farms_beyond_the_fences_in_two_rings(): void
     {
-        $this->assertSame(22, $this->valley->regions()->where('wild', false)->count());
+        $this->assertSame(22, $this->valley->regions()->where('wild', false)->where('ring', '!=', 'city')->count());
         $this->assertSame(18, $this->valley->regions()->where('wild', true)->count(), 'Three patches of wild land round each farm.');
         $this->assertEqualsCanonicalizing(['thornbury'], $this->region('ashcombe')->neighbours()->where('wild', false)->pluck('key')->all(), 'The second ring is reached from the first.');
         $this->assertSame(['iron', 'honey', 'herbs'], [$this->region('ashcombe')->produces, $this->region('fennick')->produces, $this->region('marlow')->produces]);
