@@ -1,0 +1,3 @@
+Buildings and the bonfire from the LowPoly Medieval Village Pack by Quaternius, https://quaternius.com
+License: CC0 1.0 Universal (public domain), https://creativecommons.org/publicdomain/zero/1.0/
+Converted from FBX to GLB, centred and set on the ground, without texture coordinates.

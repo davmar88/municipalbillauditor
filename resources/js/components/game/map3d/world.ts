@@ -54,6 +54,8 @@ import {
     farmBuilding,
     farmReady,
     loadFarm,
+    loadModels,
+    modelsReady,
 } from './farm';
 import type { Actor } from './models';
 import { makeActor } from './models';
@@ -1784,13 +1786,45 @@ export class World {
             }
             const built = styled ?? villageHome(home);
             const group = built ? withRing(built, home) : homeModel(home);
+            // A campfire burns beside every tent.
+            if (home.level === 0) {
+                const fire = farmBuilding('Bonfire_Lit');
+                if (fire) {
+                    fire.scale.setScalar(0.4);
+                    fire.position.set(0.65, 0, 0.35);
+                    group.add(fire);
+                }
+            }
             group.position.set(home.x, 0, home.y);
             this.dwellings.add(group);
             return { group, level: home.level };
         });
         this.placeHomes();
-        if (data.homes.some((home) => home.style)) {
-            this.askFarm();
+        // The looks homes have picked, and the tents' campfires, fetched as needed.
+        const wanted = [
+            ...new Set(
+                data.homes.flatMap((home): FarmModel[] => {
+                    const look = home.style
+                        ? HOME_STYLE[home.style]
+                        : undefined;
+                    return home.level === 0
+                        ? ['Bonfire_Lit']
+                        : look
+                          ? [look]
+                          : [];
+                }),
+            ),
+        ];
+        if (!modelsReady(wanted)) {
+            loadModels(wanted)
+                .then(() => {
+                    if (!this.disposed && this.data) {
+                        this.buildHomes();
+                    }
+                })
+                .catch((error: unknown) => {
+                    console.warn('A home model did not load.', error);
+                });
         }
         if (!this.villageAsked && data.homes.some((home) => home.level > 0)) {
             this.villageAsked = true;

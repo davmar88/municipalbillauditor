@@ -22,15 +22,42 @@ export const FARM_MODELS = [
     'Windmill',
 ] as const;
 
-export type FarmModel = (typeof FARM_MODELS)[number];
+/** Houses and more from Quaternius's LowPoly Medieval Village Pack (CC0), fetched only when a home or a tent needs one. */
+export const MEDIEVAL_MODELS = [
+    'House_1',
+    'House_2',
+    'House_3',
+    'House_4',
+    'Inn',
+    'Blacksmith',
+    'Stable',
+    'Mill',
+    'Sawmill',
+    'Bell_Tower',
+    'Bonfire_Lit',
+] as const;
 
-/** The farm buildings a home can look like, by the style its owner picked. */
+export type FarmModel =
+    | (typeof FARM_MODELS)[number]
+    | (typeof MEDIEVAL_MODELS)[number];
+
+/** The buildings a home can look like, by the style its owner picked. */
 export const HOME_STYLE: Record<string, FarmModel> = {
     barn: 'SmallBarn',
     coop: 'ChickenCoop',
     silo: 'Silo_House',
     windmill: 'Windmill',
     water_tower: 'WaterTower',
+    timber_house: 'House_1',
+    town_house: 'House_2',
+    stone_cottage: 'House_3',
+    low_cottage: 'House_4',
+    inn: 'Inn',
+    forge: 'Blacksmith',
+    stable: 'Stable',
+    mill_house: 'Mill',
+    sawmill: 'Sawmill',
+    bell_tower: 'Bell_Tower',
 };
 
 /** Which building stands for each kind a faction can raise. */
@@ -47,50 +74,67 @@ export const FOR_KIND: Record<BuildingKindValue, FarmModel> = {
     silo: 'Silo',
 };
 
-let loading: Promise<void> | null = null;
+const loader = new GLTFLoader();
+const loads = new Map<FarmModel, Promise<void>>();
 const ready = new Map<FarmModel, THREE.Object3D>();
 
-/** Download the buildings once; resolves when they can be placed. */
-export function loadFarm(): Promise<void> {
-    if (!loading) {
-        const loader = new GLTFLoader();
-        loading = Promise.all(
-            FARM_MODELS.map((name) =>
-                loader.loadAsync(`/models/farm/${name}.glb`).then((gltf) => {
-                    // About one unit across, the tall ones kept from towering too far.
-                    const box = new THREE.Box3().setFromObject(gltf.scene);
-                    const size = box.getSize(new THREE.Vector3());
-                    const unit = Math.max(size.x, size.z, size.y / 1.6);
-                    const model = new THREE.Group();
-                    model.add(gltf.scene);
-                    model.scale.setScalar(1 / unit);
-                    gltf.scene.traverse((o) => {
-                        const mesh = o as THREE.Mesh;
-                        if (mesh.isMesh) {
-                            const list = Array.isArray(mesh.material)
-                                ? mesh.material
-                                : [mesh.material];
-                            mesh.userData.materials = list.map((m) => ({
-                                name: m.name,
-                                colour: `#${(m as THREE.MeshStandardMaterial).color.getHexString()}`,
-                            }));
-                        }
+function folder(name: FarmModel): string {
+    return (FARM_MODELS as readonly string[]).includes(name)
+        ? 'farm'
+        : 'medieval';
+}
+
+/** Download these buildings, each once; resolves when they can be placed. */
+export function loadModels(names: readonly FarmModel[]): Promise<void> {
+    return Promise.all(
+        names.map((name) => {
+            let found = loads.get(name);
+            if (!found) {
+                found = loader
+                    .loadAsync(`/models/${folder(name)}/${name}.glb`)
+                    .then((gltf) => {
+                        // About one unit across, the tall ones kept from towering too far.
+                        const box = new THREE.Box3().setFromObject(gltf.scene);
+                        const size = box.getSize(new THREE.Vector3());
+                        const unit = Math.max(size.x, size.z, size.y / 1.6);
+                        const model = new THREE.Group();
+                        model.add(gltf.scene);
+                        model.scale.setScalar(1 / unit);
+                        gltf.scene.traverse((o) => {
+                            const mesh = o as THREE.Mesh;
+                            if (mesh.isMesh) {
+                                const list = Array.isArray(mesh.material)
+                                    ? mesh.material
+                                    : [mesh.material];
+                                mesh.userData.materials = list.map((m) => ({
+                                    name: m.name,
+                                    colour: `#${(m as THREE.MeshStandardMaterial).color.getHexString()}`,
+                                }));
+                            }
+                        });
+                        ready.set(name, model);
                     });
-                    ready.set(name, model);
-                }),
-            ),
-        ).then(() => undefined);
-        // A failed download can be tried again later.
-        loading.catch(() => {
-            loading = null;
-            ready.clear();
-        });
-    }
-    return loading;
+                loads.set(name, found);
+                // A failed download can be tried again later.
+                found.catch(() => loads.delete(name));
+            }
+            return found;
+        }),
+    ).then(() => undefined);
+}
+
+/** Download the farm buildings once; resolves when they can be placed. */
+export function loadFarm(): Promise<void> {
+    return loadModels(FARM_MODELS);
+}
+
+/** Whether these buildings have all loaded. */
+export function modelsReady(names: readonly FarmModel[]): boolean {
+    return names.every((name) => ready.has(name));
 }
 
 export function farmReady(): boolean {
-    return ready.size === FARM_MODELS.length;
+    return modelsReady(FARM_MODELS);
 }
 
 const materials = new Map<string, THREE.MeshLambertMaterial>();

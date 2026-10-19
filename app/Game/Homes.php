@@ -39,6 +39,16 @@ final class Homes
         'silo' => 'Silo house',
         'windmill' => 'Windmill',
         'water_tower' => 'Water tower',
+        'timber_house' => 'Timber house',
+        'town_house' => 'Town house',
+        'stone_cottage' => 'Stone cottage',
+        'low_cottage' => 'Low cottage',
+        'inn' => 'Inn',
+        'forge' => 'Forge',
+        'stable' => 'Stable',
+        'mill_house' => 'Mill house',
+        'sawmill' => 'Sawmill',
+        'bell_tower' => 'Bell tower',
     ];
 
     /** How close an animal must stand to its home to go in or work on it, in paces. */
