@@ -1275,8 +1275,16 @@ export function crowdRoom(k: number): number {
     return k < 0.55 ? 3 : k < 0.9 ? 6 : k < 1.8 ? 12 : 24;
 }
 
-/** Homes and buildings keep their size on screen close in, and shrink to their place on the land further out. */
+/** Homes and buildings have a fixed size on the land: small far out, big and detailed close in. */
 export const OBJECT_FLOOR = 1.2;
+
+/** Past this zoom, animals and markers grow with the land instead of keeping their size on screen. */
+export const CLOSE_ZOOM = 1.2;
+
+/** How much to scale a screen-sized thing: the same on screen far out, growing with the land close in. */
+export function grows(k: number): number {
+    return 1 / Math.min(k, CLOSE_ZOOM);
+}
 
 /** Your own home, if a point on the map falls on it at this zoom. */
 export function myHomeAt(
@@ -1285,7 +1293,7 @@ export function myHomeAt(
     k: number,
 ): MapHome | null {
     const mine = homes?.find((home) => home.mine);
-    const reach = 26 / Math.max(k, OBJECT_FLOOR);
+    const reach = 26 / OBJECT_FLOOR;
 
     return mine && Math.hypot(mine.x - x, mine.y - y) <= reach ? mine : null;
 }
@@ -1331,7 +1339,7 @@ const Crowd = memo(function Crowd({
                                     data-animal={animal.id}
                                     pointerEvents="all"
                                     className="cursor-pointer"
-                                    transform={`translate(${(hx + sx / k).toFixed(1)} ${(hy + sy / k).toFixed(1)}) scale(${1 / k})`}
+                                    transform={`translate(${(hx + sx * grows(k)).toFixed(1)} ${(hy + sy * grows(k)).toFixed(1)}) scale(${grows(k)})`}
                                 >
                                     <circle
                                         r={11.5}
@@ -1378,7 +1386,7 @@ const Crowd = memo(function Crowd({
                         })}
                         {extra > 0 && (
                             <g
-                                transform={`translate(${(hx + SPOTS[Math.min(shown.length, SPOTS.length - 1)][0] / k).toFixed(1)} ${(hy + SPOTS[Math.min(shown.length, SPOTS.length - 1)][1] / k).toFixed(1)}) scale(${1 / k})`}
+                                transform={`translate(${(hx + SPOTS[Math.min(shown.length, SPOTS.length - 1)][0] * grows(k)).toFixed(1)} ${(hy + SPOTS[Math.min(shown.length, SPOTS.length - 1)][1] * grows(k)).toFixed(1)}) scale(${grows(k)})`}
                             >
                                 <rect
                                     x={-15}
@@ -1425,7 +1433,7 @@ const Homes = memo(function Homes({
                 return (
                     <g
                         key={home.id}
-                        transform={`translate(${home.x.toFixed(1)} ${home.y.toFixed(1)}) scale(${HOME_SIZE / Math.max(k, OBJECT_FLOOR)})`}
+                        transform={`translate(${home.x.toFixed(1)} ${home.y.toFixed(1)}) scale(${HOME_SIZE / OBJECT_FLOOR})`}
                         opacity={home.readyAt ? 0.6 : 1}
                     >
                         <title>{`${home.owner.name}'s ${home.name}`}</title>
@@ -1520,7 +1528,7 @@ const Folk = memo(function Folk({
                         key={person.key}
                         data-folk={person.key}
                         className="cursor-pointer"
-                        transform={`translate(${x.toFixed(1)} ${y.toFixed(1)}) scale(${1 / Math.max(k, OBJECT_FLOOR)})`}
+                        transform={`translate(${x.toFixed(1)} ${y.toFixed(1)}) scale(${1 / OBJECT_FLOOR})`}
                     >
                         <title>{`${person.name}, ${person.role}`}</title>
                         <circle
@@ -1594,7 +1602,7 @@ const Bases = memo(function Bases({
                 return (
                     <g
                         key={region.id}
-                        transform={`translate(${x.toFixed(1)} ${y.toFixed(1)}) scale(${(1 / Math.max(k, OBJECT_FLOOR)).toFixed(3)})`}
+                        transform={`translate(${x.toFixed(1)} ${y.toFixed(1)}) scale(${(1 / OBJECT_FLOOR).toFixed(3)})`}
                         opacity={goingUp ? 0.75 : 1}
                     >
                         <rect
@@ -1692,7 +1700,7 @@ function WalkLine({ from, to, k }: { from: Point; to: Point; k: number }) {
                 strokeLinecap="round"
                 opacity={0.9}
             />
-            <g transform={`translate(${to[0]} ${to[1]}) scale(${1 / k})`}>
+            <g transform={`translate(${to[0]} ${to[1]}) scale(${grows(k)})`}>
                 <circle r={7} fill={VIOLET} stroke={HALO} strokeWidth={2} />
                 <circle r={2.5} fill="#14121a" />
             </g>
@@ -1722,7 +1730,7 @@ function Me({
                     : 'transform 1s cubic-bezier(0.45, 0, 0.2, 1)',
             }}
         >
-            <g transform={`scale(${1 / k})`}>
+            <g transform={`scale(${grows(k)})`}>
                 <circle r={20} fill={VIOLET} className="map-ping" />
                 <circle cx={1.5} cy={3} r={20} fill={HALO} opacity={0.6} />
                 <circle r={20} fill={VIOLET} />

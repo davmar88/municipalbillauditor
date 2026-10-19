@@ -16,6 +16,7 @@ import {
     shapeFor,
     subtitle,
     walkPoint,
+    CLOSE_ZOOM,
     OBJECT_FLOOR,
     crowdRoom,
 } from '@/components/game/world-map';
@@ -1428,7 +1429,7 @@ export class World {
 
     private placeBuildings() {
         // Like the 2D badges: the same size on screen, shrinking only when zoomed far out.
-        const s = 40 / Math.max(this.k, OBJECT_FLOOR);
+        const s = 40 / OBJECT_FLOOR;
         for (const { group, at } of this.buildings) {
             group.position.set(at[0], 0, at[1]);
             group.scale.setScalar(s);
@@ -1765,17 +1766,19 @@ export class World {
 
     /**
      * How tall an animal stands, in paces, for px on screen at k 0.6: about the
-     * same size on screen at any zoom, a little bigger close in.
+     * same size on screen far out, and growing with the land close in, so
+     * zooming in shows it in detail.
      */
     private animalHeight(px: number) {
-        return (px * (this.k / 0.6) ** 0.3) / this.k;
+        const k = Math.min(this.k, CLOSE_ZOOM);
+        return (px * (k / 0.6) ** 0.3) / k;
     }
 
     private placeCrowd() {
         this.changed = true;
         const h = this.animalHeight(34);
         // The 2D map's spots are screen pixels round the hub; so are these.
-        const spread = 1 / this.k;
+        const spread = 1 / Math.min(this.k, CLOSE_ZOOM);
         for (const entry of this.crowd.values()) {
             const x = entry.centre[0] + entry.spot[0] * spread;
             const y = entry.centre[1] + entry.spot[1] * spread;
@@ -1931,7 +1934,7 @@ export class World {
 
     private placeHomes() {
         // About the same size on screen at any zoom, big enough to spot, a Fort the biggest.
-        const s = 92 / Math.max(this.k, OBJECT_FLOOR);
+        const s = 92 / OBJECT_FLOOR;
         for (const { group, level } of this.homeModels) {
             // Kit homes grow with their level by themselves; tents and the simple shapes by this.
             group.scale.setScalar(
@@ -2060,7 +2063,7 @@ export class World {
         project: (point: Point, height: number) => Point,
     ): MapAnimal | null {
         const h = this.animalHeight(34);
-        const spread = 1 / this.k;
+        const spread = 1 / Math.min(this.k, CLOSE_ZOOM);
         // About half its height on screen, and never a fiddly target.
         const reach = Math.max(18, h * this.k * 0.55);
         let found: CrowdEntry | null = null;
