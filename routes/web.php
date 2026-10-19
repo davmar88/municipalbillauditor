@@ -89,6 +89,9 @@ Route::middleware(['auth', 'verified', 'player', 'throttle:120,1'])->prefix('pla
     Route::put('faction/rules', [FactionController::class, 'rules'])->name('play.faction.rules');
     Route::put('faction/members/{member}/role', [FactionController::class, 'role'])->name('play.faction.role');
     Route::delete('faction/members/{member}', [FactionController::class, 'remove'])->name('play.faction.remove');
+    Route::put('faction/raid-rules', [FactionController::class, 'raidRules'])->name('play.faction.raid-rules');
+    Route::put('faction/members/{member}/exempt', [FactionController::class, 'exempt'])->name('play.faction.exempt');
+    Route::delete('faction/members/{member}/strikes', [FactionController::class, 'forgive'])->name('play.faction.forgive');
 
     Route::post('faction/give', [BaseController::class, 'give'])->name('play.give');
     Route::post('regions/{region}/build', [BaseController::class, 'build'])->name('play.build');

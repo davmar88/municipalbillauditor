@@ -63,6 +63,11 @@ type Props = {
     irongate: IrongateInfo;
     homes: MapHome[];
     home: HomeInfo;
+    raidRules: {
+        rules: string[];
+        spare: number[];
+        labels: Record<string, string>;
+    } | null;
     /** Out in the open scrub: what there is to gather where you stand. */
     scrub: {
         id: number;
@@ -94,6 +99,7 @@ export default function MapPage({
     homes,
     home,
     scrub,
+    raidRules,
 }: Props) {
     const { player } = usePage().props;
     const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -398,6 +404,7 @@ export default function MapPage({
                             plunder={plunder}
                             irongate={irongate}
                             regions={regions}
+                            raidRules={raidRules}
                             onClose={() => setSelectedId(null)}
                         />
                     )}

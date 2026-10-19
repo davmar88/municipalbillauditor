@@ -41,6 +41,7 @@ use Illuminate\Support\Carbon;
  * @property array<string, int> $materials
  * @property int $horseshoes
  * @property Carbon $horseshoes_at
+ * @property bool $rules_exempt Excused by the leader from the faction's raid rules.
  * @property int|null $camp_level Walking off to set up camp: the home that goes up on arrival, 0 a Tent or 1 a Hut.
  * @property int|null $faction_id
  * @property FactionRole|null $faction_role
@@ -81,6 +82,7 @@ class Player extends Model
             'muted_until' => 'datetime',
             'left_faction_at' => 'datetime',
             'inside_home_at' => 'datetime',
+            'rules_exempt' => 'boolean',
             'last_visit_on' => 'date',
             'adult_confirmed_at' => 'datetime',
             'orchard_until' => 'datetime',

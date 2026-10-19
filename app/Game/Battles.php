@@ -74,7 +74,6 @@ final class Battles
         }
 
         $this->checkReach($faction, $target);
-        $this->checkFrontLine($player, $target);
         $this->checkCurfew($season, $target);
 
         return DB::transaction(function () use ($player, $season, $faction, $target, $horseshoes) {
@@ -94,6 +93,8 @@ final class Battles
 
             BattleCommitment::create(['attack_id' => $attack->id, 'player_id' => $locked->id, 'side' => 'attack', 'horseshoes' => $horseshoes, 'boost' => Powers::commitment($locked)]);
             Missions::record($locked, 'battle');
+            // The raid goes ahead whatever; the faction's own rules may give its leader a strike.
+            RaidRules::judge($locked, $faction, $target);
 
             // Both sides hear of it under the bell, in time to add horseshoes.
             $lands = Clock::local($attack->lands_at)->format('H:i');
@@ -301,33 +302,9 @@ final class Battles
      */
     private function checkReach(Faction $faction, Region $target): void
     {
-        $held = $target->neighbours()->where('faction_id', $faction->id)->count();
-
-        if ($target->isFarmhouse()) {
-            if ($held < 2) {
-                throw new GameException('To attack the Farmhouse your faction must hold 2 of the 4 regions around it.');
-            }
-
-            return;
-        }
-
-        $fromPaddock = $target->neighbours()->where('key', 'paddock')->exists();
-
-        if ($held === 0 && ! $fromPaddock) {
-            throw new GameException("You can only attack a region next to one your faction holds. Factions without land start from the Paddock's neighbours.");
-        }
-    }
-
-    /**
-     * Raids start from the front line: the animal launching one must stand
-     * in a region next to the target.
-     *
-     * @throws GameException
-     */
-    private function checkFrontLine(Player $player, Region $target): void
-    {
-        if (! $target->neighbours()->whereKey($player->location()->id)->exists()) {
-            throw new GameException("Walk to a region next to {$target->name} first: raids start from the front line.");
+        // Any region can be raided from anywhere; only the seat of power asks for a foothold.
+        if ($target->isFarmhouse() && $target->neighbours()->where('faction_id', $faction->id)->count() < 2) {
+            throw new GameException('To attack the Farmhouse your faction must hold 2 of the 4 regions around it.');
         }
     }
 

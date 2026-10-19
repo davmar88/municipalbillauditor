@@ -137,13 +137,6 @@ class GrowingFarmsTest extends TestCase
         $this->stand($red[0], 'thornbury');
         $this->travel(61)->minutes();
 
-        try {
-            app(Battles::class)->launch($red[0]->fresh(), $this->region('thornbury_heath'), 1);
-            $this->fail('The heath borders only its farm.');
-        } catch (GameException $e) {
-            $this->assertStringContainsString('next to one your faction holds', $e->getMessage());
-        }
-
         $this->hold($redFaction, 'thornbury');
         app(Battles::class)->launch($red[0]->fresh(), $this->region('thornbury_heath'), 1);
         $this->travel(61)->minutes();

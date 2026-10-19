@@ -160,7 +160,7 @@ final class Factions
             }
 
             $wasLeader = $player->faction_role === FactionRole::Leader;
-            $player->forceFill(['faction_id' => null, 'faction_role' => null, 'faction_joined_at' => null, 'left_faction_at' => now()])->save();
+            $player->forceFill(['faction_id' => null, 'faction_role' => null, 'faction_joined_at' => null, 'rules_exempt' => false, 'left_faction_at' => now()])->save();
 
             $successor = $faction->members()
                 ->orderByRaw("case faction_role when 'council' then 0 when 'member' then 1 else 2 end")
@@ -217,7 +217,7 @@ final class Factions
         }
 
         $faction = $member->faction;
-        $member->forceFill(['faction_id' => null, 'faction_role' => null, 'faction_joined_at' => null, 'left_faction_at' => now()])->save();
+        $member->forceFill(['faction_id' => null, 'faction_role' => null, 'faction_joined_at' => null, 'rules_exempt' => false, 'left_faction_at' => now()])->save();
         // An outcast should hear it, not find out on the map.
         Notices::send($member->id, 'faction', "{$leader->name} threw you out of {$faction?->name}. You're a lone wolf now: Irongate's Rookery takes anyone.", route('play.faction', [], false));
     }

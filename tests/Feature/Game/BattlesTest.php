@@ -6,8 +6,10 @@ use App\Enums\Species;
 use App\Game\Battles;
 use App\Game\Clock;
 use App\Game\GameException;
+use App\Game\RaidRules;
 use App\Models\Attack;
 use App\Models\Faction;
+use App\Models\Notice;
 use App\Models\Player;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -46,10 +48,13 @@ class BattlesTest extends TestCase
         $this->battles->launch($loner, $this->region('henhouse'), 1);
     }
 
-    public function test_landless_factions_start_from_the_paddocks_neighbours(): void
+    public function test_any_region_can_be_raided_from_anywhere(): void
     {
-        $this->expectExceptionMessage('next to one your faction holds');
-        $this->battles->launch($this->red[0], $this->region('orchard'), 1);
+        // No land, nowhere near it: the raid still goes.
+        $this->stand($this->red[0], 'paddock');
+        $attack = $this->battles->launch($this->red[0]->fresh(), $this->region('orchard'), 1);
+
+        $this->assertSame($this->region('orchard')->id, $attack->region_id);
     }
 
     public function test_the_farmhouse_needs_two_of_its_four_neighbours(): void
@@ -149,13 +154,27 @@ class BattlesTest extends TestCase
         $this->assertSame(4, $this->redHooves->regions()->count());
     }
 
-    public function test_raids_start_from_the_front_line(): void
+    public function test_breaking_the_factions_raid_rules_earns_strikes_and_a_flag(): void
     {
-        $this->hold($this->redHooves, 'granary');
-        $this->stand($this->red[0], 'stables');
+        $leader = $this->red[0];
+        $leader->forceFill(['faction_role' => 'leader'])->save();
+        $member = $this->red[1];
+        $member->forceFill(['faction_role' => 'member'])->save();
+        app(RaidRules::class)->set($leader->fresh(), ['front_line', 'near_land', 'leader_call'], [], false);
+        $this->stand($member, 'paddock');
 
-        $this->expectExceptionMessage('raids start from the front line');
-        $this->battles->launch($this->red[0]->fresh(), $this->region('orchard'), 1);
+        // Far from the orchard, next to no land of ours, and not the leader's call: three strikes, but the raid goes.
+        $this->battles->launch($member->fresh(), $this->region('orchard'), 1);
+        $this->assertSame(3, RaidRules::strikes($this->redHooves->fresh())->get($member->id));
+        $this->assertStringContainsString('flagged', Notice::query()->where('player_id', $leader->id)->where('text', 'like', '%raid rules%')->latest('id')->value('text'));
+
+        // Excused: no more strikes.
+        app(RaidRules::class)->exempt($leader->fresh(), $member->fresh(), true);
+        $this->battles->launch($member->fresh(), $this->region('quarry'), 1);
+        $this->assertSame(3, RaidRules::strikes($this->redHooves->fresh())->get($member->id));
+
+        app(RaidRules::class)->forgive($leader->fresh(), $member->fresh());
+        $this->assertSame(0, RaidRules::strikes($this->redHooves->fresh())->get($member->id, 0));
     }
 
     public function test_nobody_can_attack_the_paddock(): void

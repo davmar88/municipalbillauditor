@@ -30,6 +30,8 @@ use Illuminate\Support\Carbon;
  * @property array<int, string>|null $species
  * @property int $entry_fee
  * @property bool $accepts_criminals
+ * @property array{rules?: list<string>, spare?: list<int>}|null $raid_rules The raid rules its members are held to
+ * @property bool $rogue A rogue faction holds its members to no raid rules
  */
 #[Fillable(['valley_id', 'name', 'colour', 'motto', 'entry_mode', 'min_level', 'species', 'entry_fee', 'accepts_criminals'])]
 class Faction extends Model
@@ -45,6 +47,8 @@ class Faction extends Model
             'accepts_criminals' => 'boolean',
             'materials' => 'array',
             'studies' => 'array',
+            'raid_rules' => 'array',
+            'rogue' => 'boolean',
             'studying_until' => 'datetime',
         ];
     }

@@ -6,6 +6,7 @@ import { FactionStudyList } from '@/components/game/faction-studies';
 import { GameBar } from '@/components/game/game-bar';
 import { OrchardBadge } from '@/components/game/orchard-badge';
 import { ProfileLink } from '@/components/game/profile-link';
+import { WhyNot } from '@/components/game/why-not';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -16,8 +17,11 @@ import { chat, crime } from '@/routes/play';
 import { show as conversation } from '@/routes/play/messages';
 import {
     answer,
+    exempt,
+    forgive,
     join,
     leave,
+    raidRules as raidRulesRoute,
     remove,
     role,
     rules as rulesRoute,
@@ -68,6 +72,7 @@ type Props = {
                   }[];
               };
               studies: FactionStudies;
+              raidRules: RaidRulesInfo;
               members: {
                   id: number;
                   name: string;
@@ -77,6 +82,10 @@ type Props = {
                   homeClosed: boolean;
                   orchard: boolean;
                   me: boolean;
+                  /** Raid rules broken this season. */
+                  strikes: number;
+                  /** Excused by the leader from the raid rules. */
+                  exempt: boolean;
               }[];
               requests: {
                   id: number;
@@ -215,6 +224,8 @@ function MyFaction({
                 }}
             />
 
+            <RaidRulesSection raidRules={faction.raidRules} />
+
             <section className="flex flex-col gap-2">
                 <h2 className="text-lg font-bold">Members</h2>
                 <ul className="divide-y rounded-xl border bg-card">
@@ -243,6 +254,31 @@ function MyFaction({
                                     {member.level}
                                     {member.homeClosed && ' · home burned'}
                                 </span>
+                                {member.strikes > 0 && (
+                                    <span
+                                        className={cn(
+                                            'ml-2 rounded-full px-2 py-0.5 text-xs font-semibold',
+                                            member.strikes >=
+                                                faction.raidRules.flagAt
+                                                ? 'bg-red-500/20 text-red-300'
+                                                : 'bg-amber-500/15 text-amber-300',
+                                        )}
+                                        title="Raid rules broken this season"
+                                    >
+                                        ⚑ {member.strikes}{' '}
+                                        {member.strikes === 1
+                                            ? 'strike'
+                                            : 'strikes'}
+                                        {member.strikes >=
+                                            faction.raidRules.flagAt &&
+                                            ' · flagged'}
+                                    </span>
+                                )}
+                                {member.exempt && (
+                                    <span className="ml-2 rounded-full bg-sky-500/15 px-2 py-0.5 text-xs font-semibold text-sky-300">
+                                        excused from the rules
+                                    </span>
+                                )}
                             </span>
                             <span className="font-mono text-xs tracking-[0.1em] text-primary">
                                 {member.role?.toUpperCase()}
@@ -288,6 +324,48 @@ function MyFaction({
                                         Hand over leadership
                                     </option>
                                     <option value="remove">Remove</option>
+                                </NativeSelect>
+                            )}
+                            {faction.raidRules.canSet && !member.me && (
+                                <NativeSelect
+                                    value=""
+                                    className="w-44"
+                                    aria-label={`Raid rules for ${member.name}`}
+                                    onChange={(e) => {
+                                        if (e.target.value === 'forgive') {
+                                            act(
+                                                forgive.url(member.id),
+                                                {},
+                                                'delete',
+                                            );
+                                        } else if (e.target.value) {
+                                            act(
+                                                exempt.url(member.id),
+                                                {
+                                                    exempt:
+                                                        e.target.value ===
+                                                        'exempt',
+                                                },
+                                                'put',
+                                            );
+                                        }
+                                    }}
+                                >
+                                    <option value="">Raid rules</option>
+                                    {member.exempt ? (
+                                        <option value="hold">
+                                            Hold to the rules again
+                                        </option>
+                                    ) : (
+                                        <option value="exempt">
+                                            Excuse from the rules
+                                        </option>
+                                    )}
+                                    {member.strikes > 0 && (
+                                        <option value="forgive">
+                                            Wipe their strikes
+                                        </option>
+                                    )}
                                 </NativeSelect>
                             )}
                         </li>
@@ -779,6 +857,119 @@ function Underworld({
                         </li>
                     ))}
                 </ul>
+            )}
+        </section>
+    );
+}
+
+type RaidRulesInfo = {
+    rules: string[];
+    spare: number[];
+    rogue: boolean;
+    all: { key: string; label: string }[];
+    flagAt: number;
+    canSet: boolean;
+    others: { id: number; name: string; colour: string }[];
+};
+
+/**
+ * The faction's raid rules. Anyone can raid anywhere; these are what the
+ * faction asks of its own members. Breaking one doesn't stop the raid, but
+ * earns a strike, and enough strikes flag the member to the leader.
+ */
+function RaidRulesSection({ raidRules }: { raidRules: RaidRulesInfo }) {
+    const [rules, setRules] = useState(raidRules.rules);
+    const [spare, setSpare] = useState(raidRules.spare);
+    const [rogue, setRogue] = useState(raidRules.rogue);
+    const toggle = <T,>(list: T[], value: T) =>
+        list.includes(value)
+            ? list.filter((item) => item !== value)
+            : [...list, value];
+
+    return (
+        <section className="flex flex-col gap-3 rounded-xl border bg-card p-4">
+            <h2 className="text-lg font-bold">Raid rules</h2>
+            <p className="text-sm text-muted-foreground">
+                Any animal can raid any region, from anywhere. These are the
+                rules your faction holds its own members to. Breaking one
+                doesn't stop the raid, but earns a strike; {raidRules.flagAt}{' '}
+                strikes in a season flag the member here. The leader can excuse
+                a member from the rules, or run the faction rogue with none.
+            </p>
+            {raidRules.rogue && !raidRules.canSet && (
+                <p className="text-sm font-semibold text-red-300">
+                    This faction runs rogue: no raid rules.
+                </p>
+            )}
+            <fieldset
+                disabled={!raidRules.canSet}
+                className="flex flex-col gap-2 text-sm"
+            >
+                {raidRules.all.map((rule) => (
+                    <label key={rule.key} className="flex items-start gap-2">
+                        <input
+                            type="checkbox"
+                            className="mt-1"
+                            checked={rules.includes(rule.key)}
+                            onChange={() => setRules(toggle(rules, rule.key))}
+                        />
+                        <span
+                            className={cn(rogue && 'line-through opacity-60')}
+                        >
+                            {rule.label}
+                        </span>
+                    </label>
+                ))}
+                {rules.includes('spare') && raidRules.others.length > 0 && (
+                    <div className="flex flex-wrap gap-2 pl-6">
+                        {raidRules.others.map((other) => (
+                            <label
+                                key={other.id}
+                                className="flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs"
+                            >
+                                <input
+                                    type="checkbox"
+                                    checked={spare.includes(other.id)}
+                                    onChange={() =>
+                                        setSpare(toggle(spare, other.id))
+                                    }
+                                />
+                                <span
+                                    className="size-2 rounded-full"
+                                    style={{ background: other.colour }}
+                                    aria-hidden
+                                />
+                                {other.name}
+                            </label>
+                        ))}
+                    </div>
+                )}
+                <label className="mt-1 flex items-start gap-2 font-semibold text-red-300">
+                    <input
+                        type="checkbox"
+                        className="mt-1"
+                        checked={rogue}
+                        onChange={() => setRogue(!rogue)}
+                    />
+                    Run rogue: no rules for anyone
+                </label>
+            </fieldset>
+            {raidRules.canSet ? (
+                <Button
+                    className="self-start"
+                    variant="secondary"
+                    onClick={() =>
+                        act(
+                            raidRulesRoute.url(),
+                            { rules, spare, rogue },
+                            'put',
+                        )
+                    }
+                >
+                    Save the raid rules
+                </Button>
+            ) : (
+                <WhyNot reason="Only your faction's leader and council set the raid rules." />
             )}
         </section>
     );

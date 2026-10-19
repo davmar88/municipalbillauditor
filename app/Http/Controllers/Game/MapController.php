@@ -17,6 +17,7 @@ use App\Game\Ironfield;
 use App\Game\Irongate;
 use App\Game\Movement;
 use App\Game\Powers;
+use App\Game\RaidRules;
 use App\Game\Stock;
 use App\Game\ValleyBuilder;
 use App\Game\Wall;
@@ -185,6 +186,10 @@ class MapController extends Controller
                 ],
             ]),
             'here' => $player->region_id ?? $paddock?->id,
+            // The raid rules your faction holds you to, to warn before a raid breaks one; none when rogue or excused.
+            'raidRules' => $player->faction && ! $player->faction->rogue && ! $player->rules_exempt
+                ? [...RaidRules::of($player->faction), 'labels' => RaidRules::RULES]
+                : null,
             // Out in the open scrub: what there is to gather where you stand.
             'scrub' => (function () use ($player, $valley) {
                 $scrub = $valley->regions()->where('ring', 'scrub')->first();

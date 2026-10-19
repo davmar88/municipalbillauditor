@@ -10,6 +10,7 @@ use App\Enums\Species;
 use App\Game\Bases;
 use App\Game\Clock;
 use App\Game\Factions;
+use App\Game\RaidRules;
 use App\Game\Research;
 use App\Game\Stores;
 use App\Http\Controllers\Controller;
@@ -36,6 +37,7 @@ class FactionController extends Controller
         /** @var Player $player */
         $player = $request->user()->player;
         $faction = $player->faction;
+        $strikes = $faction ? RaidRules::strikes($faction) : collect();
         $house = $player->valley->house();
 
         $factions = Faction::query()
@@ -70,6 +72,16 @@ class FactionController extends Controller
                         ->map(fn (Region $plot) => ['id' => $plot->id, 'name' => $plot->name, 'key' => $plot->key, 'produces' => $plot->produces, 'farm' => $plot->isFarm() && ! $plot->wild]),
                 ],
                 'studies' => Research::page($faction, $player),
+                // The raid rules the faction holds its members to, and who has broken them.
+                'raidRules' => [
+                    ...RaidRules::of($faction),
+                    'rogue' => $faction->rogue,
+                    'all' => collect(RaidRules::RULES)->map(fn (string $label, string $key) => ['key' => $key, 'label' => $label])->values(),
+                    'flagAt' => RaidRules::FLAG_AT,
+                    'canSet' => $player->decides(),
+                    'others' => Faction::query()->where('valley_id', $faction->valley_id)->whereKeyNot($faction->id)->orderBy('name')->get(['id', 'name', 'colour'])
+                        ->map(fn (Faction $other) => ['id' => $other->id, 'name' => $other->name, 'colour' => $other->colour]),
+                ],
                 'members' => $faction->members()->orderByRaw("case faction_role when 'leader' then 0 when 'council' then 1 when 'member' then 2 else 3 end")->orderBy('name')->get()
                     ->map(fn (Player $member) => [
                         'id' => $member->id,
@@ -80,6 +92,8 @@ class FactionController extends Controller
                         'homeClosed' => $member->homeIsClosed(),
                         'orchard' => $member->inOrchard(),
                         'me' => $member->is($player),
+                        'strikes' => $strikes->get($member->id, 0),
+                        'exempt' => $member->rules_exempt,
                     ]),
                 'requests' => $player->decides() ? $faction->joinRequests()->with('player')->where('status', 'pending')->get()
                     ->map(fn (FactionJoinRequest $joinRequest) => [
@@ -196,6 +210,35 @@ class FactionController extends Controller
         $factions->setRole($request->user()->player, $member, FactionRole::from($role));
 
         return $this->told("{$member->name} is now ".FactionRole::from($role)->label().'.');
+    }
+
+    public function raidRules(Request $request, RaidRules $raidRules): RedirectResponse
+    {
+        $data = $request->validate([
+            'rules' => ['array'],
+            'rules.*' => ['string'],
+            'spare' => ['array'],
+            'spare.*' => ['integer'],
+            'rogue' => ['boolean'],
+        ]);
+        $raidRules->set($request->user()->player, $data['rules'] ?? [], $data['spare'] ?? [], (bool) ($data['rogue'] ?? false));
+
+        return $this->told(($data['rogue'] ?? false) ? 'Your faction runs rogue: no raid rules.' : 'Raid rules saved.');
+    }
+
+    public function exempt(Request $request, Player $member, RaidRules $raidRules): RedirectResponse
+    {
+        $exempt = (bool) $request->validate(['exempt' => ['required', 'boolean']])['exempt'];
+        $raidRules->exempt($request->user()->player, $member, $exempt);
+
+        return $this->told($exempt ? "{$member->name} is excused from the raid rules." : "{$member->name} is held to the raid rules again.");
+    }
+
+    public function forgive(Request $request, Player $member, RaidRules $raidRules): RedirectResponse
+    {
+        $raidRules->forgive($request->user()->player, $member);
+
+        return $this->told("{$member->name}'s strikes are wiped.");
     }
 
     public function remove(Request $request, Player $member, Factions $factions): RedirectResponse

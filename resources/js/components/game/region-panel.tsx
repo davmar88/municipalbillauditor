@@ -109,6 +109,12 @@ type Props = {
     /** Irongate's people, for the town's districts. */
     irongate: IrongateInfo;
     regions: MapRegion[];
+    /** The raid rules your faction holds you to, or null when there are none for you. */
+    raidRules: {
+        rules: string[];
+        spare: number[];
+        labels: Record<string, string>;
+    } | null;
     onClose: () => void;
 };
 
@@ -131,6 +137,7 @@ export function RegionPanel({
     plunder,
     irongate,
     regions,
+    raidRules,
     onClose,
 }: Props) {
     const { player } = usePage().props;
@@ -159,7 +166,27 @@ export function RegionPanel({
         myFaction !== null &&
         region.ring !== 'safe' &&
         region.ring !== 'city' &&
+        region.ring !== 'ironfield' &&
         !holds(region);
+    // Your faction's raid rules this raid would break: it still goes ahead, but earns you a strike.
+    const breaks = raidRules
+        ? raidRules.rules.filter((rule) =>
+              rule === 'front_line'
+                  ? !frontLine && !isHere
+                  : rule === 'near_land'
+                    ? !regions.some(
+                          (other) =>
+                              region.neighbours.includes(other.id) &&
+                              holds(other),
+                      )
+                    : rule === 'leader_call'
+                      ? !['leader', 'council'].includes(myFaction?.role ?? '')
+                      : rule === 'spare'
+                        ? region.faction !== null &&
+                          raidRules.spare.includes(region.faction.id)
+                        : false,
+          )
+        : [];
     const others = region.animals.sample.filter((animal) => !animal.me);
     const outlaws = others.flatMap((animal) => {
         const warrant = warrants.find((w) => w.playerId === animal.id);
@@ -802,7 +829,7 @@ export function RegionPanel({
                             <p className="text-muted-foreground">
                                 Wait until {clockTime(region.settledUntil)}.
                             </p>
-                        ) : frontLine ? (
+                        ) : (
                             <>
                                 <p className="text-muted-foreground">
                                     The raid marches for an hour. Put in
@@ -830,21 +857,27 @@ export function RegionPanel({
                                         )}
                                     />
                                 </div>
-                                {horseshoesLeft < horseshoes && (
-                                    <p className="text-xs text-orange-300">
-                                        You have {horseshoesLeft}{' '}
-                                        {horseshoesLeft === 1
-                                            ? 'horseshoe'
-                                            : 'horseshoes'}
-                                        . Put in fewer, or wait for more.
-                                    </p>
+                                {breaks.length > 0 && raidRules && (
+                                    <div className="rounded-md border border-red-500/40 bg-red-500/10 p-2 text-xs text-red-200">
+                                        <p className="font-semibold">
+                                            ⚑ This raid breaks your faction's
+                                            rules:
+                                        </p>
+                                        <ul className="list-disc pl-4">
+                                            {breaks.map((rule) => (
+                                                <li key={rule}>
+                                                    {raidRules.labels[rule]}
+                                                </li>
+                                            ))}
+                                        </ul>
+                                        <p>
+                                            You can still raid, but you'll get a
+                                            strike for each, and the leader sees
+                                            it.
+                                        </p>
+                                    </div>
                                 )}
                             </>
-                        ) : (
-                            <p className="text-muted-foreground">
-                                Raids start from the front line: walk to a
-                                region next to {region.name} first.
-                            </p>
                         )}
                         {region.key === 'farmhouse' && (
                             <p className="text-xs text-muted-foreground">
