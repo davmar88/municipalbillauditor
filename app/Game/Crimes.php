@@ -119,6 +119,16 @@ final class Crimes
         return DB::transaction(function () use ($player, $kind, $faction, $target, $season, $region) {
             $locked = Players::lock($player);
             Players::ensureFree($locked);
+
+            // Checked again under the lock: a faction joined a moment ago counts.
+            if (! $locked->isLoneWolf()) {
+                throw new GameException('Only lone wolves commit crimes. Leave your faction first.');
+            }
+
+            if ($locked->left_faction_at !== null && $locked->left_faction_at->gt(now()->subHours(self::LONE_WOLF_HOURS))) {
+                throw new GameException('You only just left your faction. Lie low as a lone wolf for a day before your first crime.');
+            }
+
             Horseshoes::spend($locked, $kind->horseshoes());
             Missions::record($locked, 'crime');
 

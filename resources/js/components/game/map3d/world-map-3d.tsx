@@ -360,8 +360,15 @@ export default function WorldMap3D({
         dirty.current = true;
     };
 
+    // A card opened by a tap points at that spot; once the camera moves, it would point at the wrong thing.
+    const closeCards = () => {
+        setMenu(null);
+        setPerson(null);
+    };
+
     const zoomAt = useCallback(
         (point: Point, factor: number, animate = false) => {
+            closeCards();
             rigRef.current?.zoomAt(point, factor, animate);
             moved();
         },
@@ -369,11 +376,13 @@ export default function WorldMap3D({
     );
 
     const lookAt = useCallback((point: Point, zoom?: number, spot?: Point) => {
+        closeCards();
         rigRef.current?.lookAt(point, zoom, spot);
         moved();
     }, []);
 
     const fit = useCallback(() => {
+        closeCards();
         const rig = rigRef.current;
         if (rig) {
             const [centre, k] = rig.framing(REACH);
@@ -390,7 +399,6 @@ export default function WorldMap3D({
         }
         const onWheel = (event: WheelEvent) => {
             event.preventDefault();
-            setMenu(null);
             const rect = element.getBoundingClientRect();
             const unit =
                 event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? 400 : 1;
@@ -651,7 +659,7 @@ export default function WorldMap3D({
         if (!rig || !size || event.target !== event.currentTarget) {
             return;
         }
-        setMenu(null);
+        closeCards();
         const centre: Point = [size.width / 2, size.height / 2];
         const moves: Record<string, Point> = {
             ArrowLeft: [-90, 0],
@@ -879,6 +887,7 @@ export default function WorldMap3D({
 
             {person && size && irongate && (
                 <FolkCard
+                    key={person.folk.key}
                     folk={person.folk}
                     at={person.at}
                     size={size}
@@ -892,6 +901,7 @@ export default function WorldMap3D({
 
             {menu && size && (
                 <AnimalMenu
+                    key={menu.animal.id}
                     animal={menu.animal}
                     at={menu.at}
                     size={size}

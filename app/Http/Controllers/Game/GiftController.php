@@ -30,7 +30,7 @@ class GiftController extends Controller
         ]);
     }
 
-    /** @return array{items: list<array<string, mixed>>, left: int, perDay: int} */
+    /** @return array{items: list<array<string, mixed>>, left: int, perDay: int, cant: string|null} */
     private function bag(Player $player): array
     {
         return [
@@ -44,6 +44,12 @@ class GiftController extends Controller
             ])->values()->all(),
             'left' => Gifts::left($player),
             'perDay' => Gifts::PER_DAY,
+            // Why you can't give anything just now, so the picker can say so up front.
+            'cant' => match (true) {
+                $player->level() < (int) config('game.levels.stall') => 'You can give items from level '.config('game.levels.stall').'.',
+                $player->inPound() => "You can't give anything from the pound.",
+                default => null,
+            },
         ];
     }
 }

@@ -6,6 +6,7 @@ import {
     Flag,
     Flame,
     Gavel,
+    Gift,
     MessageCircle,
     Palette,
     ScanEye,
@@ -14,8 +15,10 @@ import {
     Swords,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import { useState } from 'react';
 import { AnimalStageSlot } from '@/components/game/animal-stage-slot';
 import { GameBar } from '@/components/game/game-bar';
+import { GiftPicker } from '@/components/game/gift-picker';
 import { ItemPreview } from '@/components/game/item-preview';
 import { ProgressBar } from '@/components/game/missions';
 import { OrchardBadge } from '@/components/game/orchard-badge';
@@ -112,6 +115,8 @@ export default function AnimalProfile({
     shop,
     collection,
 }: Props) {
+    const [giving, setGiving] = useState(false);
+
     return (
         <>
             <Head title={animal.name} />
@@ -166,6 +171,13 @@ export default function AnimalProfile({
                         <Button onClick={() => openChat(animal.id)}>
                             <MessageCircle className="size-4" /> Message
                         </Button>
+                        <Button
+                            variant="outline"
+                            aria-expanded={giving}
+                            onClick={() => setGiving(!giving)}
+                        >
+                            <Gift className="size-4" /> Send an item
+                        </Button>
                         {bounty !== null && (
                             <Button
                                 variant="outline"
@@ -180,6 +192,11 @@ export default function AnimalProfile({
                             </Button>
                         )}
                     </div>
+                    {giving && (
+                        <div className="max-w-sm rounded-xl border bg-card p-3 text-sm">
+                            <GiftPicker animal={animal} />
+                        </div>
+                    )}
                 </header>
 
                 <AnimalStageSlot

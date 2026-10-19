@@ -38,6 +38,8 @@ final class Factions
                 throw new GameException('Leave your faction before founding a new one.');
             }
 
+            self::ensureNoCrimePending($player);
+
             $level = (int) config('game.levels.found_faction');
 
             if ($player->level() < $level) {
@@ -278,13 +280,22 @@ final class Factions
             throw new GameException("{$faction->name} doesn't take animals with a criminal record.");
         }
 
-        // No hiding a crime behind a faction badge before it has played out.
-        if (Crime::query()->where('player_id', $player->id)->whereNull('resolved_at')->exists()) {
-            throw new GameException('You have a crime still playing out. Join a faction once you know whether you got away with it.');
-        }
+        self::ensureNoCrimePending($player);
 
         if ($player->corn < $faction->entry_fee) {
             throw new GameException("Joining {$faction->name} costs {$faction->entry_fee} Corn. You have {$player->corn}.");
+        }
+    }
+
+    /**
+     * No hiding a crime behind a faction badge before it has played out.
+     *
+     * @throws GameException
+     */
+    private static function ensureNoCrimePending(Player $player): void
+    {
+        if (Crime::query()->where('player_id', $player->id)->whereNull('resolved_at')->exists()) {
+            throw new GameException('You have a crime still playing out. Join or found a faction once you know whether you got away with it.');
         }
     }
 

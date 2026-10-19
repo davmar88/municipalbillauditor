@@ -648,19 +648,21 @@ export function RegionPanel({
                     </div>
                 )}
 
-                {!myFaction && region.ring !== 'safe' && (
-                    <p className="text-muted-foreground">
-                        Join a faction to raid. Lone wolves loot and burn
-                        instead, from the{' '}
-                        <Link
-                            href={factionPage()}
-                            className="font-semibold text-primary"
-                        >
-                            Faction
-                        </Link>{' '}
-                        tab.
-                    </p>
-                )}
+                {!myFaction &&
+                    region.ring !== 'safe' &&
+                    region.ring !== 'city' && (
+                        <p className="text-muted-foreground">
+                            Join a faction to raid. Lone wolves loot and burn
+                            instead, from the{' '}
+                            <Link
+                                href={factionPage()}
+                                className="font-semibold text-primary"
+                            >
+                                Faction
+                            </Link>{' '}
+                            tab.
+                        </p>
+                    )}
 
                 {region.key === 'farmhouse' &&
                     region.faction &&

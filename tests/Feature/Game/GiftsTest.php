@@ -45,7 +45,9 @@ class GiftsTest extends TestCase
         $this->actingAs($giver->user)->getJson(route('play.gifts'))->assertOk()
             ->assertJsonPath('items.0.id', $hat->id)
             ->assertJsonPath('items.0.name', 'Straw Hat')
-            ->assertJsonPath('left', Gifts::PER_DAY);
+            ->assertJsonPath('left', Gifts::PER_DAY)
+            ->assertJsonPath('cant', null);
+        $this->actingAs($this->player()->user)->getJson(route('play.gifts'))->assertJsonPath('cant', 'You can give items from level 2.');
 
         $this->actingAs($giver->user)->postJson(route('play.gift', $friend), ['item' => $hat->id])->assertOk()
             ->assertJsonPath('message', "You gave {$friend->name} Straw Hat.")
@@ -126,6 +128,7 @@ class GiftsTest extends TestCase
 
         $this->actingAs($buyer->user)->postJson(route('play.gift', $friend), ['item' => $hat->id])
             ->assertStatus(422)->assertJsonPath('message', "You bought Straw Hat with Apples in the last 14 days, so it can't be given away yet.");
+        $this->actingAs($buyer->user)->getJson(route('play.gifts'))->assertJsonCount(0, 'items');
 
         $this->travel(15)->days();
         $this->actingAs($buyer->user)->postJson(route('play.gift', $friend), ['item' => $hat->id])->assertOk();

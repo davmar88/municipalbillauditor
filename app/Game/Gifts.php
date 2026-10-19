@@ -6,6 +6,7 @@ use App\Models\Gift;
 use App\Models\Item;
 use App\Models\Listing;
 use App\Models\Player;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -28,9 +29,25 @@ final class Gifts
     {
         return $player->items()
             ->whereDoesntHave('openListing')
+            ->whereNotIn('id', self::boughtWithApplesLately($player))
             ->with('design')
             ->latest('id')
             ->get();
+    }
+
+    /**
+     * Items the animal bought with Apples within the cash-out hold: they wait
+     * like the Apples would, so they can't hop to another account and be sold.
+     *
+     * @return Builder<Listing>
+     */
+    private static function boughtWithApplesLately(Player $player): Builder
+    {
+        return Listing::query()
+            ->select('item_id')
+            ->where('buyer_player_id', $player->id)
+            ->where('currency', 'apples')
+            ->where('sold_at', '>', now()->subDays((int) config('game.cashout.hold_days')));
     }
 
     /** How many more items you can give today. */
@@ -58,9 +75,11 @@ final class Gifts
         }
 
         return DB::transaction(function () use ($from, $to, $itemId) {
-            // The giver first, then the item, the same order as using an item's power.
-            $from = Players::lock($from);
-            $to = $to->fresh();
+            // Both animals, lowest id first so two gifts crossing can't deadlock, then the item.
+            [$first, $second] = $from->id < $to->id ? [$from, $to] : [$to, $from];
+            $first = Players::lock($first);
+            $second = Players::lock($second);
+            [$from, $to] = $first->id === $from->id ? [$first, $second] : [$second, $first];
             Players::ensureFree($from);
 
             if ($from->level() < (int) config('game.levels.stall')) {
@@ -105,15 +124,7 @@ final class Gifts
                 throw new GameException("{$item->design->name} is on your shop shelf. Take it off the shelf first.");
             }
 
-            // Bought with Apples lately: it waits like the Apples would, so it can't hop to another account and be sold for cash.
-            $bought = Listing::query()
-                ->where('item_id', $item->id)
-                ->where('buyer_player_id', $from->id)
-                ->where('currency', 'apples')
-                ->where('sold_at', '>', now()->subDays((int) config('game.cashout.hold_days')))
-                ->exists();
-
-            if ($bought) {
+            if (self::boughtWithApplesLately($from)->where('item_id', $item->id)->exists()) {
                 throw new GameException("You bought {$item->design->name} with Apples in the last ".config('game.cashout.hold_days').' days, so it can\'t be given away yet.');
             }
 

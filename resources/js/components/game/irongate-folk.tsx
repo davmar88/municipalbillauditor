@@ -1,6 +1,7 @@
 import { Link, usePage } from '@inertiajs/react';
 import { X } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { besidePoint, useEscape } from '@/components/game/animal-menu';
 import type { Warrant } from '@/components/game/region-panel';
 import { Button } from '@/components/ui/button';
 import { act, capitalise } from '@/lib/game';
@@ -118,8 +119,12 @@ function Fence({
     why: string | null;
 }) {
     const owned = Object.entries(materials).filter(([, n]) => n > 0);
-    const [material, setMaterial] = useState(owned[0]?.[0] ?? '');
+    const [picked, setMaterial] = useState(owned[0]?.[0] ?? '');
     const [amount, setAmount] = useState(5);
+    // After a sale empties the picked material, the next one you have takes its place.
+    const material = owned.some(([name]) => name === picked)
+        ? picked
+        : (owned[0]?.[0] ?? '');
     const price = irongate.fence.rare.includes(material)
         ? irongate.fence.rarePrice
         : irongate.fence.price;
@@ -156,7 +161,17 @@ function Fence({
                         min={1}
                         value={amount}
                         onChange={(event) =>
-                            setAmount(Math.max(1, Number(event.target.value)))
+                            setAmount(
+                                Math.min(
+                                    1000,
+                                    Math.max(
+                                        1,
+                                        Math.floor(
+                                            Number(event.target.value) || 1,
+                                        ),
+                                    ),
+                                ),
+                            )
                         }
                         className="w-16 rounded-md border bg-background px-2 py-1"
                         aria-label="How many"
@@ -286,36 +301,14 @@ export function FolkCard({
     regions: MapRegion[];
     here: number | null;
 }) {
-    useEffect(() => {
-        const onKey = (event: KeyboardEvent) => {
-            if (event.key === 'Escape') {
-                onClose();
-            }
-        };
-        window.addEventListener('keydown', onKey);
-
-        return () => window.removeEventListener('keydown', onKey);
-    }, [onClose]);
-
-    const width = 272;
-    const left = Math.min(
-        Math.max(8, at[0] - width / 2),
-        Math.max(8, size.width - width - 8),
-    );
-    const below = at[1] < size.height * 0.55;
+    useEscape(onClose);
 
     return (
         <div
             role="dialog"
             aria-label={folk.name}
-            className="absolute z-20 flex max-h-[70%] flex-col gap-2 overflow-y-auto rounded-xl border bg-card/95 p-3 text-sm shadow-xl backdrop-blur"
-            style={{
-                width,
-                left,
-                ...(below
-                    ? { top: Math.min(at[1] + 22, size.height - 80) }
-                    : { bottom: Math.max(8, size.height - at[1] + 22) }),
-            }}
+            className="absolute z-20 flex flex-col gap-2 overflow-y-auto rounded-xl border bg-card/95 p-3 text-sm shadow-xl backdrop-blur"
+            style={besidePoint(at, size, 272)}
             onPointerDown={(event) => event.stopPropagation()}
         >
             <div className="flex items-start gap-2">

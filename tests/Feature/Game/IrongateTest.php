@@ -269,7 +269,14 @@ class IrongateTest extends TestCase
         $this->travel(25)->hours();
         app(Crimes::class)->commit($member->fresh(), CrimeKind::Loot, $victims);
 
-        // Until it plays out, no faction will have it.
+        // Until it plays out, no faction will have it, not even one of its own.
+        try {
+            app(Factions::class)->found($member->fresh()->forceFill(['corn' => 1000]), 'Outcasts', '#b39aff', null);
+            $this->fail('Founded a faction with a crime playing out.');
+        } catch (GameException $e) {
+            $this->assertStringContainsString('crime still playing out', $e->getMessage());
+        }
+
         $this->expectExceptionMessage('crime still playing out');
         app(Factions::class)->join($member->fresh(), $faction->fresh());
     }

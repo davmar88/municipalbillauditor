@@ -1753,6 +1753,12 @@ export function WorldMap({
         onAnimal,
     );
     const { view, size, lookAt, current } = camera;
+
+    // A card opened by a tap points at that spot; once the map moves, it would point at the wrong thing.
+    useEffect(() => {
+        setMenu(null);
+        setPerson(null);
+    }, [view.x, view.y, view.k]);
     const ready = size !== null && view.k > 0;
 
     // Bring a newly picked region, or your animal after a walk, out from under the card.
@@ -1950,6 +1956,7 @@ export function WorldMap({
 
             {menu && size && (
                 <AnimalMenu
+                    key={menu.animal.id}
                     animal={menu.animal}
                     at={menu.at}
                     size={size}
@@ -1960,6 +1967,7 @@ export function WorldMap({
 
             {person && size && irongate && (
                 <FolkCard
+                    key={person.folk.key}
                     folk={person.folk}
                     at={person.at}
                     size={size}

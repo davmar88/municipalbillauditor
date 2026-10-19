@@ -376,6 +376,13 @@ const CRATES: Point[] = [
     [1690, 566],
 ];
 
+/**
+ * The gate in the Iron Yards' west wall, where Gate Road comes in: a break in
+ * the wall's stroke, measured along the district's outline (its west side
+ * starts 1008 paces along; the road crosses 98 to 158 paces up it).
+ */
+const GATE_GAP = '1106 60 2000';
+
 /** Lamps lit at Irongate's gates and corners. */
 export const LAMPS: Point[] = [
     [1530, 470],
@@ -416,7 +423,7 @@ function Irongate() {
                     fill="none"
                     stroke="#5a5266"
                     strokeWidth={7}
-                    strokeDasharray={i === 1 ? '120 40 2000' : undefined}
+                    strokeDasharray={i === 1 ? GATE_GAP : undefined}
                     opacity={0.9}
                 />
             ))}

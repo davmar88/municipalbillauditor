@@ -49,21 +49,21 @@ final class Irongate
             'name' => 'Captain Hask Brannock',
             'role' => 'Captain of the Garrison',
             'district' => 'irongate_garrison',
-            'spot' => [60, -30],
+            'spot' => [70, 0],
             'says' => 'Sunday, seven sharp, my men go through that gate. Count them and weep.',
         ],
         'vetch' => [
             'name' => 'Ma Vetch',
             'role' => 'The fence',
             'district' => 'irongate_yards',
-            'spot' => [70, -50],
+            'spot' => [50, -20],
             'says' => "Straw, stone, honey, it's all the same to me. No questions, small Corn.",
         ],
         'wick' => [
             'name' => 'Wick',
             'role' => 'The informer',
             'district' => 'irongate_yards',
-            'spot' => [96, 40],
+            'spot' => [110, 50],
             'says' => 'Everybody hides somewhere. For a little Corn I remember where.',
         ],
         'tamsin' => [
@@ -186,10 +186,11 @@ final class Irongate
     public function tip(Player $hunter, Warrant $warrant): string
     {
         return DB::transaction(function () use ($hunter, $warrant) {
+            // The same order as an arrest: the warrant, the hunter, then the outlaw, settled where it really is.
+            $warrant = Warrant::query()->lockForUpdate()->findOrFail($warrant->id);
             $hunter = Players::lock($hunter);
             Players::ensureFree($hunter);
-            $warrant = Warrant::query()->lockForUpdate()->findOrFail($warrant->id);
-            $wanted = $warrant->wanted;
+            $wanted = Players::lock($warrant->wanted);
 
             if ($warrant->status !== 'open' || $wanted->valley_id !== $hunter->valley_id) {
                 throw new GameException('That warrant is closed.');

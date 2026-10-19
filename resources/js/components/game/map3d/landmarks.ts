@@ -397,14 +397,21 @@ export function landmarks(): Landmarks {
     {
         for (const [key, blocks] of Object.entries(CITY_BLOCKS)) {
             const wall = SHAPES[key].polygon;
-            for (let i = 0; i < wall.length; i++) {
-                const [ax, ay] = wall[i];
-                const [bx, by] = wall[(i + 1) % wall.length];
+            const sides: [Point, Point][] = wall.map((a, i) => [
+                a,
+                wall[(i + 1) % wall.length],
+            ]);
+            if (key === 'irongate_yards') {
+                // The gate onto Gate Road: a gap in the west wall, 98 to 158 paces up it, as on the flat map.
+                const [[ax, ay], [bx, by]] = sides.pop() as [Point, Point];
+                const at = (d: number): Point => {
+                    const t = d / Math.hypot(bx - ax, by - ay);
+                    return [ax + (bx - ax) * t, ay + (by - ay) * t];
+                };
+                sides.push([[ax, ay], at(98)], [at(158), [bx, by]]);
+            }
+            for (const [[ax, ay], [bx, by]] of sides) {
                 const length = Math.hypot(bx - ax, by - ay);
-                // The gate onto Gate Road stays open.
-                if (key === 'irongate_yards' && i === wall.length - 1) {
-                    continue;
-                }
                 const stones = box(
                     length,
                     9,
