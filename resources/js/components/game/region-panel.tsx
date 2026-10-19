@@ -78,6 +78,7 @@ const RINGS: Record<MapRegion['ring'], string> = {
     safe: 'Safe ground',
     farm: 'Farm beyond the fences',
     city: 'Irongate',
+    frontier: 'Frontier',
 };
 
 type Props = {

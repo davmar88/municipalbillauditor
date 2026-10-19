@@ -242,7 +242,15 @@ export type MapRegion = {
     id: number;
     key: string;
     name: string;
-    ring: 'seat' | 'inner' | 'middle' | 'outer' | 'safe' | 'farm' | 'city';
+    ring:
+        | 'seat'
+        | 'inner'
+        | 'middle'
+        | 'outer'
+        | 'safe'
+        | 'farm'
+        | 'city'
+        | 'frontier';
     produces: string | null;
     /** What is left to gather, and how it grows back; null where nothing grows. */
     stock: {

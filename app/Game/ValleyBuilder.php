@@ -95,6 +95,61 @@ final class ValleyBuilder
         'irongate_rookery' => ['The Rookery', 'city', null, 0, 10],
         'irongate_yards' => ['The Iron Yards', 'city', null, 1, 10],
         'irongate_garrison' => ['The Garrison', 'city', null, 2, 10],
+        // The frontier: wild land filling the valley round the farms, open to all.
+        'glitter_gully' => ['Glitter Gully', 'frontier', 'gold', 0, 11],
+        'blackthorn_wood' => ['Blackthorn Wood', 'frontier', 'wood', 1, 11],
+        'mirror_ponds' => ['Mirror Ponds', 'frontier', 'clay', 2, 11],
+        'bramble_heath' => ['Bramble Heath', 'frontier', 'dye', 3, 11],
+        'grey_scree' => ['Grey Scree', 'frontier', 'stone', 4, 11],
+        'long_meadow' => ['Long Meadow', 'frontier', 'wool', 5, 11],
+        'rookhollow_wood' => ['Rookhollow Wood', 'frontier', 'wood', 6, 11],
+        'heron_mere' => ['Heron Mere', 'frontier', 'clay', 7, 11],
+        'gorse_common' => ['Gorse Common', 'frontier', 'dye', 8, 11],
+        'flint_downs' => ['Flint Downs', 'frontier', 'stone', 9, 11],
+        'sheep_down' => ['Sheep Down', 'frontier', 'wool', 10, 11],
+        'gallows_copse' => ['Gallows Copse', 'frontier', 'wood', 11, 11],
+        'silt_pools' => ['Silt Pools', 'frontier', 'clay', 12, 11],
+        'thistle_down' => ['Thistle Down', 'frontier', 'dye', 13, 11],
+        'cairn_hill' => ['Cairn Hill', 'frontier', 'stone', 14, 11],
+        'old_copper_seam' => ['Old Copper Seam', 'frontier', 'copper', 15, 11],
+        'cowslip_lea' => ['Cowslip Lea', 'frontier', 'wool', 16, 11],
+        'ashwood' => ['Ashwood', 'frontier', 'wood', 17, 11],
+        'eelwater' => ['Eelwater', 'frontier', 'clay', 18, 11],
+        'wild_hives' => ['Wild Hives', 'frontier', 'honey', 19, 11],
+        'briar_scrub' => ['Briar Scrub', 'frontier', 'dye', 20, 11],
+        'rattle_rocks' => ['Rattle Rocks', 'frontier', 'stone', 21, 11],
+        'windy_common' => ['Windy Common', 'frontier', 'wool', 22, 11],
+        'hazel_hanger' => ['Hazel Hanger', 'frontier', 'wood', 23, 11],
+        'berry_brake' => ['Berry Brake', 'frontier', 'berries', 24, 11],
+    ];
+
+    /** What each frontier region borders: its nearest land. */
+    public const FRONTIER_LINKS = [
+        'glitter_gully' => ['hartley_fen', 'blackthorn_wood'],
+        'blackthorn_wood' => ['windy_common', 'hartley_fen'],
+        'mirror_ponds' => ['long_meadow', 'northfold_crag'],
+        'bramble_heath' => ['windy_common', 'hartley_rise'],
+        'grey_scree' => ['northfold_crag', 'mirror_ponds'],
+        'long_meadow' => ['mirror_ponds', 'coldharbour_mine'],
+        'rookhollow_wood' => ['hartley_rise', 'bramble_heath'],
+        'heron_mere' => ['rookhollow_wood', 'hartley'],
+        'gorse_common' => ['hartley_fold', 'hartley'],
+        'flint_downs' => ['fennick_moor', 'fennick_downs'],
+        'sheep_down' => ['rushmere_bog', 'rushmere'],
+        'gallows_copse' => ['hazel_hanger', 'brookside_meadow'],
+        'silt_pools' => ['hazel_hanger', 'rushmere_carr'],
+        'thistle_down' => ['marlow_mill', 'southmere_weald'],
+        'cairn_hill' => ['copperhill_slag', 'eelwater'],
+        'old_copper_seam' => ['rushmere_banks', 'wild_hives'],
+        'cowslip_lea' => ['berry_brake', 'rushmere_banks'],
+        'ashwood' => ['southmere_dell', 'silt_pools'],
+        'eelwater' => ['southmere_weald', 'rattle_rocks'],
+        'wild_hives' => ['old_copper_seam', 'berry_brake'],
+        'briar_scrub' => ['northfold_heath', 'ashcombe_ridge'],
+        'rattle_rocks' => ['eelwater', 'cairn_hill'],
+        'windy_common' => ['bramble_heath', 'blackthorn_wood'],
+        'hazel_hanger' => ['silt_pools', 'rushmere_carr'],
+        'berry_brake' => ['cowslip_lea', 'wild_hives'],
     ];
 
     /** Irongate's districts and what each borders: the Yards open onto Ironfield Gate and the other two. */
@@ -258,6 +313,11 @@ final class ValleyBuilder
 
     private function touches(Region $a, Region $b): bool
     {
+        if ($a->ring === 'frontier' || $b->ring === 'frontier') {
+            return in_array($b->key, self::FRONTIER_LINKS[$a->key] ?? [], true)
+                || in_array($a->key, self::FRONTIER_LINKS[$b->key] ?? [], true);
+        }
+
         if ($a->isCity() || $b->isCity()) {
             return in_array($b->key, self::CITY_LINKS[$a->key] ?? [], true)
                 || in_array($a->key, self::CITY_LINKS[$b->key] ?? [], true);

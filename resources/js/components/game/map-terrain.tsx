@@ -3,6 +3,7 @@ import type { Point } from '@/lib/hollowmere';
 import {
     BROOK,
     CITY,
+    FRONTIER_KIND,
     FIELD_SHAPES,
     FIELDS,
     SHAPES,
@@ -1433,6 +1434,111 @@ function Crop({
     );
 }
 
+/** The frontier's ground, by kind. */
+const FRONTIER_FILL: Record<string, string> = {
+    woods: INK.woods,
+    ponds: INK.meadow,
+    scrub: '#1f2422',
+    stone: INK.rock,
+    grass: INK.meadow,
+    deposit: INK.rock,
+};
+
+/**
+ * What grows or lies on a frontier region: trees in the woods, ponds and
+ * reeds, bushes on the scrub, rocks on stony ground, and a glint of the rare
+ * stuff at the deposits.
+ */
+function frontierland(key: string) {
+    return function Frontier() {
+        const shape = SHAPES[key];
+        const kind = FRONTIER_KIND[key];
+        const centre = hub(key);
+
+        if (kind === 'woods') {
+            const woods = scatter(shape, 70, `trees:${key}`, 6).filter(
+                (p) => !near(p, centre, 36),
+            );
+
+            return <Trees list={trees(woods, key, [8, 8])} />;
+        }
+
+        if (kind === 'ponds') {
+            const ponds = scatter(shape, 3, `ponds:${key}`, 50).filter(
+                (p) => !near(p, centre, 60),
+            );
+
+            return (
+                <>
+                    {ponds.map((p, i) => (
+                        <path
+                            key={i}
+                            d={smoothLoop(
+                                blob(p, 34, 22, `pond:${key}:${i}`, 0.18),
+                            )}
+                            fill={INK.water}
+                            stroke={INK.waterEdge}
+                            strokeWidth={1.4}
+                        />
+                    ))}
+                    <Trees
+                        list={trees(
+                            scatter(shape, 10, `reeds:${key}`, 12),
+                            `${key}:reeds`,
+                            [4, 3],
+                        )}
+                    />
+                </>
+            );
+        }
+
+        if (kind === 'scrub') {
+            const bushes = scatter(shape, 40, `bushes:${key}`, 8).filter(
+                (p) => !near(p, centre, 30),
+            );
+
+            return <Trees list={trees(bushes, `${key}:bushes`, [5, 4])} />;
+        }
+
+        if (kind === 'stone' || kind === 'deposit') {
+            const rocks = scatter(
+                shape,
+                kind === 'stone' ? 26 : 14,
+                `rocks:${key}`,
+                10,
+            ).filter((p) => !near(p, centre, 30));
+
+            return (
+                <path
+                    d={rocks
+                        .map((p, i) =>
+                            smoothLoop(
+                                blob(p, 8, 6, `rock:${key}:${i}`, 0.3, 7),
+                            ),
+                        )
+                        .join('')}
+                    fill={kind === 'stone' ? INK.rockLight : '#8a7a3a'}
+                    stroke={kind === 'stone' ? '#4a4754' : '#d6bc5a'}
+                    strokeWidth={0.8}
+                />
+            );
+        }
+
+        return (
+            <path
+                d={discs(
+                    scatter(shape, 30, `grass:${key}`, 8).map(([x, y]) => ({
+                        x,
+                        y,
+                        r: 2,
+                    })),
+                )}
+                fill={INK.meadowDot}
+            />
+        );
+    };
+}
+
 const UNDER: Record<string, () => React.ReactNode> = {
     thornbury: farmland('thornbury'),
     brookside: farmland('brookside'),
@@ -1525,13 +1631,18 @@ export const MapGround = memo(function MapGround() {
                 strokeDasharray="2 14"
             />
             {shapes.map(([key, shape]) => {
-                const Under = UNDER[key];
+                const Under =
+                    UNDER[key] ??
+                    (FRONTIER_KIND[key] ? frontierland(key) : undefined);
 
                 return (
                     <g key={key} clipPath={`url(#clip-${key})`}>
                         <path
                             d={toPath(shape.polygon)}
-                            fill={GROUND[key] ?? INK.meadow}
+                            fill={
+                                GROUND[key] ??
+                                FRONTIER_FILL[FRONTIER_KIND[key] ?? 'grass']
+                            }
                         />
                         {Under && <Under />}
                     </g>

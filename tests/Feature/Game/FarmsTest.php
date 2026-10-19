@@ -7,6 +7,7 @@ use App\Game\Battles;
 use App\Game\Clock;
 use App\Game\Farms;
 use App\Game\GameException;
+use App\Game\Gathering;
 use App\Game\Tick;
 use App\Models\Notice;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -29,15 +30,31 @@ class FarmsTest extends TestCase
 
     public function test_the_valley_has_twelve_farms_beyond_the_fences_in_three_rings(): void
     {
-        $this->assertSame(28, $this->valley->regions()->where('wild', false)->where('ring', '!=', 'city')->count());
+        $this->assertSame(28, $this->valley->regions()->where('wild', false)->whereNotIn('ring', ['city', 'frontier'])->count());
         $this->assertSame(36, $this->valley->regions()->where('wild', true)->count(), 'Three patches of wild land round each farm.');
-        $this->assertSame(['fennick'], $this->region('hartley')->neighbours()->where('wild', false)->pluck('key')->all(), 'The third ring is reached from the second.');
+        $this->assertSame(['fennick'], $this->region('hartley')->neighbours()->where('wild', false)->where('ring', 'farm')->pluck('key')->all(), 'The third ring is reached from the second.');
         $this->assertSame(['gold', 'copper', 'pears', 'carrots', 'berries', 'pumpkins'], collect(['coldharbour', 'copperhill', 'northfold', 'hartley', 'rushmere', 'southmere'])->map(fn (string $key) => $this->region($key)->produces)->all());
         $this->assertEqualsCanonicalizing(['thornbury', 'northfold', 'coldharbour'], $this->region('ashcombe')->neighbours()->where('wild', false)->pluck('key')->all(), 'The second ring is reached from the first, and leads on to the third.');
         $this->assertSame(['iron', 'honey', 'herbs'], [$this->region('ashcombe')->produces, $this->region('fennick')->produces, $this->region('marlow')->produces]);
         $this->assertEqualsCanonicalizing(['orchard', 'big_barn', 'hayfield', 'ashcombe'], $this->region('thornbury')->neighbours()->where('wild', false)->pluck('key')->all());
         $this->assertEqualsCanonicalizing(['paddock', 'marlow', 'copperhill'], $this->region('willowby')->neighbours()->where('wild', false)->pluck('key')->all());
         $this->assertTrue($this->region('big_barn')->neighbours()->where('key', 'thornbury')->exists());
+    }
+
+    public function test_the_frontier_fills_the_valley_with_open_land(): void
+    {
+        $frontier = $this->valley->regions()->where('ring', 'frontier')->get();
+
+        $this->assertCount(25, $frontier);
+        $this->assertSame('gold', $this->region('glitter_gully')->produces);
+        $this->assertSame('wood', $this->region('blackthorn_wood')->produces);
+        // Every bit of it can be reached from somewhere.
+        $frontier->each(fn ($region) => $this->assertTrue($region->neighbours()->exists(), "{$region->name} borders nothing."));
+
+        // Anyone can walk out and gather there.
+        $player = $this->player();
+        $this->stand($player, 'blackthorn_wood');
+        $this->assertSame('wood', app(Gathering::class)->gather($player->fresh(), $this->region('blackthorn_wood'))['what']);
     }
 
     public function test_a_leader_buys_an_unclaimed_farm_from_the_treasury(): void

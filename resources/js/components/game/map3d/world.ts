@@ -22,6 +22,7 @@ import type { Point, RegionShape } from '@/lib/hollowmere';
 import {
     BROOK,
     FARMS,
+    FRONTIER_KIND,
     FIELD_SHAPES,
     FIELDS,
     anchor,
@@ -152,12 +153,25 @@ const FARM_CROP: Record<
 };
 
 /** A region's ground: a farm, a field a farm has cleared, wild land, or one of Hollowmere's own. */
+/** How each kind of frontier land looks in 3D. */
+const FRONTIER_LOOK: Record<string, string> = {
+    woods: 'woods',
+    ponds: 'wet',
+    scrub: 'heath',
+    stone: 'rock',
+    grass: 'meadow',
+    deposit: 'rock',
+};
+
 function kindOf(
     key: string,
     isRegion: boolean,
 ): { kind: string; wild: boolean } {
     if (FARMS[key]) {
         return { kind: 'farm', wild: false };
+    }
+    if (FRONTIER_KIND[key]) {
+        return { kind: FRONTIER_LOOK[FRONTIER_KIND[key]], wild: false };
     }
     if (FIELDS[key]) {
         return isRegion
