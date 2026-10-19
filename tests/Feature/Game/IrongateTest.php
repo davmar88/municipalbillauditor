@@ -358,7 +358,7 @@ class IrongateTest extends TestCase
         for ($try = 0; $try < 40 && $won === null; $try++) {
             $this->travel(Ironfield::COOLDOWN_HOURS)->hours();
             $player->fresh()->forceFill(['horseshoes' => 10, 'horseshoes_at' => now(), 'pound_until' => null])->save();
-            $this->stand($player, 'ironfield_road');
+            $this->stand($player->fresh(), 'ironfield_road');
             $result = app(Ironfield::class)->run($player->fresh(), $this->region('ironfield_road'), 10);
 
             if ($result['won']) {

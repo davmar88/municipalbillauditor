@@ -11,7 +11,7 @@ import {
     walkPoint,
 } from '@/components/game/world-map';
 import type { Point } from '@/lib/hollowmere';
-import { FARM, LANDS, hub, inside } from '@/lib/hollowmere';
+import { FARM, LANDS, hub, inside, reachable } from '@/lib/hollowmere';
 import { cn } from '@/lib/utils';
 import { AnimalMenu } from '@/components/game/animal-menu';
 import { FolkCard } from '@/components/game/irongate-folk';
@@ -525,8 +525,10 @@ export default function WorldMap3D({
                 setHover(id);
                 const project = (p: Point, height: number) =>
                     rig.project(p, height);
+                const ground = rig.pick(point);
                 setOverLand(
                     id !== null ||
+                        (ground !== null && reachable(ground)) ||
                         worldRef.current?.animalAt(point, project) != null ||
                         worldRef.current?.folkAt(point, project) != null,
                 );
@@ -635,9 +637,13 @@ export default function WorldMap3D({
                 setPerson({ folk: current.folk, at: point });
                 return;
             }
-            // A quick tap on land sets off straight for that spot.
+            // A quick tap on land sets off straight for that spot, the open scrub between the regions included.
             const ground = rig.pick(point);
-            if (ground && current.region !== null && current.region > 0) {
+            if (
+                ground &&
+                ((current.region !== null && current.region > 0) ||
+                    reachable(ground))
+            ) {
                 latest.current.onWalk?.(ground);
             }
             return;

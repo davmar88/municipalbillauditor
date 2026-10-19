@@ -15,6 +15,7 @@ import {
     FARM,
     FIELDS,
     LANDS,
+    reachable,
     WORLD,
     anchor,
     hub,
@@ -1820,12 +1821,15 @@ export function WorldMap({
           ? hub(hereRegion.key)
           : null;
 
-    // A quick tap on land sets off straight for that spot.
+    // A quick tap on land sets off straight for that spot, the open scrub between the regions included.
     const onTap = useCallback(
         (target: Element | null, world: Point) => {
             const id = Number(target?.getAttribute('data-region'));
 
-            if (onWalk && Number.isFinite(id) && id > 0) {
+            if (
+                onWalk &&
+                ((Number.isFinite(id) && id > 0) || reachable(world))
+            ) {
                 onWalk(world);
             }
         },

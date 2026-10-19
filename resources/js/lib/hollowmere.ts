@@ -17,6 +17,16 @@ export const REACH = { x: -2650, y: -2930, width: 6250, height: 6920 };
 /** Hollowmere, its farms and Irongate, for seeing all the regions at once. */
 export const LANDS = { x: -1650, y: -1930, width: 4250, height: 4920 };
 
+/** Whether animals can walk to a point: anywhere inside the valley's edge, the open scrub included. */
+export function reachable([x, y]: Point): boolean {
+    return (
+        x >= REACH.x &&
+        x <= REACH.x + REACH.width &&
+        y >= REACH.y &&
+        y <= REACH.y + REACH.height
+    );
+}
+
 /** The farm without the land around it, for fitting it on screen. */
 export const FARM = { x: 96, y: 92, width: 1408, height: 904 };
 

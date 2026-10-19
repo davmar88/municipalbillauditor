@@ -8,6 +8,7 @@ use App\Game\Clock;
 use App\Game\Farms;
 use App\Game\GameException;
 use App\Game\Movement;
+use App\Game\Players;
 use App\Models\Faction;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -99,14 +100,18 @@ class GrowingFarmsTest extends TestCase
             ->where('regions.16.growth.grown', 0)
             ->where('regions.16.growth.next.name', 'Thornbury Heath'));
 
+        // Animals can wander onto it: until it's grown, it's open scrub.
+        app(Movement::class)->walk($red[1]->fresh(), $this->region('thornbury_heath'));
+        $this->travel(3)->hours();
+        $this->assertSame('scrubland', Players::lock($red[1]->fresh())->location()->key);
+
         foreach ([
-            fn () => app(Movement::class)->walk($red[0]->fresh(), $this->region('thornbury_heath')),
             fn () => app(Battles::class)->launch($red[0]->fresh(), $this->region('thornbury_heath'), 1),
             fn () => $this->farms->buy($red[0]->fresh(), $this->region('thornbury_heath')),
         ] as $try) {
             try {
                 $try();
-                $this->fail('Wild land is out of reach.');
+                $this->fail('Wild land is not for taking.');
             } catch (GameException $e) {
                 $this->assertStringContainsString('wild', $e->getMessage());
             }

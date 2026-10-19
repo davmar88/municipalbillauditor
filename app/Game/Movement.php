@@ -42,7 +42,8 @@ final class Movement
         $key = $player->location()->key;
 
         // A point still in the animal's region; otherwise it was moved there some other way.
-        if ($player->pos_x !== null && $player->pos_y !== null && Geography::regionAt($player->pos_x, $player->pos_y) === $key) {
+        // Out in the scrub, which lies everywhere between the regions, an animal is wherever it stopped.
+        if ($player->pos_x !== null && $player->pos_y !== null && (Geography::regionAt($player->pos_x, $player->pos_y) === $key || ($key === 'scrubland' && Geography::reachable($player->pos_x, $player->pos_y)))) {
             return [$player->pos_x, $player->pos_y];
         }
 
@@ -238,10 +239,19 @@ final class Movement
         ];
     }
 
+    /** The region under a point. Wild land round a farm is open scrub until the farm grows into it. */
     private static function regionUnder(Player $player, float $x, float $y): ?Region
     {
         $key = Geography::regionAt($x, $y);
 
-        return $key === null ? null : Region::query()->where('valley_id', $player->valley_id)->where('key', $key)->first();
+        if ($key === null) {
+            return null;
+        }
+
+        $region = Region::query()->where('valley_id', $player->valley_id)->where('key', $key)->first();
+
+        return $region !== null && $region->wild
+            ? Region::query()->where('valley_id', $player->valley_id)->where('key', 'scrubland')->first() ?? $region
+            : $region;
     }
 }
