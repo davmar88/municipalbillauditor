@@ -44,7 +44,7 @@
                     @include('site.partials.logo', ['size' => 30])
                     <span class="flex flex-col leading-none">
                         <span class="font-mono text-[10px] tracking-[0.12em] text-muted">A FARM OF RIVAL FACTIONS</span>
-                        <span class="mt-[3px] text-[19px] font-bold">Revenue<span class="text-gradient">Guard</span></span>
+                        <span class="mt-[3px] text-[19px] font-bold">Animal <span class="text-gradient">Farm</span></span>
                     </span>
                 </a>
                 <nav aria-label="Main" class="flex flex-wrap items-center gap-x-5 gap-y-1 text-[15px]">
@@ -66,7 +66,7 @@
             <div class="mx-auto flex max-w-[1200px] flex-col gap-8 px-[clamp(16px,4vw,40px)]">
                 <div class="flex flex-wrap items-start justify-between gap-8">
                     <div class="flex max-w-[420px] flex-col gap-2.5">
-                        <span class="text-[19px] font-bold text-white">Revenue<span class="text-gradient">Guard</span></span>
+                        <span class="text-[19px] font-bold text-white">Animal <span class="text-gradient">Farm</span></span>
                         <span class="text-sm text-night-muted">An online strategy game set on a farm the humans left behind. Inspired by a classic fable. Not affiliated with or endorsed by the estate of George Orwell.</span>
                     </div>
                     <nav aria-label="Site" class="flex flex-col gap-1">

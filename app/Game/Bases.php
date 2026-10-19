@@ -104,6 +104,10 @@ final class Bases
                     : 'Only a Head Office can be built in the Farmhouse.');
             }
 
+            if (! $kind->fits($region)) {
+                throw new GameException($kind->fitsWhere());
+            }
+
             // What the last holders built here is a ruin now.
             Building::query()->where('region_id', $region->id)->where('faction_id', '!=', $faction->id)->delete();
 

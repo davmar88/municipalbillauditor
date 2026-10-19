@@ -48,7 +48,7 @@ export default function Puzzle({ puzzle, player, solvedToday }: Props) {
     }, [stage, left]);
 
     const right = guess === puzzle.answer;
-    const share = `RevenueGuard Spot the Edit #${puzzle.number}: ${right ? `spotted in ${seconds}s` : 'missed it'} ${puzzle.after.map((_, i) => (i === puzzle.answer ? (right ? '🟪' : '🟧') : '⬛')).join('')}`;
+    const share = `Animal Farm Spot the Edit #${puzzle.number}: ${right ? `spotted in ${seconds}s` : 'missed it'} ${puzzle.after.map((_, i) => (i === puzzle.answer ? (right ? '🟪' : '🟧') : '⬛')).join('')}`;
 
     function pick(index: number) {
         const taken = Math.round((Date.now() - started.current) / 1000);

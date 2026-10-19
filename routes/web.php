@@ -110,6 +110,7 @@ Route::middleware(['auth', 'verified', 'player', 'throttle:120,1'])->prefix('pla
     Route::post('chat/{message}/translate', [ChatController::class, 'translate'])->middleware('throttle:30,1,chat-translate')->name('play.chat.translate');
 
     Route::get('market', [MarketController::class, 'index'])->name('play.market');
+    Route::post('market/trader', [MarketController::class, 'trader'])->middleware('throttle:20,1,trader')->name('play.market.trader');
     Route::post('designs', [MarketController::class, 'design'])->name('play.design');
     Route::post('designs/{design}/craft', [MarketController::class, 'craft'])->name('play.craft');
     Route::post('items/{item}/list', [MarketController::class, 'list'])->name('play.list');

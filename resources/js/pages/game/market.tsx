@@ -23,10 +23,22 @@ import {
     unlist,
     use as useItem,
 } from '@/routes/play';
+import { trader as traderBuy } from '@/routes/play/market';
 import type { DesignCard } from '@/types';
 import type { Currency } from '@/types/game';
 
 type Props = {
+    /** Pell the Irongate trader's cart: basics for Corn. */
+    trader: {
+        name: string;
+        left: number;
+        goods: {
+            template: string;
+            label: string;
+            power: string | null;
+            price: number;
+        }[];
+    };
     listings: {
         id: number;
         price: number;
@@ -100,7 +112,8 @@ export default function MarketPage(props: Props) {
                         The market
                     </h1>
                     <p className="text-sm text-muted-foreground">
-                        Everything here is made by players. Prices are in Corn
+                        Everything here is made by players, except Pell's cart
+                        from Irongate. Prices are in Corn
                         {props.levy > 0 &&
                             `, plus the House's ${props.levy}% market levy`}
                         , or in Apples.
@@ -134,7 +147,67 @@ export default function MarketPage(props: Props) {
     );
 }
 
-function Browse({
+function Browse(props: Props & { onWorkshop: () => void }) {
+    return (
+        <div className="flex flex-col gap-4">
+            <TraderCart trader={props.trader} />
+            <Shelves {...props} />
+        </div>
+    );
+}
+
+/** Pell's cart: a few plain basics for Corn, so there's always something to buy. */
+function TraderCart({ trader }: { trader: Props['trader'] }) {
+    const { player } = usePage().props;
+    const corn = player?.corn ?? 0;
+
+    return (
+        <section className="flex flex-col gap-2 rounded-xl border border-amber-500/30 bg-amber-500/5 p-3">
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+                <p className="font-semibold">
+                    🛒 {trader.name}'s cart, from Irongate
+                </p>
+                <span className="text-xs text-muted-foreground">
+                    {trader.left > 0
+                        ? `She'll sell you ${trader.left} more today.`
+                        : 'Sold out for you today. Back tomorrow.'}
+                </span>
+            </div>
+            <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                {trader.goods.map((good) => (
+                    <li
+                        key={good.template}
+                        className="flex flex-col gap-1 rounded-lg border bg-card p-2 text-sm"
+                    >
+                        <p className="font-semibold">
+                            {trader.name}'s {good.label}
+                        </p>
+                        {good.power && (
+                            <p className="text-xs text-muted-foreground">
+                                {good.power}
+                            </p>
+                        )}
+                        <Button
+                            size="sm"
+                            variant="secondary"
+                            className="mt-auto self-start"
+                            disabled={trader.left < 1 || corn < good.price}
+                            onClick={() =>
+                                act(traderBuy.url(), {
+                                    template: good.template,
+                                })
+                            }
+                        >
+                            Buy for {good.price} Corn
+                        </Button>
+                    </li>
+                ))}
+            </ul>
+        </section>
+    );
+}
+
+function Shelves({
     listings,
     levy,
     onWorkshop,

@@ -290,7 +290,8 @@ final class Market
             }
 
             $maker = $item->design->player_id;
-            $resale = $maker !== $seller->id;
+            // Pell's goods have no maker, so nobody takes a royalty on them.
+            $resale = $maker !== null && $maker !== $seller->id;
             $inApples = $listing->currency === 'apples';
             $levy = 0;
             $cut = 0;

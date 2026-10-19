@@ -2,6 +2,8 @@
 
 namespace App\Enums;
 
+use App\Models\Region;
+
 /**
  * What a faction can build on its land. The Den is the faction's base and
  * comes first. The Head Office goes in the Farmhouse, and its faction rules
@@ -84,6 +86,26 @@ enum BuildingKind: string
             self::HeadOffice => [0.2, 0.35, 0.5][$level - 1],
             self::Mill => [0.25, 0.5, 0.75][$level - 1],
             self::Well, self::Coop, self::Silo => 0.0,
+        };
+    }
+
+    /** Whether it does any good on this land: a Mill where Corn grows, a Well on a farm. */
+    public function fits(Region $region): bool
+    {
+        return match ($this) {
+            self::Mill => $region->produces === 'corn',
+            self::Well => $region->isFarm() && ! $region->wild,
+            default => true,
+        };
+    }
+
+    /** Where it does any good, for the build card when it doesn't fit. */
+    public function fitsWhere(): ?string
+    {
+        return match ($this) {
+            self::Mill => 'A Mill only helps where Corn grows.',
+            self::Well => 'A Well only helps on a farm.',
+            default => null,
         };
     }
 

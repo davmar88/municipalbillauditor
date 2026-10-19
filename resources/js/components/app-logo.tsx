@@ -9,7 +9,7 @@ export default function AppLogo() {
                     A FARM OF RIVAL FACTIONS
                 </span>
                 <span className="mt-0.5 truncate text-lg font-bold tracking-tight">
-                    Revenue<span className="text-sidebar-primary">Guard</span>
+                    Animal <span className="text-sidebar-primary">Farm</span>
                 </span>
             </div>
         </>

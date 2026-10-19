@@ -21,7 +21,7 @@ import {
 } from '@/lib/hollowmere';
 
 /**
- * The farm drawn as a dark street map in RevenueGuard's violet. Everything
+ * The farm drawn as a dark street map in Animal Farm's violet. Everything
  * here is drawn once; small things like trees and sheep are batched into a
  * few shapes so dragging the map stays smooth on phones.
  */

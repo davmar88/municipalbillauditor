@@ -429,6 +429,26 @@ class BasesTest extends TestCase
         $this->assertSame($before + 1500, Stores::capacity($faction->fresh())['corn']);
     }
 
+    public function test_a_mill_goes_where_corn_grows_and_a_well_on_a_farm(): void
+    {
+        $leader = $this->player();
+        $faction = $this->stock($this->faction('Builders', $leader));
+        $this->hold($faction, 'old_well', 'ironfield_gate');
+        $this->raise($faction, 'old_well', BuildingKind::Den);
+        $this->hold($faction, 'thornbury');
+
+        foreach ([[BuildingKind::Mill, 'thornbury', 'Corn grows'], [BuildingKind::Well, 'ironfield_gate', 'on a farm']] as [$kind, $key, $why]) {
+            try {
+                $this->bases->build($leader->fresh(), $this->region($key), $kind);
+                $this->fail("A {$kind->label()} went up in {$key}.");
+            } catch (GameException $e) {
+                $this->assertStringContainsString($why, $e->getMessage());
+            }
+        }
+
+        $this->assertSame(BuildingKind::Mill, $this->bases->build($leader->fresh(), $this->region('ironfield_gate'), BuildingKind::Mill)->kind);
+    }
+
     public function test_buildings_fall_with_land_lost_any_other_way(): void
     {
         $faction = $this->faction('Unlucky', $this->player());

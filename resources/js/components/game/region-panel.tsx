@@ -896,7 +896,11 @@ export function RegionPanel({
                         </p>
                         <BuildOptions
                             regionId={region.id}
-                            regionKey={region.key}
+                            plot={{
+                                key: region.key,
+                                produces: region.produces,
+                                farm: region.ring === 'farm',
+                            }}
                             kinds={buildingKinds}
                             store={base}
                             hasDen={base.hasDen}

@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * pattern. Copies are made from materials and numbered.
  *
  * @property int $id
- * @property int $player_id
+ * @property int|null $player_id Null for Pell the trader's goods.
  * @property ItemTemplate $template
  * @property string $name
  * @property array<int, string> $colours

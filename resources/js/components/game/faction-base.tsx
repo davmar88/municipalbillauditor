@@ -194,37 +194,57 @@ export function BuildingDetails({
  * What a faction can raise in a region: a Head Office in the Farmhouse,
  * and elsewhere the Den first, then the rest.
  */
+export type Plot = {
+    key: string;
+    /** What grows there: a Mill only helps where it's Corn. */
+    produces: string | null;
+    /** A farm, where a Well keeps the crop watered. */
+    farm: boolean;
+};
+
+/** Whether a building does any good on this land. */
+function fits(kind: BuildingKindCard, plot: Plot): boolean {
+    if (kind.value === 'mill') {
+        return plot.produces === 'corn';
+    }
+    if (kind.value === 'well') {
+        return plot.farm;
+    }
+    return true;
+}
+
 export function buildable(
     kinds: BuildingKindCard[],
     hasDen: boolean,
-    regionKey: string | undefined,
+    plot: Plot | undefined,
 ): BuildingKindCard[] {
-    if (regionKey === 'farmhouse') {
+    if (plot?.key === 'farmhouse') {
         return kinds.filter((kind) => kind.value === 'head_office');
     }
 
     return kinds.filter(
         (kind) =>
             kind.value !== 'head_office' &&
-            (hasDen ? kind.value !== 'den' : kind.value === 'den'),
+            (hasDen ? kind.value !== 'den' : kind.value === 'den') &&
+            (!plot || fits(kind, plot)),
     );
 }
 
 /** The buildings a faction may raise here, each with its cost and a Build button. */
 export function BuildOptions({
     regionId,
-    regionKey,
+    plot,
     kinds,
     store,
     hasDen,
 }: {
     regionId: number;
-    regionKey: string;
+    plot: Plot;
     kinds: BuildingKindCard[];
     store: Store;
     hasDen: boolean;
 }) {
-    const choices = buildable(kinds, hasDen, regionKey);
+    const choices = buildable(kinds, hasDen, plot);
 
     return (
         <ul className="flex flex-col gap-2">
@@ -258,7 +278,7 @@ export function BuildOptions({
                     </li>
                 );
             })}
-            {regionKey === 'farmhouse' ? (
+            {plot.key === 'farmhouse' ? (
                 <li className="text-xs text-muted-foreground">
                     Your faction rules Hollowmere once its Head Office stands.
                     While it goes up, the Farmhouse can be raided.
@@ -287,7 +307,7 @@ type Props = {
         capacity: { corn: number; material: number };
         memberCap: number;
         buildings: (MapBuilding & { region: { id: number; name: string } })[];
-        plots: { id: number; name: string; key: string }[];
+        plots: ({ id: number; name: string } & Plot)[];
     };
     kinds: BuildingKindCard[];
 };
@@ -301,7 +321,7 @@ export function FactionBase({ treasury, base, kinds }: Props) {
     const choices = buildable(
         kinds,
         hasDen,
-        base.plots.find((plot) => plot.id === plotId)?.key,
+        base.plots.find((plot) => plot.id === plotId),
     );
     const [picked, setPicked] = useState<BuildingKindValue>(
         choices[0]?.value ?? 'den',

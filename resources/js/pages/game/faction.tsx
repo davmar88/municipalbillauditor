@@ -59,7 +59,13 @@ type Props = {
                   buildings: (MapBuilding & {
                       region: { id: number; name: string };
                   })[];
-                  plots: { id: number; name: string; key: string }[];
+                  plots: {
+                      id: number;
+                      name: string;
+                      key: string;
+                      produces: string | null;
+                      farm: boolean;
+                  }[];
               };
               studies: FactionStudies;
               members: {

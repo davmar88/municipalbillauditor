@@ -18,6 +18,7 @@ use App\Models\Crime;
 use App\Models\Faction;
 use App\Models\FactionJoinRequest;
 use App\Models\Player;
+use App\Models\Region;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -65,7 +66,8 @@ class FactionController extends Controller
                         ->where('key', '!=', 'paddock')
                         ->whereDoesntHave('building', fn ($query) => $query->where('faction_id', $faction->id))
                         ->orderBy('name')
-                        ->get(['id', 'name', 'key']),
+                        ->get(['id', 'name', 'key', 'ring', 'produces', 'wild'])
+                        ->map(fn (Region $plot) => ['id' => $plot->id, 'name' => $plot->name, 'key' => $plot->key, 'produces' => $plot->produces, 'farm' => $plot->isFarm() && ! $plot->wild]),
                 ],
                 'studies' => Research::page($faction, $player),
                 'members' => $faction->members()->orderByRaw("case faction_role when 'leader' then 0 when 'council' then 1 when 'member' then 2 else 3 end")->orderBy('name')->get()

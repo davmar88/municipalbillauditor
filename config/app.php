@@ -13,7 +13,8 @@ return [
     |
     */
 
-    'name' => env('APP_NAME', 'Laravel'),
+    // The game's name, the same everywhere whatever the server's .env says.
+    'name' => 'Animal Farm',
 
     /*
     |--------------------------------------------------------------------------

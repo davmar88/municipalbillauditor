@@ -13,6 +13,7 @@ use App\Game\Homes;
 use App\Game\Movement;
 use App\Game\Players;
 use App\Game\Tick;
+use App\Game\Trader;
 use App\Models\Notice;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -309,5 +310,22 @@ class FarmsTest extends TestCase
 
         $this->expectExceptionMessage("don't have a home");
         app(Homes::class)->demolish($player->fresh());
+    }
+
+    public function test_pell_sells_basics_for_corn_three_a_day(): void
+    {
+        $player = $this->player(attributes: ['corn' => 500]);
+
+        $item = app(Trader::class)->buy($player->fresh(), 'gloves');
+        $this->assertSame($player->id, $item->player_id);
+        $this->assertNull($item->design->player_id, 'Her goods have no maker.');
+        $this->assertSame(500 - Trader::STOCK['gloves'], $player->fresh()->corn);
+
+        app(Trader::class)->buy($player->fresh(), 'hat');
+        app(Trader::class)->buy($player->fresh(), 'hat');
+        $this->assertSame(2, $player->fresh()->items()->whereHas('design', fn ($q) => $q->where('template', 'hat'))->count());
+
+        $this->expectExceptionMessage('3 things a day');
+        app(Trader::class)->buy($player->fresh(), 'scarf');
     }
 }

@@ -7,6 +7,7 @@ use App\Game\LawTemplate;
 use App\Game\Market;
 use App\Game\Powers;
 use App\Game\Skills;
+use App\Game\Trader;
 use App\Game\Wall;
 use App\Http\Controllers\Controller;
 use App\Models\Item;
@@ -22,6 +23,14 @@ use Inertia\Response;
 /** The market: shops along Market Square, your own shop, and the Workshop. */
 class MarketController extends Controller
 {
+    public function trader(Request $request, Trader $trader): RedirectResponse
+    {
+        $data = $request->validate(['template' => ['required', 'string', 'max:20']]);
+        $item = $trader->buy($request->user()->player, $data['template']);
+
+        return $this->told("Pell wraps up {$item->design->name} for you. It's in your bag.");
+    }
+
     public function index(Request $request, Market $market): Response
     {
         /** @var Player $player */
@@ -40,6 +49,8 @@ class MarketController extends Controller
             ->get();
 
         return Inertia::render('game/market', [
+            // Pell the Irongate trader's cart: basics for Corn while the shelves are bare.
+            'trader' => Trader::cart($player),
             'listings' => $listings->map(fn (Listing $listing) => [
                 'id' => $listing->id,
                 'price' => $listing->price,
