@@ -14,6 +14,7 @@ import {
     Swords,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import { AnimalStageSlot } from '@/components/game/animal-stage-slot';
 import { GameBar } from '@/components/game/game-bar';
 import { ItemPreview } from '@/components/game/item-preview';
 import { ProgressBar } from '@/components/game/missions';
@@ -25,6 +26,7 @@ import {
 } from '@/components/game/shop-listing';
 import { Button } from '@/components/ui/button';
 import { clockTime, dayMonth, speciesEmoji } from '@/lib/game';
+import type { Worn } from '@/lib/animal-dress';
 import { openChat } from '@/lib/pulse';
 import { wanted } from '@/routes/play';
 import type { DesignCard } from '@/types';
@@ -58,6 +60,8 @@ type Props = {
         homeClosed: boolean;
     };
     biography: string;
+    /** The shop items it wears, one per spot on its body. */
+    wearing: Worn[];
     skills: SkillCard[];
     record: Deeds;
     /** The bounty in Apples on a warrant out for them, if there is one. */
@@ -101,6 +105,7 @@ const RECORD: { key: keyof Deeds; label: string; icon: LucideIcon }[] = [
 export default function AnimalProfile({
     animal,
     biography,
+    wearing,
     skills,
     record,
     bounty,
@@ -176,6 +181,12 @@ export default function AnimalProfile({
                         )}
                     </div>
                 </header>
+
+                <AnimalStageSlot
+                    species={animal.species}
+                    wearing={wearing}
+                    empty="Not wearing anything from the shops yet."
+                />
 
                 <section className="grid gap-3 sm:grid-cols-2">
                     <div className="flex flex-col gap-2 rounded-xl border bg-card p-4">

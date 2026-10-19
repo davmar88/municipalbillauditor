@@ -127,4 +127,40 @@ class AnimalProfileTest extends TestCase
         $this->actingAs($viewer->user)->get(route('play.animal', $stranger))->assertNotFound();
         $this->actingAs($viewer->user)->get(route('play.animal', Player::query()->max('id') + 1))->assertNotFound();
     }
+
+    public function test_an_animal_wears_its_newest_unused_items_one_per_spot(): void
+    {
+        $viewer = $this->player();
+        // A shop opens at level 2, for the copy on the shelf.
+        $bo = $this->player(Species::Horse, level: 2);
+        $item = function (ItemTemplate $template, string $name, string $pattern = 'plain') use ($bo): Item {
+            $design = ItemDesign::create(['player_id' => $bo->id, 'template' => $template, 'name' => $name, 'colours' => ['#b39aff', '#41d1ff'], 'pattern' => $pattern, 'status' => 'approved']);
+
+            return Item::create(['item_design_id' => $design->id, 'player_id' => $bo->id, 'serial' => 1]);
+        };
+
+        $item(ItemTemplate::Hat, 'Old Hat');
+        $item(ItemTemplate::Hat, 'New Hat', 'stars');
+        // A used-up copy and one on the shop shelf aren't worn.
+        $item(ItemTemplate::Scarf, 'Spent Scarf')->forceFill(['used_at' => now()])->save();
+        app(Market::class)->list($bo->fresh(), $item(ItemTemplate::Cloak, 'Shelf Cloak'), 40);
+        $item(ItemTemplate::Shoes, 'Iron Shoes');
+        // One thing rides on the back, a banner before a basket.
+        $item(ItemTemplate::Basket, 'Picnic');
+        $item(ItemTemplate::Banner, 'Red Banner');
+        $item(ItemTemplate::Tonic, 'Not Worn');
+
+        $expected = [
+            ['spot' => 'hat', 'template' => 'hat', 'name' => 'New Hat', 'colours' => ['#b39aff', '#41d1ff'], 'pattern' => 'stars'],
+            ['spot' => 'shoes', 'template' => 'shoes', 'name' => 'Iron Shoes', 'colours' => ['#b39aff', '#41d1ff'], 'pattern' => 'plain'],
+            ['spot' => 'carried', 'template' => 'banner', 'name' => 'Red Banner', 'colours' => ['#b39aff', '#41d1ff'], 'pattern' => 'plain'],
+        ];
+
+        $this->actingAs($viewer->user)->get(route('play.animal', $bo))->assertInertia(fn (Assert $page) => $page
+            ->component('game/animal')
+            ->where('wearing', $expected));
+        $this->actingAs($bo->user)->get(route('play.me'))->assertInertia(fn (Assert $page) => $page
+            ->component('game/me')
+            ->where('wearing', $expected));
+    }
 }

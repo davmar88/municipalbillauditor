@@ -1,5 +1,6 @@
 import { Head, Link } from '@inertiajs/react';
 import { Award } from 'lucide-react';
+import { AnimalStageSlot } from '@/components/game/animal-stage-slot';
 import { GameBar } from '@/components/game/game-bar';
 import { ItemPreview } from '@/components/game/item-preview';
 import { OrchardBadge } from '@/components/game/orchard-badge';
@@ -7,7 +8,9 @@ import { NativeSelect } from '@/components/ui/native-select';
 import { act, dayMonth } from '@/lib/game';
 import { apples } from '@/routes/play';
 import { language as languageRoute } from '@/routes/play/me';
+import type { Worn } from '@/lib/animal-dress';
 import type { DesignCard } from '@/types';
+import type { Species } from '@/types/game';
 
 type Props = {
     animal: {
@@ -29,6 +32,8 @@ type Props = {
         orchardUntil: string | null;
     };
     biography: string;
+    /** The shop items it wears, one per spot on its body. */
+    wearing: Worn[];
     rosettes: { amount: number; reason: string; at: string }[];
     collection: {
         items: { id: number; serial: number; design: DesignCard }[];
@@ -41,6 +46,7 @@ type Props = {
 export default function Me({
     animal,
     biography,
+    wearing,
     rosettes,
     collection,
     languages,
@@ -83,6 +89,12 @@ export default function Me({
                     )}
                     <p className="text-muted-foreground">{biography}</p>
                 </header>
+
+                <AnimalStageSlot
+                    species={animal.species as Species}
+                    wearing={wearing}
+                    empty="Hats, scarves, cloaks and the other shop items you own show on your animal."
+                />
 
                 <section className="grid gap-3 sm:grid-cols-2">
                     <div className="rounded-xl border bg-card p-4">

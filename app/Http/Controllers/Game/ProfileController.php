@@ -8,6 +8,7 @@ use App\Game\Messages;
 use App\Game\Players;
 use App\Game\Skills;
 use App\Game\Wall;
+use App\Game\Wardrobe;
 use App\Http\Controllers\Controller;
 use App\Models\Item;
 use App\Models\Listing;
@@ -55,6 +56,7 @@ class ProfileController extends Controller
                 'role_in_faction' => $player->faction_role?->label(),
                 'orchardUntil' => $player->inOrchard() ? $player->orchard_until->toIso8601String() : null,
             ],
+            'wearing' => Wardrobe::worn($player),
             'biography' => $this->biography($player, $this->record($player)),
             'rosettes' => RosetteEntry::query()->where('player_id', $player->id)->latest('id')->limit(12)->get(['amount', 'reason', 'created_at'])
                 ->map(fn (RosetteEntry $entry) => ['amount' => $entry->amount, 'reason' => $entry->reason, 'at' => $entry->created_at->toIso8601String()]),
@@ -111,6 +113,7 @@ class ProfileController extends Controller
                 'homeClosed' => $player->homeIsClosed(),
             ],
             'biography' => $this->biography($player, $record),
+            'wearing' => Wardrobe::worn($player),
             'skills' => array_map(fn (string $skill) => Skills::card($player, $skill), Skills::ALL),
             'record' => $record,
             'bounty' => $season ? Warrant::query()->where('season_id', $season->id)->where('player_id', $player->id)->where('status', 'open')->value('bounty') : null,
