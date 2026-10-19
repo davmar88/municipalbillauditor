@@ -18,6 +18,13 @@ type Props = {
         /** "••••7a3f" when saved: the key itself never comes back. */
         paypalClientSecret: string | null;
         paypalMode: 'sandbox' | 'live';
+        googleClientId: string | null;
+        /** "••••7a3f" when saved: the secret itself never comes back. */
+        googleClientSecret: string | null;
+        /** The ID and secret aren't both saved here, but the server's .env has a client. */
+        googleFromServer: boolean;
+        /** The redirect URI the Google client must list. */
+        googleRedirect: string;
         anthropicApiKey: string | null;
         /** No key saved here, but the server's .env has one. */
         anthropicFromServer: boolean;
@@ -62,8 +69,8 @@ const STATUS: Record<Props['purchases'][number]['status'], string> = {
 };
 
 /**
- * The owner's page: the PayPal and Claude keys, whether Pineapple packs are on
- * sale and cash-outs open, and what the sales brought in.
+ * The owner's page: the PayPal, Google and Claude keys, whether Pineapple packs
+ * are on sale and cash-outs open, and what the sales brought in.
  */
 export default function AdminSettings({
     settings,
@@ -81,9 +88,10 @@ export default function AdminSettings({
                         Admin
                     </h1>
                     <p className="text-sm text-muted-foreground">
-                        PayPal keys, Pineapple sales and cash-outs, and what the
-                        sales brought in. Keys are stored encrypted, and once
-                        saved this page only shows their last four characters.
+                        PayPal and Google keys, Pineapple sales and cash-outs,
+                        and what the sales brought in. Keys are stored
+                        encrypted, and once saved this page only shows their
+                        last four characters.
                     </p>
                 </header>
 
@@ -136,6 +144,7 @@ export default function AdminSettings({
                     options={{ preserveScroll: true }}
                     resetOnSuccess={[
                         'paypal_client_secret',
+                        'google_client_secret',
                         'anthropic_api_key',
                     ]}
                     className="flex flex-col gap-6"
@@ -264,6 +273,56 @@ export default function AdminSettings({
                                     </NativeSelect>
                                     <InputError message={errors.paypal_mode} />
                                 </div>
+                            </Card>
+
+                            <Card
+                                title="Google, for “Continue with Google”"
+                                actions={
+                                    <KeyActions
+                                        service="google"
+                                        removable={
+                                            settings.googleClientSecret
+                                                ? 'google_client_secret'
+                                                : null
+                                        }
+                                    />
+                                }
+                            >
+                                <div className="grid gap-2">
+                                    <Label htmlFor="google_client_id">
+                                        Client ID
+                                    </Label>
+                                    <Input
+                                        id="google_client_id"
+                                        name="google_client_id"
+                                        defaultValue={
+                                            settings.googleClientId ?? ''
+                                        }
+                                        placeholder="….apps.googleusercontent.com"
+                                        autoComplete="off"
+                                    />
+                                    <InputError
+                                        message={errors.google_client_id}
+                                    />
+                                </div>
+                                <SecretField
+                                    name="google_client_secret"
+                                    label="Client secret"
+                                    saved={settings.googleClientSecret}
+                                    error={errors.google_client_secret}
+                                    note={
+                                        settings.googleFromServer
+                                            ? "Using the client in the server's .env until you save an ID and a secret here."
+                                            : 'From Google Cloud: APIs & Services, Credentials, your OAuth client.'
+                                    }
+                                />
+                                <p className="text-xs text-muted-foreground">
+                                    The client&rsquo;s authorised redirect URIs
+                                    must include{' '}
+                                    <span className="font-mono break-all text-foreground">
+                                        {settings.googleRedirect}
+                                    </span>
+                                </p>
                             </Card>
 
                             <Card
@@ -409,7 +468,7 @@ function KeyActions({
     service,
     removable,
 }: {
-    service: 'paypal' | 'claude';
+    service: 'paypal' | 'google' | 'claude';
     removable: string | null;
 }) {
     return (

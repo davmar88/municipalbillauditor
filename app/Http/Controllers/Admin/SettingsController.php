@@ -10,6 +10,7 @@ use App\Models\Faction;
 use App\Models\Player;
 use App\Models\Warrant;
 use App\Payments\PayPal;
+use App\Support\GoogleSignIn;
 use App\Support\Settings;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\RedirectResponse;
@@ -21,14 +22,14 @@ use Inertia\Inertia;
 use Inertia\Response;
 
 /**
- * The owner's page: the PayPal and Claude keys, whether Pineapple packs are
- * on sale and cash-outs open, and what the sales brought in. Saved keys are
- * never sent back to the browser, only their last four characters.
+ * The owner's page: the PayPal, Google and Claude keys, whether Pineapple
+ * packs are on sale and cash-outs open, and what the sales brought in. Saved
+ * keys are never sent back to the browser, only their last four characters.
  */
 class SettingsController extends Controller
 {
     /** Keys the owner can remove. */
-    public const REMOVABLE = ['paypal_client_id', 'paypal_client_secret', 'anthropic_api_key'];
+    public const REMOVABLE = ['paypal_client_id', 'paypal_client_secret', 'google_client_id', 'google_client_secret', 'anthropic_api_key'];
 
     public function index(Settings $settings, PayPal $paypal): Response
     {
@@ -47,6 +48,12 @@ class SettingsController extends Controller
                 'paypalClientId' => $settings->get('paypal_client_id'),
                 'paypalClientSecret' => $settings->hint('paypal_client_secret'),
                 'paypalMode' => $settings->get('paypal_mode', 'sandbox'),
+                'googleClientId' => $settings->get('google_client_id'),
+                'googleClientSecret' => $settings->hint('google_client_secret'),
+                'googleFromServer' => ($settings->get('google_client_id') === null || $settings->get('google_client_secret') === null)
+                    && filled(config('services.google.client_id')),
+                // The address the Google client must list as a redirect URI.
+                'googleRedirect' => config('services.google.redirect'),
                 'anthropicApiKey' => $settings->hint('anthropic_api_key'),
                 'anthropicFromServer' => $settings->get('anthropic_api_key') === null && filled(config('game.translator.api_key')),
             ],
@@ -88,15 +95,18 @@ class SettingsController extends Controller
             'paypal_client_id' => ['nullable', 'string', 'max:200'],
             'paypal_client_secret' => ['nullable', 'string', 'max:200'],
             'paypal_mode' => ['required', Rule::in(['sandbox', 'live'])],
+            'google_client_id' => ['nullable', 'string', 'max:200', 'ends_with:.apps.googleusercontent.com'],
+            'google_client_secret' => ['nullable', 'string', 'max:200'],
             'anthropic_api_key' => ['nullable', 'string', 'max:300', 'starts_with:sk-ant-'],
         ], [
+            'google_client_id.ends_with' => 'A Google client ID ends with .apps.googleusercontent.com.',
             'anthropic_api_key.starts_with' => 'A Claude API key starts with sk-ant-.',
         ]);
 
         $user = $request->user();
 
         // A secret left empty keeps the one saved.
-        foreach (['paypal_client_secret', 'anthropic_api_key'] as $key) {
+        foreach (['paypal_client_secret', 'google_client_secret', 'anthropic_api_key'] as $key) {
             if (filled($data[$key] ?? null)) {
                 $settings->put($key, $data[$key], $user);
             }
@@ -104,6 +114,7 @@ class SettingsController extends Controller
 
         $settings->put('paypal_client_id', $data['paypal_client_id'] ?? null, $user);
         $settings->put('paypal_mode', $data['paypal_mode'], $user);
+        $settings->put('google_client_id', $data['google_client_id'] ?? null, $user);
 
         if ($request->boolean('apples_on_sale') && ! $paypal->ready()) {
             throw ValidationException::withMessages(['apples_on_sale' => 'Add the PayPal keys before opening sales. Your keys were saved.']);
@@ -123,15 +134,16 @@ class SettingsController extends Controller
         return $this->told('Removed.');
     }
 
-    public function test(string $service, Settings $settings, PayPal $paypal): RedirectResponse
+    public function test(string $service, Settings $settings, PayPal $paypal, GoogleSignIn $google): RedirectResponse
     {
         $problem = match ($service) {
             'paypal' => $paypal->test(),
+            'google' => $google->test(),
             'claude' => $this->testClaude($settings->get('anthropic_api_key', config('game.translator.api_key'))),
             default => abort(404),
         };
 
-        $name = ['paypal' => 'PayPal', 'claude' => 'Claude'][$service];
+        $name = ['paypal' => 'PayPal', 'google' => 'Google', 'claude' => 'Claude'][$service];
 
         return $problem === null
             ? $this->told("{$name} accepted the key.")

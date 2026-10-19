@@ -17,7 +17,7 @@ use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 /**
- * The owner's admin page: the PayPal and Claude keys, stored encrypted and
+ * The owner's admin page: the PayPal, Google and Claude keys, stored encrypted and
  * never shown again, and the switches that open Pineapple sales and
  * cash-outs.
  */
@@ -28,6 +28,8 @@ class AdminSettingsTest extends TestCase
     private const SECRET = 'paypal-client-secret-1234';
 
     private const CLAUDE_KEY = 'sk-ant-test-key';
+
+    private const GOOGLE_SECRET = 'google-client-secret-5678';
 
     private function admin(): User
     {
@@ -140,6 +142,60 @@ class AdminSettingsTest extends TestCase
         $this->actingAs($admin)->post(route('admin.settings.test', 'claude'))->assertInertiaFlash('toast.message', 'Claude accepted the key.');
 
         Http::assertSent(fn (Request $request) => str_starts_with($request->url(), 'https://api.anthropic.com/v1/models') && $request->hasHeader('x-api-key', self::CLAUDE_KEY));
+    }
+
+    public function test_google_keys_are_saved_encrypted_and_the_page_shows_the_redirect_address(): void
+    {
+        config(['services.google.client_id' => 'server-client', 'services.google.redirect' => 'https://animalfarm.cc/auth/google/callback']);
+        $admin = $this->admin();
+
+        $this->actingAs($admin)->get(route('admin'))->assertInertia(fn (Assert $page) => $page
+            ->where('settings.googleFromServer', true)
+            ->where('settings.googleClientSecret', null)
+            ->where('settings.googleRedirect', 'https://animalfarm.cc/auth/google/callback'));
+
+        $this->save($admin, ['google_client_id' => 'not-a-google-id'])->assertSessionHasErrors('google_client_id');
+
+        $this->save($admin, ['google_client_id' => 'owner.apps.googleusercontent.com', 'google_client_secret' => self::GOOGLE_SECRET])->assertSessionHasNoErrors();
+
+        $raw = DB::table('app_settings')->where('key', 'google_client_secret')->value('value');
+        $this->assertNotSame(self::GOOGLE_SECRET, $raw);
+        $this->assertSame(self::GOOGLE_SECRET, Crypt::decryptString($raw));
+
+        $this->actingAs($admin)->get(route('admin'))
+            ->assertDontSee(self::GOOGLE_SECRET)
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('settings.googleClientId', 'owner.apps.googleusercontent.com')
+                ->where('settings.googleClientSecret', '••••5678')
+                ->where('settings.googleFromServer', false));
+
+        // Saving again with the box left empty keeps the secret.
+        $this->save($admin, ['google_client_id' => 'owner.apps.googleusercontent.com']);
+        $this->assertSame(self::GOOGLE_SECRET, app(Settings::class)->get('google_client_secret'));
+
+        $this->actingAs($admin)->delete(route('admin.settings.forget', 'google_client_secret'))->assertRedirect();
+        $this->assertNull(app(Settings::class)->get('google_client_secret'));
+    }
+
+    public function test_the_google_test_button_asks_google_about_the_id_and_secret(): void
+    {
+        Http::preventStrayRequests();
+        Http::fake(['oauth2.googleapis.com/token' => Http::sequence()
+            ->push(['error' => 'invalid_grant', 'error_description' => 'Malformed auth code.'], 400)
+            ->push(['error' => 'invalid_client', 'error_description' => 'The provided client secret is invalid.'], 401)]);
+        config(['services.google.client_id' => null, 'services.google.client_secret' => null]);
+        $admin = $this->admin();
+
+        $this->actingAs($admin)->post(route('admin.settings.test', 'google'))->assertInertiaFlash('toast', ['type' => 'error', 'message' => 'Add the Google client ID and secret first.']);
+
+        $this->save($admin, ['google_client_id' => 'owner.apps.googleusercontent.com', 'google_client_secret' => self::GOOGLE_SECRET]);
+
+        $this->actingAs($admin)->post(route('admin.settings.test', 'google'))->assertInertiaFlash('toast.message', 'Google accepted the key.');
+        $this->actingAs($admin)->post(route('admin.settings.test', 'google'))->assertInertiaFlash('toast', ['type' => 'error', 'message' => 'Google said: The provided client secret is invalid.']);
+
+        Http::assertSent(fn (Request $request) => $request->url() === 'https://oauth2.googleapis.com/token'
+            && $request['client_id'] === 'owner.apps.googleusercontent.com'
+            && $request['client_secret'] === self::GOOGLE_SECRET);
     }
 
     public function test_chat_translation_uses_the_key_saved_here(): void

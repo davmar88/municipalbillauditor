@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Actions\Fortify\CreateNewUser;
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Support\GoogleSignIn;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -27,19 +28,23 @@ use Throwable;
  */
 class GoogleController extends Controller
 {
-    public function redirect(): SymfonyRedirectResponse|RedirectResponse
+    public function redirect(GoogleSignIn $signIn): SymfonyRedirectResponse|RedirectResponse
     {
-        if (! filled(config('services.google.client_id'))) {
+        if (! $signIn->configure()) {
             return to_route('login')->withErrors(['email' => 'Google sign-in is not set up yet.']);
         }
 
         return Socialite::driver('google')->scopes(['openid', 'profile', 'email'])->redirect();
     }
 
-    public function callback(Request $request, CreateNewUser $accounts): RedirectResponse
+    public function callback(Request $request, CreateNewUser $accounts, GoogleSignIn $signIn): RedirectResponse
     {
         if ($request->filled('error')) {
             return to_route('login')->withErrors(['email' => 'Google sign-in was cancelled.']);
+        }
+
+        if (! $signIn->configure()) {
+            return to_route('login')->withErrors(['email' => 'Google sign-in is not set up yet.']);
         }
 
         try {

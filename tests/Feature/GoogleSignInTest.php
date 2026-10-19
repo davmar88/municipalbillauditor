@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use App\Support\GoogleSignIn;
+use App\Support\Settings;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
 use Laravel\Socialite\Socialite;
@@ -102,6 +104,23 @@ class GoogleSignInTest extends TestCase
             ->assertSessionHasErrors('email');
 
         $this->assertGuest();
+    }
+
+    public function test_the_keys_saved_on_the_admin_page_win_over_the_servers(): void
+    {
+        $settings = app(Settings::class);
+        $settings->put('google_client_id', 'owner.apps.googleusercontent.com');
+
+        // An ID alone isn't enough: the server's client carries on.
+        $this->assertTrue(app(GoogleSignIn::class)->configure());
+        $this->assertSame('test-client', config('services.google.client_id'));
+
+        $settings->put('google_client_secret', 'owner-secret');
+        config(['services.google.client_id' => null, 'services.google.client_secret' => null]);
+
+        $this->get(route('login'))->assertInertia(fn (Assert $page) => $page->where('googleAvailable', true));
+        $this->assertStringContainsString('client_id=owner.apps.googleusercontent.com', $this->get(route('google.redirect'))->headers->get('Location'));
+        $this->assertSame('owner-secret', config('services.google.client_secret'));
     }
 
     public function test_the_google_id_never_reaches_the_browser(): void

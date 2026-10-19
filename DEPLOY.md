@@ -247,6 +247,10 @@ deploy/artisan config:cache
 
 The button only shows once `GOOGLE_CLIENT_ID` is set.
 
+Or paste a client's ID and secret on the admin page instead. Once both are
+saved there, they are used in place of the ones in `.env`, and the page shows
+the redirect URI the client has to list.
+
 - **Branding.** Google's sign-in screen shows the name and logo of the
   Google Cloud project the client belongs to, so RevenueGuard players see
   Cable Elite's. To show RevenueGuard's, create a client in a project of its
