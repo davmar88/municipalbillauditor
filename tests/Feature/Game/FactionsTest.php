@@ -150,7 +150,7 @@ class FactionsTest extends TestCase
         $this->assertNull($this->region('orchard')->faction_id, 'Its land goes back to the valley.');
     }
 
-    public function test_the_faction_page_shows_members_to_members_and_the_underworld_to_lone_wolves(): void
+    public function test_the_faction_page_shows_members_to_members_and_the_underworld_to_everyone(): void
     {
         $leader = $this->player();
         $this->faction('Visible', $leader, $this->player());
@@ -159,11 +159,13 @@ class FactionsTest extends TestCase
         $this->actingAs($leader->user)->get(route('play.faction'))->assertInertia(fn (Assert $page) => $page
             ->component('game/faction')
             ->has('faction.members', 2)
-            ->where('underworld', null));
+            ->where('underworld.loneWolf', false)
+            ->has('underworld.crimes', 2));
 
         $this->actingAs($wolf->user)->get(route('play.faction'))->assertInertia(fn (Assert $page) => $page
             ->where('faction', null)
             ->has('factions', 1)
+            ->where('underworld.loneWolf', true)
             ->has('underworld.targets', 2));
     }
 
