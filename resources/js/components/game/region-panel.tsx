@@ -28,6 +28,7 @@ import { Button } from '@/components/ui/button';
 import { act, capitalise, clockTime, fromNow, speciesEmoji } from '@/lib/game';
 import { openChat } from '@/lib/pulse';
 import { GateStrength } from '@/components/game/gate-strength';
+import { DistrictFolk } from '@/components/game/irongate-folk';
 import { arrest as arrestOutlaw } from '@/routes/play/warrant';
 import {
     attack,
@@ -46,6 +47,7 @@ import type {
     BuildingKindCard,
     FactionRef,
     FactionStore,
+    IrongateInfo,
     MapBattle,
     MapRegion,
 } from '@/types/game';
@@ -54,6 +56,7 @@ import type {
 export type Warrant = {
     id: number;
     playerId: number;
+    name: string;
     /** In Apples. */
     bounty: number;
     escapedUntil: string | null;
@@ -74,6 +77,7 @@ const RINGS: Record<MapRegion['ring'], string> = {
     outer: 'Outer ring',
     safe: 'Safe ground',
     farm: 'Farm beyond the fences',
+    city: 'Irongate',
 };
 
 type Props = {
@@ -88,6 +92,9 @@ type Props = {
     farms: { price: number; income: number };
     warrants: Warrant[];
     plunder: Plunder;
+    /** Irongate's people, for the town's districts. */
+    irongate: IrongateInfo;
+    regions: MapRegion[];
     onClose: () => void;
 };
 
@@ -108,6 +115,8 @@ export function RegionPanel({
     farms,
     warrants,
     plunder,
+    irongate,
+    regions,
     onClose,
 }: Props) {
     const { player } = usePage().props;
@@ -130,7 +139,10 @@ export function RegionPanel({
     const isHere = region.id === here;
     const frontLine = here !== null && region.neighbours.includes(here);
     const raidable =
-        myFaction !== null && region.ring !== 'safe' && !holds(region);
+        myFaction !== null &&
+        region.ring !== 'safe' &&
+        region.ring !== 'city' &&
+        !holds(region);
     const others = region.animals.sample.filter((animal) => !animal.me);
     const outlaws = others.flatMap((animal) => {
         const warrant = warrants.find((w) => w.playerId === animal.id);
@@ -189,6 +201,8 @@ export function RegionPanel({
                             </>
                         ) : region.ring === 'safe' ? (
                             'Nobody can be raided here.'
+                        ) : region.ring === 'city' ? (
+                            "The humans' town. Nobody holds it."
                         ) : region.key === 'farmhouse' ? (
                             'Nobody rules. Whoever takes it becomes the House.'
                         ) : (
@@ -209,6 +223,15 @@ export function RegionPanel({
             </header>
 
             <div className="flex flex-col gap-3 overflow-y-auto px-4 py-3 text-sm">
+                {region.ring === 'city' && (
+                    <DistrictFolk
+                        region={region}
+                        irongate={irongate}
+                        warrants={warrants}
+                        regions={regions}
+                        here={here}
+                    />
+                )}
                 {region.incoming.map((incoming) => {
                     const battle = battleFor.get(incoming.id);
 

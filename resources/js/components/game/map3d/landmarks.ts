@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import type { Point } from '@/lib/hollowmere';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { CITY_BLOCKS, LAMPS, STOCKADE } from '@/components/game/map-terrain';
 import { SHAPES, blob, fits, hub, scatter, seeded } from '@/lib/hollowmere';
 
 /**
@@ -390,24 +391,100 @@ export function landmarks(): Landmarks {
         group.add(water);
     }
 
-    // Ironfield's barns beyond the east fence, a lamp lit at each.
-    for (const [p, w, d, a] of [
-        [[1552, 296], 42, 28, 4],
-        [[1546, 700], 52, 30, -3],
-    ] as const) {
-        group.add(
-            placed(
-                house(w, d, 18, M.wallDark, M.roof, 12),
-                p as unknown as Point,
-                a,
-            ),
-        );
-        const lamp = new THREE.Mesh(
-            new THREE.SphereGeometry(2.4, 8, 6),
-            M.lamp,
-        );
-        lamp.position.set(p[0] - w / 2 - 4, 12, p[1]);
-        group.add(lamp);
+    // Irongate past the east fence: the town wall, tenements in the Rookery,
+    // sheds and crates in the Iron Yards, the Garrison's stockade and
+    // watchtower, and lamps lit at the gates. Out here, men build.
+    {
+        for (const [key, blocks] of Object.entries(CITY_BLOCKS)) {
+            const wall = SHAPES[key].polygon;
+            for (let i = 0; i < wall.length; i++) {
+                const [ax, ay] = wall[i];
+                const [bx, by] = wall[(i + 1) % wall.length];
+                const length = Math.hypot(bx - ax, by - ay);
+                // The gate onto Gate Road stays open.
+                if (key === 'irongate_yards' && i === wall.length - 1) {
+                    continue;
+                }
+                const stones = box(
+                    length,
+                    9,
+                    5,
+                    M.stoneDark,
+                    (ax + bx) / 2,
+                    4.5,
+                    (ay + by) / 2,
+                );
+                stones.rotation.y = -Math.atan2(by - ay, bx - ax);
+                group.add(stones);
+            }
+            blocks.forEach(([x, y, w, d, angle], i) => {
+                const height =
+                    key === 'irongate_rookery' ? 26 + (i % 3) * 8 : 20;
+                group.add(
+                    placed(
+                        house(
+                            w,
+                            d,
+                            height,
+                            i % 2 ? M.wallDark : M.stone,
+                            M.roof,
+                            10,
+                        ),
+                        [x, y],
+                        angle,
+                    ),
+                );
+            });
+        }
+        const { x, y, width, height } = STOCKADE;
+        const posts = 34;
+        for (let i = 0; i < posts; i++) {
+            const t = i / posts;
+            const side = Math.floor(t * 4);
+            const u = t * 4 - side;
+            const [px, py] = [
+                [x + u * width, y],
+                [x + width, y + u * height],
+                [x + width - u * width, y + height],
+                [x, y + height - u * height],
+            ][side];
+            group.add(box(3, 14, 3, M.woodDark, px, 7, py));
+        }
+        const tower = new THREE.Group();
+        for (const [dx, dz] of [
+            [-6, -6],
+            [6, -6],
+            [-6, 6],
+            [6, 6],
+        ]) {
+            tower.add(box(2, 36, 2, M.wood, dx, 18, dz));
+        }
+        tower.add(box(18, 3, 18, M.wood, 0, 36, 0));
+        const cap = gable(20, 8, 20, M.roof);
+        cap.position.y = 37;
+        tower.add(cap);
+        group.add(placed(tower, [x + width, y]));
+        for (const [cx, cy] of [
+            [1752, 458],
+            [1764, 470],
+            [1742, 474],
+            [1836, 462],
+            [1848, 474],
+            [1690, 566],
+        ]) {
+            group.add(
+                box(10, 10, 10, M.wood, cx, 5, cy, seeded(`crate:${cx}`) * 0.6),
+            );
+        }
+        for (const [lx, ly] of LAMPS) {
+            group.add(box(1.5, 16, 1.5, M.woodDark, lx, 8, ly));
+            const lamp = new THREE.Mesh(
+                new THREE.SphereGeometry(2.6, 8, 6),
+                M.lamp,
+            );
+            lamp.position.set(lx, 17, ly);
+            group.add(lamp);
+        }
     }
 
     // Logs in the Wildwood clearing.

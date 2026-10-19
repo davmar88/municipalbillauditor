@@ -236,7 +236,7 @@ export type MapRegion = {
     id: number;
     key: string;
     name: string;
-    ring: 'seat' | 'inner' | 'middle' | 'outer' | 'safe' | 'farm';
+    ring: 'seat' | 'inner' | 'middle' | 'outer' | 'safe' | 'farm' | 'city';
     produces: string | null;
     /** What is left to gather, and how it grows back; null where nothing grows. */
     stock: {
@@ -322,4 +322,33 @@ export type SkillCard = {
     title: string;
     from: number;
     to: number;
+};
+
+/** One of Irongate's people: not a player, a fixed part of the town. */
+export type Folk = {
+    key: string;
+    name: string;
+    role: string;
+    /** The district they stand in. */
+    district: string;
+    /** Where, as a nudge from the district's hub. */
+    spot: [number, number];
+    says: string;
+};
+
+/** Irongate's people and their prices. */
+export type IrongateInfo = {
+    folk: Folk[];
+    /** Ironfield's men mustering for Sunday's Gate Night. */
+    muster: number;
+    fence: {
+        price: number;
+        rarePrice: number;
+        rare: string[];
+        /** Corn the fence will still pay you today. */
+        left: number;
+        daily: number;
+    };
+    /** Corn the informer wants for a tip. */
+    tip: number;
 };

@@ -45,7 +45,8 @@ export function MapHud({
         return [...held.values()].sort((a, b) => b.count - a.count);
     }, [regions]);
     const unclaimed = regions.filter(
-        (region) => !region.faction && region.ring !== 'safe',
+        (region) =>
+            !region.faction && region.ring !== 'safe' && region.ring !== 'city',
     ).length;
     const toggle = (panel: 'laws' | 'factions') =>
         setOpen(open === panel ? null : panel);

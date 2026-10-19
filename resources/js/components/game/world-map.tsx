@@ -2,6 +2,7 @@ import { LocateFixed, Minus, Plus, Scan } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimalMenu } from '@/components/game/animal-menu';
+import { FolkCard, folkFace } from '@/components/game/irongate-folk';
 import {
     FieldGround,
     MapFeatures,
@@ -23,9 +24,12 @@ import {
     toPath,
 } from '@/lib/hollowmere';
 import { cn } from '@/lib/utils';
+import type { Warrant } from '@/components/game/region-panel';
 import type {
     BuildingKindValue,
     FactionRef,
+    Folk as FolkPerson,
+    IrongateInfo,
     MapAnimal,
     MapRegion,
     Species,
@@ -390,7 +394,10 @@ function useCamera(
     };
 
     const onPointerDown = (event: React.PointerEvent<SVGSVGElement>) => {
-        const animal = (event.target as Element).closest('[data-animal]');
+        // Another animal or one of Irongate's people: a tap opens their card.
+        const animal = (event.target as Element).closest(
+            '[data-animal], [data-folk]',
+        );
 
         // A right click asks what is there: an animal's menu, or the region's card.
         if (event.pointerType === 'mouse' && event.button === 2) {
@@ -922,7 +929,7 @@ const Marches = memo(function Marches({
             )}
             {gateNight && (
                 <March
-                    from={[1640, 486]}
+                    from={hub('irongate_garrison')}
                     to={hub('ironfield_gate')}
                     colour={FLAG}
                     k={k}
@@ -969,6 +976,13 @@ export function subtitle(
         return gateResult === 'held'
             ? { text: '🛡 The gate held tonight', colour: '#8fe3b0' }
             : { text: '🔥 Ironfield broke through', colour: '#f5a27a' };
+    }
+
+    if (region.ring === 'city') {
+        return {
+            text: CITY_LINES[region.key] ?? "The humans' town",
+            colour: '#f5a27a',
+        };
     }
 
     if (region.stock?.nextAt) {
@@ -1091,7 +1105,7 @@ const Labels = memo(function Labels({
             {(
                 [
                     ['THE RIDGE', [800, -570], 0],
-                    ['IRONFIELD', [1600, 560], 90],
+                    ['IRONFIELD', [2180, 480], 90],
                 ] as const
             ).map(([text, [x, y], angle]) => (
                 <text
@@ -1288,6 +1302,71 @@ const Crowd = memo(function Crowd({
                                     +{extra}
                                 </text>
                             </g>
+                        )}
+                    </g>
+                );
+            })}
+        </g>
+    );
+});
+
+/** What each of Irongate's districts is for, under its name. */
+const CITY_LINES: Record<string, string> = {
+    irongate_rookery: '🕯 Outlaws and lone wolves lie low',
+    irongate_yards: '⚖ Ma Vetch and Wick deal here',
+    irongate_garrison: "⚔ Ironfield's men muster here",
+};
+
+/** Irongate's people, standing in their districts, tapped for their card. */
+const Folk = memo(function Folk({
+    folk,
+    k,
+}: {
+    folk: FolkPerson[];
+    k: number;
+}) {
+    return (
+        <g>
+            {folk.map((person) => {
+                const [hx, hy] = hub(person.district);
+                const x = hx + person.spot[0];
+                const y = hy + person.spot[1];
+
+                return (
+                    <g
+                        key={person.key}
+                        data-folk={person.key}
+                        className="cursor-pointer"
+                        transform={`translate(${x.toFixed(1)} ${y.toFixed(1)}) scale(${1 / Math.max(k, 0.6)})`}
+                    >
+                        <title>{`${person.name}, ${person.role}`}</title>
+                        <circle
+                            r={13}
+                            fill="#2a1f1c"
+                            stroke="#f5a27a"
+                            strokeWidth={2.2}
+                        />
+                        <text
+                            textAnchor="middle"
+                            dominantBaseline="central"
+                            fontSize={14}
+                            y={0.5}
+                        >
+                            {folkFace(person.key)}
+                        </text>
+                        {k >= 0.7 && (
+                            <text
+                                y={24}
+                                textAnchor="middle"
+                                fontSize={9.5}
+                                fontWeight={800}
+                                fill="#f5d6c4"
+                                stroke={HALO}
+                                strokeWidth={3}
+                                paintOrder="stroke"
+                            >
+                                {person.name.split(' ').slice(-1)[0]}
+                            </text>
                         )}
                     </g>
                 );
@@ -1569,6 +1648,10 @@ export type WorldMapProps = {
     wanted: number[];
     /** A button to switch between the flat map and the 3D one. */
     switcher?: ReactNode;
+    /** Irongate's people, drawn in the town and tapped for their card. */
+    irongate?: IrongateInfo;
+    /** Open warrants, for the informer's card. */
+    warrants?: Warrant[];
     children?: ReactNode;
 };
 
@@ -1590,6 +1673,8 @@ export function WorldMap({
     gateResult,
     wanted,
     switcher,
+    irongate,
+    warrants,
     children,
 }: WorldMapProps) {
     const containerRef = useRef<HTMLDivElement>(null);
@@ -1629,19 +1714,34 @@ export function WorldMap({
         [onSelect],
     );
 
-    // A tap, hold or right click on another animal opens its menu.
+    // A tap, hold or right click on another animal opens its menu; on one of Irongate's people, their card.
     const [menu, setMenu] = useState<{ animal: MapAnimal; at: Point } | null>(
         null,
     );
+    const [person, setPerson] = useState<{
+        folk: FolkPerson;
+        at: Point;
+    } | null>(null);
     const onAnimal = useCallback(
         (element: Element, at: Point) => {
+            const folkKey = element.getAttribute('data-folk');
+
+            if (folkKey) {
+                const folk = irongate?.folk.find((f) => f.key === folkKey);
+                setMenu(null);
+                setPerson(folk ? { folk, at } : null);
+
+                return;
+            }
+
+            setPerson(null);
             const id = Number(element.getAttribute('data-animal'));
             const animal = regions
                 .flatMap((region) => region.animals.sample)
                 .find((a) => a.id === id);
             setMenu(animal ? { animal, at } : null);
         },
-        [regions],
+        [regions, irongate],
     );
 
     const camera = useCamera(
@@ -1720,7 +1820,10 @@ export function WorldMap({
                 aria-label={`Map of ${valley}. Drag to look around, scroll or pinch to zoom, tap a spot to walk there, and press and hold or right-click to see what's there.`}
                 tabIndex={0}
                 {...camera.handlers}
-                onPointerDownCapture={() => setMenu(null)}
+                onPointerDownCapture={() => {
+                    setMenu(null);
+                    setPerson(null);
+                }}
             >
                 <defs>
                     <linearGradient id="house-edge" x1="0" y1="0" x2="1" y2="1">
@@ -1760,6 +1863,7 @@ export function WorldMap({
                             gateResult={gateResult}
                         />
                         <Bases regions={regions} k={k} />
+                        {irongate && <Folk folk={irongate.folk} k={k} />}
                         <Crowd regions={regions} k={k} wanted={wanted} />
                         {me?.walk && herePoint && (
                             <WalkLine from={herePoint} to={me.walk.to} k={k} />
@@ -1851,6 +1955,19 @@ export function WorldMap({
                     size={size}
                     wanted={wanted.includes(menu.animal.id)}
                     onClose={() => setMenu(null)}
+                />
+            )}
+
+            {person && size && irongate && (
+                <FolkCard
+                    folk={person.folk}
+                    at={person.at}
+                    size={size}
+                    irongate={irongate}
+                    warrants={warrants ?? []}
+                    regions={regions}
+                    here={here}
+                    onClose={() => setPerson(null)}
                 />
             )}
 

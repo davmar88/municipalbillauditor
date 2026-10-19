@@ -2,6 +2,7 @@ import { memo } from 'react';
 import type { Point } from '@/lib/hollowmere';
 import {
     BROOK,
+    CITY,
     FIELD_SHAPES,
     FIELDS,
     SHAPES,
@@ -286,6 +287,15 @@ function Patterns() {
                 />
             </pattern>
             <pattern
+                id="cobbles"
+                width="14"
+                height="14"
+                patternUnits="userSpaceOnUse"
+            >
+                <rect width="14" height="14" fill="#211e28" />
+                <path d="M1 1h5v5h-5zM8 1h5v5h-5zM4 8h5v5h-5z" fill="#2a2633" />
+            </pattern>
+            <pattern
                 id="ironfield"
                 width="10"
                 height="10"
@@ -324,6 +334,148 @@ const GROUND: Record<string, string> = {
     fennick: 'url(#rows-fennick)',
     marlow: 'url(#rows-marlow)',
 };
+
+/** A building in Irongate: [x, y, width, depth, angle]. */
+type Block = [number, number, number, number, number];
+
+/** The town's buildings, by district: tenements, the yards' sheds, the Garrison's barracks. */
+export const CITY_BLOCKS: Record<string, Block[]> = {
+    irongate_rookery: [
+        [1572, 168, 40, 22, -4],
+        [1628, 152, 34, 20, 3],
+        [1704, 160, 44, 24, -2],
+        [1790, 176, 38, 22, 5],
+        [1858, 214, 30, 24, -6],
+        [1566, 300, 36, 20, -5],
+        [1846, 300, 34, 22, 4],
+        [1612, 330, 30, 16, 2],
+    ],
+    irongate_yards: [
+        [1812, 404, 62, 30, 2],
+        [1874, 520, 44, 40, -3],
+        [1792, 572, 50, 22, 4],
+        [1566, 400, 28, 20, -3],
+    ],
+    irongate_garrison: [
+        [1784, 676, 92, 32, 0],
+        [1788, 752, 92, 30, 0],
+        [1572, 800, 34, 22, -4],
+    ],
+};
+
+/** The Garrison's stockade, round its barracks. */
+export const STOCKADE = { x: 1716, y: 640, width: 150, height: 150 };
+
+/** Crates stacked in the Iron Yards. */
+const CRATES: Point[] = [
+    [1752, 458],
+    [1764, 470],
+    [1742, 474],
+    [1836, 462],
+    [1848, 474],
+    [1690, 566],
+];
+
+/** Lamps lit at Irongate's gates and corners. */
+export const LAMPS: Point[] = [
+    [1530, 470],
+    [1530, 230],
+    [1530, 720],
+    [1716, 640],
+    [1866, 640],
+    [1900, 350],
+];
+
+/**
+ * Irongate, the humans' town past the east fence: cobbled districts inside a
+ * stone wall, close-packed tenements in the Rookery, sheds, crates and a
+ * crane in the Iron Yards, and the Garrison's stockade and watchtower. The
+ * fence keeps buildings off Hollowmere itself; out here, men build.
+ */
+function Irongate() {
+    const districts = Object.keys(CITY_BLOCKS).map((key) => SHAPES[key]);
+    const blocks = Object.values(CITY_BLOCKS).flat();
+    const { x, y, width, height } = STOCKADE;
+
+    return (
+        <>
+            {districts.map((shape, i) => (
+                <path
+                    key={i}
+                    d={toPath(shape.polygon)}
+                    fill="url(#cobbles)"
+                    stroke="#3d3646"
+                    strokeWidth={2}
+                />
+            ))}
+            {/* The town wall, broken by the gate onto Gate Road. */}
+            {districts.map((shape, i) => (
+                <path
+                    key={`wall-${i}`}
+                    d={toPath(shape.polygon)}
+                    fill="none"
+                    stroke="#5a5266"
+                    strokeWidth={7}
+                    strokeDasharray={i === 1 ? '120 40 2000' : undefined}
+                    opacity={0.9}
+                />
+            ))}
+            {blocks.map(([bx, by, w, h, angle], i) => (
+                <Building
+                    key={i}
+                    at={[bx, by]}
+                    w={w}
+                    h={h}
+                    angle={angle}
+                    roof={i % 2 ? '#3a2f3a' : '#2f2a38'}
+                    edge="#4a4256"
+                />
+            ))}
+            <rect
+                x={x}
+                y={y}
+                width={width}
+                height={height}
+                rx={6}
+                fill="none"
+                stroke="#6b5a44"
+                strokeWidth={5}
+                strokeDasharray="4 3"
+            />
+            {/* The watchtower and the crane. */}
+            <rect
+                x={x + width - 14}
+                y={y - 14}
+                width={22}
+                height={22}
+                fill="#2f2a38"
+                stroke="#6b5a44"
+                strokeWidth={2}
+            />
+            <path
+                d="M1700 440l60-40M1700 440v40M1760 400l10 18"
+                stroke="#8a7a5c"
+                strokeWidth={3}
+                fill="none"
+            />
+            {CRATES.map(([cx, cy], i) => (
+                <rect
+                    key={i}
+                    x={cx - 5}
+                    y={cy - 5}
+                    width={10}
+                    height={10}
+                    fill="#6e5c2f"
+                    stroke="#86723b"
+                    strokeWidth={1}
+                />
+            ))}
+            {LAMPS.map(([lx, ly], i) => (
+                <circle key={i} cx={lx} cy={ly} r={3} fill="#ffb35c" />
+            ))}
+        </>
+    );
+}
 
 /** The land around the farm: the Ridge, Hollow Brook and Ironfield. */
 function Surroundings() {
@@ -458,24 +610,6 @@ function Surroundings() {
                 strokeWidth={1.4}
             />
             <Trees list={edge} />
-            {/* Ironfield's barns, beyond the east fence, with a lamp lit. */}
-            <Building
-                at={[1552, 296]}
-                w={42}
-                h={28}
-                angle={4}
-                roof="#2a2531"
-                edge="#3d3646"
-            />
-            <Building
-                at={[1546, 700]}
-                w={52}
-                h={30}
-                angle={-3}
-                roof="#2a2531"
-                edge="#3d3646"
-            />
-            <path d="M1540 290h4v3h-4zM1556 696h4v3h-4z" fill="#dd6b30" />
             {/* Hollow Brook. */}
             <path
                 d={smoothPath(BROOK)}
@@ -1274,19 +1408,22 @@ const UNDER: Record<string, () => React.ReactNode> = {
 /** Trees in the hedges, one per bend in a border. */
 function hedgeTrees(): TreeSpec[] {
     const seen = new Set<string>();
-    const points = Object.values(SHAPES).flatMap((shape) =>
-        shape.polygon.filter((point, i) => {
-            const key = `${point[0].toFixed(0)},${point[1].toFixed(0)}`;
+    const points = Object.entries(SHAPES)
+        .filter(([key]) => !CITY[key])
+        .map(([, shape]) => shape)
+        .flatMap((shape) =>
+            shape.polygon.filter((point, i) => {
+                const key = `${point[0].toFixed(0)},${point[1].toFixed(0)}`;
 
-            if (i % 3 === 0 || seen.has(key)) {
-                return false;
-            }
+                if (i % 3 === 0 || seen.has(key)) {
+                    return false;
+                }
 
-            seen.add(key);
+                seen.add(key);
 
-            return seeded(`hedge:${key}`) > 0.42;
-        }),
-    );
+                return seeded(`hedge:${key}`) > 0.42;
+            }),
+        );
 
     return trees(points, 'hedge', [5, 3]);
 }
@@ -1296,20 +1433,22 @@ function hedgeTrees(): TreeSpec[] {
  * what grows on it, and the hedges between regions.
  */
 export const MapGround = memo(function MapGround() {
-    const shapes = Object.entries(SHAPES);
+    // Irongate has its own walls and streets, drawn after the farm's fields and hedges.
+    const shapes = Object.entries(SHAPES).filter(([key]) => !CITY[key]);
     const outlines = shapes.map(([, shape]) => toPath(shape.polygon)).join('');
 
     return (
         <g>
             <defs>
                 <Patterns />
-                {[...shapes, ...Object.entries(FIELD_SHAPES)].map(
-                    ([key, shape]) => (
-                        <clipPath key={key} id={`clip-${key}`}>
-                            <path d={toPath(shape.polygon)} />
-                        </clipPath>
-                    ),
-                )}
+                {[
+                    ...Object.entries(SHAPES),
+                    ...Object.entries(FIELD_SHAPES),
+                ].map(([key, shape]) => (
+                    <clipPath key={key} id={`clip-${key}`}>
+                        <path d={toPath(shape.polygon)} />
+                    </clipPath>
+                ))}
             </defs>
             <Surroundings />
             {/* The fence round the farm: the half of these strokes outside the fields. */}
@@ -1357,6 +1496,7 @@ export const MapGround = memo(function MapGround() {
                 strokeDasharray="7 6"
                 opacity={0.75}
             />
+            <Irongate />
         </g>
     );
 });

@@ -33,12 +33,14 @@ import {
 import type {
     BuildingKindValue,
     FactionRef,
+    Folk,
     MapAnimal,
     MapMe,
     MapRegion,
     Species,
     Worn,
 } from '@/types/game';
+import { person as makePerson } from './folk';
 import { landmarks, orchardTrees } from './landmarks';
 import type { Actor } from './models';
 import { makeActor } from './models';
@@ -54,6 +56,8 @@ export type WorldData = {
     me: MapMe | null;
     species: Species | null;
     wearing: Worn[];
+    /** Irongate's people, standing in their districts. */
+    folk: Folk[];
 };
 
 // ---- the look of the land -------------------------------------------------------------
@@ -76,6 +80,9 @@ const KIND: Record<string, string> = {
     stables: 'meadow',
     old_well: 'meadow',
     paddock: 'meadow',
+    irongate_rookery: 'street',
+    irongate_yards: 'street',
+    irongate_garrison: 'street',
 };
 /** Wild land round the farms, by the last word of its key. */
 const WILD: Record<string, string> = {
@@ -137,6 +144,7 @@ const LOOK: Record<string, { colour: string; stripe?: string }> = {
     rock: { colour: '#3f3c47' },
     wet: { colour: '#22403c' },
     heath: { colour: '#433a4b' },
+    street: { colour: '#2e2a35' },
 };
 
 function stripes(colour: string, stripe: string): THREE.CanvasTexture {
@@ -260,6 +268,8 @@ export class World {
     private readonly picked = new THREE.Group();
     /** Raids on their way, redrawn on their own. */
     private readonly raids = new THREE.Group();
+    /** Irongate's people. */
+    private readonly town = new THREE.Group();
     private regionLabels = new Map<
         number,
         {
@@ -337,6 +347,7 @@ export class World {
             this.picked,
             this.marks,
             this.raids,
+            this.town,
             this.people,
         );
 
@@ -802,7 +813,7 @@ export class World {
             this.fixedLabels.push({ obj, el, minK });
         };
         fixed('THE RIDGE', [800, -570], {});
-        fixed('IRONFIELD', [1600, 560], { color: '#f5a27a' });
+        fixed('IRONFIELD', [2180, 480], { color: '#f5a27a' });
         fixed(
             'Hollow Brook',
             BROOK[2],
@@ -860,6 +871,9 @@ export class World {
         }
         if (land || was.wanted.join() !== data.wanted.join()) {
             this.syncCrowd();
+        }
+        if (!was || was.folk !== data.folk) {
+            this.syncFolk();
         }
         this.syncMe();
         this.changed = true;
@@ -1286,7 +1300,8 @@ export class World {
             }
         }
         if (data.gateNight) {
-            draw([1640, 486], hub('ironfield_gate'), FLAG);
+            // Ironfield's men march out of the Garrison.
+            draw(hub('irongate_garrison'), hub('ironfield_gate'), FLAG);
         }
     }
 
@@ -1557,6 +1572,77 @@ export class World {
         }
     }
 
+    private townsfolk: {
+        person: Folk;
+        figure: THREE.Group;
+        tag: CSS2DObject;
+    }[] = [];
+
+    /** Irongate's people as little figures, each with its name. */
+    private syncFolk() {
+        const data = this.data as WorldData;
+        this.clearGroup(this.town);
+        this.townsfolk = data.folk.map((person) => {
+            const figure = makePerson(person.key);
+            figure.rotation.y = (seeded(`folk:${person.key}`) - 0.5) * 1.4;
+            const tag = new CSS2DObject(
+                div(
+                    '',
+                    {
+                        color: '#f5d6c4',
+                        font: '800 10px system-ui, sans-serif',
+                        textShadow: LABEL_SHADOW,
+                        pointerEvents: 'none',
+                        whiteSpace: 'nowrap',
+                    },
+                    person.name.split(' ').slice(-1)[0],
+                ),
+            );
+            tag.center.set(0.5, -0.4);
+            tag.renderOrder = 3;
+            this.town.add(figure, tag);
+            return { person, figure, tag };
+        });
+        this.placeFolk();
+    }
+
+    private placeFolk() {
+        const h = this.animalHeight(34);
+        for (const { person, figure, tag } of this.townsfolk) {
+            const [hx, hy] = hub(person.district);
+            const x = hx + person.spot[0];
+            const y = hy + person.spot[1];
+            figure.position.set(x, 0, y);
+            figure.scale.setScalar(h);
+            tag.position.set(x, 0, y);
+            tag.visible = this.k >= 0.7;
+        }
+    }
+
+    /** One of Irongate's people under a point on screen, if any, for their card. */
+    folkAt(
+        screen: Point,
+        project: (point: Point, height: number) => Point,
+    ): Folk | null {
+        const h = this.animalHeight(34);
+        const reach = Math.max(18, h * this.k * 0.55);
+        let found: Folk | null = null;
+        let nearest = reach;
+        for (const { person } of this.townsfolk) {
+            const [hx, hy] = hub(person.district);
+            const [sx, sy] = project(
+                [hx + person.spot[0], hy + person.spot[1]],
+                h * 0.5,
+            );
+            const d = Math.hypot(sx - screen[0], sy - screen[1]);
+            if (d < nearest) {
+                nearest = d;
+                found = person;
+            }
+        }
+        return found;
+    }
+
     private syncMe() {
         const data = this.data as WorldData;
         const me = this.me;
@@ -1710,6 +1796,7 @@ export class World {
             } else {
                 this.placeCrowd();
             }
+            this.placeFolk();
             for (const m of this.marching) {
                 m.dashSize = 10 / k;
                 m.gapSize = 8 / k;

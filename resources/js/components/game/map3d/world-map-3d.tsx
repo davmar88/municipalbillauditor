@@ -14,7 +14,8 @@ import type { Point } from '@/lib/hollowmere';
 import { FARM, REACH, hub, inside } from '@/lib/hollowmere';
 import { cn } from '@/lib/utils';
 import { AnimalMenu } from '@/components/game/animal-menu';
-import type { MapAnimal, MapRegion, Worn } from '@/types/game';
+import { FolkCard } from '@/components/game/irongate-folk';
+import type { Folk, MapAnimal, MapRegion, Worn } from '@/types/game';
 import { Rig } from './rig';
 import { World } from './world';
 
@@ -36,12 +37,17 @@ type Gesture = {
     region: number | null;
     /** The animal pressed on, if any: a tap or hold on it opens its menu. */
     animal: MapAnimal | null;
+    /** One of Irongate's people pressed on, if any: a tap opens their card. */
+    folk: Folk | null;
     velocity: Point;
     last: { point: Point; at: number };
     held?: boolean;
 };
 
 const LONG_PRESS_MS = 500;
+
+/** No townsfolk, as one shared value so the scene isn't rebuilt for nothing. */
+const NO_FOLK: Folk[] = [];
 
 const distance = (a: Point, b: Point) => Math.hypot(a[0] - b[0], a[1] - b[1]);
 const middle = (a: Point, b: Point): Point => [
@@ -84,6 +90,8 @@ export default function WorldMap3D({
     wearing,
     switcher,
     onFail,
+    irongate,
+    warrants,
     children,
 }: Props) {
     const containerRef = useRef<HTMLDivElement>(null);
@@ -96,8 +104,11 @@ export default function WorldMap3D({
     const [dragging, setDragging] = useState(false);
     const [overLand, setOverLand] = useState(false);
     const [lost, setLost] = useState(false);
-    // A tap, hold or right click on another animal opens its menu.
+    // A tap, hold or right click on another animal opens its menu; on one of Irongate's people, their card.
     const [menu, setMenu] = useState<{ animal: MapAnimal; at: Point } | null>(
+        null,
+    );
+    const [person, setPerson] = useState<{ folk: Folk; at: Point } | null>(
         null,
     );
     const lostRef = useRef(false);
@@ -306,6 +317,7 @@ export default function WorldMap3D({
             me,
             species,
             wearing,
+            folk: irongate?.folk ?? NO_FOLK,
         });
         dirty.current = true;
         // Only rebuild when what's shown changes, not on every render of the page.
@@ -320,6 +332,7 @@ export default function WorldMap3D({
         me,
         species,
         wearingKey,
+        irongate,
     ]);
 
     // ---- moving about ---------------------------------------------------------------------------------------------
@@ -408,14 +421,18 @@ export default function WorldMap3D({
         }
         const point = local(event);
         setMenu(null);
-        const animal =
-            worldRef.current?.animalAt(point, (p, height) =>
-                rig.project(p, height),
-            ) ?? null;
-        // A right click asks what is there: an animal's menu, or the region's card.
+        setPerson(null);
+        const project = (p: Point, height: number) => rig.project(p, height);
+        const animal = worldRef.current?.animalAt(point, project) ?? null;
+        const folk = animal
+            ? null
+            : (worldRef.current?.folkAt(point, project) ?? null);
+        // A right click asks what is there: an animal's menu, a person's card, or the region's card.
         if (event.pointerType === 'mouse' && event.button === 2) {
             if (animal) {
                 setMenu({ animal, at: point });
+            } else if (folk) {
+                setPerson({ folk, at: point });
             } else {
                 latest.current.onSelect(
                     regionAt(latest.current.regions, rig.pick(point)),
@@ -443,6 +460,7 @@ export default function WorldMap3D({
                 moved: 0,
                 region,
                 animal,
+                folk,
                 velocity: [0, 0],
                 last: { point, at: now },
             };
@@ -455,6 +473,8 @@ export default function WorldMap3D({
                     held.held = true;
                     if (animal) {
                         setMenu({ animal, at: point });
+                    } else if (folk) {
+                        setPerson({ folk, at: point });
                     } else {
                         latest.current.onSelect(region);
                     }
@@ -473,6 +493,7 @@ export default function WorldMap3D({
                 moved: Infinity,
                 region: null,
                 animal: null,
+                folk: null,
                 velocity: [0, 0],
                 last: { point: centre, at: now },
             };
@@ -490,11 +511,12 @@ export default function WorldMap3D({
             if (event.pointerType === 'mouse') {
                 const id = regionAt(latest.current.regions, rig.pick(point));
                 setHover(id);
+                const project = (p: Point, height: number) =>
+                    rig.project(p, height);
                 setOverLand(
                     id !== null ||
-                        worldRef.current?.animalAt(point, (p, height) =>
-                            rig.project(p, height),
-                        ) != null,
+                        worldRef.current?.animalAt(point, project) != null ||
+                        worldRef.current?.folkAt(point, project) != null,
                 );
             }
             return;
@@ -595,6 +617,10 @@ export default function WorldMap3D({
             // A tap on an animal opens its menu instead of walking.
             if (current.animal) {
                 setMenu({ animal: current.animal, at: point });
+                return;
+            }
+            if (current.folk) {
+                setPerson({ folk: current.folk, at: point });
                 return;
             }
             // A quick tap on land sets off straight for that spot.
@@ -849,6 +875,19 @@ export default function WorldMap3D({
                         <Compass />
                     </div>
                 </>
+            )}
+
+            {person && size && irongate && (
+                <FolkCard
+                    folk={person.folk}
+                    at={person.at}
+                    size={size}
+                    irongate={irongate}
+                    warrants={warrants ?? []}
+                    regions={regions}
+                    here={here}
+                    onClose={() => setPerson(null)}
+                />
             )}
 
             {menu && size && (

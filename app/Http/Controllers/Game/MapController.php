@@ -150,12 +150,14 @@ class MapController extends Controller
             'farms' => ['price' => Farms::PRICE, 'income' => Farms::INCOME],
             // Open warrants, so the map can mark outlaws and offer arrests.
             'warrants' => $season ? Warrant::query()
+                ->with('wanted:id,name')
                 ->where('season_id', $season->id)
                 ->where('status', 'open')
                 ->get()
                 ->map(fn (Warrant $warrant) => [
                     'id' => $warrant->id,
                     'playerId' => $warrant->player_id,
+                    'name' => $warrant->wanted->name,
                     'bounty' => $warrant->bounty,
                     'escapedUntil' => $warrant->escaped_until?->isFuture() ? $warrant->escaped_until->toIso8601String() : null,
                 ]) : [],

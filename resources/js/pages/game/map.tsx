@@ -17,6 +17,7 @@ import type {
     BuildingKindCard,
     FactionRef,
     FactionStore,
+    IrongateInfo,
     MapBattle,
     MapLaw,
     MapRegion,
@@ -42,6 +43,7 @@ type Props = {
     farms: { price: number; income: number };
     warrants: Warrant[];
     plunder: Plunder;
+    irongate: IrongateInfo;
 };
 
 export default function MapPage({
@@ -62,6 +64,7 @@ export default function MapPage({
     farms,
     warrants,
     plunder,
+    irongate,
 }: Props) {
     const { player } = usePage().props;
     const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -299,6 +302,8 @@ export default function MapPage({
                     }
                     wanted={wanted}
                     wearing={wearing}
+                    irongate={irongate}
+                    warrants={warrants}
                 >
                     <MapHud
                         valley={valley}
@@ -322,6 +327,8 @@ export default function MapPage({
                             farms={farms}
                             warrants={warrants}
                             plunder={plunder}
+                            irongate={irongate}
+                            regions={regions}
                             onClose={() => setSelectedId(null)}
                         />
                     )}

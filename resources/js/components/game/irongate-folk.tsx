@@ -1,0 +1,344 @@
+import { Link, usePage } from '@inertiajs/react';
+import { X } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import type { Warrant } from '@/components/game/region-panel';
+import { Button } from '@/components/ui/button';
+import { act, capitalise } from '@/lib/game';
+import type { Point } from '@/lib/hollowmere';
+import { chat } from '@/routes/play';
+import { fence, tip } from '@/routes/play/irongate';
+import type { Folk, IrongateInfo, MapRegion } from '@/types/game';
+
+/** How each of Irongate's people looks on the map and on their card. */
+export const FOLK_FACE: Record<string, string> = {
+    brannock: '💂',
+    vetch: '👩',
+    wick: '🕵️',
+    tamsin: '👵',
+    fallow: '🧔',
+};
+
+export const folkFace = (key: string) => FOLK_FACE[key] ?? '🧑';
+
+/**
+ * What one of Irongate's people does for you: the Captain counts Sunday's
+ * men, the fence buys materials, the informer sells word of an outlaw, the
+ * Rookery's keeper opens the board. The server checks where you stand.
+ */
+export function FolkActions({
+    folk,
+    irongate,
+    warrants,
+    regions,
+    here,
+}: {
+    folk: Folk;
+    irongate: IrongateInfo;
+    warrants: Warrant[];
+    regions: MapRegion[];
+    here: number | null;
+}) {
+    const { player } = usePage().props;
+    const standing = regions.find((region) => region.id === here) ?? null;
+    const inTown = standing?.ring === 'city';
+    const inDistrict = standing?.key === folk.district;
+    const loneWolf = !player?.faction;
+
+    if (folk.key === 'brannock') {
+        return (
+            <p>
+                <span className="font-bold text-[#f5a27a]">
+                    {irongate.muster} men
+                </span>{' '}
+                muster for Sunday's Gate Night at 19:00. Hold the gate with
+                horseshoes from the map on Sunday.
+            </p>
+        );
+    }
+
+    if (folk.key === 'vetch') {
+        return (
+            <Fence
+                irongate={irongate}
+                materials={(player?.materials ?? {}) as Record<string, number>}
+                ready={inDistrict && loneWolf}
+                why={
+                    !loneWolf
+                        ? "She won't deal with faction animals."
+                        : !inDistrict
+                          ? 'Walk to the Iron Yards to deal with her.'
+                          : null
+                }
+            />
+        );
+    }
+
+    if (folk.key === 'wick') {
+        return (
+            <Tips
+                irongate={irongate}
+                warrants={warrants.filter((w) => w.playerId !== player?.id)}
+                ready={inTown}
+            />
+        );
+    }
+
+    if (folk.key === 'tamsin') {
+        return loneWolf ? (
+            <Link
+                href={chat.url({ query: { channel: 'rookery' } })}
+                className="self-start rounded-lg border px-3 py-1.5 font-semibold hover:bg-accent"
+            >
+                Open the Rookery board
+            </Link>
+        ) : (
+            <p className="text-muted-foreground">
+                The Rookery board is for lone wolves. Faction animals talk in
+                their own channels.
+            </p>
+        );
+    }
+
+    return (
+        <p className="text-muted-foreground">
+            Syndicates of lone wolves are coming to the Rookery.
+        </p>
+    );
+}
+
+function Fence({
+    irongate,
+    materials,
+    ready,
+    why,
+}: {
+    irongate: IrongateInfo;
+    materials: Record<string, number>;
+    ready: boolean;
+    why: string | null;
+}) {
+    const owned = Object.entries(materials).filter(([, n]) => n > 0);
+    const [material, setMaterial] = useState(owned[0]?.[0] ?? '');
+    const [amount, setAmount] = useState(5);
+    const price = irongate.fence.rare.includes(material)
+        ? irongate.fence.rarePrice
+        : irongate.fence.price;
+
+    return (
+        <div className="flex flex-col gap-2">
+            <p>
+                {irongate.fence.price} Corn each for materials,{' '}
+                {irongate.fence.rarePrice} for honey, herbs or iron. She'll pay
+                you {irongate.fence.left} more Corn today.
+            </p>
+            {why ? (
+                <p className="text-muted-foreground">{why}</p>
+            ) : owned.length === 0 ? (
+                <p className="text-muted-foreground">
+                    You have nothing to sell her.
+                </p>
+            ) : (
+                <div className="flex flex-wrap items-center gap-2">
+                    <select
+                        value={material}
+                        onChange={(event) => setMaterial(event.target.value)}
+                        className="rounded-md border bg-background px-2 py-1"
+                        aria-label="Material to sell"
+                    >
+                        {owned.map(([name, n]) => (
+                            <option key={name} value={name}>
+                                {capitalise(name)} ({n})
+                            </option>
+                        ))}
+                    </select>
+                    <input
+                        type="number"
+                        min={1}
+                        value={amount}
+                        onChange={(event) =>
+                            setAmount(Math.max(1, Number(event.target.value)))
+                        }
+                        className="w-16 rounded-md border bg-background px-2 py-1"
+                        aria-label="How many"
+                    />
+                    <Button
+                        size="sm"
+                        disabled={!ready || irongate.fence.left < price}
+                        onClick={() => act(fence.url(), { material, amount })}
+                    >
+                        Sell for {Math.min(amount * price, irongate.fence.left)}{' '}
+                        Corn
+                    </Button>
+                </div>
+            )}
+        </div>
+    );
+}
+
+function Tips({
+    irongate,
+    warrants,
+    ready,
+}: {
+    irongate: IrongateInfo;
+    warrants: Warrant[];
+    ready: boolean;
+}) {
+    if (warrants.length === 0) {
+        return (
+            <p className="text-muted-foreground">
+                Nobody's wanted right now. Nothing to tell.
+            </p>
+        );
+    }
+
+    return (
+        <div className="flex flex-col gap-2">
+            <p>
+                {irongate.tip} Corn and he tells you which district an outlaw
+                hides in.{' '}
+                {!ready &&
+                    'He only talks in Irongate: walk into the town first.'}
+            </p>
+            <ul className="flex flex-col gap-1">
+                {warrants.map((warrant) => (
+                    <li key={warrant.id} className="flex items-center gap-2">
+                        <span className="min-w-0 flex-1 truncate font-semibold">
+                            🎯 {warrant.name}
+                        </span>
+                        <Button
+                            size="sm"
+                            variant="secondary"
+                            disabled={!ready}
+                            onClick={() => act(tip.url(warrant.id))}
+                        >
+                            Ask Wick
+                        </Button>
+                    </li>
+                ))}
+            </ul>
+        </div>
+    );
+}
+
+/** Irongate's people standing in a district, for its region card. */
+export function DistrictFolk({
+    region,
+    ...props
+}: {
+    region: MapRegion;
+    irongate: IrongateInfo;
+    warrants: Warrant[];
+    regions: MapRegion[];
+    here: number | null;
+}) {
+    const folk = props.irongate.folk.filter(
+        (person) => person.district === region.key,
+    );
+
+    return (
+        <div className="flex flex-col gap-3">
+            <p className="text-muted-foreground">
+                Irongate, the humans' town. No faction can take it, and an
+                outlaw lying low here is hidden from anyone outside this
+                district.
+            </p>
+            {folk.map((person) => (
+                <div
+                    key={person.key}
+                    className="flex flex-col gap-2 rounded-lg border p-3"
+                >
+                    <p className="flex items-center gap-2">
+                        <span className="text-xl" aria-hidden>
+                            {folkFace(person.key)}
+                        </span>
+                        <span>
+                            <span className="block font-bold">
+                                {person.name}
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                                {person.role}
+                            </span>
+                        </span>
+                    </p>
+                    <p className="italic">"{person.says}"</p>
+                    <FolkActions folk={person} {...props} />
+                </div>
+            ))}
+        </div>
+    );
+}
+
+/** The card for one of Irongate's people, opened by tapping them on the map. */
+export function FolkCard({
+    folk,
+    at,
+    size,
+    onClose,
+    ...props
+}: {
+    folk: Folk;
+    at: Point;
+    size: { width: number; height: number };
+    onClose: () => void;
+    irongate: IrongateInfo;
+    warrants: Warrant[];
+    regions: MapRegion[];
+    here: number | null;
+}) {
+    useEffect(() => {
+        const onKey = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') {
+                onClose();
+            }
+        };
+        window.addEventListener('keydown', onKey);
+
+        return () => window.removeEventListener('keydown', onKey);
+    }, [onClose]);
+
+    const width = 272;
+    const left = Math.min(
+        Math.max(8, at[0] - width / 2),
+        Math.max(8, size.width - width - 8),
+    );
+    const below = at[1] < size.height * 0.55;
+
+    return (
+        <div
+            role="dialog"
+            aria-label={folk.name}
+            className="absolute z-20 flex max-h-[70%] flex-col gap-2 overflow-y-auto rounded-xl border bg-card/95 p-3 text-sm shadow-xl backdrop-blur"
+            style={{
+                width,
+                left,
+                ...(below
+                    ? { top: Math.min(at[1] + 22, size.height - 80) }
+                    : { bottom: Math.max(8, size.height - at[1] + 22) }),
+            }}
+            onPointerDown={(event) => event.stopPropagation()}
+        >
+            <div className="flex items-start gap-2">
+                <span className="text-2xl" aria-hidden>
+                    {folkFace(folk.key)}
+                </span>
+                <span className="min-w-0 flex-1">
+                    <span className="block font-bold">{folk.name}</span>
+                    <span className="text-xs text-muted-foreground">
+                        {folk.role}
+                    </span>
+                </span>
+                <button
+                    type="button"
+                    aria-label="Close"
+                    onClick={onClose}
+                    className="rounded-md p-1 text-muted-foreground hover:bg-accent"
+                >
+                    <X className="size-4" />
+                </button>
+            </div>
+            <p className="italic">"{folk.says}"</p>
+            <FolkActions folk={folk} {...props} />
+        </div>
+    );
+}
