@@ -107,6 +107,22 @@ const WILD: Record<string, string> = {
     glen: 'woods',
     leas: 'meadow',
     mill: 'meadow',
+    fold: 'meadow',
+    fen: 'wet',
+    rise: 'heath',
+    crag: 'rock',
+    scar: 'rock',
+    mine: 'rock',
+    moss: 'wet',
+    bog: 'wet',
+    banks: 'wet',
+    carr: 'woods',
+    dell: 'woods',
+    gardens: 'meadow',
+    weald: 'woods',
+    workings: 'rock',
+    tor: 'rock',
+    slag: 'rock',
 };
 /** What each farm grows, as ValleyBuilder has it. */
 const FARM_CROP: Record<string, 'honey' | 'herbs' | 'iron'> = {
@@ -116,6 +132,12 @@ const FARM_CROP: Record<string, 'honey' | 'herbs' | 'iron'> = {
     ashcombe: 'iron',
     fennick: 'honey',
     marlow: 'herbs',
+    hartley: 'herbs',
+    northfold: 'honey',
+    coldharbour: 'iron',
+    rushmere: 'honey',
+    southmere: 'herbs',
+    copperhill: 'iron',
 };
 
 /** A region's ground: a farm, a field a farm has cleared, wild land, or one of Hollowmere's own. */

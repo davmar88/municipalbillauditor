@@ -27,14 +27,16 @@ class FarmsTest extends TestCase
         $this->travelTo(Clock::now()->setTime(12, 0));
     }
 
-    public function test_the_valley_has_six_farms_beyond_the_fences_in_two_rings(): void
+    public function test_the_valley_has_twelve_farms_beyond_the_fences_in_three_rings(): void
     {
-        $this->assertSame(22, $this->valley->regions()->where('wild', false)->where('ring', '!=', 'city')->count());
-        $this->assertSame(18, $this->valley->regions()->where('wild', true)->count(), 'Three patches of wild land round each farm.');
-        $this->assertEqualsCanonicalizing(['thornbury'], $this->region('ashcombe')->neighbours()->where('wild', false)->pluck('key')->all(), 'The second ring is reached from the first.');
+        $this->assertSame(28, $this->valley->regions()->where('wild', false)->where('ring', '!=', 'city')->count());
+        $this->assertSame(36, $this->valley->regions()->where('wild', true)->count(), 'Three patches of wild land round each farm.');
+        $this->assertSame(['fennick'], $this->region('hartley')->neighbours()->where('wild', false)->pluck('key')->all(), 'The third ring is reached from the second.');
+        $this->assertSame(['honey', 'herbs', 'iron'], [$this->region('northfold')->produces, $this->region('southmere')->produces, $this->region('copperhill')->produces]);
+        $this->assertEqualsCanonicalizing(['thornbury', 'northfold', 'coldharbour'], $this->region('ashcombe')->neighbours()->where('wild', false)->pluck('key')->all(), 'The second ring is reached from the first, and leads on to the third.');
         $this->assertSame(['iron', 'honey', 'herbs'], [$this->region('ashcombe')->produces, $this->region('fennick')->produces, $this->region('marlow')->produces]);
         $this->assertEqualsCanonicalizing(['orchard', 'big_barn', 'hayfield', 'ashcombe'], $this->region('thornbury')->neighbours()->where('wild', false)->pluck('key')->all());
-        $this->assertEqualsCanonicalizing(['paddock', 'marlow'], $this->region('willowby')->neighbours()->where('wild', false)->pluck('key')->all());
+        $this->assertEqualsCanonicalizing(['paddock', 'marlow', 'copperhill'], $this->region('willowby')->neighbours()->where('wild', false)->pluck('key')->all());
         $this->assertTrue($this->region('big_barn')->neighbours()->where('key', 'thornbury')->exists());
     }
 

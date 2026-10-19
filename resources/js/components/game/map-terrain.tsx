@@ -1318,6 +1318,12 @@ const FARM_CROP: Record<string, 'honey' | 'herbs' | 'iron'> = {
     ashcombe: 'iron',
     fennick: 'honey',
     marlow: 'herbs',
+    hartley: 'herbs',
+    northfold: 'honey',
+    coldharbour: 'iron',
+    rushmere: 'honey',
+    southmere: 'herbs',
+    copperhill: 'iron',
 };
 
 /** What makes each farm worth having: hives, herb beds or an old forge's ore. */
@@ -1395,6 +1401,12 @@ const UNDER: Record<string, () => React.ReactNode> = {
     ashcombe: farmland('ashcombe'),
     fennick: farmland('fennick'),
     marlow: farmland('marlow'),
+    hartley: farmland('hartley'),
+    northfold: farmland('northfold'),
+    coldharbour: farmland('coldharbour'),
+    rushmere: farmland('rushmere'),
+    southmere: farmland('southmere'),
+    copperhill: farmland('copperhill'),
     wildwood: Wildwood,
     orchard: Orchard,
     big_barn: BigBarn,
