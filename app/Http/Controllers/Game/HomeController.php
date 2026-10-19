@@ -58,6 +58,14 @@ class HomeController extends Controller
         return $this->told('You stepped outside.');
     }
 
+    public function demolish(Request $request, Homes $homes): RedirectResponse
+    {
+        $back = $homes->demolish($request->user()->player);
+        $list = collect($back)->map(fn (int $amount, string $name) => "{$amount} {$name}")->implode(', ');
+
+        return $this->told('You broke your home down'.($list !== '' ? " and got back {$list}." : '.'));
+    }
+
     public function style(Request $request, Homes $homes): RedirectResponse
     {
         $data = $request->validate(['style' => ['nullable', 'string', 'max:20']]);

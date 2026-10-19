@@ -1,10 +1,12 @@
 import { usePage } from '@inertiajs/react';
+import { useState } from 'react';
 import { Home as HomeIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { act, capitalise, clockTime } from '@/lib/game';
 import type { Point } from '@/lib/hollowmere';
 import {
     build,
+    demolish,
     enter,
     help,
     leave,
@@ -203,6 +205,14 @@ export function HomeCard({
                             </span>
                         )}
                     </label>
+                    <BreakDown
+                        atDoor={atDoor && !info.inside}
+                        name={home.name}
+                        back={
+                            info.levels.find((l) => l.level === home.level)
+                                ?.materials ?? {}
+                        }
+                    />
                     {home.level > 0 && (
                         <label className="flex flex-wrap items-center gap-2 text-xs">
                             <span className="font-semibold">Look</span>
@@ -270,5 +280,56 @@ export function HomeCard({
                 </div>
             )}
         </section>
+    );
+}
+
+/** Break your home down at its door: asks once more first, and gives back half its top level's materials. */
+function BreakDown({
+    atDoor,
+    name,
+    back,
+}: {
+    atDoor: boolean;
+    name: string;
+    back: Record<string, number>;
+}) {
+    const [sure, setSure] = useState(false);
+    const half = Object.entries(back)
+        .map(([material, n]) => `${Math.floor(n / 2)} ${material}`)
+        .join(', ');
+
+    if (!atDoor) {
+        return null;
+    }
+
+    return sure ? (
+        <div className="flex flex-wrap items-center gap-2 rounded-lg border border-red-500/40 bg-red-500/10 p-2 text-xs">
+            <span>
+                Break down your {name}? You get back {half || 'nothing'}, and
+                can set up camp somewhere else.
+            </span>
+            <Button
+                size="sm"
+                variant="destructive"
+                onClick={() => {
+                    act(demolish.url());
+                    setSure(false);
+                }}
+            >
+                Yes, break it down
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setSure(false)}>
+                Keep it
+            </Button>
+        </div>
+    ) : (
+        <Button
+            size="sm"
+            variant="ghost"
+            className="self-start text-red-300"
+            onClick={() => setSure(true)}
+        >
+            Break it down
+        </Button>
     );
 }

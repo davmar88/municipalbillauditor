@@ -311,6 +311,36 @@ final class Homes
     }
 
     /**
+     * Break your home down, standing at its door: half the materials of its
+     * top level come back to you, and you can set up camp somewhere else.
+     *
+     * @return array<string, int> The materials you got back.
+     *
+     * @throws GameException
+     */
+    public function demolish(Player $player): array
+    {
+        return DB::transaction(function () use ($player) {
+            $player = Players::lock($player);
+            Players::ensureFree($player);
+            $home = $this->mine($player);
+            $this->ensureAtDoor($player, $home);
+
+            $back = array_map(fn (int $amount) => intdiv($amount, 2), self::level($home->level)['materials']);
+            $materials = $player->materials ?? [];
+
+            foreach ($back as $name => $amount) {
+                $materials[$name] = (int) ($materials[$name] ?? 0) + $amount;
+            }
+
+            $player->forceFill(['materials' => $materials, 'inside_home_at' => null])->save();
+            $home->delete();
+
+            return array_filter($back);
+        });
+    }
+
+    /**
      * Put a home skin from your bag on your home; it stays yours.
      *
      * @throws GameException

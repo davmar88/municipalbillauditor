@@ -1278,6 +1278,18 @@ export function crowdRoom(k: number): number {
 /** Homes and buildings keep their size on screen close in, and shrink to their place on the land further out. */
 export const OBJECT_FLOOR = 1.2;
 
+/** Your own home, if a point on the map falls on it at this zoom. */
+export function myHomeAt(
+    homes: MapHome[] | undefined,
+    [x, y]: Point,
+    k: number,
+): MapHome | null {
+    const mine = homes?.find((home) => home.mine);
+    const reach = 26 / Math.max(k, OBJECT_FLOOR);
+
+    return mine && Math.hypot(mine.x - x, mine.y - y) <= reach ? mine : null;
+}
+
 /** The other animals in the valley, standing where they are. */
 const Crowd = memo(function Crowd({
     regions,
@@ -1819,6 +1831,8 @@ export type WorldMapProps = {
     onWalk?: (point: Point) => void;
     /** A right click or long press on the open scrub, to walk or set up camp there. */
     onGround?: (point: Point) => void;
+    /** A tap, hold or right click on your own home, to open its card. */
+    onHome?: (home: MapHome) => void;
     /** How tonight's Gate Night went, once it has happened. */
     gateResult: GateResult;
     /** The animals with a warrant out for their arrest. */
@@ -1850,6 +1864,7 @@ export function WorldMap({
     me,
     onWalk,
     onGround,
+    onHome,
     gateResult,
     wanted,
     switcher,
@@ -1874,9 +1889,17 @@ export function WorldMap({
           ? hub(hereRegion.key)
           : null;
 
-    // A quick tap on land sets off straight for that spot, the open scrub between the regions included.
+    // The zoom, for the handlers below: how near a tap must be to your home.
+    const kRef = useRef(1);
+
+    // A quick tap on land sets off straight for that spot, the open scrub between the regions included; on your home, its card.
     const onTap = useCallback(
         (target: Element | null, world: Point) => {
+            const home = myHomeAt(homes, world, kRef.current);
+            if (home && onHome) {
+                onHome(home);
+                return;
+            }
             const id = Number(target?.getAttribute('data-region'));
 
             if (
@@ -1886,12 +1909,17 @@ export function WorldMap({
                 onWalk(world);
             }
         },
-        [onWalk],
+        [onWalk, onHome, homes],
     );
 
-    // A long press or a right click opens the card for what is there: a region's, or the open scrub's.
+    // A long press or a right click opens the card for what is there: your home's, a region's, or the open scrub's.
     const onInfo = useCallback(
         (target: Element | null, world: Point) => {
+            const home = myHomeAt(homes, world, kRef.current);
+            if (home && onHome) {
+                onHome(home);
+                return;
+            }
             const id = Number(target?.getAttribute('data-region'));
             const region = Number.isFinite(id) && id > 0 ? id : null;
             onSelect(region);
@@ -1900,7 +1928,7 @@ export function WorldMap({
                 onGround?.(world);
             }
         },
-        [onSelect, onGround],
+        [onSelect, onGround, onHome, homes],
     );
 
     // A tap, hold or right click on another animal opens its menu; on one of Irongate's people, their card.
@@ -1942,6 +1970,7 @@ export function WorldMap({
         onAnimal,
     );
     const { view, size, lookAt, current } = camera;
+    kRef.current = view.k;
 
     // A card opened by a tap points at that spot; once the map moves, it would point at the wrong thing.
     useEffect(() => {

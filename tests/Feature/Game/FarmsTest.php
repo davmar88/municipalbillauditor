@@ -290,4 +290,21 @@ class FarmsTest extends TestCase
         $this->expectExceptionMessage('looks on offer');
         app(Homes::class)->style($player->fresh(), 'palace');
     }
+
+    public function test_an_animal_breaks_its_home_down_at_the_door(): void
+    {
+        $player = $this->player(attributes: ['corn' => 500, 'materials' => ['wood' => 30, 'straw' => 30]]);
+        $this->stand($player, 'old_well');
+        app(Homes::class)->build($player->fresh());
+        $this->assertSame(20, $player->fresh()->materials['wood']);
+
+        $back = app(Homes::class)->demolish($player->fresh());
+
+        $this->assertSame(['wood' => 5, 'straw' => 5], $back);
+        $this->assertNull(Homes::of($player->fresh()));
+        $this->assertSame(25, $player->fresh()->materials['wood']);
+
+        $this->expectExceptionMessage("don't have a home");
+        app(Homes::class)->demolish($player->fresh());
+    }
 }

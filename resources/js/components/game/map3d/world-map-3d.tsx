@@ -11,6 +11,7 @@ import {
     walkPoint,
 } from '@/components/game/world-map';
 import type { Point } from '@/lib/hollowmere';
+import { myHomeAt } from '@/components/game/world-map';
 import { FARM, LANDS, hub, inside, reachable } from '@/lib/hollowmere';
 import { cn } from '@/lib/utils';
 import { AnimalMenu } from '@/components/game/animal-menu';
@@ -87,6 +88,7 @@ export default function WorldMap3D({
     me,
     onWalk,
     onGround,
+    onHome,
     gateResult,
     wanted,
     wearing,
@@ -134,9 +136,25 @@ export default function WorldMap3D({
         [me, hereRegion],
     );
 
-    const latest = useRef({ regions, onSelect, onWalk, onGround, herePoint });
+    const latest = useRef({
+        regions,
+        onSelect,
+        onWalk,
+        onGround,
+        onHome,
+        homes,
+        herePoint,
+    });
     useEffect(() => {
-        latest.current = { regions, onSelect, onWalk, onGround, herePoint };
+        latest.current = {
+            regions,
+            onSelect,
+            onWalk,
+            onGround,
+            onHome,
+            homes,
+            herePoint,
+        };
     });
 
     // ---- the scene, made once ---------------------------------------------------------------------------
@@ -448,6 +466,13 @@ export default function WorldMap3D({
                 setPerson({ folk, at: point });
             } else {
                 const ground = rig.pick(point);
+                const home = ground
+                    ? myHomeAt(latest.current.homes, ground, rig.k)
+                    : null;
+                if (home && latest.current.onHome) {
+                    latest.current.onHome(home);
+                    return;
+                }
                 const region = regionAt(latest.current.regions, ground);
                 latest.current.onSelect(region);
                 if (region === null && ground && reachable(ground)) {
@@ -492,6 +517,13 @@ export default function WorldMap3D({
                     } else if (folk) {
                         setPerson({ folk, at: point });
                     } else {
+                        const home = anchor
+                            ? myHomeAt(latest.current.homes, anchor, rig.k)
+                            : null;
+                        if (home && latest.current.onHome) {
+                            latest.current.onHome(home);
+                            return;
+                        }
                         latest.current.onSelect(region);
                         if (region === null && anchor && reachable(anchor)) {
                             latest.current.onGround?.(anchor);
@@ -644,8 +676,15 @@ export default function WorldMap3D({
                 setPerson({ folk: current.folk, at: point });
                 return;
             }
-            // A quick tap on land sets off straight for that spot, the open scrub between the regions included.
+            // A quick tap on land sets off straight for that spot, the open scrub between the regions included; on your home, its card.
             const ground = rig.pick(point);
+            const home = ground
+                ? myHomeAt(latest.current.homes, ground, rig.k)
+                : null;
+            if (home && latest.current.onHome) {
+                latest.current.onHome(home);
+                return;
+            }
             if (
                 ground &&
                 ((current.region !== null && current.region > 0) ||

@@ -98,6 +98,8 @@ export default function MapPage({
     const [selectedId, setSelectedId] = useState<number | null>(null);
     // The open scrub right-clicked, to walk or set up camp there.
     const [ground, setGround] = useState<[number, number] | null>(null);
+    // Your own home, tapped on the map, to manage it there.
+    const [homeOpen, setHomeOpen] = useState(false);
     const [horseshoes, setHorseshoes] = useState(1);
     const selected = regions.find((region) => region.id === selectedId) ?? null;
 
@@ -327,6 +329,11 @@ export default function MapPage({
                     me={me}
                     onWalk={walkTo}
                     onGround={setGround}
+                    onHome={() => {
+                        setSelectedId(null);
+                        setGround(null);
+                        setHomeOpen(true);
+                    }}
                     gateResult={
                         gateNight.result === null
                             ? null
@@ -348,6 +355,24 @@ export default function MapPage({
                         regions={regions}
                         compact={selected !== null}
                     />
+                    {homeOpen && !selected && (
+                        <div className="absolute bottom-3 left-3 z-20 flex max-h-[calc(100%-1.5rem)] w-80 max-w-[calc(100%-1.5rem)] flex-col overflow-y-auto rounded-2xl shadow-lg">
+                            <button
+                                type="button"
+                                className="absolute top-3 right-3 z-10 text-muted-foreground hover:text-foreground"
+                                aria-label="Close"
+                                onClick={() => setHomeOpen(false)}
+                            >
+                                ✕
+                            </button>
+                            <HomeCard
+                                info={home}
+                                homes={homes}
+                                me={me}
+                                onWalk={walkTo}
+                            />
+                        </div>
+                    )}
                     {ground && !selected && (
                         <GroundCard
                             point={ground}
