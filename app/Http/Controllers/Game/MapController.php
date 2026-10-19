@@ -246,6 +246,8 @@ class MapController extends Controller
                     'daily' => Irongate::FENCE_DAILY_CORN,
                 ],
                 'tip' => Irongate::TIP_CORN,
+                'smith' => ['stone' => Irongate::SMITH_STONE, 'wood' => Irongate::SMITH_WOOD, 'daily' => Irongate::SMITH_DAILY],
+                'meal' => Irongate::MEAL_CORN,
             ],
         ]);
     }

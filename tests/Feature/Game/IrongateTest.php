@@ -13,6 +13,7 @@ use App\Game\GameException;
 use App\Game\GateNight;
 use App\Game\Gathering;
 use App\Game\Geography;
+use App\Game\Horseshoes;
 use App\Game\Irongate;
 use App\Game\Movement;
 use App\Game\Notices;
@@ -57,7 +58,7 @@ class IrongateTest extends TestCase
         return [$ruler->fresh(), $suspect->fresh(), $warrant];
     }
 
-    public function test_irongate_has_three_districts_off_ironfield_gate(): void
+    public function test_irongate_has_its_districts_off_ironfield_gate(): void
     {
         $yards = $this->region('irongate_yards');
 
@@ -67,10 +68,10 @@ class IrongateTest extends TestCase
         }
 
         $this->assertEqualsCanonicalizing(
-            ['ironfield_gate', 'irongate_rookery', 'irongate_garrison'],
+            ['ironfield_gate', 'irongate_rookery', 'irongate_garrison', 'irongate_tavern'],
             $yards->neighbours()->pluck('key')->all(),
         );
-        $this->assertSame(['irongate_yards'], $this->region('irongate_rookery')->neighbours()->pluck('key')->all());
+        $this->assertEqualsCanonicalizing(['irongate_yards', 'irongate_smithy'], $this->region('irongate_rookery')->neighbours()->pluck('key')->all());
         $this->assertContains('irongate_yards', $this->region('ironfield_gate')->neighbours()->pluck('key')->all());
     }
 
@@ -293,5 +294,36 @@ class IrongateTest extends TestCase
         $this->assertFalse($chat->canRead($member->fresh(), Chat::rookery()));
         $chat->post($wolf->fresh(), Chat::rookery(), 'Anyone seen the dog?');
         $this->assertCount(1, $chat->messages($wolf->fresh(), Chat::rookery()));
+    }
+
+    public function test_the_town_grew_east_with_a_smith_and_an_inn(): void
+    {
+        $this->assertSame('city', $this->region('irongate_tavern')->ring);
+        $this->assertContains('irongate_tavern', $this->region('irongate_yards')->neighbours()->pluck('key')->all());
+
+        $player = $this->player(attributes: ['corn' => 100, 'materials' => ['stone' => 30, 'wood' => 30], 'horseshoes' => 5]);
+        $this->stand($player, 'irongate_smithy');
+        $irongate = app(Irongate::class);
+
+        foreach (range(1, Irongate::SMITH_DAILY) as $i) {
+            $irongate->smith($player->fresh());
+        }
+        $this->assertSame(3, $player->fresh()->materials['iron']);
+        $this->assertSame(0, $player->fresh()->materials['stone']);
+
+        try {
+            $irongate->smith($player->fresh());
+            $this->fail('Bram worked a fourth time.');
+        } catch (GameException $e) {
+            $this->assertStringContainsString('furnace needs to cool', $e->getMessage());
+        }
+
+        $this->stand($player, 'irongate_tavern');
+        $irongate->meal($player->fresh());
+        $this->assertSame(100 - Irongate::MEAL_CORN, $player->fresh()->corn);
+        $this->assertSame(6, Horseshoes::current($player->fresh()));
+
+        $this->expectExceptionMessage('one hot meal a day');
+        $irongate->meal($player->fresh());
     }
 }

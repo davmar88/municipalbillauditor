@@ -153,6 +153,8 @@ Route::middleware(['auth', 'verified', 'player', 'throttle:120,1'])->prefix('pla
     // Irongate's people: the fence and the informer.
     Route::post('irongate/fence', [IrongateController::class, 'fence'])->middleware('throttle:20,1,irongate')->name('play.irongate.fence');
     Route::post('irongate/tip/{warrant}', [IrongateController::class, 'tip'])->middleware('throttle:20,1,irongate')->name('play.irongate.tip');
+    Route::post('irongate/smith', [IrongateController::class, 'smith'])->middleware('throttle:20,1,irongate')->name('play.irongate.smith');
+    Route::post('irongate/meal', [IrongateController::class, 'meal'])->middleware('throttle:20,1,irongate')->name('play.irongate.meal');
 
     // The bell, and the pulse every screen checks for pop-ups.
     Route::get('pulse', [NoticeController::class, 'pulse'])->name('play.pulse');

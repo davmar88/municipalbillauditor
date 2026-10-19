@@ -95,6 +95,9 @@ final class ValleyBuilder
         'irongate_rookery' => ['The Rookery', 'city', null, 0, 10],
         'irongate_yards' => ['The Iron Yards', 'city', null, 1, 10],
         'irongate_garrison' => ['The Garrison', 'city', null, 2, 10],
+        'irongate_smithy' => ['Smithy Row', 'city', null, 3, 10],
+        'irongate_tavern' => ['The Black Dog Tavern', 'city', null, 4, 10],
+        'irongate_gallows' => ['Gallows Square', 'city', null, 5, 10],
         // The frontier: wild land filling the valley round the farms, open to all.
         'glitter_gully' => ['Glitter Gully', 'frontier', 'gold', 0, 11],
         'blackthorn_wood' => ['Blackthorn Wood', 'frontier', 'wood', 1, 11],
@@ -154,7 +157,10 @@ final class ValleyBuilder
 
     /** Irongate's districts and what each borders: the Yards open onto Ironfield Gate and the other two. */
     public const CITY_LINKS = [
-        'irongate_yards' => ['ironfield_gate', 'irongate_rookery', 'irongate_garrison'],
+        'irongate_yards' => ['ironfield_gate', 'irongate_rookery', 'irongate_garrison', 'irongate_tavern'],
+        'irongate_smithy' => ['irongate_rookery', 'irongate_tavern'],
+        'irongate_tavern' => ['irongate_gallows'],
+        'irongate_gallows' => ['irongate_garrison'],
     ];
 
     /** Which farm each patch of wild land belongs to, in the order it is cleared. */

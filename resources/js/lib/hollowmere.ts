@@ -423,6 +423,37 @@ export function smoothLoop(points: Point[]): string {
  * districts down the far side of the east fence. Nobody holds it.
  */
 export const CITY: Record<string, Point[]> = {
+    // The town grew east: the smiths, the tavern and the gallows.
+    irongate_smithy: [
+        [1888, 150],
+        [2040, 130],
+        [2200, 160],
+        [2240, 260],
+        [2200, 350],
+        [2040, 366],
+        [1880, 350],
+        [1906, 258],
+    ],
+    irongate_tavern: [
+        [1880, 350],
+        [2040, 366],
+        [2200, 350],
+        [2260, 470],
+        [2230, 592],
+        [2060, 606],
+        [1914, 592],
+        [1932, 470],
+    ],
+    irongate_gallows: [
+        [1914, 592],
+        [2060, 606],
+        [2230, 592],
+        [2210, 722],
+        [2160, 850],
+        [2000, 870],
+        [1862, 850],
+        [1902, 722],
+    ],
     irongate_rookery: [
         [1518, 132],
         [1640, 112],

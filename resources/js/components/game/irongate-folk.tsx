@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { act, capitalise } from '@/lib/game';
 import type { Point } from '@/lib/hollowmere';
 import { chat } from '@/routes/play';
-import { fence, tip } from '@/routes/play/irongate';
+import { fence, meal, smith, tip } from '@/routes/play/irongate';
 import type { Folk, IrongateInfo, MapRegion } from '@/types/game';
 
 /** How each of Irongate's people looks on the map and on their card. */
@@ -17,6 +17,10 @@ export const FOLK_FACE: Record<string, string> = {
     wick: '🕵️',
     tamsin: '👵',
     fallow: '🧔',
+    bram: '🧑‍🏭',
+    nell: '👩‍🍳',
+    cobb: '💂‍♂️',
+    rook: '🧙‍♀️',
 };
 
 export const folkFace = (key: string) => FOLK_FACE[key] ?? '🧑';
@@ -81,6 +85,67 @@ export function FolkActions({
                 warrants={warrants.filter((w) => w.playerId !== player?.id)}
                 ready={inTown}
             />
+        );
+    }
+
+    if (folk.key === 'bram') {
+        return (
+            <div className="flex flex-col gap-2">
+                <p>
+                    {irongate.smith.stone} stone and {irongate.smith.wood} wood
+                    for a piece of iron, up to {irongate.smith.daily} times a
+                    day.
+                </p>
+                <Button
+                    size="sm"
+                    className="self-start"
+                    disabled={!inDistrict}
+                    onClick={() => act(smith.url())}
+                >
+                    {inDistrict ? 'Make iron' : 'Walk to Smithy Row first'}
+                </Button>
+            </div>
+        );
+    }
+
+    if (folk.key === 'nell') {
+        return (
+            <div className="flex flex-col gap-2">
+                <p>
+                    A hot meal for {irongate.meal} Corn gives you a horseshoe,
+                    once a day.
+                </p>
+                <Button
+                    size="sm"
+                    className="self-start"
+                    disabled={!inDistrict}
+                    onClick={() => act(meal.url())}
+                >
+                    {inDistrict
+                        ? 'Eat a hot meal'
+                        : 'Walk to the Black Dog first'}
+                </Button>
+            </div>
+        );
+    }
+
+    if (folk.key === 'cobb') {
+        return (
+            <p>
+                He's drilling{' '}
+                <span className="font-bold text-[#f5a27a]">
+                    {irongate.muster} men
+                </span>{' '}
+                for Sunday's Gate Night.
+            </p>
+        );
+    }
+
+    if (folk.key === 'rook') {
+        return (
+            <p className="text-muted-foreground">
+                Her fortunes are coming. For now she only watches.
+            </p>
         );
     }
 

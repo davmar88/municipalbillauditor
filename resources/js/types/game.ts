@@ -365,6 +365,10 @@ export type IrongateInfo = {
     };
     /** Corn the informer wants for a tip. */
     tip: number;
+    /** What the smith takes for an iron, and how often a day. */
+    smith: { stone: number; wood: number; daily: number };
+    /** Corn for the innkeeper's hot meal, which gives a horseshoe. */
+    meal: number;
 };
 
 /** An animal's own home on the map. */

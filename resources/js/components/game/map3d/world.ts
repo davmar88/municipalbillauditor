@@ -87,6 +87,9 @@ const KIND: Record<string, string> = {
     irongate_rookery: 'street',
     irongate_yards: 'street',
     irongate_garrison: 'street',
+    irongate_smithy: 'street',
+    irongate_tavern: 'street',
+    irongate_gallows: 'street',
 };
 /** Wild land round the farms, by the last word of its key. */
 const WILD: Record<string, string> = {
@@ -870,7 +873,7 @@ export class World {
             this.fixedLabels.push({ obj, el, minK });
         };
         fixed('THE RIDGE', [800, -570], {});
-        fixed('IRONFIELD', [2180, 480], { color: '#f5a27a' });
+        fixed('IRONFIELD', [2480, 480], { color: '#f5a27a' });
         fixed(
             'Hollow Brook',
             BROOK[2],

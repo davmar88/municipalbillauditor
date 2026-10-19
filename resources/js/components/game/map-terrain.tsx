@@ -341,6 +341,22 @@ type Block = [number, number, number, number, number];
 
 /** The town's buildings, by district: tenements, the yards' sheds, the Garrison's barracks. */
 export const CITY_BLOCKS: Record<string, Block[]> = {
+    irongate_smithy: [
+        [1960, 190, 40, 26, 3],
+        [2120, 190, 46, 28, -4],
+        [2170, 300, 34, 24, 2],
+        [1960, 320, 30, 20, -2],
+    ],
+    irongate_tavern: [
+        [2120, 430, 64, 38, 2],
+        [2180, 540, 36, 26, -3],
+        [1990, 560, 40, 22, 4],
+    ],
+    irongate_gallows: [
+        [2120, 660, 40, 28, -2],
+        [2140, 790, 46, 26, 3],
+        [1940, 800, 32, 22, 0],
+    ],
     irongate_rookery: [
         [1572, 168, 40, 22, -4],
         [1628, 152, 34, 20, 3],

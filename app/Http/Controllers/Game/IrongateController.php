@@ -25,6 +25,20 @@ class IrongateController extends Controller
         return $this->told("Ma Vetch took {$amount} {$data['material']} and paid you {$corn} Corn.");
     }
 
+    public function smith(Request $request, Irongate $irongate): RedirectResponse
+    {
+        $irongate->smith($request->user()->player);
+
+        return $this->told('Bram hammers out a piece of iron for you.');
+    }
+
+    public function meal(Request $request, Irongate $irongate): RedirectResponse
+    {
+        $irongate->meal($request->user()->player);
+
+        return $this->told('Nell brings you a hot meal. One more horseshoe.');
+    }
+
     public function tip(Request $request, Warrant $warrant, Irongate $irongate): RedirectResponse
     {
         $where = $irongate->tip($request->user()->player, $warrant);

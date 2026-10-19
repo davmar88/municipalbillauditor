@@ -80,7 +80,45 @@ final class Irongate
             'spot' => [110, 50],
             'says' => "Lone wolves do better in a pack. Come back when there's more of you.",
         ],
+        'bram' => [
+            'name' => 'Bram the smith',
+            'role' => 'Works stone and wood into iron',
+            'district' => 'irongate_smithy',
+            'spot' => [40, 30],
+            'says' => 'Bring me stone for the furnace and wood for the fire, and I will give you iron.',
+        ],
+        'nell' => [
+            'name' => 'Nell',
+            'role' => 'Keeps the Black Dog',
+            'district' => 'irongate_tavern',
+            'spot' => [40, 30],
+            'says' => 'Sit down, eat something hot. You look like you walked here.',
+        ],
+        'cobb' => [
+            'name' => 'Sergeant Cobb',
+            'role' => "Drills Ironfield's men",
+            'district' => 'irongate_gallows',
+            'spot' => [60, 30],
+            'says' => 'Left, right, left. On Sunday they march through your gate, and they march well.',
+        ],
+        'rook' => [
+            'name' => 'Mother Rook',
+            'role' => 'Tells fortunes',
+            'district' => 'irongate_gallows',
+            'spot' => [-50, 40],
+            'says' => 'I see a farm changing hands, and a fox where a pig should be. Cross my palm with Corn some other day.',
+        ],
     ];
+
+    /** What Bram takes for one iron, and how often he'll work for you in a day. */
+    public const SMITH_STONE = 10;
+
+    public const SMITH_WOOD = 10;
+
+    public const SMITH_DAILY = 3;
+
+    /** What Nell's hot meal costs; it gives a horseshoe, once a day. */
+    public const MEAL_CORN = 30;
 
     /**
      * Whether an animal standing at $where is hidden from a viewer standing
@@ -175,6 +213,76 @@ final class Irongate
 
             return ['amount' => $amount, 'corn' => $corn];
         });
+    }
+
+    /**
+     * Bram works stone and wood into iron, for anyone standing at Smithy Row,
+     * a few times a day.
+     *
+     * @throws GameException
+     */
+    public function smith(Player $player): void
+    {
+        DB::transaction(function () use ($player) {
+            $player = Players::lock($player);
+            Players::ensureFree($player);
+            Movement::ensureStandingIn($player, $player->valley->region('irongate_smithy'), 'deal with Bram');
+
+            if ($this->dealsToday($player, 'smith') >= self::SMITH_DAILY) {
+                throw new GameException('Bram has worked for you '.self::SMITH_DAILY.' times today. The furnace needs to cool.');
+            }
+
+            $materials = $player->materials ?? [];
+
+            if ((int) ($materials['stone'] ?? 0) < self::SMITH_STONE || (int) ($materials['wood'] ?? 0) < self::SMITH_WOOD) {
+                throw new GameException('Bram needs '.self::SMITH_STONE.' stone and '.self::SMITH_WOOD.' wood for a piece of iron.');
+            }
+
+            $materials['stone'] -= self::SMITH_STONE;
+            $materials['wood'] -= self::SMITH_WOOD;
+            $materials['iron'] = (int) ($materials['iron'] ?? 0) + 1;
+            $player->forceFill(['materials' => $materials])->save();
+            IrongateDeal::create(['player_id' => $player->id, 'kind' => 'smith', 'material' => 'iron', 'amount' => 1]);
+        });
+    }
+
+    /**
+     * Nell's hot meal: Corn for a horseshoe, once a day, at the Black Dog.
+     *
+     * @throws GameException
+     */
+    public function meal(Player $player): void
+    {
+        DB::transaction(function () use ($player) {
+            $player = Players::lock($player);
+            Players::ensureFree($player);
+            Movement::ensureStandingIn($player, $player->valley->region('irongate_tavern'), 'eat at the Black Dog');
+
+            if ($this->dealsToday($player, 'meal') > 0) {
+                throw new GameException('You have eaten at the Black Dog today. Nell serves one hot meal a day.');
+            }
+
+            if (Horseshoes::current($player) >= Horseshoes::max()) {
+                throw new GameException("You're full of horseshoes. Come and eat when you're short.");
+            }
+
+            if ($player->corn < self::MEAL_CORN) {
+                throw new GameException('A hot meal is '.self::MEAL_CORN." Corn. You have {$player->corn}.");
+            }
+
+            $player->corn -= self::MEAL_CORN;
+            Horseshoes::give($player, 1);
+            IrongateDeal::create(['player_id' => $player->id, 'kind' => 'meal', 'corn' => self::MEAL_CORN]);
+        });
+    }
+
+    private function dealsToday(Player $player, string $kind): int
+    {
+        return IrongateDeal::query()
+            ->where('player_id', $player->id)
+            ->where('kind', $kind)
+            ->where('created_at', '>=', Clock::startOfToday())
+            ->count();
     }
 
     /**

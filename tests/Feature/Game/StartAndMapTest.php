@@ -80,7 +80,7 @@ class StartAndMapTest extends TestCase
 
         $this->actingAs($player->user)->get(route('play'))->assertInertia(fn (Assert $page) => $page
             ->component('game/map')
-            ->has('regions', 56)
+            ->has('regions', 59)
             ->where('player.name', $player->name));
 
         $this->assertSame(5, $player->fresh()->rosettes);

@@ -94,7 +94,7 @@ class GrowingFarmsTest extends TestCase
         $this->stand($red[0], 'thornbury');
 
         $this->actingAs($red[0]->user)->get(route('play'))->assertInertia(fn (Assert $page) => $page
-            ->has('regions', 56)
+            ->has('regions', 59)
             ->where('regions.16.key', 'thornbury')
             ->where('regions.16.growth.grown', 0)
             ->where('regions.16.growth.next.name', 'Thornbury Heath'));
@@ -121,7 +121,7 @@ class GrowingFarmsTest extends TestCase
         $this->farms->grow($keeper, $this->region('thornbury'));
 
         $this->actingAs($keeper->user)->get(route('play'))->assertInertia(fn (Assert $page) => $page
-            ->has('regions', 57)
+            ->has('regions', 60)
             ->where('regions.19.key', 'thornbury_heath')
             ->where('regions.19.partOf', 'Thornbury Farm'));
 

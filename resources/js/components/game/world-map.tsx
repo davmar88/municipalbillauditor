@@ -1116,7 +1116,7 @@ const Labels = memo(function Labels({
             {(
                 [
                     ['THE RIDGE', [800, -570], 0],
-                    ['IRONFIELD', [2180, 480], 90],
+                    ['IRONFIELD', [2480, 480], 90],
                 ] as const
             ).map(([text, [x, y], angle]) => (
                 <text
@@ -1387,6 +1387,9 @@ const CITY_LINES: Record<string, string> = {
     irongate_rookery: '🕯 Outlaws and lone wolves lie low',
     irongate_yards: '⚖ Ma Vetch and Wick deal here',
     irongate_garrison: "⚔ Ironfield's men muster here",
+    irongate_smithy: '⚒ Bram works stone into iron',
+    irongate_tavern: '🍲 Hot meals at the Black Dog',
+    irongate_gallows: '🪢 Drills and fortunes',
 };
 
 /** Irongate's people, standing in their districts, tapped for their card. */
