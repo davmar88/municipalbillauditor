@@ -418,6 +418,59 @@ final class Bases
         return 1 + ($workshop?->bonus() ?? 0.0);
     }
 
+    /**
+     * What a faction is short of for its next steps: its Den, each building's
+     * next level and each farm's next growth, the nearest first. For the
+     * strip under every member's own bar.
+     *
+     * @return list<array{for: string, short: array<string, int>}>
+     */
+    public static function needs(Faction $faction, int $most = 3): array
+    {
+        $goals = [];
+
+        if (self::den($faction) === null) {
+            $goals[] = ['for' => 'a Den', 'cost' => BuildingKind::Den->cost(1)];
+        }
+
+        foreach (Building::query()->where('faction_id', $faction->id)->with('region:id,name')->get() as $building) {
+            if ($building->level < BuildingKind::MAX_LEVEL && $building->isReady()) {
+                $goals[] = ['for' => "{$building->kind->label()} level ".($building->level + 1)." in {$building->region->name}", 'cost' => $building->kind->cost($building->level + 1)];
+            }
+        }
+
+        foreach ($faction->regions()->where('ring', 'farm')->where('wild', false)->get() as $farm) {
+            if (Farms::fieldKeys($farm->key) !== [] && Farms::nextField($farm) !== null) {
+                $goals[] = ['for' => "growing {$farm->name}", 'cost' => Farms::growCost(Farms::grown($farm) + 1, (string) $farm->produces)];
+            }
+        }
+
+        $needs = [];
+
+        foreach ($goals as ['for' => $for, 'cost' => $cost]) {
+            $short = [];
+
+            if ($faction->treasury < $cost['corn']) {
+                $short['corn'] = $cost['corn'] - $faction->treasury;
+            }
+
+            foreach ($cost['materials'] as $material => $amount) {
+                if ($faction->material($material) < $amount) {
+                    $short[$material] = $amount - $faction->material($material);
+                }
+            }
+
+            if ($short !== []) {
+                $needs[] = ['for' => $for, 'short' => $short];
+            }
+        }
+
+        // The nearest goals first: the least still to find.
+        usort($needs, fn (array $a, array $b) => array_sum($a['short']) <=> array_sum($b['short']));
+
+        return array_slice($needs, 0, $most);
+    }
+
     /** How much more Corn an animal gathers where its faction has a Mill. */
     public static function milling(Player $player, Region $region): float
     {

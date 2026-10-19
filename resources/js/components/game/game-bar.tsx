@@ -1,11 +1,20 @@
 import { Link, usePage } from '@inertiajs/react';
-import { Award, Backpack, Clock3, Flame, Sparkles, Wheat } from 'lucide-react';
+import {
+    Award,
+    Backpack,
+    Clock3,
+    Flame,
+    Sparkles,
+    Warehouse,
+    Wheat,
+} from 'lucide-react';
 import { NextStep } from '@/components/game/next-step';
 import { Button } from '@/components/ui/button';
 import { act, fromNow } from '@/lib/game';
 import { cn } from '@/lib/utils';
-import { apples, rebuild } from '@/routes/play';
+import { apples, faction as factionPage, rebuild } from '@/routes/play';
 import { refill } from '@/routes/play/orchard';
+import type { PlayerSummary } from '@/types/game';
 
 /**
  * The strip along the top of every game screen: what you have to spend,
@@ -127,6 +136,7 @@ export function GameBar({ showNextStep = true }: { showNextStep?: boolean }) {
                     </span>
                 ))}
             </div>
+            {player.faction && <FactionStrip faction={player.faction} />}
             {(player.inPoundUntil || player.homeClosedUntil) && (
                 <p
                     className={cn(
@@ -172,5 +182,85 @@ export function Horseshoe({ className }: { className?: string }) {
                 strokeLinecap="round"
             />
         </svg>
+    );
+}
+
+/** Your faction's own strip under your bar: its treasury, its store, and what it's short of next. */
+function FactionStrip({
+    faction,
+}: {
+    faction: NonNullable<PlayerSummary['faction']>;
+}) {
+    const stored = Object.entries(faction.store ?? {});
+    const need = faction.needs?.[0];
+
+    return (
+        <div className="flex flex-wrap items-center gap-2 text-sm">
+            <Link
+                href={factionPage()}
+                prefetch
+                className="flex items-center gap-1.5 rounded-full border bg-card px-3 py-1.5 font-semibold hover:border-primary/60"
+                title="Your faction's page: give to its store, build and study"
+            >
+                <span
+                    className="size-2.5 shrink-0 rounded-full"
+                    style={{ background: faction.colour }}
+                    aria-hidden
+                />
+                {faction.name}
+                <span className="font-normal text-muted-foreground">
+                    · {(faction.treasury ?? 0).toLocaleString('en-ZA')} Corn
+                </span>
+            </Link>
+            <span
+                className="flex max-w-full items-center gap-1.5 rounded-full border bg-card px-3 py-1.5"
+                title="What your faction's store holds"
+            >
+                <Warehouse
+                    className="size-4 shrink-0 text-amber-300"
+                    aria-hidden
+                />
+                {stored.length > 0 ? (
+                    <span className="truncate">
+                        {stored
+                            .map(([name, count]) => `${count} ${name}`)
+                            .join(' · ')}
+                    </span>
+                ) : (
+                    <span className="text-muted-foreground">Store empty</span>
+                )}
+            </span>
+            {need && (
+                <Link
+                    href={factionPage()}
+                    prefetch
+                    className="flex max-w-full items-center gap-1.5 rounded-full border border-amber-500/40 bg-amber-500/10 px-3 py-1.5 hover:border-amber-400"
+                    title={faction.needs
+                        .map(
+                            (n) =>
+                                `${n.for}: ${Object.entries(n.short)
+                                    .map(
+                                        ([name, count]) =>
+                                            `${count} ${name === 'corn' ? 'Corn' : name}`,
+                                    )
+                                    .join(', ')}`,
+                        )
+                        .join(' · ')}
+                >
+                    <span className="shrink-0 font-semibold">Needs</span>
+                    <span className="truncate">
+                        {Object.entries(need.short)
+                            .map(
+                                ([name, count]) =>
+                                    `${count} ${name === 'corn' ? 'Corn' : name}`,
+                            )
+                            .join(' · ')}{' '}
+                        <span className="text-muted-foreground">
+                            for {need.for}
+                        </span>
+                    </span>
+                </Link>
+            )}
+        </div>
     );
 }

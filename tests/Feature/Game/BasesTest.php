@@ -449,6 +449,22 @@ class BasesTest extends TestCase
         $this->assertSame(BuildingKind::Mill, $this->bases->build($leader->fresh(), $this->region('ironfield_gate'), BuildingKind::Mill)->kind);
     }
 
+    public function test_a_faction_knows_what_its_next_steps_need(): void
+    {
+        $leader = $this->player();
+        $faction = $this->faction('Short', $leader);
+        $faction->forceFill(['treasury' => 50, 'materials' => ['wood' => 5]])->save();
+
+        $needs = Bases::needs($faction->fresh());
+        $this->assertSame('a Den', $needs[0]['for']);
+        $this->assertSame(['corn' => 30, 'wood' => 15, 'straw' => 20], $needs[0]['short']);
+
+        // Members see it under their own bar.
+        $this->actingAs($leader->user)->get(route('play.today'))->assertInertia(fn (Assert $page) => $page
+            ->where('player.faction.treasury', 50)
+            ->where('player.faction.needs.0.for', 'a Den'));
+    }
+
     public function test_buildings_fall_with_land_lost_any_other_way(): void
     {
         $faction = $this->faction('Unlucky', $this->player());

@@ -36,7 +36,16 @@ export type PlayerSummary = {
     freeRefill: boolean;
     materials: Record<string, number>;
     language: string;
-    faction: FactionBadge | null;
+    faction:
+        | (FactionBadge & {
+              /** The faction's Corn. */
+              treasury: number;
+              /** What its store holds, of the materials it has any of. */
+              store: Record<string, number>;
+              /** What it's short of for its next steps, the nearest first. */
+              needs: { for: string; short: Record<string, number> }[];
+          })
+        | null;
     inPoundUntil: string | null;
     homeClosedUntil: string | null;
     shieldUntil: string | null;

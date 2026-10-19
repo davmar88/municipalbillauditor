@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Game\Bases;
 use App\Game\Horseshoes;
 use App\Game\Levels;
 use App\Game\Messages;
@@ -82,6 +83,10 @@ class HandleInertiaRequests extends Middleware
                         'name' => $player->faction->name,
                         'colour' => $player->faction->colour,
                         'role' => $player->faction_role?->value,
+                        // The faction's own strip under yours: its treasury, its store and what it's short of.
+                        'treasury' => $player->faction->treasury,
+                        'store' => array_filter($player->faction->materials ?? [], fn ($amount) => $amount > 0),
+                        'needs' => Bases::needs($player->faction),
                     ] : null,
                     'inPoundUntil' => $player->inPound() ? $player->pound_until->toIso8601String() : null,
                     'homeClosedUntil' => $player->homeIsClosed() ? $player->home_closed_until->toIso8601String() : null,
