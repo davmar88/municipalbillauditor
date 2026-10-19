@@ -49,6 +49,8 @@ import type {
 import { person as makePerson } from './folk';
 import { landmarks, orchardTrees } from './landmarks';
 import { loadVillage, villageHome } from './village';
+import type { NatureSpots } from './nature';
+import { buildNature, loadNature } from './nature';
 import type { FarmModel } from './farm';
 import {
     FOR_KIND,
@@ -425,6 +427,7 @@ export class World {
             this.town,
             this.dwellings,
             this.farmyards,
+            this.nature,
             this.people,
         );
 
@@ -580,6 +583,7 @@ export class World {
         const hives: Point[] = [];
         const herbs: Point[] = [];
         const reeds: Point[] = [];
+        const flowers: Point[] = [];
         const round: [number, number, number][] = orchardTrees().map(
             ([x, y]) => [x, y, 1],
         );
@@ -629,6 +633,15 @@ export class World {
                 )) {
                     trees.push([x, y, 0.6]);
                 }
+                // Flowers and long grass across the meadows.
+                flowers.push(
+                    ...scatter(
+                        shape,
+                        Math.min(40, Math.round(area / 3500)),
+                        `${key}:flowers`,
+                        12,
+                    ),
+                );
             } else if (kind === 'rock') {
                 const centre = hub(key);
                 const pit: Point =
@@ -707,7 +720,7 @@ export class World {
             tones?: string[],
         ) => {
             if (points.length === 0) {
-                return;
+                return null;
             }
             const mesh = new THREE.InstancedMesh(geo, mat, points.length);
             const m = new THREE.Matrix4();
@@ -732,25 +745,43 @@ export class World {
                 }
             });
             this.terrain.add(mesh);
+            return mesh;
         };
         const flat = (pts: Point[]) =>
             pts.map(([x, y]) => [x, y, 1] as [number, number, number]);
-        instanced(
+        // The simple trees, bushes and rocks stand in until the nature pack has loaded.
+        this.plainNature = [];
+        const plain = (mesh: THREE.InstancedMesh | null) => {
+            if (mesh) {
+                this.plainNature.push(mesh);
+            }
+        };
+        this.natureSpots = {
             trees,
-            new THREE.ConeGeometry(0.32, 1, 6),
-            new THREE.MeshLambertMaterial({ flatShading: true }),
-            26,
-            0.62,
-            ['#2f5a3c', '#3a6b47', '#27503a', '#355f41'],
+            scrub: scrubPoints(),
+            rocks,
+            flowers,
+        };
+        plain(
+            instanced(
+                trees,
+                new THREE.ConeGeometry(0.32, 1, 6),
+                new THREE.MeshLambertMaterial({ flatShading: true }),
+                26,
+                0.62,
+                ['#2f5a3c', '#3a6b47', '#27503a', '#355f41'],
+            ),
         );
         // The open scrub between the regions: low round bushes out to the valley's edge.
-        instanced(
-            flat(scrubPoints()),
-            new THREE.IcosahedronGeometry(0.5, 0),
-            new THREE.MeshLambertMaterial({ flatShading: true }),
-            24,
-            0.3,
-            ['#4d5e2f', '#5a6b36', '#43532a', '#61703a'],
+        plain(
+            instanced(
+                flat(scrubPoints()),
+                new THREE.IcosahedronGeometry(0.5, 0),
+                new THREE.MeshLambertMaterial({ flatShading: true }),
+                24,
+                0.3,
+                ['#4d5e2f', '#5a6b36', '#43532a', '#61703a'],
+            ),
         );
         // The orchard's fruit trees: round, with a little blossom pink among the green.
         instanced(
@@ -768,21 +799,26 @@ export class World {
             17,
             0.25,
         );
-        instanced(
-            trees,
-            new THREE.CylinderGeometry(0.05, 0.07, 0.3, 5),
-            new THREE.MeshLambertMaterial({ color: '#4a3a2c' }),
-            26,
-            0.15,
+        plain(
+            instanced(
+                trees,
+                new THREE.CylinderGeometry(0.05, 0.07, 0.3, 5),
+                new THREE.MeshLambertMaterial({ color: '#4a3a2c' }),
+                26,
+                0.15,
+            ),
         );
-        instanced(
-            flat(rocks),
-            new THREE.DodecahedronGeometry(1, 0),
-            new THREE.MeshLambertMaterial({ flatShading: true }),
-            7,
-            0.35,
-            ['#6d6879', '#5c5866', '#7b748b'],
+        plain(
+            instanced(
+                flat(rocks),
+                new THREE.DodecahedronGeometry(1, 0),
+                new THREE.MeshLambertMaterial({ flatShading: true }),
+                7,
+                0.35,
+                ['#6d6879', '#5c5866', '#7b748b'],
+            ),
         );
+        this.askNature();
         instanced(
             flat(ore),
             new THREE.DodecahedronGeometry(1, 0),
@@ -1765,6 +1801,54 @@ export class World {
     private homeModels: { group: THREE.Group; level: number }[] = [];
 
     private villageAsked = false;
+
+    /** Where the nature pack goes, and the simple shapes it replaces once loaded. */
+    private natureSpots: NatureSpots | null = null;
+
+    private plainNature: THREE.Object3D[] = [];
+
+    private readonly nature = new THREE.Group();
+
+    private natureAsked = false;
+
+    /** Fetch the nature pack once, then swap it in for the simple trees, bushes and rocks. */
+    private askNature() {
+        if (this.natureAsked) {
+            this.placeNature();
+            return;
+        }
+        this.natureAsked = true;
+        loadNature()
+            .then(() => {
+                if (!this.disposed) {
+                    this.placeNature();
+                }
+            })
+            .catch((error: unknown) => {
+                // The simple shapes stay; the next map load tries again.
+                console.warn('The nature pack did not load.', error);
+                this.natureAsked = false;
+            });
+    }
+
+    private naturePlaced: NatureSpots | null = null;
+
+    private placeNature() {
+        if (!this.natureSpots || this.naturePlaced === this.natureSpots) {
+            return;
+        }
+        const built = buildNature(this.natureSpots);
+        if (built.children.length === 0) {
+            return;
+        }
+        this.clearGroup(this.nature);
+        this.nature.add(...built.children);
+        this.naturePlaced = this.natureSpots;
+        for (const mesh of this.plainNature) {
+            mesh.visible = false;
+        }
+        this.changed = true;
+    }
 
     /** Every animal's home, in its skin's colours; yours ringed in violet. Built from the village kit once it has loaded. */
     private buildHomes() {
