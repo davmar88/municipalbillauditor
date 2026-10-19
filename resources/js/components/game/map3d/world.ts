@@ -1683,8 +1683,8 @@ export class World {
     }
 
     private placeHomes() {
-        // About the same size on screen at any zoom, a Fort the biggest.
-        const s = 40 / Math.max(this.k, 0.6);
+        // About the same size on screen at any zoom, big enough to spot, a Fort the biggest.
+        const s = 92 / Math.max(this.k, 0.6);
         for (const { group, level } of this.homeModels) {
             group.scale.setScalar(s * (0.8 + level * 0.2));
         }

@@ -1396,7 +1396,7 @@ const Homes = memo(function Homes({
                 return (
                     <g
                         key={home.id}
-                        transform={`translate(${home.x.toFixed(1)} ${home.y.toFixed(1)}) scale(${1 / Math.max(k, 0.6)})`}
+                        transform={`translate(${home.x.toFixed(1)} ${home.y.toFixed(1)}) scale(${HOME_SIZE / Math.max(k, 0.6)})`}
                         opacity={home.readyAt ? 0.6 : 1}
                     >
                         <title>{`${home.owner.name}'s ${home.name}`}</title>
@@ -1457,6 +1457,9 @@ const Homes = memo(function Homes({
         </g>
     );
 });
+
+/** How big homes and tents are drawn, so they stand out on the map. */
+const HOME_SIZE = 2.4;
 
 /** What each of Irongate's districts is for, under its name. */
 const CITY_LINES: Record<string, string> = {
