@@ -40,7 +40,7 @@ final class Missions
             'chapter' => 'Arrival',
             'title' => 'Living off the land',
             'story' => 'Nobody feeds you now. The fields, woods and yards give to whoever works them.',
-            'goal' => 'Gather 3 times where you stand.',
+            'goal' => 'Gather 3 times where you stand: right-click it, or press and hold on a phone, and press Gather.',
             'events' => ['gather'],
             'target' => 3,
             'reward' => ['corn' => 30, 'rosettes' => 5, 'horseshoes' => 2],

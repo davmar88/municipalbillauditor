@@ -267,7 +267,8 @@ export function BuildOptions({
                 !hasDen && (
                     <li className="text-xs text-muted-foreground">
                         The Den comes first. After it, your faction can raise a
-                        Watchtower, Drill Yard, Storehouse or Workshop.
+                        Watchtower, Drill Yard, Storehouse, Workshop, Mill,
+                        Well, Coop or Silo.
                     </li>
                 )
             )}

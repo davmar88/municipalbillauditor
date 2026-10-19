@@ -195,7 +195,7 @@ class MapController extends Controller
 
                 [$x, $y] = Movement::position($player);
 
-                return ['id' => $scrub->id, 'produces' => $scrub->produces, 'stock' => Stock::map($scrub), 'richness' => Geography::richness($x, $y)];
+                return ['id' => $scrub->id, 'produces' => $scrub->produces, 'stock' => null, 'richness' => Geography::richness($x, $y)];
             })(),
             'base' => $player->faction ? [
                 'canBuild' => $player->decides(),

@@ -544,7 +544,10 @@ function LoneWolf({ factions, founding, underworld, entryModes }: Props) {
                                 )}
                                 <p className="text-sm text-muted-foreground">
                                     {faction.members}/{founding.maxMembers}{' '}
-                                    members · {faction.regions} regions
+                                    members · {faction.regions}{' '}
+                                    {faction.regions === 1
+                                        ? 'region'
+                                        : 'regions'}
                                     {faction.rules.minLevel > 1 &&
                                         ` · from level ${faction.rules.minLevel}`}
                                     {faction.rules.entryFee > 0 &&

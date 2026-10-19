@@ -21,6 +21,7 @@ import {
     CostList,
     shortOf,
 } from '@/components/game/faction-base';
+import { useEscape } from '@/components/game/animal-menu';
 import { Horseshoe } from '@/components/game/game-bar';
 import { HorseshoePicker } from '@/components/game/horseshoe-picker';
 import { ProfileLink } from '@/components/game/profile-link';
@@ -132,6 +133,8 @@ export function RegionPanel({
     onClose,
 }: Props) {
     const { player } = usePage().props;
+    // Escape closes the card, as it does the animal menu.
+    useEscape(onClose);
     const horseshoesLeft = player?.horseshoes ?? 0;
     const nextHorseshoe =
         player?.nextHorseshoeIn != null
@@ -440,8 +443,8 @@ export function RegionPanel({
                                 >
                                     Gather{' '}
                                     {region.produces === 'corn'
-                                        ? `${Math.max(1, Math.floor(yields.corn * region.richness))} Corn`
-                                        : `${Math.max(1, Math.floor(yields.material * region.richness))} ${region.produces}`}
+                                        ? `about ${Math.max(1, Math.floor(yields.corn * region.richness))} Corn`
+                                        : `about ${Math.max(1, Math.floor(yields.material * region.richness))} ${region.produces}`}
                                     <span className="ml-auto flex items-center gap-1 opacity-80">
                                         <Horseshoe className="size-4" />1
                                     </span>

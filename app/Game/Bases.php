@@ -23,7 +23,7 @@ use Illuminate\Support\Str;
  */
 final class Bases
 {
-    public const MATERIALS = ['wood', 'straw', 'stone', 'clay', 'wool', 'dye', 'eggs', 'honey', 'herbs', 'iron', 'gold', 'copper', 'pears', 'carrots', 'berries', 'pumpkins'];
+    public const MATERIALS = ['wood', 'straw', 'stone', 'clay', 'wool', 'dye', 'eggs', 'honey', 'herbs', 'iron', 'gold', 'copper', 'pears', 'carrots', 'berries', 'pumpkins', 'water'];
 
     /**
      * Give Corn or materials to your faction's store.

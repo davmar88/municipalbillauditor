@@ -22,9 +22,19 @@ export const MATERIALS: { name: string; from: string }[] = [
     { name: 'wool', from: 'Sheepfold' },
     { name: 'dye', from: 'Orchard' },
     { name: 'eggs', from: 'Henhouse' },
-    { name: 'honey', from: 'Thornbury Farm' },
-    { name: 'herbs', from: 'Brookside Farm' },
-    { name: 'iron', from: 'Willowby Farm' },
+    { name: 'honey', from: 'Thornbury and Fennick farms' },
+    { name: 'herbs', from: 'Brookside and Marlow farms' },
+    { name: 'iron', from: 'Willowby and Ashcombe farms, and Ironfield' },
+    {
+        name: 'gold',
+        from: 'Coldharbour Farm, Glitter Gully and deep Ironfield',
+    },
+    { name: 'copper', from: 'Copperhill Farm and Ironfield' },
+    { name: 'pears', from: 'Northfold Farm' },
+    { name: 'carrots', from: 'Hartley Farm' },
+    { name: 'berries', from: 'Rushmere Farm' },
+    { name: 'pumpkins', from: 'Southmere Farm' },
+    { name: 'water', from: 'ponds, meres and springs' },
 ];
 
 /** The face an animal wears on the map. */

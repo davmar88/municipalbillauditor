@@ -463,7 +463,8 @@ function GateResult({
 
 /** Out in the scrub between the regions: anyone gathers and camps here, but the further out, the less there is. */
 function ScrubCard({ scrub }: { scrub: NonNullable<Props['scrub']> }) {
-    const left = scrub.stock?.left ?? 0;
+    // The scrub never runs out; a stock, if any, would show what's left.
+    const left = scrub.stock ? scrub.stock.left : Infinity;
 
     return (
         <section className="flex flex-col gap-2 rounded-lg border border-lime-700/40 bg-lime-950/30 p-3 text-sm">

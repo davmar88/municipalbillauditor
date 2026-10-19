@@ -111,7 +111,8 @@ export function HomeCard({
                     <p>
                         Your{' '}
                         <span className="font-bold">
-                            level {home.level} {home.name}
+                            {home.level > 0 ? `level ${home.level} ` : ''}
+                            {home.name}
                             {home.skin && ` in ${home.skin.name}`}
                         </span>
                         {home.readyAt

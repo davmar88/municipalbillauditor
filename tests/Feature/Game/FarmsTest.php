@@ -12,7 +12,6 @@ use App\Game\Geography;
 use App\Game\Homes;
 use App\Game\Movement;
 use App\Game\Players;
-use App\Game\Stock;
 use App\Game\Tick;
 use App\Models\Notice;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -217,7 +216,11 @@ class FarmsTest extends TestCase
         $got = app(Gathering::class)->gather($player->fresh(), $scrub);
         $this->assertSame('wood', $got['what']);
         $this->assertSame((int) floor(Gathering::MATERIAL * Geography::LEAST * $player->species->gathering()), $got['amount']);
-        $this->assertSame((int) round(120 * Geography::LEAST), Stock::state($scrub)['max']);
+        // The scrub never runs out, however many gather there.
+        $player->fresh()->forceFill(['horseshoes' => 10])->save();
+        foreach (range(1, 8) as $i) {
+            app(Gathering::class)->gather($player->fresh(), $scrub->fresh());
+        }
 
         // Anyone can set up camp, but nobody holds it.
         $this->assertSame('scrubland', app(Homes::class)->build($player->fresh())->region->key);

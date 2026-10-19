@@ -54,7 +54,8 @@ final class Gathering
 
             // Each region holds only so much at a time, and grows it back.
             $region = Region::query()->lockForUpdate()->findOrFail($region->id);
-            $left = Stock::state($region)['left'];
+            // The scrub lies everywhere, so it never runs out: it's just thin pickings.
+            $left = $region->isScrub() ? PHP_INT_MAX : Stock::state($region)['left'];
 
             if ($left < 1) {
                 throw new GameException("{$region->name} is picked clean. More grows back by ".Clock::local(Stock::nextAt($region))->format('H:i').'.');
@@ -75,7 +76,9 @@ final class Gathering
             $rich = Geography::richness($x, $y);
             // Gathering Gloves, a Feast Basket and the faction's Farming bring in more.
             $amount = min($left, max(1, (int) floor($base * $rich * $player->species->gathering() * ($own ? 1.5 : 1.0) * $workshop * Powers::gathering($player, $region->produces) * Research::gathering($player))));
-            Stock::take($region, $amount);
+            if (! $region->isScrub()) {
+                Stock::take($region, $amount);
+            }
             $tax = 0;
 
             if ($region->produces === 'corn') {
