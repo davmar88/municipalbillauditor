@@ -1,6 +1,7 @@
 import { LocateFixed, Minus, Plus, Scan } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { AnimalMenu } from '@/components/game/animal-menu';
 import {
     FieldGround,
     MapFeatures,
@@ -25,6 +26,7 @@ import { cn } from '@/lib/utils';
 import type {
     BuildingKindValue,
     FactionRef,
+    MapAnimal,
     MapRegion,
     Species,
     MapMe,
@@ -146,6 +148,8 @@ type Gesture = {
     spread: number;
     moved: number;
     target: Element | null;
+    /** The animal pressed on, if any: a tap or hold on it opens its menu. */
+    animal: Element | null;
     velocity: Point;
     last: { point: Point; at: number };
     /** A long press already opened the card, so letting go doesn't walk. */
@@ -166,6 +170,7 @@ function useCamera(
     focus: Point | null,
     onTap: (target: Element | null, world: Point) => void,
     onInfo: (target: Element | null) => void,
+    onAnimal: (animal: Element, screen: Point) => void,
 ) {
     const [view, setView] = useState<View>({ x: 0, y: 0, k: 0 });
     const [size, setSize] = useState<Size | null>(null);
@@ -179,12 +184,14 @@ function useCamera(
     const focusRef = useRef(focus);
     const tapRef = useRef(onTap);
     const infoRef = useRef(onInfo);
+    const animalRef = useRef(onAnimal);
     const press = useRef<number | null>(null);
 
     useEffect(() => {
         focusRef.current = focus;
         tapRef.current = onTap;
         infoRef.current = onInfo;
+        animalRef.current = onAnimal;
     });
 
     const cancelPress = () => {
@@ -383,9 +390,17 @@ function useCamera(
     };
 
     const onPointerDown = (event: React.PointerEvent<SVGSVGElement>) => {
-        // A right click asks what is there.
+        const animal = (event.target as Element).closest('[data-animal]');
+
+        // A right click asks what is there: an animal's menu, or the region's card.
         if (event.pointerType === 'mouse' && event.button === 2) {
-            infoRef.current((event.target as Element).closest('[data-region]'));
+            if (animal) {
+                animalRef.current(animal, local(event));
+            } else {
+                infoRef.current(
+                    (event.target as Element).closest('[data-region]'),
+                );
+            }
 
             return;
         }
@@ -409,6 +424,7 @@ function useCamera(
                 spread: 0,
                 moved: 0,
                 target,
+                animal,
                 velocity: [0, 0],
                 last: { point, at: now },
             };
@@ -421,7 +437,12 @@ function useCamera(
 
                 if (held?.kind === 'pan' && held.moved < 5) {
                     held.held = true;
-                    infoRef.current(target);
+
+                    if (animal) {
+                        animalRef.current(animal, point);
+                    } else {
+                        infoRef.current(target);
+                    }
                 }
             }, LONG_PRESS_MS);
         } else if (pointers.current.size === 2) {
@@ -434,6 +455,7 @@ function useCamera(
                 spread: Math.max(1, distance(a, b)),
                 moved: Infinity,
                 target: null,
+                animal: null,
                 velocity: [0, 0],
                 last: { point: middle(a, b), at: now },
             };
@@ -555,6 +577,14 @@ function useCamera(
             }
 
             lastTap.current = { at: now, point };
+
+            // A tap on an animal opens its menu instead of walking.
+            if (current.animal) {
+                animalRef.current(current.animal, point);
+
+                return;
+            }
+
             const seen = viewRef.current;
             tapRef.current(current.target, [
                 (point[0] - seen.x) / seen.k,
@@ -1186,7 +1216,10 @@ const Crowd = memo(function Crowd({
 
                             return (
                                 <g
-                                    key={`${animal.name}-${i}`}
+                                    key={animal.id}
+                                    data-animal={animal.id}
+                                    pointerEvents="all"
+                                    className="cursor-pointer"
                                     transform={`translate(${(hx + sx / k).toFixed(1)} ${(hy + sy / k).toFixed(1)}) scale(${1 / k})`}
                                 >
                                     <circle
@@ -1596,7 +1629,29 @@ export function WorldMap({
         [onSelect],
     );
 
-    const camera = useCamera(containerRef, svgRef, herePoint, onTap, onInfo);
+    // A tap, hold or right click on another animal opens its menu.
+    const [menu, setMenu] = useState<{ animal: MapAnimal; at: Point } | null>(
+        null,
+    );
+    const onAnimal = useCallback(
+        (element: Element, at: Point) => {
+            const id = Number(element.getAttribute('data-animal'));
+            const animal = regions
+                .flatMap((region) => region.animals.sample)
+                .find((a) => a.id === id);
+            setMenu(animal ? { animal, at } : null);
+        },
+        [regions],
+    );
+
+    const camera = useCamera(
+        containerRef,
+        svgRef,
+        herePoint,
+        onTap,
+        onInfo,
+        onAnimal,
+    );
     const { view, size, lookAt, current } = camera;
     const ready = size !== null && view.k > 0;
 
@@ -1665,6 +1720,7 @@ export function WorldMap({
                 aria-label={`Map of ${valley}. Drag to look around, scroll or pinch to zoom, tap a spot to walk there, and press and hold or right-click to see what's there.`}
                 tabIndex={0}
                 {...camera.handlers}
+                onPointerDownCapture={() => setMenu(null)}
             >
                 <defs>
                     <linearGradient id="house-edge" x1="0" y1="0" x2="1" y2="1">
@@ -1787,6 +1843,16 @@ export function WorldMap({
                 </div>
                 <Compass />
             </div>
+
+            {menu && size && (
+                <AnimalMenu
+                    animal={menu.animal}
+                    at={menu.at}
+                    size={size}
+                    wanted={wanted.includes(menu.animal.id)}
+                    onClose={() => setMenu(null)}
+                />
+            )}
 
             {children}
         </div>

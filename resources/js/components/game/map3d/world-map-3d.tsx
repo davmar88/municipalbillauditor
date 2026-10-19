@@ -13,7 +13,8 @@ import {
 import type { Point } from '@/lib/hollowmere';
 import { FARM, REACH, hub, inside } from '@/lib/hollowmere';
 import { cn } from '@/lib/utils';
-import type { MapRegion, Worn } from '@/types/game';
+import { AnimalMenu } from '@/components/game/animal-menu';
+import type { MapAnimal, MapRegion, Worn } from '@/types/game';
 import { Rig } from './rig';
 import { World } from './world';
 
@@ -33,6 +34,8 @@ type Gesture = {
     spread: number;
     moved: number;
     region: number | null;
+    /** The animal pressed on, if any: a tap or hold on it opens its menu. */
+    animal: MapAnimal | null;
     velocity: Point;
     last: { point: Point; at: number };
     held?: boolean;
@@ -93,6 +96,10 @@ export default function WorldMap3D({
     const [dragging, setDragging] = useState(false);
     const [overLand, setOverLand] = useState(false);
     const [lost, setLost] = useState(false);
+    // A tap, hold or right click on another animal opens its menu.
+    const [menu, setMenu] = useState<{ animal: MapAnimal; at: Point } | null>(
+        null,
+    );
     const lostRef = useRef(false);
 
     const byId = useMemo(
@@ -370,6 +377,7 @@ export default function WorldMap3D({
         }
         const onWheel = (event: WheelEvent) => {
             event.preventDefault();
+            setMenu(null);
             const rect = element.getBoundingClientRect();
             const unit =
                 event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? 400 : 1;
@@ -399,11 +407,20 @@ export default function WorldMap3D({
             return;
         }
         const point = local(event);
-        // A right click asks what is there.
+        setMenu(null);
+        const animal =
+            worldRef.current?.animalAt(point, (p, height) =>
+                rig.project(p, height),
+            ) ?? null;
+        // A right click asks what is there: an animal's menu, or the region's card.
         if (event.pointerType === 'mouse' && event.button === 2) {
-            latest.current.onSelect(
-                regionAt(latest.current.regions, rig.pick(point)),
-            );
+            if (animal) {
+                setMenu({ animal, at: point });
+            } else {
+                latest.current.onSelect(
+                    regionAt(latest.current.regions, rig.pick(point)),
+                );
+            }
             return;
         }
         if (event.pointerType === 'mouse' && event.button !== 0) {
@@ -425,6 +442,7 @@ export default function WorldMap3D({
                 spread: 0,
                 moved: 0,
                 region,
+                animal,
                 velocity: [0, 0],
                 last: { point, at: now },
             };
@@ -435,7 +453,11 @@ export default function WorldMap3D({
                 const held = gesture.current;
                 if (held?.kind === 'pan' && held.moved < 5) {
                     held.held = true;
-                    latest.current.onSelect(region);
+                    if (animal) {
+                        setMenu({ animal, at: point });
+                    } else {
+                        latest.current.onSelect(region);
+                    }
                 }
             }, LONG_PRESS_MS);
         } else if (pointers.current.size === 2) {
@@ -450,6 +472,7 @@ export default function WorldMap3D({
                 spread: Math.max(1, distance(a, b)),
                 moved: Infinity,
                 region: null,
+                animal: null,
                 velocity: [0, 0],
                 last: { point: centre, at: now },
             };
@@ -467,7 +490,12 @@ export default function WorldMap3D({
             if (event.pointerType === 'mouse') {
                 const id = regionAt(latest.current.regions, rig.pick(point));
                 setHover(id);
-                setOverLand(id !== null);
+                setOverLand(
+                    id !== null ||
+                        worldRef.current?.animalAt(point, (p, height) =>
+                            rig.project(p, height),
+                        ) != null,
+                );
             }
             return;
         }
@@ -564,6 +592,11 @@ export default function WorldMap3D({
                 return;
             }
             lastTap.current = { at: now, point };
+            // A tap on an animal opens its menu instead of walking.
+            if (current.animal) {
+                setMenu({ animal: current.animal, at: point });
+                return;
+            }
             // A quick tap on land sets off straight for that spot.
             const ground = rig.pick(point);
             if (ground && current.region !== null && current.region > 0) {
@@ -592,6 +625,7 @@ export default function WorldMap3D({
         if (!rig || !size || event.target !== event.currentTarget) {
             return;
         }
+        setMenu(null);
         const centre: Point = [size.width / 2, size.height / 2];
         const moves: Record<string, Point> = {
             ArrowLeft: [-90, 0],
@@ -815,6 +849,16 @@ export default function WorldMap3D({
                         <Compass />
                     </div>
                 </>
+            )}
+
+            {menu && size && (
+                <AnimalMenu
+                    animal={menu.animal}
+                    at={menu.at}
+                    size={size}
+                    wanted={wanted.includes(menu.animal.id)}
+                    onClose={() => setMenu(null)}
+                />
             )}
 
             {children}

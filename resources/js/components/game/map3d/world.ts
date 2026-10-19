@@ -33,6 +33,7 @@ import {
 import type {
     BuildingKindValue,
     FactionRef,
+    MapAnimal,
     MapMe,
     MapRegion,
     Species,
@@ -1597,6 +1598,40 @@ export class World {
                     console.warn(`No 3D ${data.species} for you`, error);
                 });
         }
+    }
+
+    /** The other animal under a point on screen, if any, for its menu. */
+    animalAt(
+        screen: Point,
+        project: (point: Point, height: number) => Point,
+    ): MapAnimal | null {
+        const h = this.animalHeight(34);
+        const spread = 1 / this.k;
+        // About half its height on screen, and never a fiddly target.
+        const reach = Math.max(18, h * this.k * 0.55);
+        let found: CrowdEntry | null = null;
+        let nearest = reach;
+        for (const entry of this.crowd.values()) {
+            const at: Point = [
+                entry.centre[0] + entry.spot[0] * spread,
+                entry.centre[1] + entry.spot[1] * spread,
+            ];
+            const [sx, sy] = project(at, h * 0.45);
+            const d = Math.hypot(sx - screen[0], sy - screen[1]);
+            if (d < nearest) {
+                nearest = d;
+                found = entry;
+            }
+        }
+        if (!found) {
+            return null;
+        }
+        const id = found.id;
+        return (
+            this.data?.regions
+                .flatMap((r) => r.animals.sample)
+                .find((a) => a.id === id) ?? null
+        );
     }
 
     /** Region names step back where they would cover your animal, which the 2D map draws over them. */

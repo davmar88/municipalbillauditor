@@ -10,6 +10,7 @@ use App\Http\Controllers\Game\CashoutController;
 use App\Http\Controllers\Game\ChatController;
 use App\Http\Controllers\Game\CrimeController;
 use App\Http\Controllers\Game\FactionController;
+use App\Http\Controllers\Game\GiftController;
 use App\Http\Controllers\Game\MapController;
 use App\Http\Controllers\Game\MarketController;
 use App\Http\Controllers\Game\MessageController;
@@ -134,6 +135,10 @@ Route::middleware(['auth', 'verified', 'player', 'throttle:120,1'])->prefix('pla
     Route::get('me', [ProfileController::class, 'show'])->name('play.me');
     Route::put('me/language', [ProfileController::class, 'language'])->name('play.me.language');
     Route::get('animals/{player}', [ProfileController::class, 'animal'])->name('play.animal');
+
+    // Giving another animal an item from your bag.
+    Route::get('gifts', [GiftController::class, 'index'])->name('play.gifts');
+    Route::post('animals/{player}/gift', [GiftController::class, 'store'])->middleware('throttle:20,1,gifts')->name('play.gift');
 
     // The bell, and the pulse every screen checks for pop-ups.
     Route::get('pulse', [NoticeController::class, 'pulse'])->name('play.pulse');
