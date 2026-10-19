@@ -103,6 +103,23 @@ class StartAndMapTest extends TestCase
         $this->assertSame(10, Horseshoes::current($player->fresh()));
     }
 
+    public function test_extra_horseshoes_are_kept_until_spent(): void
+    {
+        $player = $this->player();
+        Horseshoes::spend($player, 4);
+
+        Horseshoes::bonus($player->fresh(), 50);
+        $this->assertSame(56, Horseshoes::current($player->fresh()));
+
+        $this->travel(10)->hours();
+        $this->assertSame(56, Horseshoes::current($player->fresh()), 'None come back while over ten.');
+
+        Horseshoes::spend($player->fresh(), 47);
+        $this->assertSame(9, Horseshoes::current($player->fresh()));
+        $this->travel(46)->minutes();
+        $this->assertSame(10, Horseshoes::current($player->fresh()));
+    }
+
     public function test_gathering_corn_pays_the_houses_grain_tax(): void
     {
         $farmer = $this->player(Species::Pig);

@@ -35,7 +35,9 @@ export function GameBar({ showNextStep = true }: { showNextStep?: boolean }) {
                     title="Horseshoes: every action costs one or more"
                 >
                     <Horseshoe className="size-4 text-primary" />
-                    {player.horseshoes}/{player.maxHorseshoes}
+                    {player.horseshoes > player.maxHorseshoes
+                        ? player.horseshoes
+                        : `${player.horseshoes}/${player.maxHorseshoes}`}
                     {nextAt && (
                         <span className="font-normal text-muted-foreground">
                             · next {fromNow(nextAt)}

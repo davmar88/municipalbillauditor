@@ -7,7 +7,7 @@ use Carbon\CarbonImmutable;
 
 /**
  * Every action costs horseshoes. A player holds up to ten, and one comes
- * back every 45 minutes. They are worked out when read, so nothing has to
+ * back every 45 minutes. Extra ones handed out on top are kept until spent. They are worked out when read, so nothing has to
  * run on a timer.
  */
 final class Horseshoes
@@ -26,6 +26,12 @@ final class Horseshoes
     private static function settle(Player $player): array
     {
         $now = CarbonImmutable::now();
+
+        // Extra horseshoes handed out above the usual most are kept until spent; none come back meanwhile.
+        if ($player->horseshoes >= self::max()) {
+            return [$player->horseshoes, $now];
+        }
+
         $at = CarbonImmutable::instance($player->horseshoes_at);
         $gained = intdiv(max(0, (int) $at->diffInMinutes($now)), self::minutes());
         $count = min(self::max(), $player->horseshoes + $gained);
@@ -75,8 +81,16 @@ final class Horseshoes
     {
         [$current, $clock] = self::settle($player);
 
-        $player->horseshoes = min(self::max(), $current + max(0, $count));
+        $player->horseshoes = max($current, min(self::max(), $current + max(0, $count)));
         $player->horseshoes_at = $player->horseshoes >= self::max() ? CarbonImmutable::now() : $clock;
+        $player->save();
+    }
+
+    /** Hand every player extra horseshoes on top of what they have, past the usual most. */
+    public static function bonus(Player $player, int $count): void
+    {
+        $player->horseshoes = self::current($player) + max(0, $count);
+        $player->horseshoes_at = CarbonImmutable::now();
         $player->save();
     }
 }
