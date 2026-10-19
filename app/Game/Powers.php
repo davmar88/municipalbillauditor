@@ -103,6 +103,7 @@ final class Powers
                 ItemTemplate::Bell => $this->time(['faction_id' => $this->faction($player)->id], 'bell', self::BELL_HOURS, 'You hung the Watch Bell: criminals who target your faction are likelier to be caught'),
                 ItemTemplate::Hedge => $this->hedge($player),
                 ItemTemplate::Trowel => $this->trowel($player),
+                ItemTemplate::Mortar => app(Homes::class)->mortar($player),
                 ItemTemplate::Sheaf => $this->sheaf($player),
                 ItemTemplate::Cake => $this->time(['player_id' => $player->id], 'cake', self::CAKE_HOURS, 'You ate the Honey Cake: your skills grow twice as fast'),
                 ItemTemplate::Pickaxe => $this->charge($player, 'pickaxe', self::PICKAXE_USES, 'Pickaxe in hand: your next 10 gathers of materials bring in twice as much.'),

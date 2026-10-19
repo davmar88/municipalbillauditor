@@ -208,7 +208,8 @@ final class Warrants
 
             Horseshoes::spend($hunter, self::ARREST_HORSESHOES);
             // Hiding in a home makes it harder: each level of it guards the door.
-            $chance = self::ARREST_CHANCE + ($hunter->species === Species::Dog ? self::DOG_BONUS : 0.0) - Homes::guard($wanted) * Homes::ARREST_GUARD;
+            $chance = self::ARREST_CHANCE + ($hunter->species === Species::Dog ? self::DOG_BONUS : 0.0);
+            $chance -= Homes::arrestCut(Homes::guard($wanted), $chance);
             $roll ??= Dice::roll(Dice::seed(), 'arrest');
             $wantedPage = route('play.wanted', [], false);
 

@@ -77,6 +77,15 @@ function Shape({
     second: string;
 }) {
     switch (template) {
+        case 'mortar':
+            // A sack of mortar and a trowel.
+            return (
+                <>
+                    <path d="M16 22h32l-4 32H20z" fill={fill} />
+                    <path d="M16 22h32" stroke={second} strokeWidth="4" />
+                    <path d="M40 12l12 12-6 2-8-8z" fill={second} />
+                </>
+            );
         case 'skin':
             // A home in its new paint.
             return (

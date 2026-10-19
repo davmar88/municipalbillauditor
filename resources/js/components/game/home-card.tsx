@@ -3,7 +3,7 @@ import { Home as HomeIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { act, capitalise, clockTime } from '@/lib/game';
 import type { Point } from '@/lib/hollowmere';
-import { build, enter, leave, skin, upgrade } from '@/routes/play/home';
+import { build, enter, help, leave, skin, upgrade } from '@/routes/play/home';
 import type { HomeInfo, MapHome, MapMe } from '@/types/game';
 
 function cost(level: HomeInfo['levels'][number]): string {
@@ -77,7 +77,7 @@ export function HomeCard({
                     <p>
                         Your{' '}
                         <span className="font-bold">
-                            {home.name}
+                            level {home.level} {home.name}
                             {home.skin && ` in ${home.skin.name}`}
                         </span>
                         {home.readyAt
@@ -134,9 +134,11 @@ export function HomeCard({
                     {next && (
                         <p className="text-xs text-muted-foreground">
                             A {next.name} takes {cost(next)} and {next.minutes}{' '}
-                            minutes, built at your door. Each level makes you
-                            harder to arrest inside and your home harder to
-                            burn.
+                            minutes, built at your door, and homes keep growing
+                            past it. Faction mates can lend a hand while a level
+                            goes up, and a Builder's Mortar from the Market
+                            raises it at once. Each level makes you harder to
+                            arrest inside and your home harder to burn.
                         </p>
                     )}
                     <label className="flex flex-wrap items-center gap-2 text-xs">
@@ -170,6 +172,43 @@ export function HomeCard({
                         )}
                     </label>
                 </>
+            )}
+            {homes.some((h) => h.helpable) && (
+                <div className="flex flex-col gap-1 border-t pt-2">
+                    <p className="text-xs font-semibold">
+                        Faction mates' homes going up
+                    </p>
+                    {homes
+                        .filter((h) => h.helpable)
+                        .map((h) => (
+                            <div
+                                key={h.id}
+                                className="flex flex-wrap items-center gap-2"
+                            >
+                                <span className="min-w-0 flex-1 truncate">
+                                    {h.owner.name}'s {h.name}
+                                </span>
+                                <Button
+                                    size="sm"
+                                    variant="secondary"
+                                    onClick={() => onWalk([h.x, h.y])}
+                                >
+                                    Walk there
+                                </Button>
+                                <Button
+                                    size="sm"
+                                    disabled={
+                                        me.walk !== null ||
+                                        Math.hypot(h.x - me.x, h.y - me.y) >
+                                            info.door
+                                    }
+                                    onClick={() => act(help.url(h.id))}
+                                >
+                                    Lend a hand
+                                </Button>
+                            </div>
+                        ))}
+                </div>
             )}
         </section>
     );

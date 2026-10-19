@@ -24,6 +24,7 @@ use App\Models\Attack;
 use App\Models\BattleCommitment;
 use App\Models\GateDefence;
 use App\Models\Home;
+use App\Models\HomeHelp;
 use App\Models\Law;
 use App\Models\Player;
 use App\Models\Region;
@@ -206,7 +207,7 @@ class MapController extends Controller
             'yields' => ['corn' => Gathering::CORN, 'material' => Gathering::MATERIAL],
             // Every animal's home, and yours with what building it further takes.
             'homes' => Home::query()
-                ->with(['owner:id,name,species', 'skin.design', 'skin.openListing'])
+                ->with(['owner:id,name,species,faction_id', 'skin.design', 'skin.openListing'])
                 ->whereHas('owner', fn ($query) => $query->where('valley_id', $valley->id))
                 ->get()
                 ->map(fn (Home $home) => [
@@ -219,10 +220,14 @@ class MapController extends Controller
                     'readyAt' => $home->building() ? $home->ready_at->toIso8601String() : null,
                     'skin' => Homes::skin($home),
                     'mine' => $home->player_id === $player->id,
+                    // A faction mate's home going up that you could lend a hand on.
+                    'helpable' => $home->player_id !== $player->id && $player->faction_id !== null && $home->owner->faction_id === $player->faction_id && $home->building()
+                        && ! HomeHelp::query()->where('home_id', $home->id)->where('level', $home->level)->where('player_id', $player->id)->exists(),
                 ])->values(),
             'home' => [
                 'inside' => $player->inside_home_at !== null,
-                'levels' => collect(Homes::LEVELS)->map(fn (array $level, int $n) => ['level' => $n, ...$level])->values(),
+                // The levels so far and the next one: homes grow without end.
+                'levels' => collect(range(1, max(3, (int) (Homes::of($player)?->level ?? 0) + 1)))->map(fn (int $n) => ['level' => $n, ...Homes::level($n)])->values(),
                 'door' => Homes::DOOR,
                 'skins' => $player->items()->with('design')->whereDoesntHave('openListing')->get()
                     ->filter(fn ($item) => $item->design->template === ItemTemplate::Skin)

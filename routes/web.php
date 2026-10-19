@@ -148,6 +148,7 @@ Route::middleware(['auth', 'verified', 'player', 'throttle:120,1'])->prefix('pla
     Route::post('home/enter', [HomeController::class, 'enter'])->middleware('throttle:20,1,home')->name('play.home.enter');
     Route::post('home/leave', [HomeController::class, 'leave'])->middleware('throttle:20,1,home')->name('play.home.leave');
     Route::post('home/skin', [HomeController::class, 'skin'])->middleware('throttle:20,1,home')->name('play.home.skin');
+    Route::post('homes/{home}/help', [HomeController::class, 'help'])->middleware('throttle:20,1,home')->name('play.home.help');
 
     // Irongate's people: the fence and the informer.
     Route::post('irongate/fence', [IrongateController::class, 'fence'])->middleware('throttle:20,1,irongate')->name('play.irongate.fence');

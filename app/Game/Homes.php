@@ -4,6 +4,7 @@ namespace App\Game;
 
 use App\Enums\ItemTemplate;
 use App\Models\Home;
+use App\Models\HomeHelp;
 use App\Models\Item;
 use App\Models\Player;
 use Carbon\CarbonImmutable;
@@ -11,7 +12,8 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * Every animal's own home: built where it stands, raised from a Hut to a
- * Cottage to a Fort. Inside it, an animal is hidden from the map and harder
+ * Cottage to a Fort and on, level after level, with faction mates lending a
+ * hand or a Builder's Mortar. Inside it, an animal is hidden from the map and harder
  * to arrest; the higher it is built, the harder it is to burn down. A home
  * skin from the market changes how it looks.
  */
@@ -37,17 +39,58 @@ final class Homes
     /** How much each level cuts a bounty hunter's chance at the door. */
     public const ARREST_GUARD = 0.1;
 
+    /** However high a home is built, a hunter at the door keeps this much of a chance: warrants still mean something. */
+    public const ARREST_FLOOR = 0.1;
+
     /** How much each level adds to the chance a would-be burner is caught. */
     public const BURN_GUARD = 0.12;
+
+    /** Faction mates who can lend a hand on one level. */
+    public const MOST_HELPERS = 5;
 
     public static function of(Player $player): ?Home
     {
         return Home::query()->where('player_id', $player->id)->first();
     }
 
+    /**
+     * What a level costs and how long it takes. The first three are set;
+     * past the Fort, homes keep growing without end: each level costs half
+     * as much Corn again as the one before, more stone, wood and iron, and
+     * an hour longer, up to a day.
+     *
+     * @return array{name: string, corn: int, materials: array<string, int>, minutes: int}
+     */
+    public static function level(int $level): array
+    {
+        if (isset(self::LEVELS[$level])) {
+            return self::LEVELS[$level];
+        }
+
+        $past = $level - 3;
+
+        return [
+            'name' => self::name($level),
+            'corn' => (int) (round(300 * 1.5 ** $past / 10) * 10),
+            'materials' => ['stone' => 40 + 15 * $past, 'wood' => 25 + 10 * $past, 'iron' => 4 + 2 * $past],
+            'minutes' => min(24 * 60, 180 + 60 * $past),
+        ];
+    }
+
     public static function name(int $level): string
     {
-        return self::LEVELS[$level]['name'] ?? 'Home';
+        return match (true) {
+            $level <= 3 => self::LEVELS[max(1, $level)]['name'],
+            $level === 4 => 'Keep',
+            $level === 5 => 'Castle',
+            default => 'Castle '.($level - 4),
+        };
+    }
+
+    /** How much a home this high cuts a hunter's chance at its door: never below the floor. */
+    public static function arrestCut(int $level, float $chance): float
+    {
+        return min($level * self::ARREST_GUARD, max(0.0, $chance - self::ARREST_FLOOR));
     }
 
     /** Whether the animal is hiding inside a home that stands. */
@@ -125,13 +168,8 @@ final class Homes
             }
 
             $next = $home->level + 1;
-
-            if (! isset(self::LEVELS[$next])) {
-                throw new GameException('Your home is already a Fort.');
-            }
-
             $this->pay($player, $next);
-            $home->forceFill(['level' => $next, 'ready_at' => CarbonImmutable::now()->addMinutes(self::LEVELS[$next]['minutes'])])->save();
+            $home->forceFill(['level' => $next, 'ready_at' => CarbonImmutable::now()->addMinutes(self::level($next)['minutes'])])->save();
 
             return $home;
         });
@@ -240,18 +278,89 @@ final class Homes
         }
     }
 
-    private function ensureAtDoor(Player $player, Home $home): void
+    private function ensureAtDoor(Player $player, Home $home, string $whose = 'your home'): void
     {
         [$x, $y] = Movement::position($player);
 
         if (hypot($home->x - $x, $home->y - $y) > self::DOOR) {
-            throw new GameException('Walk to your home first.');
+            throw new GameException("Walk to {$whose} first.");
         }
     }
 
-    private function pay(Player $player, int $level): void
+    /**
+     * Lend a hand on a faction mate's home while a level goes up: it cuts the
+     * time left by a third, once a level each, for a horseshoe.
+     *
+     * @throws GameException
+     */
+    public function help(Player $helper, Home $home): Home
     {
-        $cost = self::LEVELS[$level];
+        return DB::transaction(function () use ($helper, $home) {
+            $helper = Players::lock($helper);
+            Players::ensureFree($helper);
+            $home = Home::query()->with('owner')->lockForUpdate()->findOrFail($home->id);
+            $owner = $home->owner;
+
+            if ($home->player_id === $helper->id) {
+                throw new GameException('Ask your faction mates to help build your home.');
+            }
+
+            if ($helper->faction_id === null || $helper->faction_id !== $owner->faction_id) {
+                throw new GameException("Only {$owner->name}'s faction mates can help build their home.");
+            }
+
+            if (! $home->building()) {
+                throw new GameException("{$owner->name}'s ".self::name($home->level).' is already standing.');
+            }
+
+            $this->ensureAtDoor($helper, $home, "{$owner->name}'s home");
+            $helps = HomeHelp::query()->where('home_id', $home->id)->where('level', $home->level);
+
+            if ((clone $helps)->where('player_id', $helper->id)->exists()) {
+                throw new GameException("You're already helping build this level of {$owner->name}'s home.");
+            }
+
+            if ((clone $helps)->count() >= self::MOST_HELPERS) {
+                throw new GameException(self::MOST_HELPERS." are helping already: there's no room for more hands.");
+            }
+
+            Horseshoes::spend($helper, 1);
+            HomeHelp::create(['home_id' => $home->id, 'player_id' => $helper->id, 'level' => $home->level]);
+            $left = max(0, CarbonImmutable::now()->diffInSeconds($home->ready_at));
+            $home->forceFill(['ready_at' => CarbonImmutable::now()->addSeconds((int) ceil($left * 2 / 3))])->save();
+            Rosettes::award($helper, 3, "Helped build {$owner->name}'s home", "home:{$home->id}:{$home->level}:{$helper->id}", $helper->valley->currentSeason());
+            Notices::send($owner->id, 'faction', "🔨 {$helper->name} lent a hand on your ".self::name($home->level).'.', route('play', [], false));
+
+            return $home;
+        });
+    }
+
+    /**
+     * Builder's Mortar: your home goes up a level at once. You pay the
+     * level's materials, not its Corn, and don't wait. Called while using
+     * the item, inside its transaction.
+     *
+     * @throws GameException
+     */
+    public function mortar(Player $player): string
+    {
+        $home = $this->mine($player);
+
+        if ($home->building()) {
+            throw new GameException('Your '.self::name($home->level).' is still going up. Use the mortar once it stands.');
+        }
+
+        $next = $home->level + 1;
+        $this->pay($player, $next, corn: false);
+        $home->forceFill(['level' => $next, 'ready_at' => null])->save();
+
+        return 'The mortar sets: your home is a '.self::name($next).' now.';
+    }
+
+    private function pay(Player $player, int $level, bool $corn = true): void
+    {
+        $cost = self::level($level);
+        $cost['corn'] = $corn ? $cost['corn'] : 0;
 
         if ($player->corn < $cost['corn']) {
             throw new GameException("A {$cost['name']} costs {$cost['corn']} Corn. You have {$player->corn}.");

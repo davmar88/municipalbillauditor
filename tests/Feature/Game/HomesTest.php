@@ -10,6 +10,7 @@ use App\Game\GameException;
 use App\Game\Geography;
 use App\Game\Homes;
 use App\Game\Movement;
+use App\Game\Powers;
 use App\Game\Warrants;
 use App\Models\Crime;
 use App\Models\Home;
@@ -76,9 +77,61 @@ class HomesTest extends TestCase
         $this->assertSame('Fort', Homes::name($home->level));
         $this->assertSame(6, $player->fresh()->materials['iron']);
 
+        // And on, without end: a Keep, a Castle, Castle 2...
         $this->travel(181)->minutes();
-        $this->expectExceptionMessage('already a Fort');
-        $this->homes->upgrade($player->fresh());
+        $this->assertSame(['Keep', 'Castle', 'Castle 2', 'Castle 7'], [Homes::name(4), Homes::name(5), Homes::name(6), Homes::name(11)]);
+        $this->assertSame(450, Homes::level(4)['corn']);
+        $this->assertSame(['stone' => 55, 'wood' => 35, 'iron' => 6], Homes::level(4)['materials']);
+        $this->assertSame(24 * 60, Homes::level(40)['minutes']);
+        $player->fresh()->forceFill(['corn' => 5000, 'materials' => ['stone' => 100, 'wood' => 100, 'iron' => 10]])->save();
+        $this->assertSame(4, $this->homes->upgrade($player->fresh())->level);
+    }
+
+    public function test_however_high_a_home_a_hunter_keeps_a_chance(): void
+    {
+        $this->assertEqualsWithDelta(0.3, Homes::arrestCut(3, 0.55), 0.001);
+        $this->assertEqualsWithDelta(0.45, Homes::arrestCut(40, 0.55), 0.001);
+        $this->assertEqualsWithDelta(Homes::ARREST_FLOOR, 0.55 - Homes::arrestCut(40, 0.55), 0.001);
+    }
+
+    public function test_faction_mates_lend_a_hand_and_a_mortar_raises_a_level_at_once(): void
+    {
+        $owner = $this->builder();
+        $mate = $this->builder(attributes: ['horseshoes' => 10]);
+        $stranger = $this->builder();
+        $this->faction('Red Hooves', $owner, $mate);
+        $home = $this->homes->build($owner->fresh());
+        $before = $home->ready_at->diffInSeconds(now(), true);
+
+        try {
+            $this->homes->help($stranger->fresh(), $home);
+            $this->fail('A stranger helped.');
+        } catch (GameException $e) {
+            $this->assertStringContainsString('faction mates', $e->getMessage());
+        }
+
+        $this->homes->help($mate->fresh(), $home);
+        $this->assertEqualsWithDelta($before * 2 / 3, $home->fresh()->ready_at->diffInSeconds(now(), true), 2);
+        $this->assertSame(9, $mate->fresh()->horseshoes);
+
+        try {
+            $this->homes->help($mate->fresh(), $home);
+            $this->fail('Helped the same level twice.');
+        } catch (GameException $e) {
+            $this->assertStringContainsString('already helping', $e->getMessage());
+        }
+
+        // Builder's Mortar: the next level at once, for its materials and no Corn.
+        $this->travel(31)->minutes();
+        $design = ItemDesign::create(['player_id' => $owner->id, 'template' => ItemTemplate::Mortar, 'name' => 'Quick Lime', 'colours' => ['#ffffff'], 'pattern' => 'plain', 'status' => 'approved']);
+        $mortar = Item::create(['item_design_id' => $design->id, 'player_id' => $owner->id, 'serial' => 1]);
+        $corn = $owner->fresh()->corn;
+        app(Powers::class)->use($owner->fresh(), $mortar);
+
+        $this->assertSame(2, $home->fresh()->level);
+        $this->assertFalse($home->fresh()->building());
+        $this->assertSame($corn, $owner->fresh()->corn);
+        $this->assertNotNull($mortar->fresh()->used_at);
     }
 
     public function test_no_homes_in_the_farmhouse_the_paddock_or_irongate_nor_on_top_of_another(): void

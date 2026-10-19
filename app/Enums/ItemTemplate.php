@@ -32,6 +32,7 @@ enum ItemTemplate: string
     case Plough = 'plough';
     case Speedo = 'speedo';
     case Skin = 'skin';
+    case Mortar = 'mortar';
 
     public function label(): string
     {
@@ -58,6 +59,7 @@ enum ItemTemplate: string
             self::Plough => 'Iron Plough',
             self::Speedo => 'Speedo',
             self::Skin => 'Home skin',
+            self::Mortar => "Builder's Mortar",
         };
     }
 
@@ -90,6 +92,7 @@ enum ItemTemplate: string
             self::Speedo => ['eggs' => 2, 'straw' => 1, 'clay' => 1],
             // Paint and boards for the outside of a home.
             self::Skin => ['dye' => 3, 'wood' => 2, 'clay' => 1],
+            self::Mortar => ['stone' => 4, 'clay' => 4, 'eggs' => 2],
         };
     }
 
@@ -98,7 +101,7 @@ enum ItemTemplate: string
     {
         return match ($this) {
             self::Hat, self::Scarf, self::Sign, self::Skin => null,
-            self::Gloves, self::Shoes, self::Cloak, self::Tonic, self::Ribbon, self::Cake, self::Pickaxe, self::Lock, self::Speedo => 'you',
+            self::Gloves, self::Shoes, self::Cloak, self::Tonic, self::Ribbon, self::Cake, self::Pickaxe, self::Lock, self::Speedo, self::Mortar => 'you',
             default => 'faction',
         };
     }
@@ -131,6 +134,7 @@ enum ItemTemplate: string
             self::Gate => "The region you stand in can't be raided for 6 hours, if your faction holds it. Not the Farmhouse.",
             self::Plough => "Your faction's farms pay double for 24 hours.",
             self::Speedo => 'You walk twice as fast for an hour.',
+            self::Mortar => "Your home goes up a level at once: you pay that level's materials, not its Corn, and don't wait.",
         };
     }
 
@@ -138,7 +142,7 @@ enum ItemTemplate: string
     public function creativity(): int
     {
         return match ($this) {
-            self::Cloak, self::Tonic, self::Basket, self::Banner, self::Cake, self::Pickaxe, self::Lock, self::Kit, self::Gate, self::Plough => 2,
+            self::Cloak, self::Tonic, self::Basket, self::Banner, self::Cake, self::Pickaxe, self::Lock, self::Kit, self::Gate, self::Plough, self::Mortar => 2,
             self::Ribbon, self::Trowel, self::Sheaf => 3,
             default => 1,
         };

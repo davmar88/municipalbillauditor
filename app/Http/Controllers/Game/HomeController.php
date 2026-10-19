@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Game;
 
 use App\Game\Homes;
 use App\Http\Controllers\Controller;
+use App\Models\Home;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
@@ -22,6 +23,13 @@ class HomeController extends Controller
         $home = $homes->upgrade($request->user()->player);
 
         return $this->told('Your '.Homes::name($home->level).' is going up. It stands at '.$home->ready_at?->timezone(config('game.timezone'))->format('H:i').'.');
+    }
+
+    public function help(Request $request, Home $home, Homes $homes): RedirectResponse
+    {
+        $homes->help($request->user()->player, $home);
+
+        return $this->told("You lent a hand. {$home->owner->name}'s home goes up a third faster.");
     }
 
     public function enter(Request $request, Homes $homes): RedirectResponse

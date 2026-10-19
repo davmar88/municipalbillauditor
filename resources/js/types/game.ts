@@ -66,7 +66,8 @@ export type ItemShape =
     | 'gate'
     | 'plough'
     | 'speedo'
-    | 'skin';
+    | 'skin'
+    | 'mortar';
 
 export type DesignCard = {
     id: number;
@@ -367,6 +368,8 @@ export type MapHome = {
     readyAt: string | null;
     skin: { name: string; colours: string[]; pattern: string } | null;
     mine: boolean;
+    /** A faction mate's home going up that you could lend a hand on. */
+    helpable: boolean;
 };
 
 /** What building your own home takes, and whether you're hiding in it. */
