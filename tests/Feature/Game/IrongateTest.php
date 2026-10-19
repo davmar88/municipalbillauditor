@@ -14,6 +14,7 @@ use App\Game\GateNight;
 use App\Game\Gathering;
 use App\Game\Geography;
 use App\Game\Horseshoes;
+use App\Game\Ironfield;
 use App\Game\Irongate;
 use App\Game\Movement;
 use App\Game\Notices;
@@ -325,5 +326,52 @@ class IrongateTest extends TestCase
 
         $this->expectExceptionMessage('one hot meal a day');
         $irongate->meal($player->fresh());
+    }
+
+    public function test_ironfield_runs_deeper_with_more_men_and_bigger_hauls(): void
+    {
+        // Four depths, out from Irongate's east districts.
+        $this->assertTrue($this->region('ironfield_road')->neighbours()->where('key', 'irongate_tavern')->exists());
+        $this->assertTrue($this->region('ironfield_pit')->neighbours()->where('key', 'ironfield_pithead')->exists());
+        $this->assertSame([1, 2, 3, 4], array_map(fn (string $key) => Ironfield::depth($this->region($key)), ['ironfield_road', 'ironfield_foundry', 'ironfield_pithead', 'ironfield_pit']));
+        $this->assertGreaterThan(Ironfield::MEN[1], Ironfield::MEN[4]);
+
+        $player = $this->player(Species::Horse);
+        $this->assertGreaterThan(Ironfield::chance($player, 4, 5), Ironfield::chance($player, 1, 5), 'Harder the deeper you go.');
+        $this->assertGreaterThan(Ironfield::chance($player, 4, 2), Ironfield::chance($player, 4, 8), 'More horseshoes, better odds.');
+
+        // Nobody holds it, builds there or camps there.
+        $faction = $this->faction('Red Hooves', $this->player(), $this->player(), $player);
+        $this->hold($faction, 'irongate_yards');
+
+        try {
+            app(Battles::class)->launch($player->fresh(), $this->region('ironfield_road'), 1);
+            $this->fail('Ironfield was raided.');
+        } catch (GameException $e) {
+            $this->assertStringContainsString('Ironfield', $e->getMessage());
+        }
+
+        // Win at the road, then the men stay on guard there for a while.
+        $this->stand($player, 'ironfield_road');
+        $won = null;
+
+        for ($try = 0; $try < 40 && $won === null; $try++) {
+            $this->travel(Ironfield::COOLDOWN_HOURS)->hours();
+            $player->fresh()->forceFill(['horseshoes' => 10, 'horseshoes_at' => now(), 'pound_until' => null])->save();
+            $this->stand($player, 'ironfield_road');
+            $result = app(Ironfield::class)->run($player->fresh(), $this->region('ironfield_road'), 10);
+
+            if ($result['won']) {
+                $won = $result;
+            } else {
+                $this->assertTrue($player->fresh()->inPound(), 'Caught means the pound.');
+                $this->assertSame('paddock', $player->fresh()->location()->key);
+            }
+        }
+
+        $this->assertNotNull($won, 'Ten horseshoes against two carters gets away with it sometimes.');
+        $this->assertSame(Ironfield::REWARD[1]['materials']['iron'], $won['reward']['materials']['iron']);
+        $this->expectExceptionMessage('still on their guard');
+        app(Ironfield::class)->run($player->fresh(), $this->region('ironfield_road'), 1);
     }
 }

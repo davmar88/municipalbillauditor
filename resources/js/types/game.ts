@@ -250,7 +250,8 @@ export type MapRegion = {
         | 'safe'
         | 'farm'
         | 'city'
-        | 'frontier';
+        | 'frontier'
+        | 'ironfield';
     produces: string | null;
     /** What is left to gather, and how it grows back; null where nothing grows. */
     stock: {
@@ -270,6 +271,22 @@ export type MapRegion = {
     wateredUntil: string | null;
     /** How rich its land is, from 1 near the farms down to 0.25 far out. */
     richness: number;
+    /** Ironfield's mission here: the deeper in, the more men guard it and the more it pays. */
+    ironfield: {
+        depth: number;
+        men: number;
+        title: string;
+        guards: string;
+        reward: {
+            corn: number;
+            rosettes: number;
+            materials: Record<string, number>;
+        };
+        poundHours: number;
+        nextAt: string | null;
+        /** The odds of getting away with it for 1, 2 ... 10 horseshoes. */
+        odds: number[];
+    } | null;
     /** The trench running water to this farm: the regions it runs through, from the water. */
     trench: { keys: string[]; from: string } | null;
     /** Fed by a trench, its own or its farm's: it never runs dry. */

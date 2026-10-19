@@ -183,6 +183,17 @@ final class ValleyBuilder
         'robin_thicket' => ['Robin Thicket', 'frontier', 'dye', 80, 11],
         'stoat_spring' => ['Stoat Spring', 'frontier', 'water', 81, 11],
         'tansy_spinney' => ['Tansy Spinney', 'frontier', 'wood', 82, 11],
+        // Ironfield, the humans' mining country east of Irongate: nobody holds it, and the deeper in, the more men guard it.
+        'ironfield_road' => ['Ironfield Road', 'ironfield', 'iron', 0, 13],
+        'ironfield_carts' => ['Ore Cart Track', 'ironfield', 'iron', 1, 13],
+        'ironfield_foundry' => ['Foundry Yard', 'ironfield', 'iron', 2, 13],
+        'ironfield_kilns' => ['The Kilns', 'ironfield', 'stone', 3, 13],
+        'ironfield_slag' => ['Slag Heaps', 'ironfield', 'copper', 4, 13],
+        'ironfield_pithead' => ['The Pithead', 'ironfield', 'iron', 5, 13],
+        'ironfield_lodge' => ["Overseer's Lodge", 'ironfield', 'copper', 6, 13],
+        'ironfield_shaft' => ['Black Shaft', 'ironfield', 'gold', 7, 13],
+        'ironfield_pit' => ['The Deep Pit', 'ironfield', 'gold', 8, 13],
+        'ironfield_chains' => ['Chain Barracks', 'ironfield', 'iron', 9, 13],
         // The open scrub between all the rest, out to the valley's edge: anyone stands, gathers and camps there.
         'scrubland' => ['The Scrubland', 'scrub', 'wood', 0, 12],
     ];
@@ -272,6 +283,20 @@ final class ValleyBuilder
         'robin_thicket' => ['oak_spring', 'reed_knoll'],
         'stoat_spring' => ['ashwood', 'silt_pools'],
         'tansy_spinney' => ['southmere_dell', 'southmere_gardens'],
+    ];
+
+    /** Ironfield's regions and what each borders: the road runs out of Irongate's east districts. */
+    public const IRONFIELD_LINKS = [
+        'ironfield_road' => ['irongate_smithy', 'irongate_tavern', 'irongate_gallows', 'ironfield_carts', 'ironfield_foundry', 'ironfield_kilns'],
+        'ironfield_carts' => [],
+        'ironfield_foundry' => ['ironfield_carts'],
+        'ironfield_kilns' => ['ironfield_foundry'],
+        'ironfield_slag' => ['ironfield_carts'],
+        'ironfield_pithead' => ['ironfield_slag', 'ironfield_foundry'],
+        'ironfield_lodge' => ['ironfield_pithead', 'ironfield_kilns'],
+        'ironfield_shaft' => ['ironfield_slag'],
+        'ironfield_pit' => ['ironfield_shaft', 'ironfield_pithead'],
+        'ironfield_chains' => ['ironfield_pit', 'ironfield_lodge'],
     ];
 
     /** Irongate's districts and what each borders: the Yards open onto Ironfield Gate and the other two. */
@@ -444,6 +469,11 @@ final class ValleyBuilder
         // The scrub lies round everything and borders nothing: nobody raids from it or into it.
         if ($a->isScrub() || $b->isScrub()) {
             return false;
+        }
+
+        if ($a->isIronfield() || $b->isIronfield()) {
+            return in_array($b->key, self::IRONFIELD_LINKS[$a->key] ?? [], true)
+                || in_array($a->key, self::IRONFIELD_LINKS[$b->key] ?? [], true);
         }
 
         if ($a->ring === 'frontier' || $b->ring === 'frontier') {

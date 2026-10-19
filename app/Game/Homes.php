@@ -123,7 +123,7 @@ final class Homes
 
             $region = $player->location();
 
-            if ($region->isFarmhouse() || $region->isSafe() || $region->isCity() || $region->wild) {
+            if ($region->isFarmhouse() || $region->isSafe() || $region->isCity() || $region->isIronfield() || $region->wild) {
                 throw new GameException("Homes can't go in {$region->name}. Pick a spot in another region.");
             }
 

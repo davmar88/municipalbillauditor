@@ -154,6 +154,7 @@ final class Missions
         'daily.buy' => ['title' => 'Window shopping', 'goal' => 'Buy an item from another animal.', 'events' => ['buy'], 'target' => 1, 'for' => 'all', 'reward' => ['corn' => 30, 'rosettes' => 5]],
         'daily.give' => ['title' => 'For the store', 'goal' => 'Give 10 to your faction\'s store.', 'events' => ['give'], 'target' => 10, 'for' => 'faction', 'reward' => ['corn' => 30, 'rosettes' => 5]],
         'daily.battle' => ['title' => 'Call to arms', 'goal' => 'Join a raid or a defence.', 'events' => ['battle'], 'target' => 1, 'for' => 'faction', 'reward' => ['corn' => 40, 'rosettes' => 8]],
+        'daily.ironfield' => ['title' => 'Into Ironfield', 'goal' => 'Get away with an Ironfield mission.', 'events' => ['ironfield'], 'target' => 1, 'for' => 'all', 'reward' => ['corn' => 40, 'rosettes' => 8]],
         'daily.crime' => ['title' => 'Night work', 'goal' => 'Commit a crime.', 'events' => ['crime'], 'target' => 1, 'for' => 'lone', 'reward' => ['corn' => 40, 'rosettes' => 8]],
         'daily.craft' => ['title' => 'At the bench', 'goal' => 'Make 2 copies of your designs.', 'events' => ['craft'], 'target' => 2, 'for' => 'maker', 'reward' => ['corn' => 30, 'rosettes' => 5, 'materials' => ['wood' => 3, 'wool' => 3]]],
         'daily.sell' => ['title' => 'Busy shop', 'goal' => 'Sell 2 items.', 'events' => ['sale'], 'target' => 2, 'for' => 'shop', 'reward' => ['corn' => 50, 'rosettes' => 8]],

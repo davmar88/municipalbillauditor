@@ -34,6 +34,7 @@ import {
     attack,
     buyFarm,
     growFarm,
+    ironfield as ironfieldMission,
     waterFarm,
     digTrench,
     fillTrench,
@@ -82,6 +83,7 @@ const RINGS: Record<MapRegion['ring'], string> = {
     farm: 'Farm beyond the fences',
     city: 'Irongate',
     frontier: 'Frontier',
+    ironfield: 'Ironfield',
 };
 
 type Props = {
@@ -406,6 +408,14 @@ export function RegionPanel({
                         produces={region.produces}
                     />
                 )}
+                {region.ironfield && (
+                    <IronfieldMission
+                        mission={region.ironfield}
+                        regionId={region.id}
+                        isHere={isHere}
+                        horseshoesLeft={horseshoesLeft}
+                    />
+                )}
                 {region.stock && region.richness < 1 && (
                     <p className="-mt-1 text-xs text-muted-foreground">
                         Far from the farms, the land is thinner: it holds and
@@ -430,8 +440,8 @@ export function RegionPanel({
                                 >
                                     Gather{' '}
                                     {region.produces === 'corn'
-                                        ? `${yields.corn} Corn`
-                                        : `${yields.material} ${region.produces}`}
+                                        ? `${Math.max(1, Math.floor(yields.corn * region.richness))} Corn`
+                                        : `${Math.max(1, Math.floor(yields.material * region.richness))} ${region.produces}`}
                                     <span className="ml-auto flex items-center gap-1 opacity-80">
                                         <Horseshoe className="size-4" />1
                                     </span>
@@ -990,6 +1000,87 @@ function StockLine({
                     ? `${stock.perHour} grow back an hour; full by ${clockTime(stock.fullAt)}.`
                     : 'Full.'}
             </span>
+        </div>
+    );
+}
+
+/** Ironfield's mission in this region: slip past the men and carry off what they dig, or end up in the pound. */
+function IronfieldMission({
+    mission,
+    regionId,
+    isHere,
+    horseshoesLeft,
+}: {
+    mission: NonNullable<MapRegion['ironfield']>;
+    regionId: number;
+    isHere: boolean;
+    horseshoesLeft: number;
+}) {
+    const [shoes, setShoes] = useState(Math.min(3, mission.odds.length));
+    const chance = mission.odds[shoes - 1] ?? 0;
+    const loot = Object.entries(mission.reward.materials)
+        .map(([material, amount]) => `${amount} ${material}`)
+        .join(', ');
+
+    return (
+        <div className="flex flex-col gap-2 rounded-lg border border-orange-400/40 bg-orange-400/10 p-3">
+            <p className="flex items-center gap-2 font-semibold">
+                <Swords className="size-4 text-orange-300" aria-hidden />
+                {mission.title}
+                <span className="ml-auto text-xs font-normal text-orange-200">
+                    Depth {mission.depth} of 4
+                </span>
+            </p>
+            <p className="text-muted-foreground">
+                {mission.men} men stand guard: {mission.guards}. Get away with
+                it for {mission.reward.corn} Corn, {loot} and{' '}
+                {mission.reward.rosettes} Rosettes. Get caught and they drag you
+                to the pound for {mission.poundHours}{' '}
+                {mission.poundHours === 1 ? 'hour' : 'hours'}.
+            </p>
+            {mission.nextAt ? (
+                <p className="text-xs text-muted-foreground">
+                    The men here are still on their guard. Try again{' '}
+                    {fromNow(mission.nextAt)}.
+                </p>
+            ) : isHere ? (
+                <>
+                    <label className="flex items-center gap-2 text-xs">
+                        <span className="shrink-0">Horseshoes: {shoes}</span>
+                        <input
+                            type="range"
+                            min={1}
+                            max={mission.odds.length}
+                            value={shoes}
+                            onChange={(event) =>
+                                setShoes(Number(event.target.value))
+                            }
+                            className="w-full accent-orange-400"
+                        />
+                    </label>
+                    <p className="text-xs">
+                        {Math.round(chance * 100)}% chance to get away with it.
+                    </p>
+                    <Button
+                        size="sm"
+                        className="self-start"
+                        disabled={horseshoesLeft < shoes}
+                        onClick={() =>
+                            act(ironfieldMission.url(regionId), {
+                                horseshoes: shoes,
+                            })
+                        }
+                    >
+                        Go in with {shoes}{' '}
+                        {shoes === 1 ? 'horseshoe' : 'horseshoes'}
+                    </Button>
+                </>
+            ) : (
+                <p className="text-xs text-muted-foreground">
+                    Walk here to take it on. The deeper into Ironfield, the more
+                    men and the bigger the haul.
+                </p>
+            )}
         </div>
     );
 }

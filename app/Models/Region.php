@@ -107,6 +107,12 @@ class Region extends Model
         return $this->ring === 'scrub';
     }
 
+    /** Ironfield, the humans' mining country: nobody holds it, and missions there get harder the deeper you go. */
+    public function isIronfield(): bool
+    {
+        return $this->ring === 'ironfield';
+    }
+
     /** One of Irongate's districts: the humans' town, which nobody holds. */
     public function isCity(): bool
     {

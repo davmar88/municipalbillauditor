@@ -13,6 +13,7 @@ use App\Game\GateNight;
 use App\Game\Gathering;
 use App\Game\Geography;
 use App\Game\Homes;
+use App\Game\Ironfield;
 use App\Game\Irongate;
 use App\Game\Movement;
 use App\Game\Powers;
@@ -111,6 +112,16 @@ class MapController extends Controller
                 'stock' => Stock::map($region),
                 // How rich its land is: full near the farms, thinner further out.
                 'richness' => Geography::regionRichness($region->key),
+                // Ironfield's mission here, for this animal: how deep, who guards it, what it pays and when it's open again.
+                'ironfield' => ($depth = Ironfield::depth($region)) === null ? null : [
+                    'depth' => $depth,
+                    'men' => Ironfield::MEN[$depth],
+                    ...Ironfield::MISSIONS[$region->key],
+                    'reward' => Ironfield::REWARD[$depth],
+                    'poundHours' => $depth,
+                    'nextAt' => Ironfield::nextAt($player, $region)?->toIso8601String(),
+                    'odds' => array_map(fn (int $shoes) => Ironfield::chance($player, $depth, $shoes), range(1, Ironfield::MAX_HORSESHOES)),
+                ],
                 'col' => $region->col,
                 'row' => $region->row,
                 'faction' => $region->faction ? ['id' => $region->faction->id, 'name' => $region->faction->name, 'colour' => $region->faction->colour] : null,
@@ -348,6 +359,21 @@ class MapController extends Controller
         $farm = $farms->water($request->user()->player, $region);
 
         return $this->told("{$region->name} is watered until ".Clock::local($farm->watered_until)->format('D H:i').'.');
+    }
+
+    public function ironfield(Request $request, Region $region, Ironfield $ironfield): RedirectResponse
+    {
+        abort_unless($region->valley_id === $request->user()->player->valley_id, 404);
+        $data = $request->validate(['horseshoes' => ['required', 'integer', 'min:1', 'max:'.Ironfield::MAX_HORSESHOES]]);
+        $result = $ironfield->run($request->user()->player, $region, (int) $data['horseshoes']);
+
+        if (! $result['won']) {
+            return $this->told("Ironfield's men caught you at {$region->name} and dragged you to the pound until ".Clock::local($result['poundUntil'])->format('H:i').'.');
+        }
+
+        $loot = collect($result['reward']['materials'])->map(fn (int $amount, string $material) => "{$amount} {$material}")->implode(', ');
+
+        return $this->told("You got away from {$region->name} with {$result['reward']['corn']} Corn, {$loot} and {$result['reward']['rosettes']} Rosettes.");
     }
 
     public function dig(Request $request, Region $region, Farms $farms): RedirectResponse

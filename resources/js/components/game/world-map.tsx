@@ -1027,6 +1027,13 @@ export function subtitle(
             : { text: '🔥 Ironfield broke through', colour: '#f5a27a' };
     }
 
+    if (region.ironfield) {
+        return {
+            text: `⚔ Depth ${region.ironfield.depth} · ${region.ironfield.men} men on guard`,
+            colour: '#f5a27a',
+        };
+    }
+
     if (region.wateredUntil === '' && !region.irrigated) {
         return { text: '💧 Parched · needs water', colour: '#8fd3ff' };
     }

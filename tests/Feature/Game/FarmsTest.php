@@ -35,7 +35,7 @@ class FarmsTest extends TestCase
 
     public function test_the_valley_has_twelve_farms_beyond_the_fences_in_three_rings(): void
     {
-        $this->assertSame(28, $this->valley->regions()->where('wild', false)->whereNotIn('ring', ['city', 'frontier', 'scrub'])->count());
+        $this->assertSame(28, $this->valley->regions()->where('wild', false)->whereNotIn('ring', ['city', 'frontier', 'scrub', 'ironfield'])->count());
         $this->assertSame(36, $this->valley->regions()->where('wild', true)->count(), 'Three patches of wild land round each farm.');
         $this->assertSame(['fennick'], $this->region('hartley')->neighbours()->where('wild', false)->where('ring', 'farm')->pluck('key')->all(), 'The third ring is reached from the second.');
         $this->assertSame(['gold', 'copper', 'pears', 'carrots', 'berries', 'pumpkins'], collect(['coldharbour', 'copperhill', 'northfold', 'hartley', 'rushmere', 'southmere'])->map(fn (string $key) => $this->region($key)->produces)->all());
