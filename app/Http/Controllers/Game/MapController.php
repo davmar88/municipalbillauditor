@@ -94,7 +94,7 @@ class MapController extends Controller
                 : $group->reject(fn (Player $animal) => Irongate::hidden($animal->id, $where, $player, $hereRegion, $wanted))->values();
         });
         // What the animals the map shows are wearing, in one query.
-        $wearing = Wardrobe::wornBy([$player->id, ...$animals->flatMap(fn ($group) => $group->take(12)->pluck('id'))]);
+        $wearing = Wardrobe::wornBy([$player->id, ...$animals->flatMap(fn ($group) => $group->take(24)->pluck('id'))]);
 
         return Inertia::render('game/map', [
             'valley' => $valley->name,
@@ -174,7 +174,7 @@ class MapController extends Controller
                     : null,
                 'animals' => [
                     'count' => ($animals->get($region->id) ?? collect())->count(),
-                    'sample' => ($animals->get($region->id) ?? collect())->take(12)->map(fn (Player $animal) => [
+                    'sample' => ($animals->get($region->id) ?? collect())->take(24)->map(fn (Player $animal) => [
                         'id' => $animal->id,
                         'name' => $animal->name,
                         'species' => $animal->species->value,

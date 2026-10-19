@@ -16,6 +16,8 @@ import {
     shapeFor,
     subtitle,
     walkPoint,
+    OBJECT_FLOOR,
+    crowdRoom,
 } from '@/components/game/world-map';
 import { speciesEmoji } from '@/lib/game';
 import type { Point, RegionShape } from '@/lib/hollowmere';
@@ -1364,7 +1366,8 @@ export class World {
             const [x, y] = hub(key);
             g.position.set(x + dx, 0, y + dy);
             g.rotation.y = turn;
-            g.scale.setScalar(size);
+            // Half their old size, leaving the yards room for crowds and camps.
+            g.scale.setScalar(size * 0.5);
             this.farmyards.add(g);
         };
         put('TowerWindmill', 'windmill_hill', [70, -55], 95, 0.4);
@@ -1389,7 +1392,7 @@ export class World {
 
     private placeBuildings() {
         // Like the 2D badges: the same size on screen, shrinking only when zoomed far out.
-        const s = 40 / Math.max(this.k, 0.6);
+        const s = 40 / Math.max(this.k, OBJECT_FLOOR);
         for (const { group, at } of this.buildings) {
             group.position.set(at[0], 0, at[1]);
             group.scale.setScalar(s);
@@ -1494,9 +1497,9 @@ export class World {
 
     // ---- animals -------------------------------------------------------------------------------------------
 
-    /** How many others show round each hub at this zoom: 3, 6 or 12, as on the 2D map. */
+    /** How many others show round each hub at this zoom, as on the 2D map. */
     private room(k = this.k) {
-        return k < 0.55 ? 3 : k < 0.9 ? 6 : 12;
+        return crowdRoom(k);
     }
 
     private lastRoom = 0;
@@ -1844,7 +1847,7 @@ export class World {
 
     private placeHomes() {
         // About the same size on screen at any zoom, big enough to spot, a Fort the biggest.
-        const s = 92 / Math.max(this.k, 0.6);
+        const s = 92 / Math.max(this.k, OBJECT_FLOOR);
         for (const { group, level } of this.homeModels) {
             // Kit homes grow with their level by themselves; tents and the simple shapes by this.
             group.scale.setScalar(

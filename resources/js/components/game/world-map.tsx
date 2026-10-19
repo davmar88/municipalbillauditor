@@ -41,7 +41,8 @@ import type {
 type View = { x: number; y: number; k: number };
 export type Size = { width: number; height: number };
 
-export const MAX_ZOOM = 3;
+// Twice as far in as before, so the land holds twice the room round animals and homes.
+export const MAX_ZOOM = 6;
 export const LABEL = '#efecf7';
 export const HALO = '#0b0a0f';
 export const VIOLET = '#b39aff';
@@ -1259,7 +1260,23 @@ export const SPOTS: Point[] = [
                 Math.sin((i / 10) * Math.PI * 2) * 48,
             ] as Point,
     ),
+    ...Array.from(
+        { length: 14 },
+        (_, i) =>
+            [
+                Math.cos((i / 14) * Math.PI * 2 + 0.2) * 90,
+                Math.sin((i / 14) * Math.PI * 2 + 0.2) * 68,
+            ] as Point,
+    ),
 ];
+
+/** How many others show round each hub at a zoom: more the closer in, up to 24. */
+export function crowdRoom(k: number): number {
+    return k < 0.55 ? 3 : k < 0.9 ? 6 : k < 1.8 ? 12 : 24;
+}
+
+/** Homes and buildings keep their size on screen close in, and shrink to their place on the land further out. */
+export const OBJECT_FLOOR = 1.2;
 
 /** The other animals in the valley, standing where they are. */
 const Crowd = memo(function Crowd({
@@ -1272,7 +1289,7 @@ const Crowd = memo(function Crowd({
     /** Animals with a warrant out: always shown, marked for bounty hunters. */
     wanted: number[];
 }) {
-    const room = k < 0.55 ? 3 : k < 0.9 ? 6 : 12;
+    const room = crowdRoom(k);
 
     return (
         <g pointerEvents="none">
@@ -1396,7 +1413,7 @@ const Homes = memo(function Homes({
                 return (
                     <g
                         key={home.id}
-                        transform={`translate(${home.x.toFixed(1)} ${home.y.toFixed(1)}) scale(${HOME_SIZE / Math.max(k, 0.6)})`}
+                        transform={`translate(${home.x.toFixed(1)} ${home.y.toFixed(1)}) scale(${HOME_SIZE / Math.max(k, OBJECT_FLOOR)})`}
                         opacity={home.readyAt ? 0.6 : 1}
                     >
                         <title>{`${home.owner.name}'s ${home.name}`}</title>
@@ -1491,7 +1508,7 @@ const Folk = memo(function Folk({
                         key={person.key}
                         data-folk={person.key}
                         className="cursor-pointer"
-                        transform={`translate(${x.toFixed(1)} ${y.toFixed(1)}) scale(${1 / Math.max(k, 0.6)})`}
+                        transform={`translate(${x.toFixed(1)} ${y.toFixed(1)}) scale(${1 / Math.max(k, OBJECT_FLOOR)})`}
                     >
                         <title>{`${person.name}, ${person.role}`}</title>
                         <circle
@@ -1565,7 +1582,7 @@ const Bases = memo(function Bases({
                 return (
                     <g
                         key={region.id}
-                        transform={`translate(${x.toFixed(1)} ${y.toFixed(1)}) scale(${(1 / Math.max(k, 0.6)).toFixed(3)})`}
+                        transform={`translate(${x.toFixed(1)} ${y.toFixed(1)}) scale(${(1 / Math.max(k, OBJECT_FLOOR)).toFixed(3)})`}
                         opacity={goingUp ? 0.75 : 1}
                     >
                         <rect

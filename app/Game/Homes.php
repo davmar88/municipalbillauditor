@@ -55,7 +55,7 @@ final class Homes
     public const DOOR = 40;
 
     /** How far apart two homes must stand, in paces. */
-    public const SPACING = 30;
+    public const SPACING = 15;
 
     /** How much each level cuts a bounty hunter's chance at the door. */
     public const ARREST_GUARD = 0.1;
