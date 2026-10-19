@@ -45,6 +45,7 @@ import type {
 } from '@/types/game';
 import { person as makePerson } from './folk';
 import { landmarks, orchardTrees } from './landmarks';
+import { loadVillage, villageHome } from './village';
 import type { Actor } from './models';
 import { makeActor } from './models';
 
@@ -957,6 +958,10 @@ export class World {
             group.remove(child);
             child.traverse((o) => {
                 const mesh = o as THREE.Mesh;
+                // The village kit's geometry and colours are shared by every home built from it.
+                if (o.userData.shared) {
+                    return;
+                }
                 if (o instanceof THREE.InstancedMesh) {
                     o.dispose();
                 }
@@ -1669,24 +1674,44 @@ export class World {
 
     private homeModels: { group: THREE.Group; level: number }[] = [];
 
-    /** Every animal's home, in its skin's colours; yours ringed in violet. */
+    private villageAsked = false;
+
+    /** Every animal's home, in its skin's colours; yours ringed in violet. Built from the village kit once it has loaded. */
     private buildHomes() {
         const data = this.data as WorldData;
         this.clearGroup(this.dwellings);
         this.homeModels = data.homes.map((home) => {
-            const group = homeModel(home);
+            const built = villageHome(home);
+            const group = built ? withRing(built, home) : homeModel(home);
             group.position.set(home.x, 0, home.y);
             this.dwellings.add(group);
             return { group, level: home.level };
         });
         this.placeHomes();
+        if (!this.villageAsked && data.homes.some((home) => home.level > 0)) {
+            this.villageAsked = true;
+            loadVillage()
+                .then(() => {
+                    if (!this.disposed && this.data) {
+                        this.buildHomes();
+                    }
+                })
+                .catch((error: unknown) => {
+                    // The simple shapes stay; the next map load tries again.
+                    console.warn('The village kit did not load.', error);
+                    this.villageAsked = false;
+                });
+        }
     }
 
     private placeHomes() {
         // About the same size on screen at any zoom, big enough to spot, a Fort the biggest.
         const s = 92 / Math.max(this.k, 0.6);
         for (const { group, level } of this.homeModels) {
-            group.scale.setScalar(s * (0.8 + level * 0.2));
+            // Kit homes grow with their level by themselves; tents and the simple shapes by this.
+            group.scale.setScalar(
+                group.userData.village ? s : s * (0.8 + level * 0.2),
+            );
         }
     }
 
@@ -2072,6 +2097,31 @@ export class World {
 }
 
 /** An animal's home, about 1 unit across: walls and a roof in its skin's colours, battlements on a Fort. */
+/** The violet ring round your own kit home, by size: Hut, Cottage, Fort and up. */
+const RING: [number, number][] = [
+    [0.7, 0.82],
+    [0.95, 1.08],
+    [1.25, 1.4],
+];
+
+/** A home from the village kit, with your own ringed in violet. */
+function withRing(g: THREE.Group, home: MapHome): THREE.Group {
+    g.userData.village = true;
+    if (home.mine) {
+        const ring = new THREE.Mesh(
+            new THREE.RingGeometry(...RING[Math.min(2, home.level - 1)], 32),
+            new THREE.MeshBasicMaterial({ color: VIOLET, depthWrite: false }),
+        );
+        ring.rotation.x = -Math.PI / 2;
+        ring.position.y = 0.02;
+        const holder = new THREE.Group();
+        holder.add(g, ring);
+        holder.userData.village = true;
+        return holder;
+    }
+    return g;
+}
+
 function homeModel(home: MapHome): THREE.Group {
     const g = new THREE.Group();
     const going = home.readyAt !== null;
