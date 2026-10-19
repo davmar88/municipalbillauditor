@@ -110,6 +110,8 @@ class MapController extends Controller
                 'row' => $region->row,
                 'faction' => $region->faction ? ['id' => $region->faction->id, 'name' => $region->faction->name, 'colour' => $region->faction->colour] : null,
                 'settledUntil' => $region->settled_until?->isFuture() ? $region->settled_until->toIso8601String() : null,
+                // Farms need water: until when this one is watered, or null where it doesn't matter.
+                'wateredUntil' => $region->isFarm() && ! $region->wild ? ($region->watered_until?->isFuture() ? $region->watered_until->toIso8601String() : '') : null,
                 'gatedUntil' => Powers::gatedUntil($region)?->toIso8601String(),
                 'partOf' => isset(ValleyBuilder::FIELD_OF[$region->key]) ? $regions->firstWhere('key', ValleyBuilder::FIELD_OF[$region->key])?->name : null,
                 'growth' => Farms::fieldKeys($region->key) === [] ? null : (function () use ($region) {
@@ -154,7 +156,7 @@ class MapController extends Controller
                 'treasury' => $player->faction->treasury,
                 'materials' => (object) ($player->faction->materials ?? []),
             ] : null,
-            'farms' => ['price' => Farms::PRICE, 'income' => Farms::INCOME],
+            'farms' => ['price' => Farms::PRICE, 'income' => Farms::INCOME, 'water' => Farms::WATER, 'waterHours' => Farms::WATER_HOURS],
             // Open warrants, so the map can mark outlaws and offer arrests.
             'warrants' => $season ? Warrant::query()
                 ->with('wanted:id,name')
@@ -303,6 +305,14 @@ class MapController extends Controller
         $field = $farms->grow($request->user()->player, $region);
 
         return $this->told("{$region->name} grew into {$field->name}. It's your faction's new region.");
+    }
+
+    public function water(Request $request, Region $region, Farms $farms): RedirectResponse
+    {
+        abort_unless($region->valley_id === $request->user()->player->valley_id, 404);
+        $farm = $farms->water($request->user()->player, $region);
+
+        return $this->told("{$region->name} is watered until ".Clock::local($farm->watered_until)->format('D H:i').'.');
     }
 
     public function gather(Request $request, Region $region, Gathering $gathering): RedirectResponse

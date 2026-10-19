@@ -45,7 +45,7 @@ class FarmsTest extends TestCase
     {
         $frontier = $this->valley->regions()->where('ring', 'frontier')->get();
 
-        $this->assertCount(25, $frontier);
+        $this->assertCount(83, $frontier);
         $this->assertSame('gold', $this->region('glitter_gully')->produces);
         $this->assertSame('wood', $this->region('blackthorn_wood')->produces);
         // Every bit of it can be reached from somewhere.
@@ -118,5 +118,30 @@ class FarmsTest extends TestCase
         app(Tick::class)->run($this->valley->fresh());
 
         $this->assertSame(2 * Farms::INCOME, $faction->fresh()->treasury);
+    }
+
+    public function test_a_farm_needs_water_to_be_gathered_and_to_pay(): void
+    {
+        $farm = $this->region('thornbury');
+        $this->assertFalse($farm->isParched(), 'A farm starts with a day of water.');
+
+        $farm->forceFill(['watered_until' => now()->subMinute()])->save();
+        $player = $this->player(attributes: ['materials' => ['water' => 25]]);
+        $this->stand($player, 'thornbury');
+
+        try {
+            app(Gathering::class)->gather($player->fresh(), $farm->fresh());
+            $this->fail('Gathered a parched farm.');
+        } catch (GameException $e) {
+            $this->assertStringContainsString('parched', $e->getMessage());
+        }
+
+        $watered = app(Farms::class)->water($player->fresh(), $farm->fresh());
+        $this->assertEqualsWithDelta(now()->addHours(Farms::WATER_HOURS)->timestamp, $watered->watered_until->timestamp, 5);
+        $this->assertSame(15, $player->fresh()->materials['water']);
+        $this->assertSame('honey', app(Gathering::class)->gather($player->fresh(), $farm->fresh())['what']);
+
+        // Water fetched from a mere or a spring.
+        $this->assertSame('water', $this->region('heron_mere')->produces);
     }
 }

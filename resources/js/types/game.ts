@@ -266,6 +266,8 @@ export type MapRegion = {
     row: number;
     faction: FactionRef | null;
     settledUntil: string | null;
+    /** Farms need water: until when it's watered, '' when parched, null where it doesn't matter. */
+    wateredUntil: string | null;
     /** When an Iron Gate keeping raiders out comes down. */
     gatedUntil: string | null;
     /** The farm a cleared patch of land belongs to. */

@@ -41,6 +41,10 @@ final class Gathering
             Players::ensureFree($player);
             Movement::ensureStandingIn($player, $region, 'gather');
 
+            if ($region->isParched()) {
+                throw new GameException("{$region->name} is parched. Water it first: 10 water from a pond, a mere or a spring.");
+            }
+
             // A farm's rare crop is for anyone while the farm is unclaimed, and its holders' once it isn't.
             if ($region->isFarm() && $region->faction_id !== null && $region->faction_id !== $player->faction_id) {
                 $holders = $region->faction?->name ?? 'another faction';

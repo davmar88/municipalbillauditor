@@ -20,6 +20,13 @@ final class Farms
 
     public const INCOME = 5;
 
+    /** Water it takes to water a farm, and how long it lasts; it can be watered up to two days ahead. */
+    public const WATER = 10;
+
+    public const WATER_HOURS = 12;
+
+    public const WATER_AHEAD_HOURS = 48;
+
     /** How many times a farm can grow into the wild land round it. */
     public const GROWTH = 3;
 
@@ -108,6 +115,8 @@ final class Farms
                 'faction_id' => $faction->id,
                 'held_since' => CarbonImmutable::now(),
                 'settled_until' => CarbonImmutable::now()->addHour(),
+                // Newly cleared land starts with a day's water.
+                'watered_until' => CarbonImmutable::now()->addDay(),
             ])->save();
 
             Notices::send(Notices::valley($farm->valley_id)->reject(fn (int $id) => $id === $player->id), 'farm', "🌱 {$faction->name} grew {$farm->name} into {$field->name}.", route('play', [], false));
@@ -164,6 +173,45 @@ final class Farms
         });
     }
 
+    /**
+     * Water a farm you stand on: 10 water keeps it growing for 12 hours,
+     * up to two days ahead. Anyone can, whoever holds it.
+     *
+     * @throws GameException
+     */
+    public function water(Player $player, Region $farm): Region
+    {
+        return DB::transaction(function () use ($player, $farm) {
+            $player = Players::lock($player);
+            Players::ensureFree($player);
+            $farm = Region::query()->lockForUpdate()->findOrFail($farm->id);
+
+            if (! $farm->isFarm() || $farm->wild || $farm->valley_id !== $player->valley_id) {
+                throw new GameException('Only farmland needs watering.');
+            }
+
+            Movement::ensureStandingIn($player, $farm, 'water');
+            $now = CarbonImmutable::now();
+            $from = $farm->watered_until !== null && $farm->watered_until->isFuture() ? CarbonImmutable::instance($farm->watered_until) : $now;
+
+            if ($from->gte($now->addHours(self::WATER_AHEAD_HOURS - self::WATER_HOURS + 1))) {
+                throw new GameException("{$farm->name} has all the water it can hold. Come back tomorrow.");
+            }
+
+            $materials = $player->materials ?? [];
+
+            if ((int) ($materials['water'] ?? 0) < self::WATER) {
+                throw new GameException('Watering a farm takes '.self::WATER.' water. Fetch it from a pond, a mere or a spring.');
+            }
+
+            $materials['water'] -= self::WATER;
+            $player->forceFill(['materials' => $materials])->save();
+            $farm->forceFill(['watered_until' => $from->addHours(self::WATER_HOURS)])->save();
+
+            return $farm;
+        });
+    }
+
     /** Every held farm pays its faction's treasury. */
     public function payIncome(Season $season): void
     {
@@ -172,6 +220,8 @@ final class Farms
             ->where('ring', 'farm')
             ->whereNotNull('faction_id')
             ->get()
+            // A parched farm pays nothing until it's watered.
+            ->reject(fn (Region $farm) => $farm->isParched())
             // An Iron Plough doubles what a faction's farms pay.
             ->each(fn (Region $farm) => Stores::addCorn($farm->faction_id, (int) (self::INCOME * Powers::plough($farm->faction_id))));
     }

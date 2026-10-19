@@ -27,6 +27,7 @@ use Illuminate\Support\Carbon;
  * @property int|null $faction_id
  * @property Carbon|null $held_since
  * @property Carbon|null $settled_until
+ * @property Carbon|null $watered_until Until when a farm is watered; a parched farm grows nothing.
  * @property Faction|null $faction
  * @property Building|null $building
  */
@@ -37,6 +38,7 @@ class Region extends Model
     {
         return [
             'held_since' => 'datetime',
+            'watered_until' => 'datetime',
             'settled_until' => 'datetime',
             'stock_at' => 'datetime',
             'wild' => 'boolean',
@@ -70,6 +72,12 @@ class Region extends Model
     public function isSafe(): bool
     {
         return $this->ring === 'safe';
+    }
+
+    /** A farm that has run out of water: it can't be gathered and pays nothing. */
+    public function isParched(): bool
+    {
+        return $this->isFarm() && ! $this->wild && ($this->watered_until === null || $this->watered_until->isPast());
     }
 
     /** One of the farms beyond Hollowmere's fences. */

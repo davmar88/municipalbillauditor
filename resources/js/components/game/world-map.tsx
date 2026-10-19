@@ -989,6 +989,10 @@ export function subtitle(
             : { text: '🔥 Ironfield broke through', colour: '#f5a27a' };
     }
 
+    if (region.wateredUntil === '') {
+        return { text: '💧 Parched · needs water', colour: '#8fd3ff' };
+    }
+
     if (region.ring === 'city') {
         return {
             text: CITY_LINES[region.key] ?? "The humans' town",

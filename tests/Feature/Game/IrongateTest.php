@@ -87,7 +87,7 @@ class IrongateTest extends TestCase
         }
 
         $this->expectExceptionMessage("There's nothing there to walk to");
-        app(Movement::class)->walkTo($player->fresh(), 2200, 480);
+        app(Movement::class)->walkTo($player->fresh(), 2400, 480);
     }
 
     public function test_nobody_takes_builds_or_gathers_in_irongate(): void

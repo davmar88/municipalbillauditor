@@ -34,6 +34,7 @@ import {
     attack,
     buyFarm,
     growFarm,
+    waterFarm,
     commit,
     crime,
     faction as factionPage,
@@ -90,7 +91,7 @@ type Props = {
     gateNight: GateNightInfo;
     base: FactionStore | null;
     buildingKinds: BuildingKindCard[];
-    farms: { price: number; income: number };
+    farms: { price: number; income: number; water: number; waterHours: number };
     warrants: Warrant[];
     plunder: Plunder;
     /** Irongate's people, for the town's districts. */
@@ -458,9 +459,50 @@ export function RegionPanel({
                                 ? `Only ${region.faction.name} can gather it now.`
                                 : 'Anyone can gather it until a faction claims the farm.'}
                         </p>
+                        {region.wateredUntil !== null && (
+                            <div className="flex flex-col gap-2 rounded-lg border border-sky-400/30 bg-sky-400/10 p-3">
+                                <p>
+                                    {region.wateredUntil
+                                        ? `💧 Watered until ${clockTime(region.wateredUntil)} (${fromNow(region.wateredUntil)}).`
+                                        : '💧 Parched. Nothing can be gathered here and it pays nothing until it is watered.'}{' '}
+                                    {farms.water} water keeps it growing for{' '}
+                                    {farms.waterHours} hours; anyone standing
+                                    here can water it.
+                                </p>
+                                {isHere ? (
+                                    <Button
+                                        size="sm"
+                                        variant="secondary"
+                                        className="self-start"
+                                        disabled={
+                                            Number(
+                                                (
+                                                    (player?.materials ??
+                                                        {}) as Record<
+                                                        string,
+                                                        number
+                                                    >
+                                                ).water ?? 0,
+                                            ) < farms.water
+                                        }
+                                        onClick={() =>
+                                            act(waterFarm.url(region.id))
+                                        }
+                                    >
+                                        Water it ({farms.water} water)
+                                    </Button>
+                                ) : (
+                                    <p className="text-xs text-muted-foreground">
+                                        Walk here with {farms.water} water to
+                                        water it. Ponds, meres and springs give
+                                        water.
+                                    </p>
+                                )}
+                            </div>
+                        )}
                         <p className="text-muted-foreground">
                             It pays {farms.income} Corn into its holder's
-                            treasury every half hour.{' '}
+                            treasury every half hour while watered.{' '}
                             {region.faction
                                 ? 'Rivals take it in a raid from a region next to it.'
                                 : `Your faction can buy it for ${farms.price} Corn from the treasury, or raid for it.`}
