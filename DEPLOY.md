@@ -12,7 +12,7 @@ worker. Setting up RevenueGuard changes nothing of Cable Elite's.
 |              | Cable Elite                        | RevenueGuard                                                |
 | ------------ | ---------------------------------- | ----------------------------------------------------------- |
 | Code         | `/var/www/crm`                     | `/var/www/revenueguard`                                     |
-| nginx site   | `cableelite.co.za`                 | `animalfarm.cc`, and `revenueguard.co.za`, which forwards   |
+| nginx site   | `cableelite.co.za`                 | `revenueguard`, for animalfarm.cc                           |
 | PHP runs as  | `www-data` (the default pool)      | `revenueguard` (its own pool, `/run/php/revenueguard.sock`) |
 | Database     | `crm`                              | `revenueguard`, with a MySQL user that can only reach it    |
 | Queue worker | `cable-elite-queue`                | `revenueguard-queue`                                        |
@@ -220,7 +220,7 @@ changes, apply it by hand:
 - **Queue worker or scheduler:** `/var/www/revenueguard/deploy/setup.sh finish`.
 - **PHP pool:** `/var/www/revenueguard/deploy/setup.sh prepare`.
 - **nginx site:** after Certbot, `finish` leaves the site alone, so copy the
-  change into `/etc/nginx/sites-available/animalfarm.cc` yourself. Then
+  change into `/etc/nginx/sites-available/revenueguard` yourself. Then
   run `sudo nginx -t && sudo systemctl reload nginx`.
 
 Every phase can be run again safely. A failed nginx or PHP-FPM test puts the
@@ -257,12 +257,23 @@ The button only shows once `GOOGLE_CLIENT_ID` is set.
 ## The old address
 
 The site started at revenueguard.co.za and moved to animalfarm.cc. The old
-address still points at this server and forwards every page to the same page
-on the new one, so old links and bookmarks keep working. Its nginx site is
-`deploy/nginx/revenueguard.co.za.conf`, copied by hand to
-`/etc/nginx/sites-available/revenueguard.co.za`. It keeps its certificate,
-which Certbot renews with the others. The site still sends its email from
-`info@revenueguard.co.za`.
+address is being cancelled. Until it goes, it still points at this server and
+forwards every page to the same page on the new one, with its own
+certificate, so nobody who uses it lands on a security warning or on Cable
+Elite's site. Its nginx site is `deploy/nginx/revenueguard.co.za.conf`, copied
+by hand to `/etc/nginx/sites-available/revenueguard.co.za`.
+
+The site still sends its email from `info@revenueguard.co.za`, and the privacy
+notice gives it as the contact address, so move both to a mailbox on
+animalfarm.cc before the old domain is cancelled. Once it's gone, take its
+nginx site away and delete its certificate, or Certbot keeps failing to renew
+it:
+
+```bash
+sudo rm /etc/nginx/sites-enabled/revenueguard.co.za /etc/nginx/sites-available/revenueguard.co.za
+sudo nginx -t && sudo systemctl reload nginx
+sudo certbot delete --cert-name revenueguard.co.za
+```
 
 Sessions belong to one address, so everyone had to sign in again once after
 the move.

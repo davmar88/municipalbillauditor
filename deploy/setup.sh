@@ -26,8 +26,12 @@ BRANCH="${BRANCH:-main}"
 APP_DIR="/var/www/revenueguard"
 APP_USER="revenueguard"
 DOMAIN="animalfarm.cc"
+# nginx's site file. It sorts after cableelite.co.za, so Cable Elite stays the
+# site nginx falls back on for an address it doesn't know.
+SITE="revenueguard"
 # The mailbox stayed on the site's first address when it moved to
-# animalfarm.cc. That address now only forwards to the new one.
+# animalfarm.cc. That address only forwards to the new one now, and is being
+# cancelled: move the mailbox first.
 MAIL_DOMAIN="revenueguard.co.za"
 MAILBOX="info@${MAIL_DOMAIN}"    # the Xneelo mailbox the site sends from
 DB_NAME="revenueguard"
@@ -252,7 +256,7 @@ phase_finish() {
     artisan view:cache
 
     log "nginx site"
-    local site="/etc/nginx/sites-available/${DOMAIN}" enabled="/etc/nginx/sites-enabled/${DOMAIN}"
+    local site="/etc/nginx/sites-available/${SITE}" enabled="/etc/nginx/sites-enabled/${SITE}"
     if sudo grep -qs 'managed by Certbot' "$site"; then
         # Certbot has added HTTPS to the installed copy. Installing ours over
         # it would put the site back on plain HTTP.
