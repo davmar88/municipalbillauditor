@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Game\Bases;
 use App\Game\ValleyBuilder;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
@@ -92,7 +93,12 @@ class Region extends Model
 
         $farm = ValleyBuilder::FIELD_OF[$this->key] ?? null;
 
-        return $farm !== null && self::query()->where('valley_id', $this->valley_id)->where('key', $farm)->whereNotNull('trench')->exists();
+        if ($farm !== null && self::query()->where('valley_id', $this->valley_id)->where('key', $farm)->whereNotNull('trench')->exists()) {
+            return true;
+        }
+
+        // A faction's Well keeps its farm watered too.
+        return $this->isFarm() && Bases::wellWaters($this);
     }
 
     /** One of the farms beyond Hollowmere's fences. */

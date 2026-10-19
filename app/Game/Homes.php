@@ -32,6 +32,15 @@ final class Homes
         3 => ['name' => 'Fort', 'corn' => 300, 'materials' => ['stone' => 40, 'wood' => 25, 'iron' => 4], 'minutes' => 180],
     ];
 
+    /** The looks a home can have on the 3D map besides a village house, by name. */
+    public const STYLES = [
+        'barn' => 'Barn house',
+        'coop' => 'Coop',
+        'silo' => 'Silo house',
+        'windmill' => 'Windmill',
+        'water_tower' => 'Water tower',
+    ];
+
     /** How close an animal must stand to its home to go in or work on it, in paces. */
     public const DOOR = 40;
 
@@ -220,6 +229,24 @@ final class Homes
                     Notices::send($player->id, 'home', "🏕 You couldn't set up camp: {$e->getMessage()}", route('play', [], false));
                 }
             });
+    }
+
+    /**
+     * Pick how your home looks on the 3D map: a village house (null) or one
+     * of the farm buildings. Free, and changed any time.
+     *
+     * @throws GameException
+     */
+    public function style(Player $player, ?string $style): Home
+    {
+        if ($style !== null && ! isset(self::STYLES[$style])) {
+            throw new GameException('Pick one of the looks on offer.');
+        }
+
+        $home = self::of($player) ?? throw new GameException("You haven't got a home yet.");
+        $home->forceFill(['style' => $style])->save();
+
+        return $home;
     }
 
     /**

@@ -136,7 +136,11 @@ export type BuildingKindValue =
     | 'drill_yard'
     | 'storehouse'
     | 'workshop'
-    | 'head_office';
+    | 'head_office'
+    | 'mill'
+    | 'well'
+    | 'coop'
+    | 'silo';
 
 /** What a building costs and does at each level. */
 export type BuildingKindCard = {
@@ -414,6 +418,8 @@ export type MapHome = {
     /** While a level goes up. */
     readyAt: string | null;
     skin: { name: string; colours: string[]; pattern: string } | null;
+    /** How it looks on the 3D map: null for a village house, or a farm building. */
+    style: string | null;
     mine: boolean;
     /** A faction mate's home going up that you could lend a hand on. */
     helpable: boolean;
@@ -431,5 +437,7 @@ export type HomeInfo = {
     }[];
     /** How close you must stand to go in or build on, in paces. */
     door: number;
+    /** The farm-building looks a home can take on the 3D map, by name. */
+    styles: Record<string, string>;
     skins: { id: number; name: string; colours: string[]; pattern: string }[];
 };

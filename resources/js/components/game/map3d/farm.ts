@@ -24,6 +24,15 @@ export const FARM_MODELS = [
 
 export type FarmModel = (typeof FARM_MODELS)[number];
 
+/** The farm buildings a home can look like, by the style its owner picked. */
+export const HOME_STYLE: Record<string, FarmModel> = {
+    barn: 'SmallBarn',
+    coop: 'ChickenCoop',
+    silo: 'Silo_House',
+    windmill: 'Windmill',
+    water_tower: 'WaterTower',
+};
+
 /** Which building stands for each kind a faction can raise. */
 export const FOR_KIND: Record<BuildingKindValue, FarmModel> = {
     den: 'SmallBarn',
@@ -32,6 +41,10 @@ export const FOR_KIND: Record<BuildingKindValue, FarmModel> = {
     storehouse: 'Silo_House',
     workshop: 'Barn',
     head_office: 'BigBarn',
+    mill: 'Windmill',
+    well: 'Well',
+    coop: 'ChickenCoop',
+    silo: 'Silo',
 };
 
 let loading: Promise<void> | null = null;

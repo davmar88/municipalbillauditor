@@ -277,4 +277,17 @@ class FarmsTest extends TestCase
         $this->assertSame(1, $hut->level);
         $this->assertSame('Hut', Homes::name($hut->level));
     }
+
+    public function test_an_animal_chooses_how_its_home_looks(): void
+    {
+        $player = $this->player(attributes: ['corn' => 500, 'materials' => ['wood' => 30, 'straw' => 30]]);
+        $this->stand($player, 'old_well');
+        app(Homes::class)->build($player->fresh());
+
+        $this->assertSame('windmill', app(Homes::class)->style($player->fresh(), 'windmill')->style);
+        $this->assertNull(app(Homes::class)->style($player->fresh(), null)->style, 'Back to a village house.');
+
+        $this->expectExceptionMessage('looks on offer');
+        app(Homes::class)->style($player->fresh(), 'palace');
+    }
 }

@@ -63,6 +63,7 @@ final class Tick
             $this->battles->upkeep($season);
             $this->payNightWatch($season);
             $this->farms->payIncome($season);
+            $this->bases->layEggs($season);
         }
 
         $this->handOutRations($season->fresh());

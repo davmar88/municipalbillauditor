@@ -146,7 +146,7 @@ class MapController extends Controller
                         ];
                     })()
                     : null,
-                'irrigated' => $region->isFarm() && ! $region->wild && ($region->trench !== null || $regions->contains(fn (Region $farm) => $farm->trench !== null && $farm->key === (ValleyBuilder::FIELD_OF[$region->key] ?? null))),
+                'irrigated' => $region->isFarm() && ! $region->wild && ($region->trench !== null || $regions->contains(fn (Region $farm) => $farm->trench !== null && $farm->key === (ValleyBuilder::FIELD_OF[$region->key] ?? null)) || Bases::wellWaters($region)),
                 'gatedUntil' => Powers::gatedUntil($region)?->toIso8601String(),
                 'partOf' => isset(ValleyBuilder::FIELD_OF[$region->key]) ? $regions->firstWhere('key', ValleyBuilder::FIELD_OF[$region->key])?->name : null,
                 'growth' => Farms::fieldKeys($region->key) === [] ? null : (function () use ($region) {
@@ -268,6 +268,7 @@ class MapController extends Controller
                     'name' => Homes::name($home->level),
                     'readyAt' => $home->building() ? $home->ready_at->toIso8601String() : null,
                     'skin' => Homes::skin($home),
+                    'style' => $home->style,
                     'mine' => $home->player_id === $player->id,
                     // A faction mate's home going up that you could lend a hand on.
                     'helpable' => $home->player_id !== $player->id && $player->faction_id !== null && $home->owner->faction_id === $player->faction_id && $home->building()
@@ -278,6 +279,7 @@ class MapController extends Controller
                 // The levels so far and the next one: homes grow without end.
                 'levels' => collect(range(0, max(3, (int) (Homes::of($player)?->level ?? 0) + 1)))->map(fn (int $n) => ['level' => $n, ...Homes::level($n)])->values(),
                 'door' => Homes::DOOR,
+                'styles' => Homes::STYLES,
                 'skins' => $player->items()->with('design')->whereDoesntHave('openListing')->get()
                     ->filter(fn ($item) => $item->design->template === ItemTemplate::Skin)
                     ->map(fn ($item) => ['id' => $item->id, 'name' => $item->design->name, 'colours' => $item->design->colours, 'pattern' => $item->design->pattern])

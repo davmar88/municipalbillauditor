@@ -3,7 +3,15 @@ import { Home as HomeIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { act, capitalise, clockTime } from '@/lib/game';
 import type { Point } from '@/lib/hollowmere';
-import { build, enter, help, leave, skin, upgrade } from '@/routes/play/home';
+import {
+    build,
+    enter,
+    help,
+    leave,
+    skin,
+    style,
+    upgrade,
+} from '@/routes/play/home';
 import type { HomeInfo, MapHome, MapMe } from '@/types/game';
 
 function cost(level: HomeInfo['levels'][number]): string {
@@ -195,6 +203,33 @@ export function HomeCard({
                             </span>
                         )}
                     </label>
+                    {home.level > 0 && (
+                        <label className="flex flex-wrap items-center gap-2 text-xs">
+                            <span className="font-semibold">Look</span>
+                            <select
+                                value={home.style ?? ''}
+                                onChange={(event) =>
+                                    act(style.url(), {
+                                        style: event.target.value || null,
+                                    })
+                                }
+                                className="rounded-md border bg-background px-2 py-1"
+                            >
+                                <option value="">Village house</option>
+                                {Object.entries(info.styles).map(
+                                    ([value, label]) => (
+                                        <option key={value} value={value}>
+                                            {label}
+                                        </option>
+                                    ),
+                                )}
+                            </select>
+                            <span className="text-muted-foreground">
+                                How it looks on the 3D map. Its level still
+                                decides how strong it is.
+                            </span>
+                        </label>
+                    )}
                 </>
             )}
             {homes.some((h) => h.helpable) && (

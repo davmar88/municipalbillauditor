@@ -68,7 +68,8 @@ final class Gathering
                 default => self::MATERIAL,
             };
             $own = $player->faction_id !== null && $region->faction_id === $player->faction_id;
-            $workshop = $region->produces === 'corn' ? 1.0 : Bases::gathering($player, $region);
+            // A Workshop brings in more materials, a Mill more Corn.
+            $workshop = $region->produces === 'corn' ? Bases::milling($player, $region) : Bases::gathering($player, $region);
             // The further from the farms, the less an animal brings in.
             [$x, $y] = Movement::position($player);
             $rich = Geography::richness($x, $y);

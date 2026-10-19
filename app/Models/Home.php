@@ -16,13 +16,14 @@ use Illuminate\Support\Carbon;
  * @property float $x
  * @property float $y
  * @property int $level
+ * @property string|null $style How it looks on the 3D map: null for a village house, or a farm building.
  * @property Carbon|null $ready_at While a level goes up.
  * @property int|null $skin_item_id
  * @property Player $owner
  * @property Region $region
  * @property Item|null $skin
  */
-#[Fillable(['player_id', 'region_id', 'x', 'y', 'level', 'ready_at'])]
+#[Fillable(['player_id', 'region_id', 'x', 'y', 'level', 'ready_at', 'style'])]
 class Home extends Model
 {
     protected function casts(): array

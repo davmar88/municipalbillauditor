@@ -490,9 +490,11 @@ export function RegionPanel({
                                 <p>
                                     💧{' '}
                                     {region.trench
-                                        ? `A trench runs water here from ${region.trench.from}.`
-                                        : 'The trench to its farm waters it too.'}{' '}
-                                    It never runs dry while the trench holds.
+                                        ? `A trench runs water here from ${region.trench.from}. It never runs dry while the trench holds.`
+                                        : region.building?.kind === 'well' ||
+                                            !region.partOf
+                                          ? 'A Well keeps it watered. It never runs dry while the Well stands.'
+                                          : 'The trench to its farm waters it too. It never runs dry while the trench holds.'}
                                 </p>
                                 {region.trench &&
                                     (holds(region) ? (

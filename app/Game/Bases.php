@@ -8,6 +8,7 @@ use App\Models\BuildingHelp;
 use App\Models\Faction;
 use App\Models\Player;
 use App\Models\Region;
+use App\Models\Season;
 use App\Models\Valley;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
@@ -411,6 +412,55 @@ final class Bases
             ->first();
 
         return 1 + ($workshop?->bonus() ?? 0.0);
+    }
+
+    /** How much more Corn an animal gathers where its faction has a Mill. */
+    public static function milling(Player $player, Region $region): float
+    {
+        if ($player->faction_id === null || $region->faction_id !== $player->faction_id) {
+            return 1.0;
+        }
+
+        $mill = Building::query()
+            ->where('region_id', $region->id)
+            ->where('faction_id', $player->faction_id)
+            ->where('kind', BuildingKind::Mill)
+            ->first();
+
+        return 1 + ($mill?->bonus() ?? 0.0);
+    }
+
+    /** Whether a Well keeps a farm watered: one standing on it, or a deeper one on its holders' land next door. */
+    public static function wellWaters(Region $farm): bool
+    {
+        $wells = Building::query()
+            ->where('kind', BuildingKind::Well)
+            ->where(fn ($query) => $query
+                ->where('region_id', $farm->id)
+                ->orWhere(fn ($next) => $next
+                    ->where('faction_id', $farm->faction_id)
+                    ->whereIn('region_id', $farm->neighbours()->pluck('regions.id'))
+                    ->where('level', '>=', 2)))
+            ->get();
+
+        return $wells->contains(fn (Building $well) => $well->region_id === $farm->id ? $well->workingLevel() >= 1 : $well->workingLevel() >= 2);
+    }
+
+    /** Every standing Coop lays its eggs into its faction's store. */
+    public function layEggs(Season $season): void
+    {
+        Building::query()
+            ->where('kind', BuildingKind::Coop)
+            ->whereHas('region', fn ($query) => $query->where('valley_id', $season->valley_id))
+            ->get()
+            ->each(function (Building $coop) {
+                $eggs = $coop->kind->eggs($coop->workingLevel());
+                $faction = Faction::query()->find($coop->faction_id);
+
+                if ($eggs > 0 && $faction !== null) {
+                    Stores::add($faction, 0, ['eggs' => $eggs]);
+                }
+            });
     }
 
     /** How many members a faction can have: more with a bigger Den. */

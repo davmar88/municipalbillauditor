@@ -48,7 +48,13 @@ import { person as makePerson } from './folk';
 import { landmarks, orchardTrees } from './landmarks';
 import { loadVillage, villageHome } from './village';
 import type { FarmModel } from './farm';
-import { FOR_KIND, farmBuilding, farmReady, loadFarm } from './farm';
+import {
+    FOR_KIND,
+    HOME_STYLE,
+    farmBuilding,
+    farmReady,
+    loadFarm,
+} from './farm';
 import type { Actor } from './models';
 import { makeActor } from './models';
 
@@ -1280,8 +1286,13 @@ export class World {
             }
             const colour = region.faction?.colour ?? '#8a8399';
             // A farm building in the faction's colour, once the pack has loaded.
+            // A Mill grows into a tower windmill at its top level.
+            const model =
+                b.kind === 'mill' && b.level >= 3
+                    ? 'TowerWindmill'
+                    : FOR_KIND[b.kind];
             const group =
-                farmBuilding(FOR_KIND[b.kind], colour, b.readyAt !== null) ??
+                farmBuilding(model, colour, b.readyAt !== null) ??
                 buildingModel(b.kind, colour, b.readyAt !== null);
             const at = plot(region.key);
             const badge = div(
@@ -1324,6 +1335,7 @@ export class World {
                 if (!this.disposed && this.data) {
                     this.buildFarmyards();
                     this.buildBuildings();
+                    this.buildHomes();
                 }
             })
             .catch((error: unknown) => {
@@ -1754,13 +1766,32 @@ export class World {
         const data = this.data as WorldData;
         this.clearGroup(this.dwellings);
         this.homeModels = data.homes.map((home) => {
-            const built = villageHome(home);
+            // The farm building its owner picked, or a village house for its level.
+            let styled: THREE.Group | null = null;
+            const look = home.style ? HOME_STYLE[home.style] : undefined;
+            if (look && home.level > 0) {
+                const model = farmBuilding(
+                    look,
+                    home.skin?.colours[0] ?? null,
+                    home.readyAt !== null,
+                );
+                if (model) {
+                    // Bigger as it's raised; the map scales the holder.
+                    model.scale.setScalar(0.7 + Math.min(home.level, 6) * 0.15);
+                    styled = new THREE.Group();
+                    styled.add(model);
+                }
+            }
+            const built = styled ?? villageHome(home);
             const group = built ? withRing(built, home) : homeModel(home);
             group.position.set(home.x, 0, home.y);
             this.dwellings.add(group);
             return { group, level: home.level };
         });
         this.placeHomes();
+        if (data.homes.some((home) => home.style)) {
+            this.askFarm();
+        }
         if (!this.villageAsked && data.homes.some((home) => home.level > 0)) {
             this.villageAsked = true;
             loadVillage()

@@ -16,6 +16,10 @@ enum BuildingKind: string
     case Storehouse = 'storehouse';
     case Workshop = 'workshop';
     case HeadOffice = 'head_office';
+    case Mill = 'mill';
+    case Well = 'well';
+    case Coop = 'coop';
+    case Silo = 'silo';
 
     public const MAX_LEVEL = 3;
 
@@ -28,6 +32,10 @@ enum BuildingKind: string
             self::Storehouse => 'Storehouse',
             self::Workshop => 'Workshop',
             self::HeadOffice => 'Head Office',
+            self::Mill => 'Mill',
+            self::Well => 'Well',
+            self::Coop => 'Coop',
+            self::Silo => 'Silo',
         };
     }
 
@@ -49,6 +57,12 @@ enum BuildingKind: string
             self::Storehouse => 'Looters get away with '.(int) round($this->lootShare($level) * 100).'% of the treasury instead of 10%.',
             self::Workshop => "Members gather {$percent} more materials here.",
             self::HeadOffice => "Your faction rules Hollowmere from here once it stands. Defends the Farmhouse {$percent} harder.",
+            self::Mill => "Members gather {$percent} more Corn here.",
+            self::Well => $level >= 2
+                ? "Keeps this region's farm and your farms next door watered."
+                : "Keeps this region's farm watered.",
+            self::Coop => "Lays {$this->eggs($level)} eggs into the store every half hour.",
+            self::Silo => "Holds the faction's Corn.",
         };
     }
 
@@ -68,7 +82,15 @@ enum BuildingKind: string
             self::Storehouse => 0.1 - $this->lootShare($level),
             self::Workshop => [0.25, 0.5, 0.75][$level - 1],
             self::HeadOffice => [0.2, 0.35, 0.5][$level - 1],
+            self::Mill => [0.25, 0.5, 0.75][$level - 1],
+            self::Well, self::Coop, self::Silo => 0.0,
         };
+    }
+
+    /** The eggs a Coop lays into the store every half hour. */
+    public function eggs(int $level): int
+    {
+        return $this === self::Coop && $level >= 1 ? [4, 8, 15][min($level, self::MAX_LEVEL) - 1] : 0;
     }
 
     /**
@@ -89,6 +111,7 @@ enum BuildingKind: string
             self::Den => [[500, 150], [1000, 300], [2000, 600]][$level - 1],
             self::Storehouse => [[1000, 300], [2000, 600], [4000, 1200]][$level - 1],
             self::HeadOffice => [[800, 250], [1500, 450], [2500, 750]][$level - 1],
+            self::Silo => [[1500, 50], [3000, 50], [6000, 50]][$level - 1],
             default => [150, 50],
         };
 
@@ -139,6 +162,26 @@ enum BuildingKind: string
                 [300, ['wood' => 40, 'stone' => 40, 'clay' => 20]],
                 [500, ['stone' => 60, 'clay' => 40, 'wool' => 20]],
                 [800, ['stone' => 90, 'wood' => 60, 'dye' => 30]],
+            ],
+            self::Mill => [
+                [60, ['wood' => 20, 'stone' => 10]],
+                [140, ['wood' => 30, 'stone' => 20]],
+                [260, ['wood' => 40, 'stone' => 40, 'iron' => 3]],
+            ],
+            self::Well => [
+                [40, ['stone' => 20]],
+                [100, ['stone' => 30, 'clay' => 15]],
+                [180, ['stone' => 40, 'clay' => 25, 'iron' => 2]],
+            ],
+            self::Coop => [
+                [40, ['wood' => 15, 'straw' => 15]],
+                [90, ['wood' => 20, 'straw' => 25]],
+                [180, ['wood' => 30, 'straw' => 30, 'clay' => 15]],
+            ],
+            self::Silo => [
+                [60, ['wood' => 20, 'clay' => 10]],
+                [150, ['wood' => 30, 'clay' => 25, 'stone' => 15]],
+                [300, ['stone' => 40, 'clay' => 40, 'iron' => 3]],
             ],
         };
 

@@ -398,6 +398,37 @@ class BasesTest extends TestCase
         $this->assertSame(9, $sheep->fresh()->material('wool'), '5 wool, half again on your own land, a quarter more from the Workshop.');
     }
 
+    public function test_a_mill_well_coop_and_silo_each_do_their_job(): void
+    {
+        $leader = $this->player();
+        $faction = $this->stock($this->faction('Millers', $leader));
+        $this->hold($faction, 'ironfield_gate', 'thornbury', 'ashcombe', 'old_well');
+
+        // A Mill: more Corn gathered where it stands.
+        $this->raise($faction, 'ironfield_gate', BuildingKind::Mill);
+        $this->assertSame(1.25, Bases::milling($leader->fresh(), $this->region('ironfield_gate')));
+
+        // A Well: its farm never runs dry, and a deeper one waters the farms next door.
+        $this->region('thornbury')->forceFill(['watered_until' => now()->subDay()])->save();
+        $this->region('ashcombe')->forceFill(['watered_until' => now()->subDay()])->save();
+        $well = $this->raise($faction, 'thornbury', BuildingKind::Well);
+        $this->assertFalse($this->region('thornbury')->isParched());
+        $this->assertTrue($this->region('ashcombe')->isParched());
+        $well->forceFill(['level' => 2])->save();
+        $this->assertFalse($this->region('ashcombe')->fresh()->isParched());
+
+        // A Coop: eggs into the store every half hour.
+        $eggs = $faction->fresh()->material('eggs');
+        $this->raise($faction, 'ashcombe', BuildingKind::Coop, 2);
+        $this->bases->layEggs($this->season());
+        $this->assertSame($eggs + 8, $faction->fresh()->material('eggs'));
+
+        // A Silo: room for a lot more Corn.
+        $before = Stores::capacity($faction->fresh())['corn'];
+        $this->raise($faction, 'old_well', BuildingKind::Silo);
+        $this->assertSame($before + 1500, Stores::capacity($faction->fresh())['corn']);
+    }
+
     public function test_buildings_fall_with_land_lost_any_other_way(): void
     {
         $faction = $this->faction('Unlucky', $this->player());
@@ -437,7 +468,7 @@ class BasesTest extends TestCase
             ->where('regions.11.building', null)
             ->where('base.canBuild', true)
             ->where('base.hasDen', true)
-            ->has('buildingKinds', 6));
+            ->has('buildingKinds', 10));
 
         $this->actingAs($leader->user)->get(route('play.faction'))->assertInertia(fn (Assert $page) => $page
             ->has('faction.base.buildings', 1)

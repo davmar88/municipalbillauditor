@@ -58,6 +58,14 @@ class HomeController extends Controller
         return $this->told('You stepped outside.');
     }
 
+    public function style(Request $request, Homes $homes): RedirectResponse
+    {
+        $data = $request->validate(['style' => ['nullable', 'string', 'max:20']]);
+        $home = $homes->style($request->user()->player, $data['style'] ?? null);
+
+        return $this->told('Your home is now a '.($home->style ? Homes::STYLES[$home->style] : 'village house').' on the 3D map.');
+    }
+
     public function skin(Request $request, Homes $homes): RedirectResponse
     {
         $data = $request->validate(['item' => ['nullable', 'integer']]);
