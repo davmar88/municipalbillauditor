@@ -196,6 +196,21 @@
         @apply bg-background text-foreground;
     }
 
+    /* Every dropdown's open list, groups included, in the theme's colours: the dark theme asks the browser for its dark list. */
+    .dark select {
+        color-scheme: dark;
+    }
+
+    select option,
+    select optgroup {
+        background-color: var(--popover);
+        color: var(--popover-foreground);
+    }
+
+    select optgroup {
+        font-weight: 700;
+    }
+
     /* Money, readings and reference numbers line up in columns. */
     .figures {
         font-family: var(--font-mono);
