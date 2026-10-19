@@ -4,6 +4,7 @@ import { useState } from 'react';
 import type { ReactNode } from 'react';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
+import { WhyNot } from '@/components/game/why-not';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -226,6 +227,14 @@ function Request({ cashout }: { cashout: CashOutInfo }) {
                 >
                     Cash out
                 </Button>
+                <WhyNot
+                    reason={
+                        !valid &&
+                        (apples < cashout.min
+                            ? `Cash out at least ${cashout.min.toLocaleString('en-ZA')} Apples.`
+                            : `You can cash out up to ${cashout.available.toLocaleString('en-ZA')} Apples.`)
+                    }
+                />
             </div>
             {whole && apples < cashout.min && (
                 <p className="text-xs text-muted-foreground">

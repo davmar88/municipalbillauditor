@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { GameBar } from '@/components/game/game-bar';
 import { ProfileLink } from '@/components/game/profile-link';
 import { Button } from '@/components/ui/button';
+import { WhyNot } from '@/components/game/why-not';
 import { Input } from '@/components/ui/input';
 import { act, clockTime, fromNow, speciesEmoji } from '@/lib/game';
 import { openChat } from '@/lib/pulse';
@@ -364,6 +365,15 @@ function Suspects({
                                             <Crosshair className="size-4" /> Put
                                             out a warrant
                                         </Button>
+                                        <WhyNot
+                                            reason={
+                                                bounty < rules.minBounty
+                                                    ? `A bounty is at least ${rules.minBounty} Apples.`
+                                                    : bounty > house.apples
+                                                      ? `The House has only ${house.apples} Apples to put up.`
+                                                      : null
+                                            }
+                                        />
                                     </span>
                                 )}
                             </li>

@@ -10,6 +10,7 @@ import { MapHud } from '@/components/game/map-hud';
 import { RegionPanel } from '@/components/game/region-panel';
 import type { Plunder, Warrant } from '@/components/game/region-panel';
 import { Button } from '@/components/ui/button';
+import { WhyNot, needHorseshoes } from '@/components/game/why-not';
 import { act, clockTime, fromNow } from '@/lib/game';
 import {
     commit,
@@ -463,6 +464,7 @@ function GateResult({
 
 /** Out in the scrub between the regions: anyone gathers and camps here, but the further out, the less there is. */
 function ScrubCard({ scrub }: { scrub: NonNullable<Props['scrub']> }) {
+    const { player } = usePage().props;
     // The scrub never runs out; a stock, if any, would show what's left.
     const left = scrub.stock ? scrub.stock.left : Infinity;
 
@@ -484,6 +486,7 @@ function ScrubCard({ scrub }: { scrub: NonNullable<Props['scrub']> }) {
                 >
                     Gather {scrub.produces}
                 </Button>
+                <WhyNot reason={needHorseshoes(player?.horseshoes ?? 0, 1)} />
                 {scrub.stock && (
                     <span className="text-xs text-muted-foreground">
                         {scrub.stock.left} of {scrub.stock.max} left in the

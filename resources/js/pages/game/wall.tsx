@@ -3,6 +3,7 @@ import { Eye, Megaphone, PartyPopper, ScrollText } from 'lucide-react';
 import { useState } from 'react';
 import { GameBar } from '@/components/game/game-bar';
 import { Button } from '@/components/ui/button';
+import { WhyNot } from '@/components/game/why-not';
 import { Input } from '@/components/ui/input';
 import { NativeSelect } from '@/components/ui/native-select';
 import { act, clockTime, fromNow } from '@/lib/game';
@@ -202,6 +203,12 @@ export default function WallPage(props: Props) {
                         >
                             <ScrollText className="size-4" /> Remember the Wall
                         </Button>
+                        <WhyNot
+                            reason={
+                                !props.canRemember &&
+                                "You've already remembered the Wall today. You can again tomorrow."
+                            }
+                        />
                         {copy && (
                             <Button
                                 variant="ghost"
@@ -511,6 +518,12 @@ function HouseControls({
                 >
                     Paint it on the Wall
                 </Button>
+                <WhyNot
+                    reason={
+                        changesLeft === 0 &&
+                        'The House has used all its law changes for today. More come tomorrow.'
+                    }
+                />
                 {laws.find((law) => law.slot === slot)?.template && (
                     <Button
                         variant="ghost"
@@ -530,6 +543,12 @@ function HouseControls({
                     <PartyPopper className="size-4" /> Hold a festival (500
                     Corn)
                 </Button>
+                <WhyNot
+                    reason={
+                        !festivalReady &&
+                        'A festival can only be held once every 3 days. The last one was too recent.'
+                    }
+                />
             </div>
 
             {isLeader && (

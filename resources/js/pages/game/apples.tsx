@@ -3,6 +3,7 @@ import { Banknote, Clock3, RefreshCw, Wheat } from 'lucide-react';
 import { useState } from 'react';
 import { GameBar } from '@/components/game/game-bar';
 import { Button } from '@/components/ui/button';
+import { WhyNot } from '@/components/game/why-not';
 import { Input } from '@/components/ui/input';
 import { act, dayMonth, dollars, shortWhen } from '@/lib/game';
 import { cashout } from '@/routes/play';
@@ -350,15 +351,33 @@ function Orchard({ orchard }: { orchard: Props['orchard'] }) {
                           ? `Add ${orchard.days} days for ${orchard.price} Apples`
                           : `Join for ${orchard.price} Apples`}
                 </Button>
+                <WhyNot
+                    reason={
+                        short > 0 &&
+                        `You need ${short} more Apples. Swap Pineapples for a pack of Apples above, or harvest your apple trees.`
+                    }
+                />
                 {orchard.refillReady ? (
-                    <Button
-                        variant="secondary"
-                        disabled={full}
-                        title={full ? 'Your horseshoes are full' : undefined}
-                        onClick={() => act(refill.url())}
-                    >
-                        {full ? 'Horseshoes full' : "Take today's free refill"}
-                    </Button>
+                    <>
+                        <Button
+                            variant="secondary"
+                            disabled={full}
+                            title={
+                                full ? 'Your horseshoes are full' : undefined
+                            }
+                            onClick={() => act(refill.url())}
+                        >
+                            {full
+                                ? 'Horseshoes full'
+                                : "Take today's free refill"}
+                        </Button>
+                        <WhyNot
+                            reason={
+                                full &&
+                                'Your horseshoes are already full. Take the refill once you have used some.'
+                            }
+                        />
+                    </>
                 ) : (
                     orchard.until && (
                         <span className="text-sm text-muted-foreground">
@@ -412,6 +431,12 @@ function Swap({ cornPerApple }: { cornPerApple: number }) {
                 >
                     Swap
                 </Button>
+                <WhyNot
+                    reason={
+                        !valid &&
+                        'Type how many Apples to swap: a whole number, 1 or more.'
+                    }
+                />
             </div>
         </section>
     );
@@ -469,6 +494,12 @@ function ApplePacks({
                                 ? `Needs ${(pack.pineapples - pineapples).toLocaleString('en-ZA')} more Pineapples`
                                 : 'Swap for these Apples'}
                         </Button>
+                        <WhyNot
+                            reason={
+                                pineapples < pack.pineapples &&
+                                `You need ${pack.pineapples - pineapples} more Pineapples for this pack. Buy Pineapples above.`
+                            }
+                        />
                     </li>
                 ))}
             </ul>
@@ -553,6 +584,15 @@ function AppleTrees({
                     Plant a tree ({trees.price.toLocaleString('en-ZA')}{' '}
                     Pineapples)
                 </Button>
+                <WhyNot
+                    reason={
+                        !room
+                            ? `You have all ${trees.most} apple trees you can plant. Harvest them as they grow.`
+                            : pineapples < trees.price
+                              ? `A tree costs ${trees.price.toLocaleString('en-ZA')} Pineapples. You have ${pineapples.toLocaleString('en-ZA')}.`
+                              : null
+                    }
+                />
                 <span className="text-xs text-muted-foreground">
                     {room
                         ? `${trees.trees.length} of ${trees.most} trees growing.`

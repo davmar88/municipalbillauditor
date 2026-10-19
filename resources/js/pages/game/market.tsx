@@ -11,6 +11,7 @@ import {
     PowerLine,
 } from '@/components/game/shop-listing';
 import { Button } from '@/components/ui/button';
+import { WhyNot, needCorn } from '@/components/game/why-not';
 import { Input } from '@/components/ui/input';
 import { NativeSelect } from '@/components/ui/native-select';
 import { act, capitalise, money } from '@/lib/game';
@@ -200,6 +201,13 @@ function TraderCart({ trader }: { trader: Props['trader'] }) {
                         >
                             Buy for {good.price} Corn
                         </Button>
+                        <WhyNot
+                            reason={
+                                trader.left < 1
+                                    ? "You've bought your 3 from Pell today. Come back tomorrow."
+                                    : needCorn(corn, good.price)
+                            }
+                        />
                     </li>
                 ))}
             </ul>

@@ -9,6 +9,7 @@ import {
 import type { LucideIcon } from 'lucide-react';
 import { CostList, duration, shortOf } from '@/components/game/faction-base';
 import { Button } from '@/components/ui/button';
+import { WhyNot, storeShort } from '@/components/game/why-not';
 import { act, clockTime } from '@/lib/game';
 import { cn } from '@/lib/utils';
 import { study as startStudy } from '@/routes/play';
@@ -106,21 +107,32 @@ export function FactionStudyList({
                                     </p>
                                     <CostList cost={card.next} store={store} />
                                     {studies.canStudy && (
-                                        <Button
-                                            size="sm"
-                                            variant="secondary"
-                                            className="self-start"
-                                            disabled={busy || short.length > 0}
-                                            onClick={() =>
-                                                act(startStudy.url(), {
-                                                    study: card.value,
-                                                })
-                                            }
-                                        >
-                                            {underWay
-                                                ? 'Studying now'
-                                                : `Study level ${card.next.level}`}
-                                        </Button>
+                                        <>
+                                            <Button
+                                                size="sm"
+                                                variant="secondary"
+                                                className="self-start"
+                                                disabled={
+                                                    busy || short.length > 0
+                                                }
+                                                onClick={() =>
+                                                    act(startStudy.url(), {
+                                                        study: card.value,
+                                                    })
+                                                }
+                                            >
+                                                {underWay
+                                                    ? 'Studying now'
+                                                    : `Study level ${card.next.level}`}
+                                            </Button>
+                                            <WhyNot
+                                                reason={
+                                                    busy && !underWay
+                                                        ? 'Your faction studies one thing at a time. Wait for the study under way to finish.'
+                                                        : storeShort(short)
+                                                }
+                                            />
+                                        </>
                                     )}
                                 </div>
                             )}

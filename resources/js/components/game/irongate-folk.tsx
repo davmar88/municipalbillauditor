@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { besidePoint, useEscape } from '@/components/game/animal-menu';
 import type { Warrant } from '@/components/game/region-panel';
 import { Button } from '@/components/ui/button';
+import { WhyNot } from '@/components/game/why-not';
 import { act, capitalise } from '@/lib/game';
 import type { Point } from '@/lib/hollowmere';
 import { chat } from '@/routes/play';
@@ -249,6 +250,15 @@ function Fence({
                         Sell for {Math.min(amount * price, irongate.fence.left)}{' '}
                         Corn
                     </Button>
+                    <WhyNot
+                        reason={
+                            !ready
+                                ? 'Walk to the Iron Yards first: Ma Vetch only deals face to face.'
+                                : irongate.fence.left < price
+                                  ? "Ma Vetch has bought all she'll pay for today. Come back tomorrow."
+                                  : null
+                        }
+                    />
                 </div>
             )}
         </div>
@@ -294,6 +304,12 @@ function Tips({
                         >
                             Ask Wick
                         </Button>
+                        <WhyNot
+                            reason={
+                                !ready &&
+                                'Walk to the Iron Yards first: Wick only whispers face to face.'
+                            }
+                        />
                     </li>
                 ))}
             </ul>

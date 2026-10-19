@@ -23,6 +23,7 @@ import {
 } from '@/components/game/faction-base';
 import { useEscape } from '@/components/game/animal-menu';
 import { Horseshoe } from '@/components/game/game-bar';
+import { WhyNot, needHorseshoes, storeShort } from '@/components/game/why-not';
 import { HorseshoePicker } from '@/components/game/horseshoe-picker';
 import { ProfileLink } from '@/components/game/profile-link';
 import { Button } from '@/components/ui/button';
@@ -449,6 +450,13 @@ export function RegionPanel({
                                         <Horseshoe className="size-4" />1
                                     </span>
                                 </Button>
+                                <WhyNot
+                                    reason={
+                                        needHorseshoes(horseshoesLeft, 1) ||
+                                        (region.stock?.left === 0 &&
+                                            `${region.name} is picked clean. More grows back${region.stock.nextAt ? ` by ${clockTime(region.stock.nextAt)}` : ' soon'}; try another region meanwhile.`)
+                                    }
+                                />
                                 {horseshoesLeft < 1 && outOfHorseshoes}
                             </>
                         ) : (
@@ -508,19 +516,32 @@ export function RegionPanel({
                                         </p>
                                     ) : hereKey !== null &&
                                       region.trench.keys.includes(hereKey) ? (
-                                        <Button
-                                            size="sm"
-                                            variant="secondary"
-                                            className="self-start"
-                                            disabled={
-                                                horseshoesLeft < farms.fill
-                                            }
-                                            onClick={() =>
-                                                act(fillTrench.url(region.id))
-                                            }
-                                        >
-                                            Fill it in ({farms.fill} horseshoes)
-                                        </Button>
+                                        <>
+                                            <Button
+                                                size="sm"
+                                                variant="secondary"
+                                                className="self-start"
+                                                disabled={
+                                                    horseshoesLeft < farms.fill
+                                                }
+                                                onClick={() =>
+                                                    act(
+                                                        fillTrench.url(
+                                                            region.id,
+                                                        ),
+                                                    )
+                                                }
+                                            >
+                                                Fill it in ({farms.fill}{' '}
+                                                horseshoes)
+                                            </Button>
+                                            <WhyNot
+                                                reason={needHorseshoes(
+                                                    horseshoesLeft,
+                                                    farms.fill,
+                                                )}
+                                            />
+                                        </>
                                     ) : (
                                         <p className="text-xs text-muted-foreground">
                                             Rivals can fill it in for{' '}
@@ -541,27 +562,43 @@ export function RegionPanel({
                                     here can water it.
                                 </p>
                                 {isHere ? (
-                                    <Button
-                                        size="sm"
-                                        variant="secondary"
-                                        className="self-start"
-                                        disabled={
-                                            Number(
-                                                (
-                                                    (player?.materials ??
-                                                        {}) as Record<
-                                                        string,
-                                                        number
-                                                    >
-                                                ).water ?? 0,
-                                            ) < farms.water
-                                        }
-                                        onClick={() =>
-                                            act(waterFarm.url(region.id))
-                                        }
-                                    >
-                                        Water it ({farms.water} water)
-                                    </Button>
+                                    <>
+                                        <Button
+                                            size="sm"
+                                            variant="secondary"
+                                            className="self-start"
+                                            disabled={
+                                                Number(
+                                                    (
+                                                        (player?.materials ??
+                                                            {}) as Record<
+                                                            string,
+                                                            number
+                                                        >
+                                                    ).water ?? 0,
+                                                ) < farms.water
+                                            }
+                                            onClick={() =>
+                                                act(waterFarm.url(region.id))
+                                            }
+                                        >
+                                            Water it ({farms.water} water)
+                                        </Button>
+                                        <WhyNot
+                                            reason={
+                                                Number(
+                                                    (
+                                                        (player?.materials ??
+                                                            {}) as Record<
+                                                            string,
+                                                            number
+                                                        >
+                                                    ).water ?? 0,
+                                                ) < farms.water &&
+                                                `You need ${farms.water} water. Gather it at a pond, mere or spring, then come back.`
+                                            }
+                                        />
+                                    </>
                                 ) : (
                                     <p className="text-xs text-muted-foreground">
                                         Walk here with {farms.water} water to
@@ -597,26 +634,38 @@ export function RegionPanel({
                                                     store={base}
                                                 />
                                                 {isHere ? (
-                                                    <Button
-                                                        className="self-start"
-                                                        disabled={
-                                                            shortOf(
-                                                                region
-                                                                    .trenchPlan
-                                                                    .cost,
-                                                                base,
-                                                            ).length > 0
-                                                        }
-                                                        onClick={() =>
-                                                            act(
-                                                                digTrench.url(
-                                                                    region.id,
+                                                    <>
+                                                        <Button
+                                                            className="self-start"
+                                                            disabled={
+                                                                shortOf(
+                                                                    region
+                                                                        .trenchPlan
+                                                                        .cost,
+                                                                    base,
+                                                                ).length > 0
+                                                            }
+                                                            onClick={() =>
+                                                                act(
+                                                                    digTrench.url(
+                                                                        region.id,
+                                                                    ),
+                                                                )
+                                                            }
+                                                        >
+                                                            Dig the trench
+                                                        </Button>
+                                                        <WhyNot
+                                                            reason={storeShort(
+                                                                shortOf(
+                                                                    region
+                                                                        .trenchPlan
+                                                                        .cost,
+                                                                    base,
                                                                 ),
-                                                            )
-                                                        }
-                                                    >
-                                                        Dig the trench
-                                                    </Button>
+                                                            )}
+                                                        />
+                                                    </>
                                                 ) : (
                                                     <p className="text-xs text-muted-foreground">
                                                         Walk here to dig it.
@@ -707,6 +756,15 @@ export function RegionPanel({
                                                     Grow into{' '}
                                                     {region.growth.next.name}
                                                 </Button>
+                                                <WhyNot
+                                                    reason={storeShort(
+                                                        shortOf(
+                                                            region.growth.next
+                                                                .cost,
+                                                            base,
+                                                        ),
+                                                    )}
+                                                />
                                             </>
                                         ) : (
                                             <p className="text-xs text-muted-foreground">
@@ -765,6 +823,12 @@ export function RegionPanel({
                                     >
                                         <Swords className="size-4" /> Raid
                                     </Button>
+                                    <WhyNot
+                                        reason={needHorseshoes(
+                                            horseshoesLeft,
+                                            horseshoes,
+                                        )}
+                                    />
                                 </div>
                                 {horseshoesLeft < horseshoes && (
                                     <p className="text-xs text-orange-300">
@@ -1083,6 +1147,7 @@ function IronfieldMission({
                         Go in with {shoes}{' '}
                         {shoes === 1 ? 'horseshoe' : 'horseshoes'}
                     </Button>
+                    <WhyNot reason={needHorseshoes(horseshoesLeft, shoes)} />
                 </>
             ) : (
                 <p className="text-xs text-muted-foreground">

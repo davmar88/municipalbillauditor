@@ -2,6 +2,7 @@ import { usePage } from '@inertiajs/react';
 import { Hammer } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { WhyNot, storeShort } from '@/components/game/why-not';
 import { Input } from '@/components/ui/input';
 import { NativeSelect } from '@/components/ui/native-select';
 import { act, clockTime, MATERIALS } from '@/lib/game';
@@ -184,6 +185,13 @@ export function BuildingDetails({
                         <Hammer className="size-4" /> Raise to level{' '}
                         {next.level} ({duration(next.minutes)})
                     </Button>
+                    <WhyNot
+                        reason={
+                            building.kind !== 'den' && !hasDen
+                                ? 'Your faction needs a Den standing first.'
+                                : storeShort(short)
+                        }
+                    />
                 </div>
             )}
         </div>
@@ -270,6 +278,7 @@ export function BuildOptions({
                             >
                                 <Hammer className="size-4" /> Build
                             </Button>
+                            <WhyNot reason={storeShort(short)} />
                         </div>
                         <p className="text-sm text-muted-foreground">
                             {first.does}
@@ -436,6 +445,7 @@ export function FactionBase({ treasury, base, kinds }: Props) {
                         <Hammer className="size-4" /> Build (
                         {duration(kind.levels[0].minutes)})
                     </Button>
+                    <WhyNot reason={storeShort(short)} />
                     {short.length > 0 && (
                         <p className="text-xs text-orange-300">
                             The store is short of {short.join(', ')}.
@@ -539,6 +549,15 @@ export function FactionBase({ treasury, base, kinds }: Props) {
                     >
                         Give
                     </Button>
+                    <WhyNot
+                        reason={
+                            have < 1
+                                ? `You have no ${what === 'corn' ? 'Corn' : what} to give. Gather some on the map first.`
+                                : amount < 1
+                                  ? 'Pick how much to give.'
+                                  : null
+                        }
+                    />
                     <span className="pb-2 text-xs text-muted-foreground">
                         You have {have}.
                     </span>

@@ -2,6 +2,7 @@ import { usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import { Home as HomeIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { WhyNot } from '@/components/game/why-not';
 import { act, capitalise, clockTime } from '@/lib/game';
 import type { Point } from '@/lib/hollowmere';
 import {
@@ -76,23 +77,45 @@ export function HomeCard({
                             );
 
                             return option ? (
-                                <Button
-                                    key={level}
-                                    size="sm"
-                                    variant={
-                                        level === 0 ? 'secondary' : 'default'
-                                    }
-                                    disabled={
-                                        !canPay(option) || me.walk !== null
-                                    }
-                                    onClick={() => act(build.url(), { level })}
-                                    title={`${cost(option)} · ${option.minutes} minutes`}
-                                >
-                                    {level === 0
-                                        ? '⛺ Pitch a Tent'
-                                        : '🛖 Build a Hut'}{' '}
-                                    here
-                                </Button>
+                                <>
+                                    <Button
+                                        key={level}
+                                        size="sm"
+                                        variant={
+                                            level === 0
+                                                ? 'secondary'
+                                                : 'default'
+                                        }
+                                        disabled={
+                                            !canPay(option) || me.walk !== null
+                                        }
+                                        onClick={() =>
+                                            act(build.url(), { level })
+                                        }
+                                        title={`${cost(option)} · ${option.minutes} minutes`}
+                                    >
+                                        {level === 0
+                                            ? '⛺ Pitch a Tent'
+                                            : '🛖 Build a Hut'}{' '}
+                                        here
+                                    </Button>
+                                    <WhyNot
+                                        reason={
+                                            me.walk !== null
+                                                ? 'Stop walking first: you set up camp where you stand.'
+                                                : !canPay(option)
+                                                  ? `A ${option.name} takes ${cost(option)}. You have ${corn} Corn and ${Object.entries(
+                                                        option.materials,
+                                                    )
+                                                        .map(
+                                                            ([name]) =>
+                                                                `${materials[name] ?? 0} ${name}`,
+                                                        )
+                                                        .join(', ')}.`
+                                                  : null
+                                        }
+                                    />
+                                </>
                             ) : null;
                         })}
                     </div>
@@ -135,15 +158,24 @@ export function HomeCard({
                             </Button>
                         )}
                         {atDoor && !info.inside && (
-                            <Button
-                                size="sm"
-                                disabled={
-                                    home.level <= 1 && home.readyAt !== null
-                                }
-                                onClick={() => act(enter.url())}
-                            >
-                                Go inside and hide
-                            </Button>
+                            <>
+                                <Button
+                                    size="sm"
+                                    disabled={
+                                        home.level <= 1 && home.readyAt !== null
+                                    }
+                                    onClick={() => act(enter.url())}
+                                >
+                                    Go inside and hide
+                                </Button>
+                                <WhyNot
+                                    reason={
+                                        home.level <= 1 &&
+                                        home.readyAt !== null &&
+                                        `Your ${home.name} is still going up. You can go in once it stands, at ${clockTime(home.readyAt)}.`
+                                    }
+                                />
+                            </>
                         )}
                         {info.inside && (
                             <Button
@@ -155,15 +187,28 @@ export function HomeCard({
                             </Button>
                         )}
                         {next && atDoor && (
-                            <Button
-                                size="sm"
-                                variant="outline"
-                                disabled={!affordable || home.readyAt !== null}
-                                onClick={() => act(upgrade.url())}
-                                title={cost(next)}
-                            >
-                                Raise to a {next.name}
-                            </Button>
+                            <>
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    disabled={
+                                        !affordable || home.readyAt !== null
+                                    }
+                                    onClick={() => act(upgrade.url())}
+                                    title={cost(next)}
+                                >
+                                    Raise to a {next.name}
+                                </Button>
+                                <WhyNot
+                                    reason={
+                                        home.readyAt !== null
+                                            ? `Your ${home.name} is still going up. Raise it again once it stands.`
+                                            : !affordable
+                                              ? `A ${next.name} takes ${cost(next)}. Gather what's missing, then come back to your door.`
+                                              : null
+                                    }
+                                />
+                            </>
                         )}
                     </div>
                     {next && (
@@ -276,6 +321,18 @@ export function HomeCard({
                                 >
                                     Lend a hand
                                 </Button>
+                                <WhyNot
+                                    reason={
+                                        me.walk !== null
+                                            ? 'Stop walking first.'
+                                            : Math.hypot(
+                                                    h.x - me.x,
+                                                    h.y - me.y,
+                                                ) > info.door
+                                              ? `Walk to ${h.owner.name}'s door first: you help where you stand.`
+                                              : null
+                                    }
+                                />
                             </div>
                         ))}
                 </div>
