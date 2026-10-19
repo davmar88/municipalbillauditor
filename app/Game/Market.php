@@ -214,20 +214,29 @@ final class Market
             throw new GameException("Price items between {$min} and ".number_format($max).($currency === 'apples' ? ' Apples.' : ' Corn.'));
         }
 
-        if ($item->openListing()->exists()) {
-            throw new GameException('That item is already on your shelves.');
-        }
+        return DB::transaction(function () use ($player, $item, $price, $currency) {
+            // Locked, so it can't be given away while it goes on the shelf.
+            $item = Item::query()->lockForUpdate()->findOrFail($item->id);
 
-        $shelves = self::shelves($player);
+            if ($item->player_id !== $player->id || $item->used_at !== null) {
+                throw new GameException("That item isn't yours to sell.");
+            }
 
-        if (Listing::query()->where('player_id', $player->id)->whereNull('sold_at')->count() >= $shelves) {
-            throw new GameException("Your shop has {$shelves} shelves and they are full.".($player->inOrchard() ? '' : ' Orchard members get one more.'));
-        }
+            if ($item->openListing()->exists()) {
+                throw new GameException('That item is already on your shelves.');
+            }
 
-        $listing = Listing::create(['item_id' => $item->id, 'player_id' => $player->id, 'price' => $price, 'currency' => $currency]);
-        Missions::record($player, 'list');
+            $shelves = self::shelves($player);
 
-        return $listing;
+            if (Listing::query()->where('player_id', $player->id)->whereNull('sold_at')->count() >= $shelves) {
+                throw new GameException("Your shop has {$shelves} shelves and they are full.".($player->inOrchard() ? '' : ' Orchard members get one more.'));
+            }
+
+            $listing = Listing::create(['item_id' => $item->id, 'player_id' => $player->id, 'price' => $price, 'currency' => $currency]);
+            Missions::record($player, 'list');
+
+            return $listing;
+        });
     }
 
     /**
@@ -249,7 +258,8 @@ final class Market
      */
     public function buy(Player $buyer, Listing $listing): array
     {
-        return DB::transaction(function () use ($buyer, $listing) {
+        $stale = false;
+        $bought = DB::transaction(function () use ($buyer, $listing, &$stale) {
             $listing = Listing::query()->lockForUpdate()->findOrFail($listing->id);
             $buyer = Players::lock($buyer);
             $seller = Players::lock($listing->seller);
@@ -270,7 +280,15 @@ final class Market
             Players::ensureFree($buyer);
             $this->checkBan($season, $buyer, $seller);
 
-            $item = Item::query()->with('design')->findOrFail($listing->item_id);
+            $item = Item::query()->with('design')->lockForUpdate()->findOrFail($listing->item_id);
+
+            // It left the seller's bag (given away or used) after it was shelved.
+            if ($item->player_id !== $seller->id || $item->used_at !== null) {
+                $stale = true;
+
+                return null;
+            }
+
             $maker = $item->design->player_id;
             $resale = $maker !== $seller->id;
             $inApples = $listing->currency === 'apples';
@@ -343,6 +361,15 @@ final class Market
 
             return ['price' => $listing->price, 'levy' => $levy, 'currency' => $listing->currency];
         });
+
+        if ($stale) {
+            // Take the stale listing down, outside the rolled-back purchase.
+            Listing::query()->whereKey($listing->id)->whereNull('sold_at')->delete();
+
+            throw new GameException('That item is no longer for sale.');
+        }
+
+        return $bought;
     }
 
     /**
