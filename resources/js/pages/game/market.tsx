@@ -473,10 +473,20 @@ function PriceTag({
                     <option value="corn">Corn</option>
                     <option value="apples">Apples</option>
                 </NativeSelect>
-                <Button size="sm" onClick={() => onList(asked, currency)}>
+                <Button
+                    size="sm"
+                    disabled={asked < min || asked > max}
+                    onClick={() => onList(asked, currency)}
+                >
                     Put on a shelf
                 </Button>
             </div>
+            <WhyNot
+                reason={
+                    (asked < min || asked > max) &&
+                    `Type a price first, from ${min.toLocaleString('en-ZA')} to ${max.toLocaleString('en-ZA')} ${currency === 'apples' ? 'Apples' : 'Corn'}.`
+                }
+            />
             {currency === 'apples' && (
                 <p className="text-xs text-muted-foreground">
                     {asked >= min

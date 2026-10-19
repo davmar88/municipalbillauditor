@@ -1,3 +1,4 @@
+import { toast } from 'sonner';
 import { router } from '@inertiajs/react';
 import type { RequestPayload } from '@inertiajs/core';
 import type { Currency, Species } from '@/types/game';
@@ -127,6 +128,13 @@ export function act(
         data,
         preserveScroll: true,
         preserveState: true,
+        // A form the server turns back says why, instead of nothing happening.
+        onError: (errors) => {
+            const first = Object.values(errors)[0];
+            toast.error(
+                first ?? "That didn't work. Check what's needed and try again.",
+            );
+        },
     });
 }
 
