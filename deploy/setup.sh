@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Add RevenueGuard (revenueguard.co.za) to the server that already runs Cable
+# Add RevenueGuard (animalfarm.cc) to the server that already runs Cable
 # Elite. Run as the `ubuntu` user, on a server that Cable Elite's
 # `deploy/setup.sh system` has already hardened: key-only SSH, firewall,
 # fail2ban, nginx, MySQL and PHP are in place.
@@ -25,8 +25,11 @@ REPO="${REPO:-https://github.com/davmar88/municipalbillauditor.git}"
 BRANCH="${BRANCH:-main}"
 APP_DIR="/var/www/revenueguard"
 APP_USER="revenueguard"
-DOMAIN="revenueguard.co.za"
-MAILBOX="info@${DOMAIN}"    # the Xneelo mailbox the site sends from
+DOMAIN="animalfarm.cc"
+# The mailbox stayed on the site's first address when it moved to
+# animalfarm.cc. That address now only forwards to the new one.
+MAIL_DOMAIN="revenueguard.co.za"
+MAILBOX="info@${MAIL_DOMAIN}"    # the Xneelo mailbox the site sends from
 DB_NAME="revenueguard"
 DB_USER="revenueguard"
 DB_PASS_FILE="$HOME/.revenueguard-db-pass"
@@ -176,7 +179,7 @@ phase_app() {
     # certificate for its own host name, so the name check is skipped; the
     # connection is still encrypted.
     set_env MAIL_MAILER smtp
-    set_env MAIL_HOST "smtp.${DOMAIN}"
+    set_env MAIL_HOST "smtp.${MAIL_DOMAIN}"
     set_env MAIL_PORT 465
     set_env MAIL_VERIFY_PEER false
     set_env MAIL_USERNAME "$MAILBOX"

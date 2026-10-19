@@ -1,8 +1,10 @@
 # Deploying RevenueGuard next to Cable Elite
 
-RevenueGuard (this app, at **revenueguard.co.za**) runs on the same Xneelo
+RevenueGuard (this app, at **animalfarm.cc**) runs on the same Xneelo
 server as Cable Elite: **154.65.108.197**, Ubuntu, nginx. nginx picks the
-site by the name in the address, so both sites share ports 80 and 443.
+site by the name in the address, so both sites share ports 80 and 443. Its
+first address, revenueguard.co.za, forwards to animalfarm.cc (see "The old
+address").
 
 Each site has its own folder, Linux user, PHP pool, database and background
 worker. Setting up RevenueGuard changes nothing of Cable Elite's.
@@ -10,7 +12,7 @@ worker. Setting up RevenueGuard changes nothing of Cable Elite's.
 |              | Cable Elite                        | RevenueGuard                                                |
 | ------------ | ---------------------------------- | ----------------------------------------------------------- |
 | Code         | `/var/www/crm`                     | `/var/www/revenueguard`                                     |
-| nginx site   | `cableelite.co.za`                 | `revenueguard.co.za`                                        |
+| nginx site   | `cableelite.co.za`                 | `animalfarm.cc`, and `revenueguard.co.za`, which forwards   |
 | PHP runs as  | `www-data` (the default pool)      | `revenueguard` (its own pool, `/run/php/revenueguard.sock`) |
 | Database     | `crm`                              | `revenueguard`, with a MySQL user that can only reach it    |
 | Queue worker | `cable-elite-queue`                | `revenueguard-queue`                                        |
@@ -95,49 +97,50 @@ mode, the Xneelo mail server (`smtp.revenueguard.co.za`, port 465) and
 On the server:
 
 ```bash
-/var/www/revenueguard/deploy/verify.sh http://revenueguard.co.za 127.0.0.1
+/var/www/revenueguard/deploy/verify.sh http://animalfarm.cc 127.0.0.1
 ```
 
 It must end with **All good**. It fetches the pages a visitor hits first, and
 checks that RevenueGuard can write its storage and that `www-data` can't read
 its secrets.
 
-To see it in a browser, add `154.65.108.197 revenueguard.co.za` to your PC's
-hosts file, open `http://revenueguard.co.za`, then remove the line. Signing in
+To see it in a browser, add `154.65.108.197 animalfarm.cc` to your PC's
+hosts file, open `http://animalfarm.cc`, then remove the line. Signing in
 won't work yet: the session cookie is HTTPS-only.
 
 ## 4. Point the domain at the server
 
-In Xneelo's control panel, open the DNS settings for **revenueguard.co.za**,
+In Xneelo's control panel, open the DNS settings for **animalfarm.cc**,
 the same screen you used for cableelite.co.za. Change two records:
 
-| Record                   | Type | Now             | Change to          |
-| ------------------------ | ---- | --------------- | ------------------ |
-| `revenueguard.co.za`     | A    | 129.232.136.253 | **154.65.108.197** |
-| `www.revenueguard.co.za` | A    | 129.232.136.253 | **154.65.108.197** |
+| Record              | Type | Now          | Change to          |
+| ------------------- | ---- | ------------ | ------------------ |
+| `animalfarm.cc`     | A    | 188.40.1.204 | **154.65.108.197** |
+| `www.animalfarm.cc` | A    | 188.40.1.204 | **154.65.108.197** |
 
 Leave everything else as it is. The MX, `mail`, `smtp`, `imap`, `pop` and TXT
 records keep pointing at Xneelo's mail server, so the mailbox keeps working.
 Keep the Web Hosting product: it provides the DNS and the mailbox. Only its web
-space goes unused.
+space goes unused. revenueguard.co.za's two A records stay pointed here too,
+so the old address can forward.
 
-- If there is an **AAAA** record for `revenueguard.co.za` or `www`, delete
+- If there is an **AAAA** record for `animalfarm.cc` or `www`, delete
   it. Otherwise IPv6 visitors, and Certbot, still reach the old host.
-- `ftp` follows `www`. To use FTP on the Xneelo hosting, connect to
-  `www545.jnb1.host-h.net` instead.
+- `ftp` follows `www`. To use FTP on the Xneelo hosting, connect to the
+  hosting server's own name from Xneelo's control panel instead.
 - Lowering the TTL an hour beforehand shortens the switch.
 
 Wait until both names answer with the new address:
 
 ```bash
-dig +short revenueguard.co.za
-dig +short www.revenueguard.co.za    # both: 154.65.108.197
+dig +short animalfarm.cc
+dig +short www.animalfarm.cc    # both: 154.65.108.197
 ```
 
 ## 5. HTTPS
 
 ```bash
-sudo certbot --nginx -d revenueguard.co.za -d www.revenueguard.co.za
+sudo certbot --nginx -d animalfarm.cc -d www.animalfarm.cc
 /var/www/revenueguard/deploy/verify.sh       # All good, over https this time
 ```
 
@@ -147,7 +150,7 @@ the certificate together with Cable Elite's.
 ## 6. Your staff login
 
 Staff decide which players' item designs go on sale, so the only way to
-become staff is from the server. Register on https://revenueguard.co.za with your own
+become staff is from the server. Register on https://animalfarm.cc with your own
 address and open the verification email, then:
 
 ```bash
@@ -170,7 +173,7 @@ does an account become one:
 /var/www/revenueguard/deploy/artisan app:make-admin you@example.com
 ```
 
-Then, on https://revenueguard.co.za/admin:
+Then, on https://animalfarm.cc/admin:
 
 1. **PayPal** (US dollars): paste the client ID and secret from
    developer.paypal.com → Apps & Credentials. Leave the mode on Sandbox while
@@ -188,7 +191,7 @@ once a lawyer has confirmed the game may pay out real money: dice decide raids
 and crimes, and Apples pass between animals in bounties and shop sales, so it
 may need a gambling or payments licence.
 
-Every cash-out then waits for you at https://revenueguard.co.za/admin/cashouts,
+Every cash-out then waits for you at https://animalfarm.cc/admin/cashouts,
 and Pay sends it to the animal's PayPal email. PayPal has to turn on Payouts
 for your business account first. Ask PayPal for it, then tick Payouts in the
 app's features on developer.paypal.com. Try a cash-out in Sandbox before going
@@ -217,7 +220,7 @@ changes, apply it by hand:
 - **Queue worker or scheduler:** `/var/www/revenueguard/deploy/setup.sh finish`.
 - **PHP pool:** `/var/www/revenueguard/deploy/setup.sh prepare`.
 - **nginx site:** after Certbot, `finish` leaves the site alone, so copy the
-  change into `/etc/nginx/sites-available/revenueguard.co.za` yourself. Then
+  change into `/etc/nginx/sites-available/animalfarm.cc` yourself. Then
   run `sudo nginx -t && sudo systemctl reload nginx`.
 
 Every phase can be run again safely. A failed nginx or PHP-FPM test puts the
@@ -228,7 +231,7 @@ RevenueGuard file.
 
 "Continue with Google" on the login and register pages uses the same Google
 sign-in client as Cable Elite. In Google Cloud, that client's authorised
-redirect URIs include `https://revenueguard.co.za/auth/google/callback`,
+redirect URIs include `https://animalfarm.cc/auth/google/callback`,
 alongside Cable Elite's. Copy its ID and secret across on the server; the
 loop adds the lines if `.env` doesn't have them yet:
 
@@ -249,7 +252,20 @@ The button only shows once `GOOGLE_CLIENT_ID` is set.
   Cable Elite's. To show RevenueGuard's, create a client in a project of its
   own and put its ID and secret in `.env` instead.
 - **Authorised domains.** If Google's Branding page asks for them, add
-  `revenueguard.co.za`.
+  `animalfarm.cc`.
+
+## The old address
+
+The site started at revenueguard.co.za and moved to animalfarm.cc. The old
+address still points at this server and forwards every page to the same page
+on the new one, so old links and bookmarks keep working. Its nginx site is
+`deploy/nginx/revenueguard.co.za.conf`, copied by hand to
+`/etc/nginx/sites-available/revenueguard.co.za`. It keeps its certificate,
+which Certbot renews with the others. The site still sends its email from
+`info@revenueguard.co.za`.
+
+Sessions belong to one address, so everyone had to sign in again once after
+the move.
 
 ## After changing `.env`
 

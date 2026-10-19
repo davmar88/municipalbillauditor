@@ -2,11 +2,11 @@
 # Smoke check after every deploy: the pages a visitor hits first, against the
 # real database, and (on the server) the permissions that fail silently.
 #
-#   deploy/verify.sh                                     # https://revenueguard.co.za
-#   deploy/verify.sh http://revenueguard.co.za 127.0.0.1  # before DNS points here
+#   deploy/verify.sh                                # https://animalfarm.cc
+#   deploy/verify.sh http://animalfarm.cc 127.0.0.1  # before DNS points here
 set -uo pipefail
 
-BASE="${1:-https://revenueguard.co.za}"
+BASE="${1:-https://animalfarm.cc}"
 IP="${2:-}"
 APP_DIR="/var/www/revenueguard"
 FAIL=0
