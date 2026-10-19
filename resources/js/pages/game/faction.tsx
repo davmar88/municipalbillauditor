@@ -114,6 +114,8 @@ type Props = {
     species: { value: string; label: string }[];
     entryModes: { value: string; label: string }[];
     underworld: {
+        /** Lone wolves loot and burn; faction members can only burn. */
+        loneWolf: boolean;
         level: number;
         triedToday: boolean;
         wanted: number;
@@ -159,6 +161,8 @@ function MyFaction({
     species,
     entryModes,
     buildingKinds,
+    underworld,
+    factions,
 }: Props & { faction: NonNullable<Props['faction']> }) {
     const decides = myRole === 'leader' || myRole === 'council';
     const leader = myRole === 'leader';
@@ -225,6 +229,10 @@ function MyFaction({
             />
 
             <RaidRulesSection raidRules={faction.raidRules} />
+
+            {underworld && (
+                <Underworld underworld={underworld} factions={factions} />
+            )}
 
             <section className="flex flex-col gap-2">
                 <h2 className="text-lg font-bold">Members</h2>
@@ -748,7 +756,7 @@ function Underworld({
     underworld: NonNullable<Props['underworld']>;
     factions: Props['factions'];
 }) {
-    const [kind, setKind] = useState('loot');
+    const [kind, setKind] = useState(underworld.crimes[0]?.value ?? 'loot');
     const [factionId, setFactionId] = useState('');
     const [playerId, setPlayerId] = useState('');
     const selected = underworld.crimes.find((c) => c.value === kind)!;
@@ -770,11 +778,12 @@ function Underworld({
                 <Skull className="size-5" /> The underworld
             </h2>
             <p className="text-sm text-muted-foreground">
-                From level {underworld.level}, once a day. A loot steals a tenth
-                of a faction's treasury; a fire closes a member's home and shop
-                for a day. Dogs and the Night Watch catch criminals, who spend 6
-                hours in the pound. Nothing bought with real money is ever
-                stolen or burned.
+                {underworld.loneWolf
+                    ? `From level ${underworld.level}, once a day. A loot steals a tenth of a faction's treasury; a fire closes a member's home and shop for a day.`
+                    : `From level ${underworld.level}, once a day, you can loot a faction's treasury or set fire to a home, your own faction's included. If your faction's rules forbid turning on your own, you get a strike, and the leader hears of it either way. Plunder farms on the map.`}{' '}
+                Dogs and the Night Watch catch criminals, who spend 6 hours in
+                the pound. Nothing bought with real money is ever stolen or
+                burned.
                 {underworld.wanted > 0 &&
                     ` You've been caught ${underworld.wanted}×.`}
             </p>

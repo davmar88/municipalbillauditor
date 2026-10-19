@@ -2,6 +2,7 @@
 
 namespace App\Game;
 
+use App\Enums\CrimeKind;
 use App\Models\Faction;
 use App\Models\FactionStrike;
 use App\Models\Player;
@@ -23,6 +24,7 @@ final class RaidRules
         'near_land' => 'Raid only regions next to land we hold.',
         'leader_call' => 'Only the leader and council start raids.',
         'spare' => 'Leave the factions we name alone.',
+        'mates' => 'Never burn, loot or plunder our own faction or its members.',
     ];
 
     /** Strikes this season that flag a member to the faction. */
@@ -96,6 +98,45 @@ final class RaidRules
             "⚑ {$player->name} broke your faction's raid rules raiding {$target->name}.{$flag}",
             route('play.faction', [], false),
         );
+    }
+
+    /** A member who burns, loots or plunders their own faction: a strike if the faction forbids it, and the leader hears either way. */
+    public static function judgeCrime(Player $player, CrimeKind $kind, ?string $what): void
+    {
+        $faction = $player->faction;
+
+        if ($faction === null) {
+            return;
+        }
+
+        $forbidden = ! $faction->rogue && ! $player->rules_exempt && in_array('mates', self::of($faction)['rules'], true);
+
+        if ($forbidden) {
+            FactionStrike::query()->create([
+                'faction_id' => $faction->id,
+                'player_id' => $player->id,
+                'rule' => 'mates',
+                'detail' => self::deed($kind, $what),
+            ]);
+        }
+
+        $strikes = self::strikes($faction)->get($player->id, 0);
+        $flag = $forbidden && $strikes >= self::FLAG_AT ? " That's {$strikes} strikes: they're flagged." : '';
+        Notices::send(
+            Notices::deciders($faction->id)->reject(fn (int $id) => $id === $player->id),
+            'faction',
+            ($forbidden ? '⚑ ' : '🔥 ')."{$player->name} turned on their own faction: ".lcfirst(self::deed($kind, $what)).".{$flag}",
+            route('play.faction', [], false),
+        );
+    }
+
+    private static function deed(CrimeKind $kind, ?string $what): string
+    {
+        return match ($kind) {
+            CrimeKind::Burn => "Set fire to {$what}'s home",
+            CrimeKind::Loot => 'Looted the treasury',
+            CrimeKind::Plunder => "Plundered {$what}",
+        };
     }
 
     /**

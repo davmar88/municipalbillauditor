@@ -193,8 +193,8 @@ export function RegionPanel({
 
         return warrant ? [{ animal, warrant }] : [];
     });
-    const plunderable =
-        myFaction === null && region.ring === 'farm' && region.faction !== null;
+    // Anyone can plunder a held farm, faction members too, even their own faction's.
+    const plunderable = region.ring === 'farm' && region.faction !== null;
     const battleFor = new Map(battles.map((battle) => [battle.id, battle]));
     const isHouse = house !== null && region.faction?.id === house.id;
     const buildable =

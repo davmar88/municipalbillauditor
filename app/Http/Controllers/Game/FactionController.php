@@ -124,7 +124,9 @@ class FactionController extends Controller
                 ['value' => EntryMode::Open->value, 'label' => EntryMode::Open->label()],
                 ['value' => EntryMode::Approval->value, 'label' => EntryMode::Approval->label()],
             ],
-            'underworld' => $player->isLoneWolf() ? [
+            // Lone wolves loot and burn; faction members can burn homes too, their own faction's included.
+            'underworld' => [
+                'loneWolf' => $player->isLoneWolf(),
                 'level' => (int) config('game.levels.crime'),
                 'triedToday' => Crime::query()->where('player_id', $player->id)->where('created_at', '>=', Clock::startOfToday())->exists(),
                 'wanted' => $player->wanted,
@@ -132,7 +134,8 @@ class FactionController extends Controller
                 'crimes' => array_map(fn (CrimeKind $kind) => ['value' => $kind->value, 'label' => $kind->label(), 'horseshoes' => $kind->horseshoes()], [CrimeKind::Loot, CrimeKind::Burn]),
                 'targets' => Player::query()
                     ->where('valley_id', $player->valley_id)
-                    ->whereNotNull('faction_id')
+                    ->whereKeyNot($player->id)
+                    ->where(fn ($query) => $query->whereNotNull('faction_id')->orWhereHas('home'))
                     ->with('faction:id,name,colour')
                     ->orderBy('name')
                     ->limit(200)
@@ -140,7 +143,7 @@ class FactionController extends Controller
                     ->map(fn (Player $target) => [
                         'id' => $target->id,
                         'name' => $target->name,
-                        'faction' => $target->faction->name,
+                        'faction' => $target->faction?->name ?? 'lone wolf',
                         'protected' => $target->isShielded() || $target->homeIsClosed(),
                     ]),
                 'history' => Crime::query()->with(['targetFaction:id,name', 'targetPlayer:id,name', 'region:id,name'])->where('player_id', $player->id)->latest('id')->limit(5)->get()
@@ -160,7 +163,7 @@ class FactionController extends Controller
                         'loot' => $crime->loot,
                         'settlesAt' => $crime->settles_at->toIso8601String(),
                     ]),
-            ] : null,
+            ],
         ]);
     }
 

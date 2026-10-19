@@ -11,8 +11,10 @@ use App\Game\Dice;
 use App\Game\GameException;
 use App\Game\GateNight;
 use App\Game\LawTemplate;
+use App\Game\RaidRules;
 use App\Game\Uprisings;
 use App\Game\Wall;
+use App\Game\Warrants;
 use App\Models\Crime;
 use App\Models\Faction;
 use App\Models\Law;
@@ -142,13 +144,34 @@ class UprisingsAndCrimesTest extends TestCase
         $this->assertSame('open', Uprisings::active($this->season())?->status);
     }
 
-    public function test_only_lone_wolves_from_level_three_commit_crimes(): void
+    public function test_anyone_from_level_three_commits_crimes_faction_members_too(): void
     {
         $member = $this->player(level: 5);
         $member->forceFill(['faction_id' => $this->house->id])->save();
 
-        $this->assertRefused(fn () => app(Crimes::class)->commit($member->fresh(), CrimeKind::Loot, $this->house), 'Only lone wolves');
+        // Even looting their own faction: its rules decide what that costs them.
+        $this->assertSame($this->house->id, app(Crimes::class)->commit($member->fresh(), CrimeKind::Loot, $this->house)->target_faction_id);
         $this->assertRefused(fn () => app(Crimes::class)->commit($this->player(level: 2), CrimeKind::Loot, $this->house), 'level 3');
+    }
+
+    public function test_turning_on_your_own_faction_earns_a_strike_where_it_is_forbidden(): void
+    {
+        $leader = $this->player(level: 5);
+        $faction = $this->faction('Hotheads', $leader, $this->player(), $this->player());
+        $leader->forceFill(['faction_role' => 'leader'])->save();
+        $burner = $this->player(level: 5);
+        $mate = $this->player(level: 5);
+        $burner->forceFill(['faction_id' => $faction->id, 'faction_role' => 'member'])->save();
+        $mate->forceFill(['faction_id' => $faction->id, 'faction_role' => 'member'])->save();
+        app(RaidRules::class)->set($leader->fresh(), ['mates'], [], false);
+
+        $crime = app(Crimes::class)->commit($burner->fresh(), CrimeKind::Burn, target: $mate->fresh());
+
+        $this->assertSame($mate->id, $crime->target_player_id);
+        $this->assertSame(1, RaidRules::strikes($faction->fresh())->get($burner->id));
+        // A faction member who commits a crime can have a bounty put on them, like any lone wolf.
+        $this->assertTrue(Warrants::suspects($this->season())->contains(fn (array $suspect) => $suspect['player']->id === $burner->id));
+        $this->assertStringContainsString($mate->name, Notice::query()->where('player_id', $leader->id)->latest('id')->value('text'));
     }
 
     public function test_a_loot_that_works_steals_a_tenth_of_the_treasury(): void

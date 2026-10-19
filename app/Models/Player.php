@@ -188,6 +188,12 @@ class Player extends Model
         return $this->muted_until !== null && $this->muted_until->isFuture();
     }
 
+    /** @return HasOne<Home, $this> */
+    public function home(): HasOne
+    {
+        return $this->hasOne(Home::class);
+    }
+
     public function decides(): bool
     {
         return $this->faction_role?->decides() ?? false;

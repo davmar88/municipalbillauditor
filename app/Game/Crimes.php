@@ -49,16 +49,13 @@ final class Crimes
         $season = $player->valley->currentSeason() ?? throw new GameException('The season is changing. Try again in a moment.');
         $level = (int) config('game.levels.crime');
 
-        if (! $player->isLoneWolf()) {
-            throw new GameException('Only lone wolves commit crimes. Leave your faction first.');
-        }
-
+        // Faction members commit crimes too, against their own faction if they dare: its rules decide what that costs them.
         if ($player->level() < $level) {
             throw new GameException("Crime opens up at level {$level}.");
         }
 
         // Leaving a faction to steal and coming straight back doesn't work: a day as a lone wolf first.
-        if ($player->left_faction_at !== null && $player->left_faction_at->gt(now()->subHours(self::LONE_WOLF_HOURS))) {
+        if ($player->isLoneWolf() && $player->left_faction_at !== null && $player->left_faction_at->gt(now()->subHours(self::LONE_WOLF_HOURS))) {
             throw new GameException('You only just left your faction. Lie low as a lone wolf until '.Clock::local($player->left_faction_at->copy()->addHours(self::LONE_WOLF_HOURS))->format('j M \a\t H:i').' before your first crime.');
         }
 
@@ -100,8 +97,12 @@ final class Crimes
                 throw new GameException("{$faction->name} has already been targeted today.");
             }
         } else {
-            if ($target === null || $target->faction_id === null || $target->valley_id !== $player->valley_id) {
-                throw new GameException("Pick a faction member's home to burn.");
+            if ($target === null || $target->valley_id !== $player->valley_id || ($target->faction_id === null && Homes::of($target) === null)) {
+                throw new GameException('Pick a home to burn.');
+            }
+
+            if ($target->is($player)) {
+                throw new GameException("That's your own home.");
             }
 
             if ($target->isShielded()) {
@@ -121,17 +122,18 @@ final class Crimes
             $locked = Players::lock($player);
             Players::ensureFree($locked);
 
-            // Checked again under the lock: a faction joined a moment ago counts.
-            if (! $locked->isLoneWolf()) {
-                throw new GameException('Only lone wolves commit crimes. Leave your faction first.');
-            }
-
-            if ($locked->left_faction_at !== null && $locked->left_faction_at->gt(now()->subHours(self::LONE_WOLF_HOURS))) {
+            if ($locked->isLoneWolf() && $locked->left_faction_at !== null && $locked->left_faction_at->gt(now()->subHours(self::LONE_WOLF_HOURS))) {
                 throw new GameException('You only just left your faction. Lie low as a lone wolf for a day before your first crime.');
             }
 
             Horseshoes::spend($locked, $kind->horseshoes());
             Missions::record($locked, 'crime');
+
+            // A crime against your own faction may break its rules.
+            $victim = $kind === CrimeKind::Burn ? $target?->faction_id : $faction?->id;
+            if ($locked->faction_id !== null && $victim === $locked->faction_id) {
+                RaidRules::judgeCrime($locked, $kind, $kind === CrimeKind::Burn ? $target?->name : ($region?->name ?? $faction?->name));
+            }
 
             return Crime::create([
                 'season_id' => $season->id,
