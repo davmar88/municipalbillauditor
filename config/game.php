@@ -19,8 +19,9 @@ return [
     'timezone' => 'Africa/Johannesburg',
 
     // Shown in the privacy notice, as POPIA requires.
-    'company_name' => env('COMPANY_NAME'),
-    'information_officer' => env('INFORMATION_OFFICER'),
+    // Set here rather than in the server's .env, so the site always shows them.
+    'company_name' => 'Animal Farm',
+    'information_officer' => 'The Animal Farm Dev Team',
     'contact_email' => env('CONTACT_EMAIL'),
 
     'season_days' => (int) env('GAME_SEASON_DAYS', 14),
