@@ -44,6 +44,8 @@ export type PlayerSummary = {
               store: Record<string, number>;
               /** What it's short of for its next steps, the nearest first. */
               needs: { for: string; short: Record<string, number> }[];
+              /** The most the store holds: Corn, and of each material. */
+              capacity: { corn: number; material: number };
           })
         | null;
     inPoundUntil: string | null;

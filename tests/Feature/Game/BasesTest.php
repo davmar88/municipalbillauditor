@@ -462,6 +462,8 @@ class BasesTest extends TestCase
         // Members see it under their own bar.
         $this->actingAs($leader->user)->get(route('play.today'))->assertInertia(fn (Assert $page) => $page
             ->where('player.faction.treasury', 50)
+            ->where('player.faction.capacity.corn', Stores::BASE_CORN)
+            ->where('player.faction.capacity.material', Stores::BASE_MATERIAL)
             ->where('player.faction.needs.0.for', 'a Den'));
     }
 

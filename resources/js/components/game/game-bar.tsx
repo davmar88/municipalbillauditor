@@ -209,12 +209,13 @@ function FactionStrip({
                 />
                 {faction.name}
                 <span className="font-normal text-muted-foreground">
-                    · {(faction.treasury ?? 0).toLocaleString('en-ZA')} Corn
+                    · {(faction.treasury ?? 0).toLocaleString('en-ZA')}/
+                    {(faction.capacity?.corn ?? 0).toLocaleString('en-ZA')} Corn
                 </span>
             </Link>
             <span
                 className="flex max-w-full items-center gap-1.5 rounded-full border bg-card px-3 py-1.5"
-                title="What your faction's store holds"
+                title={`What your faction's store holds: up to ${faction.capacity?.corn ?? 0} Corn and ${faction.capacity?.material ?? 0} of each material. More buildings hold more.`}
             >
                 <Warehouse
                     className="size-4 shrink-0 text-amber-300"
@@ -223,11 +224,17 @@ function FactionStrip({
                 {stored.length > 0 ? (
                     <span className="truncate">
                         {stored
-                            .map(([name, count]) => `${count} ${name}`)
+                            .map(
+                                ([name, count]) =>
+                                    `${count}/${faction.capacity?.material ?? 0} ${name}`,
+                            )
                             .join(' · ')}
                     </span>
                 ) : (
-                    <span className="text-muted-foreground">Store empty</span>
+                    <span className="text-muted-foreground">
+                        Store empty · holds {faction.capacity?.material ?? 0} of
+                        each material
+                    </span>
                 )}
             </span>
             {need && (

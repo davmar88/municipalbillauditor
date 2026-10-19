@@ -10,6 +10,7 @@ use App\Game\Missions;
 use App\Game\Notices;
 use App\Game\Orchard;
 use App\Game\Powers;
+use App\Game\Stores;
 use App\Models\Cashout;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -87,6 +88,8 @@ class HandleInertiaRequests extends Middleware
                         'treasury' => $player->faction->treasury,
                         'store' => array_filter($player->faction->materials ?? [], fn ($amount) => $amount > 0),
                         'needs' => Bases::needs($player->faction),
+                        // How much the store holds at most: Corn, and of each material.
+                        'capacity' => Stores::capacity($player->faction),
                     ] : null,
                     'inPoundUntil' => $player->inPound() ? $player->pound_until->toIso8601String() : null,
                     'homeClosedUntil' => $player->homeIsClosed() ? $player->home_closed_until->toIso8601String() : null,
