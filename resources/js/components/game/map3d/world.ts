@@ -25,6 +25,7 @@ import {
     FRONTIER_KIND,
     FIELD_SHAPES,
     FIELDS,
+    SHAPES,
     anchor,
     hub,
     plot,
@@ -46,6 +47,8 @@ import type {
 import { person as makePerson } from './folk';
 import { landmarks, orchardTrees } from './landmarks';
 import { loadVillage, villageHome } from './village';
+import type { FarmModel } from './farm';
+import { FOR_KIND, farmBuilding, farmReady, loadFarm } from './farm';
 import type { Actor } from './models';
 import { makeActor } from './models';
 
@@ -327,6 +330,11 @@ export class World {
     private readonly town = new THREE.Group();
     /** Every animal's home. */
     private readonly dwellings = new THREE.Group();
+
+    /** Barns, silos and windmills dressing the farms and Hollowmere's yards. */
+    private readonly farmyards = new THREE.Group();
+
+    private farmAsked = false;
     private regionLabels = new Map<
         number,
         {
@@ -406,6 +414,7 @@ export class World {
             this.raids,
             this.town,
             this.dwellings,
+            this.farmyards,
             this.people,
         );
 
@@ -1270,7 +1279,10 @@ export class World {
                 continue;
             }
             const colour = region.faction?.colour ?? '#8a8399';
-            const group = buildingModel(b.kind, colour, b.readyAt !== null);
+            // A farm building in the faction's colour, once the pack has loaded.
+            const group =
+                farmBuilding(FOR_KIND[b.kind], colour, b.readyAt !== null) ??
+                buildingModel(b.kind, colour, b.readyAt !== null);
             const at = plot(region.key);
             const badge = div(
                 '',
@@ -1298,6 +1310,67 @@ export class World {
             this.buildings.push({ group, at });
         }
         this.placeBuildings();
+        this.askFarm();
+    }
+
+    /** Fetch the farm buildings once, then put up the farmyards and rebuild the factions' buildings in them. */
+    private askFarm() {
+        if (this.farmAsked || farmReady()) {
+            return;
+        }
+        this.farmAsked = true;
+        loadFarm()
+            .then(() => {
+                if (!this.disposed && this.data) {
+                    this.buildFarmyards();
+                    this.buildBuildings();
+                }
+            })
+            .catch((error: unknown) => {
+                // The simple shapes stay; the next map load tries again.
+                console.warn('The farm buildings did not load.', error);
+                this.farmAsked = false;
+            });
+    }
+
+    /** Barns and silos on each farm beyond the fences, and a windmill, well, coop and barns in Hollowmere's yards. */
+    private buildFarmyards() {
+        this.clearGroup(this.farmyards);
+        const put = (
+            name: FarmModel,
+            key: string,
+            [dx, dy]: Point,
+            size: number,
+            turn = 0,
+        ) => {
+            const g = farmBuilding(name);
+            if (!g || !SHAPES[key]) {
+                return;
+            }
+            const [x, y] = hub(key);
+            g.position.set(x + dx, 0, y + dy);
+            g.rotation.y = turn;
+            g.scale.setScalar(size);
+            this.farmyards.add(g);
+        };
+        put('TowerWindmill', 'windmill_hill', [70, -55], 95, 0.4);
+        put('Well', 'old_well', [55, -40], 34);
+        put('ChickenCoop', 'henhouse', [-62, -38], 48, -0.3);
+        put('BigBarn', 'big_barn', [-70, -62], 105);
+        put('Silo_House', 'granary', [62, -55], 80, Math.PI);
+        put('SmallBarn', 'stables', [-66, -50], 80, 0.2);
+        put('WaterTower', 'duck_pond', [70, -60], 60);
+        const yards: [FarmModel, FarmModel][] = [
+            ['Barn', 'Silo'],
+            ['SmallBarn', 'Windmill'],
+            ['OpenBarn', 'Silo_House'],
+        ];
+        Object.keys(FARMS).forEach((key, i) => {
+            const [barn, tall] = yards[i % yards.length];
+            const turn = seeded(`yard:${key}`) * Math.PI * 2;
+            put(barn, key, [-80, -55], 100, turn);
+            put(tall, key, [75, -60], 70, turn);
+        });
     }
 
     private placeBuildings() {
