@@ -25,7 +25,11 @@ final class Stock
             default => 'material',
         };
 
-        return config("game.stock.{$kind}");
+        ['max' => $max, 'per_hour' => $rate] = config("game.stock.{$kind}");
+        // The further from the farms, the less there is and the slower it grows back.
+        $rich = Geography::regionRichness($region->key);
+
+        return ['max' => max(1, (int) round($max * $rich)), 'per_hour' => max(1, (int) round($rate * $rich))];
     }
 
     /**

@@ -406,6 +406,13 @@ export function RegionPanel({
                         produces={region.produces}
                     />
                 )}
+                {region.stock && region.richness < 1 && (
+                    <p className="-mt-1 text-xs text-muted-foreground">
+                        Far from the farms, the land is thinner: it holds and
+                        gives {Math.round(region.richness * 100)}% of what land
+                        by a farm does.
+                    </p>
+                )}
 
                 {isHere && (
                     <div className="flex flex-col gap-2 rounded-lg border border-primary/40 bg-primary/10 p-3">

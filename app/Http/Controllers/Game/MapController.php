@@ -11,6 +11,7 @@ use App\Game\Crimes;
 use App\Game\Farms;
 use App\Game\GateNight;
 use App\Game\Gathering;
+use App\Game\Geography;
 use App\Game\Homes;
 use App\Game\Irongate;
 use App\Game\Movement;
@@ -49,8 +50,10 @@ class MapController extends Controller
         $house = $valley->house();
 
         // Wild land round the farms isn't a region yet: it stays off the map and its paths.
+        // The scrub between them is everywhere and nowhere: it has its own card, not a shape.
         $regions = $valley->regions()
             ->where('wild', false)
+            ->where('ring', '!=', 'scrub')
             ->with(['faction:id,name,colour', 'neighbours' => fn ($query) => $query->where('regions.wild', false), 'building'])
             ->orderBy('row')
             ->orderBy('col')
@@ -106,6 +109,8 @@ class MapController extends Controller
                 'ring' => $region->ring,
                 'produces' => $region->produces,
                 'stock' => Stock::map($region),
+                // How rich its land is: full near the farms, thinner further out.
+                'richness' => Geography::regionRichness($region->key),
                 'col' => $region->col,
                 'row' => $region->row,
                 'faction' => $region->faction ? ['id' => $region->faction->id, 'name' => $region->faction->name, 'colour' => $region->faction->colour] : null,
@@ -168,6 +173,18 @@ class MapController extends Controller
                 ],
             ]),
             'here' => $player->region_id ?? $paddock?->id,
+            // Out in the open scrub: what there is to gather where you stand.
+            'scrub' => (function () use ($player, $valley) {
+                $scrub = $valley->regions()->where('ring', 'scrub')->first();
+
+                if ($scrub === null || $player->region_id !== $scrub->id) {
+                    return null;
+                }
+
+                [$x, $y] = Movement::position($player);
+
+                return ['id' => $scrub->id, 'produces' => $scrub->produces, 'stock' => Stock::map($scrub), 'richness' => Geography::richness($x, $y)];
+            })(),
             'base' => $player->faction ? [
                 'canBuild' => $player->decides(),
                 'hasDen' => Bases::den($player->faction) !== null,

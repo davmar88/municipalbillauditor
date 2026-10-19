@@ -45,6 +45,10 @@ final class Battles
             throw new GameException("{$target->name} is safe ground. Nobody can attack it.");
         }
 
+        if ($target->isScrub()) {
+            throw new GameException("{$target->name} is open ground. Nobody holds it, so there's nothing to raid.");
+        }
+
         if ($target->isCity()) {
             throw new GameException("{$target->name} is part of Irongate, the humans' town. No faction can take it.");
         }

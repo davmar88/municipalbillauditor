@@ -101,6 +101,12 @@ class Region extends Model
         return $this->ring === 'farm';
     }
 
+    /** The open scrub between the regions: anyone's to walk, gather and camp on, and nobody's to hold. */
+    public function isScrub(): bool
+    {
+        return $this->ring === 'scrub';
+    }
+
     /** One of Irongate's districts: the humans' town, which nobody holds. */
     public function isCity(): bool
     {

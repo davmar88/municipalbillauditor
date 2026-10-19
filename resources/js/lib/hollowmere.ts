@@ -8,11 +8,14 @@
 
 export type Point = [number, number];
 
-/** Everything drawn: Hollowmere, the farms beyond its fences, Irongate and the land round them. */
-export const WORLD = { x: -1700, y: -1980, width: 4340, height: 5020 };
+/** Everything drawn: Hollowmere, the farms beyond its fences, Irongate and the scrub round them. */
+export const WORLD = { x: -2700, y: -2980, width: 6340, height: 7020 };
 
-/** Hollowmere, its farms and Irongate, for seeing everything at once. */
-export const REACH = { x: -1650, y: -1930, width: 4250, height: 4920 };
+/** As far as animals can go, out to the valley's edge. Matches Geography::REACH. */
+export const REACH = { x: -2650, y: -2930, width: 6250, height: 6920 };
+
+/** Hollowmere, its farms and Irongate, for seeing all the regions at once. */
+export const LANDS = { x: -1650, y: -1930, width: 4250, height: 4920 };
 
 /** The farm without the land around it, for fitting it on screen. */
 export const FARM = { x: 96, y: 92, width: 1408, height: 904 };
@@ -2506,4 +2509,63 @@ export function route(
     }
 
     return null;
+}
+
+let scrubCache: Point[] | null = null;
+
+/**
+ * Bushes across the open scrub between the regions, out to the valley's
+ * edge: a jittered grid, kept off every region and Ironfield's country.
+ */
+export function scrubPoints(): Point[] {
+    if (scrubCache) {
+        return scrubCache;
+    }
+
+    const shapes = [...Object.values(SHAPES), ...Object.values(FIELD_SHAPES)];
+    const step = 64;
+    const points: Point[] = [];
+
+    for (let y = REACH.y + 20; y < REACH.y + REACH.height - 20; y += step) {
+        for (let x = REACH.x + 20; x < REACH.x + REACH.width - 20; x += step) {
+            const point: Point = [
+                x + (seeded(`scrub:x:${x}:${y}`) - 0.5) * step * 0.9,
+                y + (seeded(`scrub:y:${x}:${y}`) - 0.5) * step * 0.9,
+            ];
+
+            // Ironfield's own country, east of the town.
+            if (point[0] > 2280 && point[1] > -150 && point[1] < 1050) {
+                continue;
+            }
+
+            const clear = shapes.every(({ box, polygon }) => {
+                if (
+                    point[0] < box.x - 14 ||
+                    point[0] > box.x + box.width + 14 ||
+                    point[1] < box.y - 14 ||
+                    point[1] > box.y + box.height + 14
+                ) {
+                    return true;
+                }
+
+                return ![
+                    [0, 0],
+                    [14, 0],
+                    [-14, 0],
+                    [0, 14],
+                    [0, -14],
+                ].some(([dx, dy]) =>
+                    inside([point[0] + dx, point[1] + dy], polygon),
+                );
+            });
+
+            if (clear) {
+                points.push(point);
+            }
+        }
+    }
+
+    scrubCache = points;
+
+    return points;
 }

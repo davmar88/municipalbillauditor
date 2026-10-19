@@ -268,6 +268,8 @@ export type MapRegion = {
     settledUntil: string | null;
     /** Farms need water: until when it's watered, '' when parched, null where it doesn't matter. */
     wateredUntil: string | null;
+    /** How rich its land is, from 1 near the farms down to 0.25 far out. */
+    richness: number;
     /** The trench running water to this farm: the regions it runs through, from the water. */
     trench: { keys: string[]; from: string } | null;
     /** Fed by a trench, its own or its farm's: it never runs dry. */

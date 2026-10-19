@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import type { Point } from '@/lib/hollowmere';
-import { FARM, REACH, WORLD } from '@/lib/hollowmere';
+import { FARM, LANDS, WORLD } from '@/lib/hollowmere';
 import type { Size } from '@/components/game/world-map';
 import { zoomLimits } from '@/components/game/world-map';
 
@@ -49,7 +49,7 @@ export class Rig {
         this.camera.updateProjectionMatrix();
         this.fits = {
             farm: this.framing(FARM)[1],
-            all: this.framing(REACH)[1],
+            all: this.framing(LANDS)[1],
         };
         this.set(this.target, this.k);
     }

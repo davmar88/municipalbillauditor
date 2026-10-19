@@ -8,6 +8,7 @@ import {
     FIELDS,
     SHAPES,
     WORLD,
+    scrubPoints,
     blob,
     fits,
     hub,
@@ -502,6 +503,31 @@ function Irongate() {
 }
 
 /** The land around the farm: the Ridge, Hollow Brook and Ironfield. */
+/** The open scrub between the regions: low bushes anyone can gather from and camp among. */
+const Scrub = memo(function Scrub() {
+    const list = scrubPoints();
+    const bush = (dx: number, dy: number, r: number, key: string) =>
+        discs(
+            list.map(([x, y], i) => ({
+                x: x + dx,
+                y: y + dy,
+                r: r * (0.7 + seeded(`${key}:${i}`) * 0.6),
+            })),
+        );
+
+    return (
+        <g>
+            <path
+                d={bush(3, 4, 13, 'scrub:shade')}
+                fill={INK.shadow}
+                opacity={0.45}
+            />
+            <path d={bush(0, 0, 12, 'scrub:shade')} fill="#2b3b22" />
+            <path d={bush(-3, -3, 7, 'scrub:top')} fill="#3d5230" />
+        </g>
+    );
+});
+
 function Surroundings() {
     const edge = trees(
         [
@@ -633,6 +659,7 @@ function Surroundings() {
                 stroke="#1b1f25"
                 strokeWidth={1.4}
             />
+            <Scrub />
             <Trees list={edge} />
             {/* Hollow Brook. */}
             <path

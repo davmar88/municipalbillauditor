@@ -219,8 +219,8 @@ class StartAndMapTest extends TestCase
         $this->assertSame('market_square', Players::lock($player->fresh())->location()->key);
         $this->assertSame(0, Horseshoes::current($player->fresh()));
 
-        $this->expectExceptionMessage("There's nothing there to walk to");
-        app(Movement::class)->walkTo($player->fresh(), 2900, 2900);
+        $this->expectExceptionMessage("past the valley's edge");
+        app(Movement::class)->walkTo($player->fresh(), 2900, 4100);
     }
 
     private function makeItem(Player $owner, ItemTemplate $template): Item

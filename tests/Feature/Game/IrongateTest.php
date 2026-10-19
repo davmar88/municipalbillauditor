@@ -86,8 +86,8 @@ class IrongateTest extends TestCase
             $this->assertSame($key, Players::lock($player->fresh())->location()->key);
         }
 
-        $this->expectExceptionMessage("There's nothing there to walk to");
-        app(Movement::class)->walkTo($player->fresh(), 2400, 480);
+        $this->expectExceptionMessage("past the valley's edge");
+        app(Movement::class)->walkTo($player->fresh(), 3700, 480);
     }
 
     public function test_nobody_takes_builds_or_gathers_in_irongate(): void

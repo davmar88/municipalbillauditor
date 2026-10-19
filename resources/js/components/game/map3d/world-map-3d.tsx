@@ -11,7 +11,7 @@ import {
     walkPoint,
 } from '@/components/game/world-map';
 import type { Point } from '@/lib/hollowmere';
-import { FARM, REACH, hub, inside } from '@/lib/hollowmere';
+import { FARM, LANDS, hub, inside } from '@/lib/hollowmere';
 import { cn } from '@/lib/utils';
 import { AnimalMenu } from '@/components/game/animal-menu';
 import { FolkCard } from '@/components/game/irongate-folk';
@@ -389,7 +389,7 @@ export default function WorldMap3D({
         closeCards();
         const rig = rigRef.current;
         if (rig) {
-            const [centre, k] = rig.framing(REACH);
+            const [centre, k] = rig.framing(LANDS);
             rig.go(centre, k, 480);
             moved();
         }

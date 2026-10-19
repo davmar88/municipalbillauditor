@@ -183,6 +183,8 @@ final class ValleyBuilder
         'robin_thicket' => ['Robin Thicket', 'frontier', 'dye', 80, 11],
         'stoat_spring' => ['Stoat Spring', 'frontier', 'water', 81, 11],
         'tansy_spinney' => ['Tansy Spinney', 'frontier', 'wood', 82, 11],
+        // The open scrub between all the rest, out to the valley's edge: anyone stands, gathers and camps there.
+        'scrubland' => ['The Scrubland', 'scrub', 'wood', 0, 12],
     ];
 
     /** What each frontier region borders: its nearest land. */
@@ -439,6 +441,11 @@ final class ValleyBuilder
 
     private function touches(Region $a, Region $b): bool
     {
+        // The scrub lies round everything and borders nothing: nobody raids from it or into it.
+        if ($a->isScrub() || $b->isScrub()) {
+            return false;
+        }
+
         if ($a->ring === 'frontier' || $b->ring === 'frontier') {
             return in_array($b->key, self::FRONTIER_LINKS[$a->key] ?? [], true)
                 || in_array($a->key, self::FRONTIER_LINKS[$b->key] ?? [], true);

@@ -29,6 +29,7 @@ import {
     hub,
     plot,
     scatter,
+    scrubPoints,
     seeded,
 } from '@/lib/hollowmere';
 import type {
@@ -721,6 +722,15 @@ export class World {
             26,
             0.62,
             ['#2f5a3c', '#3a6b47', '#27503a', '#355f41'],
+        );
+        // The open scrub between the regions: low round bushes out to the valley's edge.
+        instanced(
+            flat(scrubPoints()),
+            new THREE.IcosahedronGeometry(0.5, 0),
+            new THREE.MeshLambertMaterial({ flatShading: true }),
+            24,
+            0.3,
+            ['#4d5e2f', '#5a6b36', '#43532a', '#61703a'],
         );
         // The orchard's fruit trees: round, with a little blossom pink among the green.
         instanced(

@@ -93,7 +93,7 @@ final class Bases
                 throw new GameException("Your faction doesn't hold {$region->name}. Build on land you hold.");
             }
 
-            if ($region->isSafe() || $region->isCity()) {
+            if ($region->isSafe() || $region->isCity() || $region->isScrub()) {
                 throw new GameException("Nothing can be built in {$region->name}.");
             }
 

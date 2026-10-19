@@ -8,6 +8,11 @@ use App\Game\Clock;
 use App\Game\Farms;
 use App\Game\GameException;
 use App\Game\Gathering;
+use App\Game\Geography;
+use App\Game\Homes;
+use App\Game\Movement;
+use App\Game\Players;
+use App\Game\Stock;
 use App\Game\Tick;
 use App\Models\Notice;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -30,7 +35,7 @@ class FarmsTest extends TestCase
 
     public function test_the_valley_has_twelve_farms_beyond_the_fences_in_three_rings(): void
     {
-        $this->assertSame(28, $this->valley->regions()->where('wild', false)->whereNotIn('ring', ['city', 'frontier'])->count());
+        $this->assertSame(28, $this->valley->regions()->where('wild', false)->whereNotIn('ring', ['city', 'frontier', 'scrub'])->count());
         $this->assertSame(36, $this->valley->regions()->where('wild', true)->count(), 'Three patches of wild land round each farm.');
         $this->assertSame(['fennick'], $this->region('hartley')->neighbours()->where('wild', false)->where('ring', 'farm')->pluck('key')->all(), 'The third ring is reached from the second.');
         $this->assertSame(['gold', 'copper', 'pears', 'carrots', 'berries', 'pumpkins'], collect(['coldharbour', 'copperhill', 'northfold', 'hartley', 'rushmere', 'southmere'])->map(fn (string $key) => $this->region($key)->produces)->all());
@@ -191,5 +196,31 @@ class FarmsTest extends TestCase
         $this->assertNull($farm->fresh()->trench);
         $this->assertTrue($farm->fresh()->isParched());
         $this->assertTrue($field->fresh()->isParched());
+    }
+
+    public function test_the_open_scrub_is_anyones_and_the_land_thins_out_far_from_the_farms(): void
+    {
+        // Out in the gaps, far from any farm.
+        [$x, $y] = [-2400.0, -2600.0];
+        $this->assertSame('scrubland', Geography::regionAt($x, $y));
+        $this->assertSame(Geography::LEAST, Geography::richness($x, $y));
+        $this->assertSame(1.0, Geography::richness(800, 500), 'Full in Hollowmere.');
+        $this->assertNull(Geography::regionAt(5000, 5000), 'Nothing past the edge.');
+
+        $player = $this->player(attributes: ['materials' => ['wood' => 30, 'straw' => 30]]);
+        app(Movement::class)->walkTo($player->fresh(), $x, $y);
+        $this->travel(6)->hours();
+        $scrub = Players::lock($player->fresh())->location();
+        $this->assertSame('scrubland', $scrub->key);
+
+        // Gathering out here brings in a quarter.
+        $got = app(Gathering::class)->gather($player->fresh(), $scrub);
+        $this->assertSame('wood', $got['what']);
+        $this->assertSame((int) floor(Gathering::MATERIAL * Geography::LEAST * $player->species->gathering()), $got['amount']);
+        $this->assertSame((int) round(120 * Geography::LEAST), Stock::state($scrub)['max']);
+
+        // Anyone can set up camp, but nobody holds it.
+        $this->assertSame('scrubland', app(Homes::class)->build($player->fresh())->region->key);
+        $this->assertFalse($scrub->neighbours()->exists());
     }
 }

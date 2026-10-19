@@ -11,7 +11,13 @@ import { RegionPanel } from '@/components/game/region-panel';
 import type { Plunder, Warrant } from '@/components/game/region-panel';
 import { Button } from '@/components/ui/button';
 import { act, clockTime, fromNow } from '@/lib/game';
-import { commit, gate, walkStop, walkTo as walkToRoute } from '@/routes/play';
+import {
+    commit,
+    gate,
+    gather,
+    walkStop,
+    walkTo as walkToRoute,
+} from '@/routes/play';
 import type {
     GateNightInfo,
     MapMe,
@@ -55,6 +61,13 @@ type Props = {
     irongate: IrongateInfo;
     homes: MapHome[];
     home: HomeInfo;
+    /** Out in the open scrub: what there is to gather where you stand. */
+    scrub: {
+        id: number;
+        produces: string;
+        stock: { left: number; max: number } | null;
+        richness: number;
+    } | null;
 };
 
 export default function MapPage({
@@ -78,6 +91,7 @@ export default function MapPage({
     irongate,
     homes,
     home,
+    scrub,
 }: Props) {
     const { player } = usePage().props;
     const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -347,6 +361,7 @@ export default function MapPage({
                         />
                     )}
                 </GameMap>
+                {scrub && <ScrubCard scrub={scrub} />}
                 <HomeCard info={home} homes={homes} me={me} onWalk={walkTo} />
                 <p className="-mt-2 text-xs text-muted-foreground">
                     Click or tap a spot to walk there. Right-click, or press and
@@ -403,5 +418,38 @@ function GateResult({
                     : 'Nobody defended it.'}
             </span>
         </p>
+    );
+}
+
+/** Out in the scrub between the regions: anyone gathers and camps here, but the further out, the less there is. */
+function ScrubCard({ scrub }: { scrub: NonNullable<Props['scrub']> }) {
+    const left = scrub.stock?.left ?? 0;
+
+    return (
+        <section className="flex flex-col gap-2 rounded-lg border border-lime-700/40 bg-lime-950/30 p-3 text-sm">
+            <p className="font-semibold">🌿 You're out in the scrub</p>
+            <p className="text-muted-foreground">
+                Open ground nobody holds. Anyone can gather and set up camp
+                here. The further you go from the farms, the less there is: here
+                you bring in {Math.round(scrub.richness * 100)}% of what you
+                would by a farm.
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
+                <Button
+                    size="sm"
+                    variant="secondary"
+                    disabled={left < 1}
+                    onClick={() => act(gather.url(scrub.id))}
+                >
+                    Gather {scrub.produces}
+                </Button>
+                {scrub.stock && (
+                    <span className="text-xs text-muted-foreground">
+                        {scrub.stock.left} of {scrub.stock.max} left in the
+                        scrub.
+                    </span>
+                )}
+            </div>
+        </section>
     );
 }

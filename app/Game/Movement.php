@@ -60,7 +60,7 @@ final class Movement
             $player = Players::lock($player);
             Players::ensureFree($player);
             $target = self::regionUnder($player, $x, $y)
-                ?? throw new GameException("There's nothing there to walk to. Pick a spot in Hollowmere or on a farm.");
+                ?? throw new GameException("That's past the valley's edge. Pick a spot on the map.");
 
             if ($target->wild) {
                 throw new GameException("{$target->name} is still wild land. Its farm's holders can grow into it.");

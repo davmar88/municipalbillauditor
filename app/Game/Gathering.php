@@ -69,8 +69,11 @@ final class Gathering
             };
             $own = $player->faction_id !== null && $region->faction_id === $player->faction_id;
             $workshop = $region->produces === 'corn' ? 1.0 : Bases::gathering($player, $region);
+            // The further from the farms, the less an animal brings in.
+            [$x, $y] = Movement::position($player);
+            $rich = Geography::richness($x, $y);
             // Gathering Gloves, a Feast Basket and the faction's Farming bring in more.
-            $amount = min($left, (int) floor($base * $player->species->gathering() * ($own ? 1.5 : 1.0) * $workshop * Powers::gathering($player, $region->produces) * Research::gathering($player)));
+            $amount = min($left, max(1, (int) floor($base * $rich * $player->species->gathering() * ($own ? 1.5 : 1.0) * $workshop * Powers::gathering($player, $region->produces) * Research::gathering($player))));
             Stock::take($region, $amount);
             $tax = 0;
 

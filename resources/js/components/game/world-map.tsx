@@ -14,7 +14,7 @@ import {
     BROOK,
     FARM,
     FIELDS,
-    REACH,
+    LANDS,
     WORLD,
     anchor,
     hub,
@@ -55,7 +55,7 @@ export function shapeFor(region: MapRegion) {
 
 export function zoomLimits(size: Size) {
     const fit = Math.min(size.width / FARM.width, size.height / FARM.height);
-    const all = Math.min(size.width / REACH.width, size.height / REACH.height);
+    const all = Math.min(size.width / LANDS.width, size.height / LANDS.height);
 
     // You start on Hollowmere and can zoom out to see the farms round it.
     return { fit, all, min: all * 0.95, max: MAX_ZOOM };
@@ -321,7 +321,7 @@ function useCamera(
         }
 
         const { all: k } = zoomLimits(size);
-        lookAt([REACH.x + REACH.width / 2, REACH.y + REACH.height / 2], k);
+        lookAt([LANDS.x + LANDS.width / 2, LANDS.y + LANDS.height / 2], k);
     }, [lookAt]);
 
     useEffect(() => {
