@@ -2,12 +2,12 @@ import { Head, router, usePage } from '@inertiajs/react';
 import { Flame, Footprints, Shield, Swords } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { GameBar } from '@/components/game/game-bar';
+import { GameMap } from '@/components/game/game-map';
 import { GateStrength } from '@/components/game/gate-strength';
 import { HorseshoePicker } from '@/components/game/horseshoe-picker';
 import { MapHud } from '@/components/game/map-hud';
 import { RegionPanel } from '@/components/game/region-panel';
 import type { Plunder, Warrant } from '@/components/game/region-panel';
-import { WorldMap } from '@/components/game/world-map';
 import { Button } from '@/components/ui/button';
 import { act, clockTime, fromNow } from '@/lib/game';
 import { commit, gate, walkStop, walkTo as walkToRoute } from '@/routes/play';
@@ -20,6 +20,7 @@ import type {
     MapBattle,
     MapLaw,
     MapRegion,
+    Worn,
 } from '@/types/game';
 
 type Props = {
@@ -33,6 +34,8 @@ type Props = {
     recent: { id: number; text: string; at: string }[];
     gate: GateNightInfo;
     me: MapMe;
+    /** What your animal wears, for the 3D map. */
+    wearing: Worn[];
     yields: { corn: number; material: number };
     base: FactionStore | null;
     buildingKinds: BuildingKindCard[];
@@ -52,6 +55,7 @@ export default function MapPage({
     recent,
     gate: gateNight,
     me,
+    wearing,
     yields,
     base,
     buildingKinds,
@@ -275,7 +279,7 @@ export default function MapPage({
                     </section>
                 )}
 
-                <WorldMap
+                <GameMap
                     valley={valley}
                     regions={regions}
                     here={here}
@@ -294,6 +298,7 @@ export default function MapPage({
                               : 'fell'
                     }
                     wanted={wanted}
+                    wearing={wearing}
                 >
                     <MapHud
                         valley={valley}
@@ -320,7 +325,7 @@ export default function MapPage({
                             onClose={() => setSelectedId(null)}
                         />
                     )}
-                </WorldMap>
+                </GameMap>
                 <p className="-mt-2 text-xs text-muted-foreground">
                     Click or tap a spot to walk there. Right-click, or press and
                     hold on a phone, to see what's there.

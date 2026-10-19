@@ -187,9 +187,10 @@ export default function AnimalStage({
         observer.observe(box);
         fit();
 
-        const clock = new THREE.Clock();
-        renderer.setAnimationLoop(() => {
-            mixer?.update(Math.min(0.05, clock.getDelta()));
+        let last = performance.now();
+        renderer.setAnimationLoop((now: number) => {
+            mixer?.update(Math.min(0.05, (now - last) / 1000));
+            last = now;
             controls.update();
             renderer.render(scene, camera);
         });

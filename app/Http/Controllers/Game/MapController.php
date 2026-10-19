@@ -15,6 +15,7 @@ use App\Game\Powers;
 use App\Game\Stock;
 use App\Game\ValleyBuilder;
 use App\Game\Wall;
+use App\Game\Wardrobe;
 use App\Http\Controllers\Controller;
 use App\Models\Attack;
 use App\Models\BattleCommitment;
@@ -55,13 +56,24 @@ class MapController extends Controller
         $committed = BattleCommitment::query()->where('player_id', $player->id)->whereIn('attack_id', $open->pluck('id'))->pluck('attack_id')->all();
         $paddock = $regions->firstWhere('key', 'paddock');
 
-        // Who stands where. Animals without a region are in the Paddock.
+        // Who stands where. Animals without a region are in the Paddock. You come
+        // first, so the crowd count never counts you, then outlaws, so the map
+        // can always show who is wanted.
+        $wanted = $season ? Warrant::query()->where('season_id', $season->id)->where('status', 'open')->pluck('player_id')->all() : [];
         $animals = Player::query()
             ->with('faction:id,colour')
             ->where('valley_id', $valley->id)
             ->where('last_visit_on', '>=', Clock::now()->subDays(7)->toDateString())
             ->get(['id', 'name', 'species', 'faction_id', 'region_id'])
-            ->groupBy(fn (Player $animal) => $animal->region_id ?? $paddock?->id);
+            ->sortBy(fn (Player $animal) => match (true) {
+                $animal->id === $player->id => 0,
+                in_array($animal->id, $wanted, true) => 1,
+                default => 2,
+            })
+            ->groupBy(fn (Player $animal) => $animal->region_id ?? $paddock?->id)
+            ->map(fn ($group) => $group->values());
+        // What the animals the map shows are wearing, in one query.
+        $wearing = Wardrobe::wornBy([$player->id, ...$animals->flatMap(fn ($group) => $group->take(12)->pluck('id'))]);
 
         return Inertia::render('game/map', [
             'valley' => $valley->name,
@@ -115,6 +127,7 @@ class MapController extends Controller
                         'species' => $animal->species->value,
                         'colour' => $animal->faction?->colour,
                         'me' => $animal->id === $player->id,
+                        'wearing' => $wearing[$animal->id] ?? [],
                     ])->values(),
                 ],
             ]),
@@ -163,6 +176,8 @@ class MapController extends Controller
                     'at' => $attack->resolved_at->toIso8601String(),
                 ]) ?? [],
             'me' => Movement::map($player),
+            // What your own animal wears, for the 3D map.
+            'wearing' => $wearing[$player->id] ?? [],
             'gate' => [
                 'open' => GateNight::isGateDay(),
                 // Tonight's raid, so the map can ask how it went once it has happened.

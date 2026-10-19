@@ -97,12 +97,31 @@ export type MessageAnimal = {
     orchard: boolean;
 };
 
+/** A shop item an animal wears, as the server sends it (App\Game\Wardrobe). */
+export type Worn = {
+    spot:
+        | 'hat'
+        | 'scarf'
+        | 'bell'
+        | 'cloak'
+        | 'ribbon'
+        | 'gloves'
+        | 'shoes'
+        | 'carried';
+    template: string;
+    name: string;
+    colours: string[];
+    pattern: string;
+};
+
 export type MapAnimal = {
     id: number;
     name: string;
     species: Species;
     colour: string | null;
     me: boolean;
+    /** The shop items it wears (App\Game\Wardrobe), for the 3D map. */
+    wearing: Worn[];
 };
 
 export type BuildingKindValue =

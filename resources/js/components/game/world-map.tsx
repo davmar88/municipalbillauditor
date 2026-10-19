@@ -31,22 +31,22 @@ import type {
 } from '@/types/game';
 
 type View = { x: number; y: number; k: number };
-type Size = { width: number; height: number };
+export type Size = { width: number; height: number };
 
-const MAX_ZOOM = 3;
-const LABEL = '#efecf7';
-const HALO = '#0b0a0f';
-const VIOLET = '#b39aff';
-const FLAG = '#dd6b30';
+export const MAX_ZOOM = 3;
+export const LABEL = '#efecf7';
+export const HALO = '#0b0a0f';
+export const VIOLET = '#b39aff';
+export const FLAG = '#dd6b30';
 
 /** Desktop puts the region card on the left; phones slide it up from the bottom. */
-const PANEL_WIDTH = 384;
+export const PANEL_WIDTH = 384;
 
-function shapeFor(region: MapRegion) {
+export function shapeFor(region: MapRegion) {
     return shapeOf(region.key, region.col, region.row, region.ring === 'safe');
 }
 
-function zoomLimits(size: Size) {
+export function zoomLimits(size: Size) {
     const fit = Math.min(size.width / FARM.width, size.height / FARM.height);
     const all = Math.min(size.width / REACH.width, size.height / REACH.height);
 
@@ -104,7 +104,7 @@ function firstView(size: Size, focus: Point | null): View {
 }
 
 /** Where on screen a region should sit so the region card doesn't cover it. */
-function openArea(size: Size, panelOpen: boolean) {
+export function openArea(size: Size, panelOpen: boolean) {
     if (!panelOpen) {
         return {
             left: 40,
@@ -910,11 +910,11 @@ function capitalised(text: string): string {
 }
 
 /** Label size in screen pixels: grows a little as you zoom in. */
-function labelPixels(k: number): number {
+export function labelPixels(k: number): number {
     return 11.5 * (k / 0.6) ** 0.25;
 }
 
-function subtitle(
+export function subtitle(
     region: MapRegion,
     houseId: number | null,
     gateNight: boolean,
@@ -1004,7 +1004,7 @@ function subtitle(
         : null;
 }
 
-function labelPoint(region: MapRegion): Point {
+export function labelPoint(region: MapRegion): Point {
     const shape = shapeFor(region);
 
     if (region.ring === 'safe') {
@@ -1015,7 +1015,7 @@ function labelPoint(region: MapRegion): Point {
 }
 
 /** How tonight's Gate Night went, once it has happened. */
-type GateResult = 'held' | 'fell' | null;
+export type GateResult = 'held' | 'fell' | null;
 
 /** Region names and lane names, the same size on screen at any zoom. */
 const Labels = memo(function Labels({
@@ -1130,7 +1130,7 @@ const Labels = memo(function Labels({
 });
 
 /** Spots round a region's hub for the animals standing there, in screen pixels. */
-const SPOTS: Point[] = [
+export const SPOTS: Point[] = [
     ...Array.from(
         { length: 6 },
         (_, i) =>
@@ -1263,7 +1263,7 @@ const Crowd = memo(function Crowd({
     );
 });
 
-const BUILDING_GLYPH: Record<BuildingKindValue, string> = {
+export const BUILDING_GLYPH: Record<BuildingKindValue, string> = {
     den: '🏠',
     watchtower: '🗼',
     drill_yard: '⚔️',
@@ -1360,7 +1360,7 @@ function useWalkClock(walk: MapMe['walk']): number {
 }
 
 /** Where you are now: along your walk's line, or where you stand. */
-function walkPoint(me: MapMe, now: number): Point {
+export function walkPoint(me: MapMe, now: number): Point {
     if (!me.walk) {
         return [me.x, me.y];
     }
@@ -1498,7 +1498,7 @@ const HitAreas = memo(function HitAreas({
     );
 });
 
-function Compass() {
+export function Compass() {
     return (
         <svg viewBox="-20 -27 40 47" className="h-12 w-10" aria-hidden>
             <circle r={17} fill="#14121a" fillOpacity={0.85} stroke="#4f4860" />
@@ -1517,7 +1517,7 @@ function Compass() {
     );
 }
 
-type Props = {
+export type WorldMapProps = {
     valley: string;
     regions: MapRegion[];
     here: number | null;
@@ -1534,6 +1534,8 @@ type Props = {
     gateResult: GateResult;
     /** The animals with a warrant out for their arrest. */
     wanted: number[];
+    /** A button to switch between the flat map and the 3D one. */
+    switcher?: ReactNode;
     children?: ReactNode;
 };
 
@@ -1554,8 +1556,9 @@ export function WorldMap({
     onWalk,
     gateResult,
     wanted,
+    switcher,
     children,
-}: Props) {
+}: WorldMapProps) {
     const containerRef = useRef<HTMLDivElement>(null);
     const svgRef = useRef<SVGSVGElement>(null);
     const byId = useMemo(
@@ -1766,6 +1769,7 @@ export function WorldMap({
                         <Scan className="size-4" />
                     </MapButton>
                 </div>
+                {switcher}
             </div>
 
             <div
@@ -1789,7 +1793,7 @@ export function WorldMap({
     );
 }
 
-function MapButton({
+export function MapButton({
     label,
     onClick,
     divided = false,

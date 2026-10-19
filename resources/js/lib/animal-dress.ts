@@ -1,21 +1,7 @@
 import * as THREE from 'three';
+import type { Worn } from '@/types/game';
 
-/** A shop item an animal wears, as the server sends it (App\Game\Wardrobe). */
-export type Worn = {
-    spot:
-        | 'hat'
-        | 'scarf'
-        | 'bell'
-        | 'cloak'
-        | 'ribbon'
-        | 'gloves'
-        | 'shoes'
-        | 'carried';
-    template: string;
-    name: string;
-    colours: string[];
-    pattern: string;
-};
+export type { Worn };
 
 type Sample = { p: THREE.Vector3; n: THREE.Vector3 };
 

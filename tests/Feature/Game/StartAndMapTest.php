@@ -255,6 +255,27 @@ class StartAndMapTest extends TestCase
             ->where('regions.11.animals.count', 1));
     }
 
+    public function test_the_map_shows_what_you_and_the_animals_round_you_wear(): void
+    {
+        $player = $this->player();
+        $other = $this->player(Species::Horse);
+        $this->stand($other, 'henhouse');
+        $wear = function (Player $owner, ItemTemplate $template, string $name): void {
+            $design = ItemDesign::create(['player_id' => $owner->id, 'template' => $template, 'name' => $name, 'colours' => ['#b39aff'], 'pattern' => 'plain', 'status' => 'approved']);
+            Item::create(['item_design_id' => $design->id, 'player_id' => $owner->id, 'serial' => 1]);
+        };
+        $wear($player, ItemTemplate::Scarf, 'Blue Scarf');
+        $wear($other, ItemTemplate::Hat, 'Straw Hat');
+
+        $this->actingAs($player->user)->get(route('play'))->assertInertia(fn (Assert $page) => $page
+            ->where('wearing.0.spot', 'scarf')
+            ->where('wearing.0.name', 'Blue Scarf')
+            ->where('regions.11.key', 'henhouse')
+            ->where('regions.11.animals.sample.0.id', $other->id)
+            ->where('regions.11.animals.sample.0.wearing.0.spot', 'hat')
+            ->where('regions.11.animals.sample.0.wearing.0.name', 'Straw Hat'));
+    }
+
     public function test_the_map_shows_the_laws_on_the_barn_wall(): void
     {
         $player = $this->player();

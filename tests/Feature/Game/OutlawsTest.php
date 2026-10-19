@@ -295,4 +295,24 @@ class OutlawsTest extends TestCase
             ->where('warrants.0.playerId', $suspect->id)
             ->where('warrants.0.bounty', 150));
     }
+
+    public function test_the_map_shows_you_and_an_outlaw_even_in_a_crowd(): void
+    {
+        // Twelve animals got to the Henhouse first.
+        foreach (range(1, 12) as $i) {
+            $this->stand($this->player(), 'henhouse');
+        }
+        [, $ruler, $suspect] = $this->houseAndSuspect();
+        $this->stand($suspect, 'henhouse');
+        $this->stand($ruler, 'henhouse');
+        $this->warrants->issue($ruler, $suspect, 150);
+
+        $this->actingAs($ruler->user)->get(route('play'))->assertOk()->assertInertia(fn (Assert $page) => $page
+            ->where('regions.11.key', 'henhouse')
+            ->where('regions.11.animals.count', 14)
+            ->has('regions.11.animals.sample', 12)
+            ->where('regions.11.animals.sample.0.id', $ruler->id)
+            ->where('regions.11.animals.sample.0.me', true)
+            ->where('regions.11.animals.sample.1.id', $suspect->id));
+    }
 }
