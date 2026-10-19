@@ -1311,27 +1311,63 @@ function farmland(key: string) {
 }
 
 /** What each farm grows, as ValleyBuilder has it. */
-const FARM_CROP: Record<string, 'honey' | 'herbs' | 'iron'> = {
+const FARM_CROP: Record<
+    string,
+    | 'honey'
+    | 'herbs'
+    | 'iron'
+    | 'gold'
+    | 'copper'
+    | 'pears'
+    | 'carrots'
+    | 'berries'
+    | 'pumpkins'
+> = {
     thornbury: 'honey',
     brookside: 'herbs',
     willowby: 'iron',
     ashcombe: 'iron',
     fennick: 'honey',
     marlow: 'herbs',
-    hartley: 'herbs',
-    northfold: 'honey',
-    coldharbour: 'iron',
-    rushmere: 'honey',
-    southmere: 'herbs',
-    copperhill: 'iron',
+    hartley: 'carrots',
+    northfold: 'pears',
+    coldharbour: 'gold',
+    rushmere: 'berries',
+    southmere: 'pumpkins',
+    copperhill: 'copper',
 };
 
 /** What makes each farm worth having: hives, herb beds or an old forge's ore. */
+/** Crops grown in rows, by colour. */
+const ROW_COLOURS: Partial<Record<string, string>> = {
+    herbs: '#3fae7a',
+    pears: '#b8c94a',
+    carrots: '#e07a2f',
+    berries: '#b0336a',
+    pumpkins: '#d98a1e',
+};
+
+/** What's dug from the ground, and its glint. */
+const ORE_COLOURS: Partial<Record<string, [string, string]>> = {
+    iron: ['#6c6f7d', '#9aa0b4'],
+    gold: ['#c9a227', '#f2d36b'],
+    copper: ['#a0522d', '#d98b5f'],
+};
+
 function Crop({
     crop,
     centre: [cx, cy],
 }: {
-    crop: 'honey' | 'herbs' | 'iron';
+    crop:
+        | 'honey'
+        | 'herbs'
+        | 'iron'
+        | 'gold'
+        | 'copper'
+        | 'pears'
+        | 'carrots'
+        | 'berries'
+        | 'pumpkins';
     centre: Point;
 }) {
     if (crop === 'honey') {
@@ -1359,14 +1395,17 @@ function Crop({
         );
     }
 
-    if (crop === 'herbs') {
+    // Rows of herbs, fruit or veg, each in its own colour.
+    const rows = ROW_COLOURS[crop];
+
+    if (rows) {
         return (
             <path
                 d={Array.from(
                     { length: 6 },
                     (_, i) => `M${cx + 30} ${cy - 70 + i * 14}h90`,
                 ).join('')}
-                stroke="#3fae7a"
+                stroke={rows}
                 strokeWidth={6}
                 strokeLinecap="round"
                 opacity={0.85}
@@ -1387,8 +1426,8 @@ function Crop({
                     smoothLoop(blob(point, 9, 6, `ore:${i}`, 0.3, 7)),
                 )
                 .join('')}
-            fill="#6c6f7d"
-            stroke="#9aa0b4"
+            fill={ORE_COLOURS[crop]?.[0] ?? '#6c6f7d'}
+            stroke={ORE_COLOURS[crop]?.[1] ?? '#9aa0b4'}
             strokeWidth={0.8}
         />
     );

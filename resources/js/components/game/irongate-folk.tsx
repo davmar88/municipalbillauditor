@@ -133,7 +133,7 @@ function Fence({
         <div className="flex flex-col gap-2">
             <p>
                 {irongate.fence.price} Corn each for materials,{' '}
-                {irongate.fence.rarePrice} for honey, herbs or iron. She'll pay
+                {irongate.fence.rarePrice} for the farms' rare crops. She'll pay
                 you {irongate.fence.left} more Corn today.
             </p>
             {why ? (

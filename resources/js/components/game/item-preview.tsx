@@ -77,6 +77,55 @@ function Shape({
     second: string;
 }) {
     switch (template) {
+        case 'crown':
+            return (
+                <>
+                    <path
+                        d="M10 46V22l11 12 11-16 11 16 11-12v24z"
+                        fill={fill}
+                    />
+                    <rect x="10" y="44" width="44" height="6" fill={second} />
+                </>
+            );
+        case 'ring':
+            return (
+                <>
+                    <circle
+                        cx="32"
+                        cy="38"
+                        r="15"
+                        fill="none"
+                        stroke={fill}
+                        strokeWidth="6"
+                    />
+                    <path d="M26 20l6-8 6 8-6 4z" fill={second} />
+                </>
+            );
+        case 'pie':
+            return (
+                <>
+                    <ellipse cx="32" cy="40" rx="24" ry="10" fill={WOOD} />
+                    <path d="M8 38c4-12 44-12 48 0z" fill={fill} />
+                    <path
+                        d="M18 34l6-4M30 32l6-4M42 34l6-4"
+                        stroke={second}
+                        strokeWidth="2"
+                    />
+                </>
+            );
+        case 'stew':
+            return (
+                <>
+                    <path d="M10 30h44l-6 22H16z" fill={fill} />
+                    <ellipse cx="32" cy="30" rx="22" ry="5" fill={second} />
+                    <path
+                        d="M24 18c2 4-2 6 0 10M38 18c2 4-2 6 0 10"
+                        stroke="#c8c3d4"
+                        strokeWidth="2"
+                        fill="none"
+                    />
+                </>
+            );
         case 'mortar':
             // A sack of mortar and a trowel.
             return (

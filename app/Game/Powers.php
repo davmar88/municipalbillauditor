@@ -25,6 +25,11 @@ final class Powers
 
     public const GLOVES = 1.5;
 
+    /** Gathers a Fruit Pie doubles, and horseshoes a Veggie Stew gives. */
+    public const PIE_USES = 5;
+
+    public const STEW_HORSESHOES = 3;
+
     public const SHOES = 1.33;
 
     public const CLOAK = 0.5;
@@ -104,6 +109,8 @@ final class Powers
                 ItemTemplate::Hedge => $this->hedge($player),
                 ItemTemplate::Trowel => $this->trowel($player),
                 ItemTemplate::Mortar => app(Homes::class)->mortar($player),
+                ItemTemplate::Pie => $this->charge($player, 'pie', self::PIE_USES, 'You ate the Fruit Pie: your next 5 gathers bring in twice as much.'),
+                ItemTemplate::Stew => $this->stew($player),
                 ItemTemplate::Sheaf => $this->sheaf($player),
                 ItemTemplate::Cake => $this->time(['player_id' => $player->id], 'cake', self::CAKE_HOURS, 'You ate the Honey Cake: your skills grow twice as fast'),
                 ItemTemplate::Pickaxe => $this->charge($player, 'pickaxe', self::PICKAXE_USES, 'Pickaxe in hand: your next 10 gathers of materials bring in twice as much.'),
@@ -125,6 +132,11 @@ final class Powers
     public static function gathering(Player $player, ?string $produces = null): float
     {
         $boost = self::spend(['player_id' => $player->id], 'gloves') ? self::GLOVES : 1.0;
+
+        // A Fruit Pie doubles any gather, Corn or materials.
+        if (self::spend(['player_id' => $player->id], 'pie')) {
+            $boost *= 2;
+        }
 
         // An Iron Pickaxe works on materials, not Corn.
         if ($produces !== null && $produces !== 'corn' && self::spend(['player_id' => $player->id], 'pickaxe')) {
@@ -259,6 +271,17 @@ final class Powers
     }
 
     /** Add uses to a counted effect on the player. */
+    private function stew(Player $player): string
+    {
+        if (Horseshoes::current($player) >= Horseshoes::max()) {
+            throw new GameException("You're full of horseshoes already. Save the stew for when you're short.");
+        }
+
+        Horseshoes::give($player, self::STEW_HORSESHOES);
+
+        return 'You ate the Veggie Stew: '.self::STEW_HORSESHOES.' more horseshoes.';
+    }
+
     private function charge(Player $player, string $kind, int $uses, string $told): string
     {
         $effect = Effect::query()->where('player_id', $player->id)->where('kind', $kind)->whereNull('expires_at')->lockForUpdate()->first();

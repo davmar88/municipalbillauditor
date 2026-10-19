@@ -20,7 +20,8 @@ final class Wardrobe
      * @var array<string, list<ItemTemplate>>
      */
     public const SPOTS = [
-        'hat' => [ItemTemplate::Hat],
+        // A Gold Crown, when you have one, is worn instead of a hat.
+        'hat' => [ItemTemplate::Crown, ItemTemplate::Hat],
         'scarf' => [ItemTemplate::Scarf],
         'bell' => [ItemTemplate::Bell],
         'cloak' => [ItemTemplate::Cloak],

@@ -23,7 +23,7 @@ final class Gathering
     /** Honey, herbs and iron from the farms beyond the fences come slower. */
     public const RARE = 3;
 
-    public const RARE_MATERIALS = ['honey', 'herbs', 'iron'];
+    public const RARE_MATERIALS = ['honey', 'herbs', 'iron', 'gold', 'copper', 'pears', 'carrots', 'berries', 'pumpkins'];
 
     /**
      * @return array{what: string, amount: int, tax: int}

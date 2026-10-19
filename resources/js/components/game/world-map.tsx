@@ -941,7 +941,17 @@ const Marches = memo(function Marches({
 });
 
 /** What each farm beyond the fences grows, as a sign on its label. */
-const CROPS: Record<string, string> = { honey: '🍯', herbs: '🌿', iron: '⚒' };
+const CROPS: Record<string, string> = {
+    honey: '🍯',
+    herbs: '🌿',
+    iron: '⚒',
+    gold: '🪙',
+    copper: '🟤',
+    pears: '🍐',
+    carrots: '🥕',
+    berries: '🫐',
+    pumpkins: '🎃',
+};
 
 function capitalised(text: string): string {
     return text.charAt(0).toUpperCase() + text.slice(1);

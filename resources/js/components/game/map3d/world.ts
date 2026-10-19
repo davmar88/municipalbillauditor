@@ -125,19 +125,30 @@ const WILD: Record<string, string> = {
     slag: 'rock',
 };
 /** What each farm grows, as ValleyBuilder has it. */
-const FARM_CROP: Record<string, 'honey' | 'herbs' | 'iron'> = {
+const FARM_CROP: Record<
+    string,
+    | 'honey'
+    | 'herbs'
+    | 'iron'
+    | 'gold'
+    | 'copper'
+    | 'pears'
+    | 'carrots'
+    | 'berries'
+    | 'pumpkins'
+> = {
     thornbury: 'honey',
     brookside: 'herbs',
     willowby: 'iron',
     ashcombe: 'iron',
     fennick: 'honey',
     marlow: 'herbs',
-    hartley: 'herbs',
-    northfold: 'honey',
-    coldharbour: 'iron',
-    rushmere: 'honey',
-    southmere: 'herbs',
-    copperhill: 'iron',
+    hartley: 'carrots',
+    northfold: 'pears',
+    coldharbour: 'gold',
+    rushmere: 'berries',
+    southmere: 'pumpkins',
+    copperhill: 'copper',
 };
 
 /** A region's ground: a farm, a field a farm has cleared, wild land, or one of Hollowmere's own. */
@@ -630,7 +641,11 @@ export class World {
             } else if (kind === 'farm') {
                 const crop = FARM_CROP[FIELDS[key]?.farm ?? key] ?? 'herbs';
                 const list =
-                    crop === 'honey' ? hives : crop === 'iron' ? ore : herbs;
+                    crop === 'honey'
+                        ? hives
+                        : ['iron', 'gold', 'copper'].includes(crop)
+                          ? ore
+                          : herbs;
                 list.push(
                     ...scatter(
                         shape,

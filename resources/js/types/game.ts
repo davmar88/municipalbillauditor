@@ -67,7 +67,11 @@ export type ItemShape =
     | 'plough'
     | 'speedo'
     | 'skin'
-    | 'mortar';
+    | 'mortar'
+    | 'crown'
+    | 'ring'
+    | 'pie'
+    | 'stew';
 
 export type DesignCard = {
     id: number;

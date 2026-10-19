@@ -32,7 +32,7 @@ class FarmsTest extends TestCase
         $this->assertSame(28, $this->valley->regions()->where('wild', false)->where('ring', '!=', 'city')->count());
         $this->assertSame(36, $this->valley->regions()->where('wild', true)->count(), 'Three patches of wild land round each farm.');
         $this->assertSame(['fennick'], $this->region('hartley')->neighbours()->where('wild', false)->pluck('key')->all(), 'The third ring is reached from the second.');
-        $this->assertSame(['honey', 'herbs', 'iron'], [$this->region('northfold')->produces, $this->region('southmere')->produces, $this->region('copperhill')->produces]);
+        $this->assertSame(['gold', 'copper', 'pears', 'carrots', 'berries', 'pumpkins'], collect(['coldharbour', 'copperhill', 'northfold', 'hartley', 'rushmere', 'southmere'])->map(fn (string $key) => $this->region($key)->produces)->all());
         $this->assertEqualsCanonicalizing(['thornbury', 'northfold', 'coldharbour'], $this->region('ashcombe')->neighbours()->where('wild', false)->pluck('key')->all(), 'The second ring is reached from the first, and leads on to the third.');
         $this->assertSame(['iron', 'honey', 'herbs'], [$this->region('ashcombe')->produces, $this->region('fennick')->produces, $this->region('marlow')->produces]);
         $this->assertEqualsCanonicalizing(['orchard', 'big_barn', 'hayfield', 'ashcombe'], $this->region('thornbury')->neighbours()->where('wild', false)->pluck('key')->all());

@@ -11,9 +11,11 @@ use App\Game\Clock;
 use App\Game\Crimes;
 use App\Game\GameException;
 use App\Game\Gathering;
+use App\Game\Horseshoes;
 use App\Game\Market;
 use App\Game\Powers;
 use App\Game\Rosettes;
+use App\Game\Wardrobe;
 use App\Models\Building;
 use App\Models\Item;
 use App\Models\ItemDesign;
@@ -117,6 +119,32 @@ class RecipesTest extends TestCase
         }
 
         $this->assertSame(100 + 5 * 30 + 20, $player->fresh()->corn, 'Five gathers of 30, then 20 again.');
+    }
+
+    public function test_a_fruit_pie_doubles_five_gathers_and_a_veggie_stew_gives_horseshoes(): void
+    {
+        $player = $this->player();
+        $this->stand($player, 'hayfield');
+        $this->powers->use($player, $this->item($player, ItemTemplate::Pie));
+
+        foreach (range(1, 6) as $trip) {
+            app(Gathering::class)->gather($player->fresh(), $this->region('hayfield'));
+        }
+
+        $this->assertSame(100 + 5 * 40 + 20, $player->fresh()->corn, 'Five gathers of 40, then 20 again.');
+
+        // Six horseshoes spent; the stew gives three back.
+        $this->powers->use($player->fresh(), $this->item($player, ItemTemplate::Stew));
+        $this->assertSame(10 - 6 + 3, Horseshoes::current($player->fresh()));
+    }
+
+    public function test_a_gold_crown_is_worn_instead_of_a_hat(): void
+    {
+        $player = $this->player();
+        $this->item($player, ItemTemplate::Hat);
+        $this->item($player, ItemTemplate::Crown);
+
+        $this->assertSame('crown', Wardrobe::worn($player)[0]['template']);
     }
 
     public function test_a_feast_basket_helps_every_member_gather(): void

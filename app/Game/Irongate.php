@@ -36,7 +36,7 @@ final class Irongate
 
     public const FENCE_RARE_PRICE = 5;
 
-    public const RARE = ['honey', 'herbs', 'iron'];
+    public const RARE = ['honey', 'herbs', 'iron', 'gold', 'copper', 'pears', 'carrots', 'berries', 'pumpkins'];
 
     /**
      * The townsfolk: who they are, where they stand (a nudge from their
