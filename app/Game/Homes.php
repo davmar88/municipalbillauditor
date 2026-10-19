@@ -7,6 +7,7 @@ use App\Models\Home;
 use App\Models\HomeHelp;
 use App\Models\Item;
 use App\Models\Player;
+use App\Models\Region;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 
@@ -148,6 +149,67 @@ final class Homes
                 'ready_at' => CarbonImmutable::now()->addMinutes(self::LEVELS[1]['minutes']),
             ]);
         });
+    }
+
+    /**
+     * Set up camp at a spot on the map: right there if you stand on it,
+     * or walk there and the Hut goes up when you arrive.
+     *
+     * @return bool Whether the Hut went up now (false: on the way).
+     *
+     * @throws GameException
+     */
+    public function campAt(Player $player, float $x, float $y): bool
+    {
+        $player = $player->fresh();
+
+        if (self::of($player) !== null) {
+            throw new GameException('You already have a home. Raise it to the next level instead.');
+        }
+
+        $key = Geography::regionAt($x, $y) ?? throw new GameException("That's past the valley's edge. Pick a spot on the map.");
+        $region = Region::query()->where('valley_id', $player->valley_id)->where('key', $key)->first();
+
+        if ($region !== null && ! $region->wild && ($region->isFarmhouse() || $region->isSafe() || $region->isCity() || $region->isIronfield())) {
+            throw new GameException("Homes can't go in {$region->name}. Pick a spot in another region.");
+        }
+
+        if (($short = self::short($player, 1)) !== null) {
+            throw new GameException($short);
+        }
+
+        [$px, $py] = Movement::position($player);
+
+        if ($player->walk_arrives_at === null && hypot($px - $x, $py - $y) < self::DOOR) {
+            $this->build($player);
+
+            return true;
+        }
+
+        app(Movement::class)->walkTo($player, $x, $y);
+        $player->fresh()->forceFill(['camp_on_arrival' => true])->save();
+
+        return false;
+    }
+
+    /** Put up the Huts of animals that walked off to set up camp and have arrived. */
+    public function buildArrivedCamps(int $valleyId): void
+    {
+        Player::query()
+            ->where('valley_id', $valleyId)
+            ->where('camp_on_arrival', true)
+            ->whereNull('walk_arrives_at')
+            ->get()
+            ->each(function (Player $player) {
+                $player->forceFill(['camp_on_arrival' => false])->save();
+
+                try {
+                    $this->build($player);
+                    Notices::send($player->id, 'home', '🏕 You set up camp. Your Hut is going up.', route('play', [], false));
+                } catch (GameException $e) {
+                    Notices::send($player->id, 'home', "🏕 You couldn't set up camp: {$e->getMessage()}", route('play', [], false));
+                }
+            });
     }
 
     /**
@@ -357,22 +419,34 @@ final class Homes
         return 'The mortar sets: your home is a '.self::name($next).' now.';
     }
 
+    /** Why a player can't pay for a home of this level, or null when they can. */
+    private static function short(Player $player, int $level, bool $corn = true): ?string
+    {
+        $cost = self::level($level);
+
+        if ($corn && $player->corn < $cost['corn']) {
+            return "A {$cost['name']} costs {$cost['corn']} Corn. You have {$player->corn}.";
+        }
+
+        foreach ($cost['materials'] as $name => $amount) {
+            if ((int) (($player->materials ?? [])[$name] ?? 0) < $amount) {
+                return "A {$cost['name']} needs {$amount} {$name}. You have ".(int) (($player->materials ?? [])[$name] ?? 0).'.';
+            }
+        }
+
+        return null;
+    }
+
     private function pay(Player $player, int $level, bool $corn = true): void
     {
         $cost = self::level($level);
         $cost['corn'] = $corn ? $cost['corn'] : 0;
 
-        if ($player->corn < $cost['corn']) {
-            throw new GameException("A {$cost['name']} costs {$cost['corn']} Corn. You have {$player->corn}.");
+        if (($short = self::short($player, $level, $corn)) !== null) {
+            throw new GameException($short);
         }
 
         $materials = $player->materials ?? [];
-
-        foreach ($cost['materials'] as $name => $amount) {
-            if ((int) ($materials[$name] ?? 0) < $amount) {
-                throw new GameException("A {$cost['name']} needs {$amount} {$name}. You have ".(int) ($materials[$name] ?? 0).'.');
-            }
-        }
 
         foreach ($cost['materials'] as $name => $amount) {
             $materials[$name] = (int) $materials[$name] - $amount;

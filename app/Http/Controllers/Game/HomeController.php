@@ -18,6 +18,15 @@ class HomeController extends Controller
         return $this->told('Your Hut is going up. It stands at '.$home->ready_at?->timezone(config('game.timezone'))->format('H:i').'.');
     }
 
+    public function camp(Request $request, Homes $homes): RedirectResponse
+    {
+        $data = $request->validate(['x' => ['required', 'numeric'], 'y' => ['required', 'numeric']]);
+
+        return $homes->campAt($request->user()->player, (float) $data['x'], (float) $data['y'])
+            ? $this->told('You set up camp. Your Hut is going up.')
+            : $this->told('You set off to set up camp. Your Hut goes up when you get there.');
+    }
+
     public function upgrade(Request $request, Homes $homes): RedirectResponse
     {
         $home = $homes->upgrade($request->user()->player);

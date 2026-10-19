@@ -44,6 +44,7 @@ final class Tick
         }
 
         Movement::settleArrived($valley->id);
+        app(Homes::class)->buildArrivedCamps($valley->id);
 
         // Studies finish first, so what was learned counts this half hour.
         $this->research->finishDue($valley->id);

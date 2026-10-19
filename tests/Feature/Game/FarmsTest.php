@@ -223,4 +223,36 @@ class FarmsTest extends TestCase
         $this->assertSame('scrubland', app(Homes::class)->build($player->fresh())->region->key);
         $this->assertFalse($scrub->neighbours()->exists());
     }
+
+    public function test_an_animal_sets_up_camp_on_the_open_scrub_from_afar(): void
+    {
+        $player = $this->player(attributes: ['materials' => ['wood' => 30, 'straw' => 30]]);
+        [$x, $y] = [-2400.0, -2600.0];
+
+        // Not in the Paddock or Irongate.
+        try {
+            app(Homes::class)->campAt($player, ...Geography::hub('paddock'));
+            $this->fail('Camped in the Paddock.');
+        } catch (GameException $e) {
+            $this->assertStringContainsString("can't go in", $e->getMessage());
+        }
+
+        // Far off: the animal walks there, and the Hut goes up on arrival.
+        $this->assertFalse(app(Homes::class)->campAt($player, $x, $y));
+        $this->assertTrue($player->fresh()->camp_on_arrival);
+        $this->assertNull(Homes::of($player->fresh()));
+
+        $this->travel(8)->hours();
+        app(Tick::class)->run($this->valley->fresh());
+
+        $home = Homes::of($player->fresh());
+        $this->assertNotNull($home);
+        $this->assertSame('scrubland', $home->region->key);
+        $this->assertEqualsWithDelta($x, $home->x, 1);
+        $this->assertFalse($player->fresh()->camp_on_arrival);
+
+        // One home each.
+        $this->expectExceptionMessage('already have a home');
+        app(Homes::class)->campAt($player, $x + 200, $y);
+    }
 }

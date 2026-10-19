@@ -175,7 +175,7 @@ function useCamera(
     svg: React.RefObject<SVGSVGElement | null>,
     focus: Point | null,
     onTap: (target: Element | null, world: Point) => void,
-    onInfo: (target: Element | null) => void,
+    onInfo: (target: Element | null, world: Point) => void,
     onAnimal: (animal: Element, screen: Point) => void,
 ) {
     const [view, setView] = useState<View>({ x: 0, y: 0, k: 0 });
@@ -406,8 +406,11 @@ function useCamera(
             if (animal) {
                 animalRef.current(animal, local(event));
             } else {
+                const seen = viewRef.current;
+                const at = local(event);
                 infoRef.current(
                     (event.target as Element).closest('[data-region]'),
+                    [(at[0] - seen.x) / seen.k, (at[1] - seen.y) / seen.k],
                 );
             }
 
@@ -450,7 +453,11 @@ function useCamera(
                     if (animal) {
                         animalRef.current(animal, point);
                     } else {
-                        infoRef.current(target);
+                        const seen = viewRef.current;
+                        infoRef.current(target, [
+                            (point[0] - seen.x) / seen.k,
+                            (point[1] - seen.y) / seen.k,
+                        ]);
                     }
                 }
             }, LONG_PRESS_MS);
@@ -1767,6 +1774,8 @@ export type WorldMapProps = {
     me: MapMe | null;
     /** Walk to a point on the map. */
     onWalk?: (point: Point) => void;
+    /** A right click or long press on the open scrub, to walk or set up camp there. */
+    onGround?: (point: Point) => void;
     /** How tonight's Gate Night went, once it has happened. */
     gateResult: GateResult;
     /** The animals with a warrant out for their arrest. */
@@ -1797,6 +1806,7 @@ export function WorldMap({
     gateNight,
     me,
     onWalk,
+    onGround,
     gateResult,
     wanted,
     switcher,
@@ -1836,13 +1846,18 @@ export function WorldMap({
         [onWalk],
     );
 
-    // A long press or a right click opens the card for what is there.
+    // A long press or a right click opens the card for what is there: a region's, or the open scrub's.
     const onInfo = useCallback(
-        (target: Element | null) => {
+        (target: Element | null, world: Point) => {
             const id = Number(target?.getAttribute('data-region'));
-            onSelect(Number.isFinite(id) && id > 0 ? id : null);
+            const region = Number.isFinite(id) && id > 0 ? id : null;
+            onSelect(region);
+
+            if (region === null && reachable(world)) {
+                onGround?.(world);
+            }
         },
-        [onSelect],
+        [onSelect, onGround],
     );
 
     // A tap, hold or right click on another animal opens its menu; on one of Irongate's people, their card.

@@ -18,6 +18,7 @@ import {
     walkStop,
     walkTo as walkToRoute,
 } from '@/routes/play';
+import { camp as campRoute } from '@/routes/play/home';
 import type {
     GateNightInfo,
     MapMe,
@@ -95,6 +96,8 @@ export default function MapPage({
 }: Props) {
     const { player } = usePage().props;
     const [selectedId, setSelectedId] = useState<number | null>(null);
+    // The open scrub right-clicked, to walk or set up camp there.
+    const [ground, setGround] = useState<[number, number] | null>(null);
     const [horseshoes, setHorseshoes] = useState(1);
     const selected = regions.find((region) => region.id === selectedId) ?? null;
 
@@ -316,10 +319,14 @@ export default function MapPage({
                     house={house}
                     species={player?.species ?? null}
                     selectedId={selectedId}
-                    onSelect={setSelectedId}
+                    onSelect={(id) => {
+                        setSelectedId(id);
+                        setGround(null);
+                    }}
                     gateNight={gateNight.open}
                     me={me}
                     onWalk={walkTo}
+                    onGround={setGround}
                     gateResult={
                         gateNight.result === null
                             ? null
@@ -341,6 +348,16 @@ export default function MapPage({
                         regions={regions}
                         compact={selected !== null}
                     />
+                    {ground && !selected && (
+                        <GroundCard
+                            point={ground}
+                            hasHome={homes.some(
+                                (home) => home.owner.id === player?.id,
+                            )}
+                            onWalk={walkTo}
+                            onClose={() => setGround(null)}
+                        />
+                    )}
                     {selected && (
                         <RegionPanel
                             key={selected.id}
@@ -451,5 +468,65 @@ function ScrubCard({ scrub }: { scrub: NonNullable<Props['scrub']> }) {
                 )}
             </div>
         </section>
+    );
+}
+
+/** The open scrub you right-clicked: walk there, or set up your own camp there. */
+function GroundCard({
+    point,
+    hasHome,
+    onWalk,
+    onClose,
+}: {
+    point: [number, number];
+    hasHome: boolean;
+    onWalk: (point: [number, number]) => void;
+    onClose: () => void;
+}) {
+    return (
+        <div className="absolute bottom-3 left-3 z-20 flex w-72 max-w-[calc(100%-1.5rem)] flex-col gap-2 rounded-xl border bg-card/95 p-3 text-sm shadow-lg backdrop-blur">
+            <div className="flex items-center justify-between">
+                <p className="font-semibold">🌿 Open scrub</p>
+                <button
+                    type="button"
+                    className="text-muted-foreground hover:text-foreground"
+                    aria-label="Close"
+                    onClick={onClose}
+                >
+                    ✕
+                </button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+                Nobody holds it. Anyone can walk here, gather and set up camp.
+            </p>
+            <div className="flex flex-wrap gap-2">
+                <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => {
+                        onWalk(point);
+                        onClose();
+                    }}
+                >
+                    <Footprints className="size-4" />
+                    Walk here
+                </Button>
+                <Button
+                    size="sm"
+                    disabled={hasHome}
+                    onClick={() => {
+                        act(campRoute.url(), { x: point[0], y: point[1] });
+                        onClose();
+                    }}
+                >
+                    🏕 Set up camp here
+                </Button>
+            </div>
+            {hasHome && (
+                <p className="text-xs text-muted-foreground">
+                    You already have a home. Raise it to the next level instead.
+                </p>
+            )}
+        </div>
     );
 }

@@ -46,6 +46,7 @@ class MapController extends Controller
         $valley = $player->valley;
         // Walks that ended since anyone looked put their animals where they arrived.
         Movement::settleArrived($valley->id);
+        app(Homes::class)->buildArrivedCamps($valley->id);
         Movement::settle($player);
         $season = $valley->currentSeason();
         $house = $valley->house();

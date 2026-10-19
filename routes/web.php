@@ -148,6 +148,7 @@ Route::middleware(['auth', 'verified', 'player', 'throttle:120,1'])->prefix('pla
 
     // Your own home.
     Route::post('home', [HomeController::class, 'build'])->middleware('throttle:20,1,home')->name('play.home.build');
+    Route::post('home/camp', [HomeController::class, 'camp'])->middleware('throttle:20,1,home')->name('play.home.camp');
     Route::post('home/upgrade', [HomeController::class, 'upgrade'])->middleware('throttle:20,1,home')->name('play.home.upgrade');
     Route::post('home/enter', [HomeController::class, 'enter'])->middleware('throttle:20,1,home')->name('play.home.enter');
     Route::post('home/leave', [HomeController::class, 'leave'])->middleware('throttle:20,1,home')->name('play.home.leave');

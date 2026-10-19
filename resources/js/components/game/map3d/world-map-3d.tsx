@@ -86,6 +86,7 @@ export default function WorldMap3D({
     gateNight,
     me,
     onWalk,
+    onGround,
     gateResult,
     wanted,
     wearing,
@@ -133,9 +134,9 @@ export default function WorldMap3D({
         [me, hereRegion],
     );
 
-    const latest = useRef({ regions, onSelect, onWalk, herePoint });
+    const latest = useRef({ regions, onSelect, onWalk, onGround, herePoint });
     useEffect(() => {
-        latest.current = { regions, onSelect, onWalk, herePoint };
+        latest.current = { regions, onSelect, onWalk, onGround, herePoint };
     });
 
     // ---- the scene, made once ---------------------------------------------------------------------------
@@ -446,9 +447,12 @@ export default function WorldMap3D({
             } else if (folk) {
                 setPerson({ folk, at: point });
             } else {
-                latest.current.onSelect(
-                    regionAt(latest.current.regions, rig.pick(point)),
-                );
+                const ground = rig.pick(point);
+                const region = regionAt(latest.current.regions, ground);
+                latest.current.onSelect(region);
+                if (region === null && ground && reachable(ground)) {
+                    latest.current.onGround?.(ground);
+                }
             }
             return;
         }
@@ -489,6 +493,9 @@ export default function WorldMap3D({
                         setPerson({ folk, at: point });
                     } else {
                         latest.current.onSelect(region);
+                        if (region === null && anchor && reachable(anchor)) {
+                            latest.current.onGround?.(anchor);
+                        }
                     }
                 }
             }, LONG_PRESS_MS);
