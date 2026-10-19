@@ -77,6 +77,15 @@ function Shape({
     second: string;
 }) {
     switch (template) {
+        case 'skin':
+            // A home in its new paint.
+            return (
+                <>
+                    <rect x="14" y="28" width="36" height="24" fill={fill} />
+                    <path d="M8 30L32 10l24 20z" fill={second} />
+                    <rect x="28" y="38" width="8" height="14" fill={WOOD} />
+                </>
+            );
         case 'hat':
             return (
                 <>

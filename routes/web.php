@@ -11,6 +11,7 @@ use App\Http\Controllers\Game\ChatController;
 use App\Http\Controllers\Game\CrimeController;
 use App\Http\Controllers\Game\FactionController;
 use App\Http\Controllers\Game\GiftController;
+use App\Http\Controllers\Game\HomeController;
 use App\Http\Controllers\Game\IrongateController;
 use App\Http\Controllers\Game\MapController;
 use App\Http\Controllers\Game\MarketController;
@@ -140,6 +141,13 @@ Route::middleware(['auth', 'verified', 'player', 'throttle:120,1'])->prefix('pla
     // Giving another animal an item from your bag.
     Route::get('gifts', [GiftController::class, 'index'])->name('play.gifts');
     Route::post('animals/{player}/gift', [GiftController::class, 'store'])->middleware('throttle:20,1,gifts')->name('play.gift');
+
+    // Your own home.
+    Route::post('home', [HomeController::class, 'build'])->middleware('throttle:20,1,home')->name('play.home.build');
+    Route::post('home/upgrade', [HomeController::class, 'upgrade'])->middleware('throttle:20,1,home')->name('play.home.upgrade');
+    Route::post('home/enter', [HomeController::class, 'enter'])->middleware('throttle:20,1,home')->name('play.home.enter');
+    Route::post('home/leave', [HomeController::class, 'leave'])->middleware('throttle:20,1,home')->name('play.home.leave');
+    Route::post('home/skin', [HomeController::class, 'skin'])->middleware('throttle:20,1,home')->name('play.home.skin');
 
     // Irongate's people: the fence and the informer.
     Route::post('irongate/fence', [IrongateController::class, 'fence'])->middleware('throttle:20,1,irongate')->name('play.irongate.fence');

@@ -65,7 +65,8 @@ export type ItemShape =
     | 'kit'
     | 'gate'
     | 'plough'
-    | 'speedo';
+    | 'speedo'
+    | 'skin';
 
 export type DesignCard = {
     id: number;
@@ -351,4 +352,34 @@ export type IrongateInfo = {
     };
     /** Corn the informer wants for a tip. */
     tip: number;
+};
+
+/** An animal's own home on the map. */
+export type MapHome = {
+    id: number;
+    owner: { id: number; name: string; species: Species };
+    x: number;
+    y: number;
+    level: number;
+    /** Hut, Cottage or Fort. */
+    name: string;
+    /** While a level goes up. */
+    readyAt: string | null;
+    skin: { name: string; colours: string[]; pattern: string } | null;
+    mine: boolean;
+};
+
+/** What building your own home takes, and whether you're hiding in it. */
+export type HomeInfo = {
+    inside: boolean;
+    levels: {
+        level: number;
+        name: string;
+        corn: number;
+        materials: Record<string, number>;
+        minutes: number;
+    }[];
+    /** How close you must stand to go in or build on, in paces. */
+    door: number;
+    skins: { id: number; name: string; colours: string[]; pattern: string }[];
 };

@@ -29,6 +29,7 @@ import type {
     BuildingKindValue,
     FactionRef,
     Folk as FolkPerson,
+    MapHome,
     IrongateInfo,
     MapAnimal,
     MapRegion,
@@ -1310,6 +1311,67 @@ const Crowd = memo(function Crowd({
     );
 });
 
+/** Every animal's home, in its skin's colours: a Hut, a Cottage or a Fort with battlements. */
+const Homes = memo(function Homes({
+    homes,
+    k,
+}: {
+    homes: MapHome[];
+    k: number;
+}) {
+    return (
+        <g pointerEvents="none">
+            {homes.map((home) => {
+                const w = 16 + home.level * 5;
+                const wall = home.skin?.colours[1] ?? '#cfc3ad';
+                const roof = home.skin?.colours[0] ?? '#6a6479';
+
+                return (
+                    <g
+                        key={home.id}
+                        transform={`translate(${home.x.toFixed(1)} ${home.y.toFixed(1)}) scale(${1 / Math.max(k, 0.6)})`}
+                        opacity={home.readyAt ? 0.6 : 1}
+                    >
+                        <title>{`${home.owner.name}'s ${home.name}`}</title>
+                        <rect
+                            x={-w / 2}
+                            y={-w * 0.3}
+                            width={w}
+                            height={w * 0.75}
+                            fill={wall}
+                            stroke={home.mine ? VIOLET : HALO}
+                            strokeWidth={home.mine ? 2.4 : 1.2}
+                            strokeDasharray={home.readyAt ? '3 2' : undefined}
+                        />
+                        {home.level === 3 ? (
+                            <path
+                                d={`M${-w / 2} ${-w * 0.3}v${-w * 0.3}h${w / 5}v${w * 0.15}h${w / 5}v${-w * 0.15}h${w / 5}v${w * 0.15}h${w / 5}v${-w * 0.15}h${w / 5}v${w * 0.3}z`}
+                                fill={roof}
+                                stroke={HALO}
+                                strokeWidth={1}
+                            />
+                        ) : (
+                            <path
+                                d={`M${-w / 2 - 2} ${-w * 0.3}L0 ${-w * 0.85}L${w / 2 + 2} ${-w * 0.3}z`}
+                                fill={roof}
+                                stroke={HALO}
+                                strokeWidth={1}
+                            />
+                        )}
+                        <rect
+                            x={-w * 0.1}
+                            y={w * 0.1}
+                            width={w * 0.2}
+                            height={w * 0.35}
+                            fill="#3a2a1e"
+                        />
+                    </g>
+                );
+            })}
+        </g>
+    );
+});
+
 /** What each of Irongate's districts is for, under its name. */
 const CITY_LINES: Record<string, string> = {
     irongate_rookery: '🕯 Outlaws and lone wolves lie low',
@@ -1652,6 +1714,8 @@ export type WorldMapProps = {
     irongate?: IrongateInfo;
     /** Open warrants, for the informer's card. */
     warrants?: Warrant[];
+    /** Every animal's home. */
+    homes?: MapHome[];
     children?: ReactNode;
 };
 
@@ -1675,6 +1739,7 @@ export function WorldMap({
     switcher,
     irongate,
     warrants,
+    homes,
     children,
 }: WorldMapProps) {
     const containerRef = useRef<HTMLDivElement>(null);
@@ -1869,6 +1934,7 @@ export function WorldMap({
                             gateResult={gateResult}
                         />
                         <Bases regions={regions} k={k} />
+                        {homes && <Homes homes={homes} k={k} />}
                         {irongate && <Folk folk={irongate.folk} k={k} />}
                         <Crowd regions={regions} k={k} wanted={wanted} />
                         {me?.walk && herePoint && (

@@ -15,7 +15,7 @@ import { FARM, REACH, hub, inside } from '@/lib/hollowmere';
 import { cn } from '@/lib/utils';
 import { AnimalMenu } from '@/components/game/animal-menu';
 import { FolkCard } from '@/components/game/irongate-folk';
-import type { Folk, MapAnimal, MapRegion, Worn } from '@/types/game';
+import type { Folk, MapAnimal, MapHome, MapRegion, Worn } from '@/types/game';
 import { Rig } from './rig';
 import { World } from './world';
 
@@ -48,6 +48,7 @@ const LONG_PRESS_MS = 500;
 
 /** No townsfolk, as one shared value so the scene isn't rebuilt for nothing. */
 const NO_FOLK: Folk[] = [];
+const NO_HOMES: MapHome[] = [];
 
 const distance = (a: Point, b: Point) => Math.hypot(a[0] - b[0], a[1] - b[1]);
 const middle = (a: Point, b: Point): Point => [
@@ -92,6 +93,7 @@ export default function WorldMap3D({
     onFail,
     irongate,
     warrants,
+    homes,
     children,
 }: Props) {
     const containerRef = useRef<HTMLDivElement>(null);
@@ -318,6 +320,7 @@ export default function WorldMap3D({
             species,
             wearing,
             folk: irongate?.folk ?? NO_FOLK,
+            homes: homes ?? NO_HOMES,
         });
         dirty.current = true;
         // Only rebuild when what's shown changes, not on every render of the page.
@@ -333,6 +336,7 @@ export default function WorldMap3D({
         species,
         wearingKey,
         irongate,
+        homes,
     ]);
 
     // ---- moving about ---------------------------------------------------------------------------------------------

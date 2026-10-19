@@ -3,6 +3,7 @@ import { Flame, Footprints, Shield, Swords } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { GameBar } from '@/components/game/game-bar';
 import { GameMap } from '@/components/game/game-map';
+import { HomeCard } from '@/components/game/home-card';
 import { GateStrength } from '@/components/game/gate-strength';
 import { HorseshoePicker } from '@/components/game/horseshoe-picker';
 import { MapHud } from '@/components/game/map-hud';
@@ -17,7 +18,9 @@ import type {
     BuildingKindCard,
     FactionRef,
     FactionStore,
+    HomeInfo,
     IrongateInfo,
+    MapHome,
     MapBattle,
     MapLaw,
     MapRegion,
@@ -44,6 +47,8 @@ type Props = {
     warrants: Warrant[];
     plunder: Plunder;
     irongate: IrongateInfo;
+    homes: MapHome[];
+    home: HomeInfo;
 };
 
 export default function MapPage({
@@ -65,6 +70,8 @@ export default function MapPage({
     warrants,
     plunder,
     irongate,
+    homes,
+    home,
 }: Props) {
     const { player } = usePage().props;
     const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -304,6 +311,7 @@ export default function MapPage({
                     wearing={wearing}
                     irongate={irongate}
                     warrants={warrants}
+                    homes={homes}
                 >
                     <MapHud
                         valley={valley}
@@ -333,6 +341,7 @@ export default function MapPage({
                         />
                     )}
                 </GameMap>
+                <HomeCard info={home} homes={homes} me={me} onWalk={walkTo} />
                 <p className="-mt-2 text-xs text-muted-foreground">
                     Click or tap a spot to walk there. Right-click, or press and
                     hold on a phone, to see what's there.

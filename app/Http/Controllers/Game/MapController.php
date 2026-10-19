@@ -4,12 +4,14 @@ namespace App\Http\Controllers\Game;
 
 use App\Enums\BuildingKind;
 use App\Enums\CrimeKind;
+use App\Enums\ItemTemplate;
 use App\Game\Bases;
 use App\Game\Clock;
 use App\Game\Crimes;
 use App\Game\Farms;
 use App\Game\GateNight;
 use App\Game\Gathering;
+use App\Game\Homes;
 use App\Game\Irongate;
 use App\Game\Movement;
 use App\Game\Powers;
@@ -21,6 +23,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Attack;
 use App\Models\BattleCommitment;
 use App\Models\GateDefence;
+use App\Models\Home;
 use App\Models\Law;
 use App\Models\Player;
 use App\Models\Region;
@@ -65,7 +68,7 @@ class MapController extends Controller
             ->with('faction:id,colour')
             ->where('valley_id', $valley->id)
             ->where('last_visit_on', '>=', Clock::now()->subDays(7)->toDateString())
-            ->get(['id', 'name', 'species', 'faction_id', 'region_id'])
+            ->get(['id', 'name', 'species', 'faction_id', 'region_id', 'inside_home_at'])
             ->sortBy(fn (Player $animal) => match (true) {
                 $animal->id === $player->id => 0,
                 in_array($animal->id, $wanted, true) => 1,
@@ -76,6 +79,9 @@ class MapController extends Controller
         $hereRegion = $regions->firstWhere('id', $player->region_id ?? $paddock?->id) ?? $paddock;
         $animals = $animals->map(function ($group, $regionId) use ($regions, $player, $hereRegion, $wanted) {
             $where = $regions->firstWhere('id', $regionId);
+
+            // Animals hiding in their homes don't show at all, except to themselves.
+            $group = $group->reject(fn (Player $animal) => $animal->inside_home_at !== null && $animal->id !== $player->id);
 
             return $where === null || $hereRegion === null
                 ? $group->values()
@@ -198,6 +204,31 @@ class MapController extends Controller
                 'result' => $season !== null ? GateNight::result($season) : null,
             ],
             'yields' => ['corn' => Gathering::CORN, 'material' => Gathering::MATERIAL],
+            // Every animal's home, and yours with what building it further takes.
+            'homes' => Home::query()
+                ->with(['owner:id,name,species', 'skin.design', 'skin.openListing'])
+                ->whereHas('owner', fn ($query) => $query->where('valley_id', $valley->id))
+                ->get()
+                ->map(fn (Home $home) => [
+                    'id' => $home->id,
+                    'owner' => ['id' => $home->owner->id, 'name' => $home->owner->name, 'species' => $home->owner->species->value],
+                    'x' => $home->x,
+                    'y' => $home->y,
+                    'level' => $home->level,
+                    'name' => Homes::name($home->level),
+                    'readyAt' => $home->building() ? $home->ready_at->toIso8601String() : null,
+                    'skin' => Homes::skin($home),
+                    'mine' => $home->player_id === $player->id,
+                ])->values(),
+            'home' => [
+                'inside' => $player->inside_home_at !== null,
+                'levels' => collect(Homes::LEVELS)->map(fn (array $level, int $n) => ['level' => $n, ...$level])->values(),
+                'door' => Homes::DOOR,
+                'skins' => $player->items()->with('design')->whereDoesntHave('openListing')->get()
+                    ->filter(fn ($item) => $item->design->template === ItemTemplate::Skin)
+                    ->map(fn ($item) => ['id' => $item->id, 'name' => $item->design->name, 'colours' => $item->design->colours, 'pattern' => $item->design->pattern])
+                    ->values(),
+            ],
             // Irongate's people and their prices, for the city's cards.
             'irongate' => [
                 'folk' => collect(Irongate::FOLK)->map(fn (array $folk, string $key) => ['key' => $key, ...$folk])->values(),

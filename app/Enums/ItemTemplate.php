@@ -31,6 +31,7 @@ enum ItemTemplate: string
     case Gate = 'gate';
     case Plough = 'plough';
     case Speedo = 'speedo';
+    case Skin = 'skin';
 
     public function label(): string
     {
@@ -56,6 +57,7 @@ enum ItemTemplate: string
             self::Gate => 'Iron Gate',
             self::Plough => 'Iron Plough',
             self::Speedo => 'Speedo',
+            self::Skin => 'Home skin',
         };
     }
 
@@ -86,6 +88,8 @@ enum ItemTemplate: string
             self::Plough => ['iron' => 2, 'wood' => 3, 'honey' => 1],
             // A drink: eggs and straw shaken up in a clay cup.
             self::Speedo => ['eggs' => 2, 'straw' => 1, 'clay' => 1],
+            // Paint and boards for the outside of a home.
+            self::Skin => ['dye' => 3, 'wood' => 2, 'clay' => 1],
         };
     }
 
@@ -93,7 +97,7 @@ enum ItemTemplate: string
     public function for(): ?string
     {
         return match ($this) {
-            self::Hat, self::Scarf, self::Sign => null,
+            self::Hat, self::Scarf, self::Sign, self::Skin => null,
             self::Gloves, self::Shoes, self::Cloak, self::Tonic, self::Ribbon, self::Cake, self::Pickaxe, self::Lock, self::Speedo => 'you',
             default => 'faction',
         };
@@ -108,7 +112,7 @@ enum ItemTemplate: string
     public function power(): ?string
     {
         return match ($this) {
-            self::Hat, self::Scarf, self::Sign => null,
+            self::Hat, self::Scarf, self::Sign, self::Skin => null,
             self::Gloves => 'Your next 5 gathers bring in half as much again.',
             self::Shoes => 'Your horseshoes count a third more in your next raid or defence.',
             self::Cloak => 'Your next crime is half as likely to be caught.',

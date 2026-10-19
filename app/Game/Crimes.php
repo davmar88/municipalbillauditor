@@ -6,6 +6,7 @@ use App\Enums\CrimeKind;
 use App\Enums\Species;
 use App\Models\Crime;
 use App\Models\Faction;
+use App\Models\Home;
 use App\Models\Player;
 use App\Models\Season;
 use Carbon\CarbonImmutable;
@@ -212,6 +213,7 @@ final class Crimes
                     'home_closed_until' => CarbonImmutable::now()->addDay(),
                     'home_burned_at' => CarbonImmutable::now(),
                 ]);
+                Homes::burned($crime->target_player_id);
             }
 
             $crime->forceFill(['resolved_at' => CarbonImmutable::now(), 'caught' => $caught, 'loot' => $loot])->save();
@@ -289,7 +291,11 @@ final class Crimes
             ->count();
 
         $watch = Wall::law($season, LawTemplate::NightWatch) !== null ? 0.25 : 0.0;
-        $chance = min(0.9, 0.3 + 0.05 * min(4, $dogs) + $watch + Powers::bell($crime->target_faction_id));
+        // A home built up into a Cottage or a Fort is harder to set alight unseen.
+        $walls = $crime->kind === CrimeKind::Burn && $crime->target_player_id !== null
+            ? (Home::query()->where('player_id', $crime->target_player_id)->value('level') ?? 0) * Homes::BURN_GUARD
+            : 0.0;
+        $chance = min(0.9, 0.3 + 0.05 * min(4, $dogs) + $watch + Powers::bell($crime->target_faction_id) + $walls);
 
         // A Night Cloak halves it.
         return $crime->cloaked ? $chance * Powers::CLOAK : $chance;

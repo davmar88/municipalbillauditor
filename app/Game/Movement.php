@@ -193,6 +193,8 @@ final class Movement
     private function head(Player $player, array $from, array $to): void
     {
         $seconds = (int) ceil(hypot($to[0] - $from[0], $to[1] - $from[1]) / self::pace($player) * 60);
+        // Setting off means stepping out of your home.
+        $player->inside_home_at = null;
 
         if ($seconds < 1) {
             $changes = self::still($to[0], $to[1]);

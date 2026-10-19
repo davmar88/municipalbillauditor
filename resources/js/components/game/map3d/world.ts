@@ -35,6 +35,7 @@ import type {
     FactionRef,
     Folk,
     MapAnimal,
+    MapHome,
     MapMe,
     MapRegion,
     Species,
@@ -58,6 +59,8 @@ export type WorldData = {
     wearing: Worn[];
     /** Irongate's people, standing in their districts. */
     folk: Folk[];
+    /** Every animal's home. */
+    homes: MapHome[];
 };
 
 // ---- the look of the land -------------------------------------------------------------
@@ -270,6 +273,8 @@ export class World {
     private readonly raids = new THREE.Group();
     /** Irongate's people. */
     private readonly town = new THREE.Group();
+    /** Every animal's home. */
+    private readonly dwellings = new THREE.Group();
     private regionLabels = new Map<
         number,
         {
@@ -348,6 +353,7 @@ export class World {
             this.marks,
             this.raids,
             this.town,
+            this.dwellings,
             this.people,
         );
 
@@ -874,6 +880,9 @@ export class World {
         }
         if (!was || was.folk !== data.folk) {
             this.syncFolk();
+        }
+        if (!was || was.homes !== data.homes) {
+            this.buildHomes();
         }
         this.syncMe();
         this.changed = true;
@@ -1572,6 +1581,29 @@ export class World {
         }
     }
 
+    private homeModels: { group: THREE.Group; level: number }[] = [];
+
+    /** Every animal's home, in its skin's colours; yours ringed in violet. */
+    private buildHomes() {
+        const data = this.data as WorldData;
+        this.clearGroup(this.dwellings);
+        this.homeModels = data.homes.map((home) => {
+            const group = homeModel(home);
+            group.position.set(home.x, 0, home.y);
+            this.dwellings.add(group);
+            return { group, level: home.level };
+        });
+        this.placeHomes();
+    }
+
+    private placeHomes() {
+        // About the same size on screen at any zoom, a Fort the biggest.
+        const s = 40 / Math.max(this.k, 0.6);
+        for (const { group, level } of this.homeModels) {
+            group.scale.setScalar(s * (0.8 + level * 0.2));
+        }
+    }
+
     private townsfolk: {
         person: Folk;
         figure: THREE.Group;
@@ -1797,6 +1829,7 @@ export class World {
                 this.placeCrowd();
             }
             this.placeFolk();
+            this.placeHomes();
             for (const m of this.marching) {
                 m.dashSize = 10 / k;
                 m.gapSize = 8 / k;
@@ -1950,6 +1983,56 @@ export class World {
             }
         });
     }
+}
+
+/** An animal's home, about 1 unit across: walls and a roof in its skin's colours, battlements on a Fort. */
+function homeModel(home: MapHome): THREE.Group {
+    const g = new THREE.Group();
+    const going = home.readyAt !== null;
+    const look = (color: string) =>
+        new THREE.MeshLambertMaterial({
+            color,
+            flatShading: true,
+            transparent: going,
+            opacity: going ? 0.55 : 1,
+        });
+    const wall = look(home.skin?.colours[1] ?? '#cfc3ad');
+    const roof = look(home.skin?.colours[0] ?? '#6a6479');
+    const walls = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.45, 0.55), wall);
+    walls.position.y = 0.225;
+    g.add(walls);
+    if (home.level === 3) {
+        for (const [x, z] of [
+            [-0.3, -0.22],
+            [0.3, -0.22],
+            [-0.3, 0.22],
+            [0.3, 0.22],
+            [0, -0.22],
+            [0, 0.22],
+        ]) {
+            const merlon = new THREE.Mesh(
+                new THREE.BoxGeometry(0.12, 0.12, 0.12),
+                roof,
+            );
+            merlon.position.set(x, 0.51, z);
+            g.add(merlon);
+        }
+    } else {
+        const top = new THREE.Mesh(new THREE.ConeGeometry(0.52, 0.35, 4), roof);
+        top.position.y = 0.62;
+        top.rotation.y = Math.PI / 4;
+        g.add(top);
+    }
+    if (home.mine) {
+        const ring = new THREE.Mesh(
+            new THREE.RingGeometry(0.55, 0.65, 24),
+            new THREE.MeshBasicMaterial({ color: VIOLET, depthWrite: false }),
+        );
+        ring.rotation.x = -Math.PI / 2;
+        ring.position.y = 0.02;
+        g.add(ring);
+    }
+    return g;
 }
 
 /** A little building for each kind, about 1 unit across, in the holder's colour. */
