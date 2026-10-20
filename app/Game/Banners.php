@@ -15,7 +15,7 @@ final class Banners
 {
     public const PATTERNS = ['plain', 'stripes', 'chevron', 'cross', 'saltire', 'quarters', 'bend', 'border', 'chief'];
 
-    public const EMBLEMS = ['', '🐷', '🐴', '🐶', '🐑', '🐐', '🐔', '🐦‍⬛', '⚔️', '🛡️', '🌾', '🍎', '🔥', '⭐', '🌙', '☀️', '👑', '🐺', '⚒️', '🌳'];
+    public const EMBLEMS = ['', '🐷', '🐴', '🐶', '🐑', '🐐', '🐔', '🪶', '⚔️', '🛡️', '🌾', '🍎', '🔥', '⭐', '🌙', '☀️', '👑', '🐺', '⚒️', '🌳'];
 
     /** The largest picture a faction can upload, in kilobytes. */
     public const MAX_KB = 1024;
