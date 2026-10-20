@@ -1618,14 +1618,16 @@ const IronfieldTown = memo(function IronfieldTown({
                         key={i}
                         transform={`translate(${lot.x.toFixed(1)} ${lot.y.toFixed(1)}) rotate(${((lot.turn * 180) / Math.PI).toFixed(0)})`}
                     >
-                        <rect
-                            x={-w / 2 + 4}
-                            y={-h / 2 + 5}
-                            width={w}
-                            height={h}
-                            fill="#000"
-                            opacity={0.35}
-                        />
+                        {!PHONE && (
+                            <rect
+                                x={-w / 2 + 4}
+                                y={-h / 2 + 5}
+                                width={w}
+                                height={h}
+                                fill="#000"
+                                opacity={0.35}
+                            />
+                        )}
                         <rect
                             x={-w / 2}
                             y={-h / 2}

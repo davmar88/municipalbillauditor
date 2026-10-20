@@ -2715,14 +2715,20 @@ export class World {
             now - this.fireAt > (this.coarse ? 160 : 80)
         ) {
             this.fireAt = now;
+            let animated = false;
             for (const { group, ash } of [...this.fires, ...this.landFlames]) {
+                // Embers glow on, still, on a phone: only real flames move there.
+                if (ash && this.coarse) {
+                    continue;
+                }
                 if (ash) {
                     animateAshes(group, now);
                 } else {
                     animateFire(group, now);
                 }
+                animated = true;
             }
-            moving = true;
+            moving ||= animated;
         }
         const me = this.me;
         const target = this.herePoint(now);

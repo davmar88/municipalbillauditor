@@ -505,8 +505,15 @@ function Irongate() {
 
 /** The land around the farm: the Ridge, Hollow Brook and Ironfield. */
 /** The open scrub between the regions: low bushes anyone can gather from and camp among. */
+/** A phone draws a third of the scrub bushes: thousands of them slow its map down. */
+const PHONE =
+    typeof window !== 'undefined' &&
+    (window.matchMedia?.('(pointer: coarse)').matches ?? false);
+
 const Scrub = memo(function Scrub() {
-    const list = scrubPoints();
+    const list = PHONE
+        ? scrubPoints().filter((_, i) => i % 3 === 0)
+        : scrubPoints();
     const bush = (dx: number, dy: number, r: number, key: string) =>
         discs(
             list.map(([x, y], i) => ({

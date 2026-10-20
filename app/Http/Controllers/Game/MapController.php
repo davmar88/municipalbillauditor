@@ -467,7 +467,7 @@ class MapController extends Controller
 
     /**
      * Land on fire: while a plunder is under way, and for a while after a
-     * plunder, a raid or Irongate's riders took it; ashes for hours after.
+     * plunder, a raid or Irongate's riders took it; ashes for an hour after.
      *
      * @return array<int, string> region id => burning or ash
      */
@@ -475,7 +475,8 @@ class MapController extends Controller
     {
         $now = now();
         $burnFor = $now->copy()->subMinutes(20);
-        $ashFor = $now->copy()->subHours(6);
+        // Ashes lie for an hour after, then the land is clear again.
+        $ashFor = $now->copy()->subHour();
         $fires = [];
         $mark = function (int $regionId, $at) use (&$fires, $burnFor) {
             $state = $at === null || $at->gt($burnFor) ? 'burning' : 'ash';

@@ -78,7 +78,7 @@
             'Anyone can run to the door and put the fire out for 1 horseshoe. That saves the home, and the burner was seen, so they\'re likelier to be caught.',
             'A home that burns down drops a level, and ash and charred beams stand where it was until its owner rebuilds.',
             'Every home shows its health: it falls while it burns and mends 10 an hour once the fire is out.',
-            'Land plundered, raided or sacked by Irongate\'s riders burns for a while, then lies in ashes for hours.',
+            'Land plundered, raided or sacked by Irongate\'s riders burns for twenty minutes, then lies in ashes for an hour.',
         ]],
         'bounties' => ['Bounties and the pound', [
             'Any faction\'s leader and council can put a bounty in Apples on an animal the informants have seen breaking the law. Anyone can add Apples to a bounty.',

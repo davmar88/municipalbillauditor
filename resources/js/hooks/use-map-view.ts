@@ -4,6 +4,13 @@ export type MapView = '2d' | '3d';
 
 const KEY = 'hollowmere-map-view';
 
+/** A phone: it starts on the flat map, which is far lighter, and remembers its own choice. */
+const phone = () =>
+    typeof window !== 'undefined' &&
+    (window.matchMedia?.('(pointer: coarse)').matches ?? false);
+
+const key = () => (phone() ? `${KEY}:phone` : KEY);
+
 let webgl: boolean | null = null;
 
 /** Whether this browser can draw the 3D map at all: three.js needs WebGL 2. */
@@ -24,7 +31,7 @@ export function canDraw3d(): boolean {
 
 function stored(): MapView | null {
     try {
-        const value = window.localStorage.getItem(KEY);
+        const value = window.localStorage.getItem(key());
 
         return value === '2d' || value === '3d' ? value : null;
     } catch {
@@ -34,18 +41,18 @@ function stored(): MapView | null {
 
 /**
  * The flat map or the 3D one, remembered on this device. 3D unless this
- * browser can't draw it, or you switched back to the flat map.
+ * browser can't draw it, you switched back to the flat map, or it's a phone.
  */
 export function useMapView() {
     const [view, setView] = useState<MapView>(() =>
-        canDraw3d() ? (stored() ?? '3d') : '2d',
+        canDraw3d() ? (stored() ?? (phone() ? '2d' : '3d')) : '2d',
     );
 
     const choose = useCallback((next: MapView) => {
         setView(next);
 
         try {
-            window.localStorage.setItem(KEY, next);
+            window.localStorage.setItem(key(), next);
         } catch {
             // Private windows may not keep it; the choice still holds for now.
         }
