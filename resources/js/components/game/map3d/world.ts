@@ -48,6 +48,7 @@ import type {
     Species,
     Worn,
     LootPile,
+    Walker,
 } from '@/types/game';
 import { bannerFlag, bannerTexture } from '@/lib/banner';
 import { cityLots } from '@/lib/city-lots';
@@ -90,6 +91,8 @@ export type WorldData = {
     loot: LootPile[];
     /** Your own health, for the bar over you. */
     myHealth: number | null;
+    /** Everyone else out walking. */
+    walkers: Walker[];
 };
 
 // ---- the look of the land -------------------------------------------------------------
@@ -1172,6 +1175,9 @@ export class World {
         if (!was || was.loot !== data.loot) {
             this.buildLoot();
         }
+        if (!was || was.walkers !== data.walkers) {
+            this.buildWalks();
+        }
         this.syncMe();
         this.changed = true;
     }
@@ -2088,6 +2094,78 @@ export class World {
         }
     }
 
+    /** Everyone else out walking: a dashed trail, and them moving along it. */
+    private readonly walks = new THREE.Group();
+
+    private walking: { walker: Walker; disc: CSS2DObject }[] = [];
+
+    private buildWalks() {
+        const data = this.data as WorldData;
+        if (!this.walks.parent) {
+            this.scene.add(this.walks);
+        }
+        this.clearGroup(this.walks);
+        this.walking = data.walkers.map((walker) => {
+            const colour = walker.colour ?? '#c9c2d8';
+            const line = new THREE.Line(
+                new THREE.BufferGeometry().setFromPoints([
+                    new THREE.Vector3(walker.from[0], 1.5, walker.from[1]),
+                    new THREE.Vector3(walker.to[0], 1.5, walker.to[1]),
+                ]),
+                new THREE.LineDashedMaterial({
+                    color: colour,
+                    dashSize: 8,
+                    gapSize: 6,
+                    transparent: true,
+                    opacity: 0.8,
+                }),
+            );
+            line.computeLineDistances();
+            this.walks.add(line);
+            const disc = new CSS2DObject(
+                div(
+                    '',
+                    {
+                        width: '23px',
+                        height: '23px',
+                        borderRadius: '50%',
+                        background: '#14121a',
+                        boxShadow: `0 0 0 2.2px ${colour}`,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '13px',
+                        pointerEvents: 'none',
+                    },
+                    speciesEmoji(walker.species),
+                ),
+            );
+            disc.element.title = `${walker.name} is walking`;
+            disc.renderOrder = 3;
+            this.walks.add(disc);
+            return { walker, disc };
+        });
+        this.placeWalks(Date.now());
+    }
+
+    private placeWalks(now: number) {
+        for (const { walker, disc } of this.walking) {
+            const start = Date.parse(walker.startedAt);
+            const end = Date.parse(walker.arrivesAt);
+            const done = Math.min(
+                1,
+                Math.max(0, (now - start) / Math.max(1, end - start)),
+            );
+            disc.position.set(
+                walker.from[0] + (walker.to[0] - walker.from[0]) * done,
+                this.animalHeight(34) * 0.45,
+                walker.from[1] + (walker.to[1] - walker.from[1]) * done,
+            );
+        }
+    }
+
+    private walksAt = 0;
+
     /** What dead animals left behind: sacks where they fell. */
     private readonly lootSacks = new THREE.Group();
 
@@ -2505,6 +2583,12 @@ export class World {
 
         let moving = zoomed || this.changed;
         this.changed = false;
+        // Others out walking move along their trails, a few times a second.
+        if (this.walking.length > 0 && now - this.walksAt > 200) {
+            this.walksAt = now;
+            this.placeWalks(Date.now());
+            moving = true;
+        }
         // The sea rolls in and the surf washes up and back, a few times a second.
         if (!reduce && now - this.seaAt > 90) {
             this.seaAt = now;

@@ -102,6 +102,18 @@ export type Weather = {
     }[];
 };
 
+/** Another animal out walking, for its trail on the map. */
+export type Walker = {
+    id: number;
+    name: string;
+    species: Species;
+    colour: string | null;
+    from: [number, number];
+    to: [number, number];
+    startedAt: string;
+    arrivesAt: string;
+};
+
 /** What a dead animal left lying on the map. */
 export type LootPile = {
     id: number;

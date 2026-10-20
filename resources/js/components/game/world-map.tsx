@@ -40,6 +40,7 @@ import type {
     Species,
     MapMe,
     LootPile,
+    Walker,
 } from '@/types/game';
 
 type View = { x: number; y: number; k: number };
@@ -2072,6 +2073,95 @@ export function walkPoint(me: MapMe, now: number): Point {
 }
 
 /** The straight line still to walk, and a flag where it ends. */
+/**
+ * Everyone else out walking: a dashed trail in their faction's colour, and
+ * them moving along it by the clock, as your own walk shows.
+ */
+const OtherWalks = memo(function OtherWalks({
+    walkers,
+    k,
+}: {
+    walkers: Walker[];
+    k: number;
+}) {
+    // Once a second they move on; the transform eases between ticks.
+    const [now, setNow] = useState(() => Date.now());
+    useEffect(() => {
+        const timer = window.setInterval(() => setNow(Date.now()), 1000);
+
+        return () => window.clearInterval(timer);
+    }, []);
+
+    return (
+        <g pointerEvents="none">
+            {walkers.map((walker) => {
+                const start = Date.parse(walker.startedAt);
+                const end = Date.parse(walker.arrivesAt);
+                const done = Math.min(
+                    1,
+                    Math.max(0, (now - start) / Math.max(1, end - start)),
+                );
+                const x =
+                    walker.from[0] + (walker.to[0] - walker.from[0]) * done;
+                const y =
+                    walker.from[1] + (walker.to[1] - walker.from[1]) * done;
+                const colour = walker.colour ?? '#c9c2d8';
+
+                return (
+                    <g key={`${walker.id}:${walker.arrivesAt}`}>
+                        <title>{`${walker.name} is walking`}</title>
+                        <line
+                            x1={walker.from[0]}
+                            y1={walker.from[1]}
+                            x2={walker.to[0]}
+                            y2={walker.to[1]}
+                            stroke={colour}
+                            strokeWidth={2.4 / k}
+                            strokeDasharray={`${7 / k} ${6 / k}`}
+                            strokeLinecap="round"
+                            opacity={0.75}
+                        />
+                        <g
+                            transform={`translate(${walker.to[0]} ${walker.to[1]}) scale(${grows(k)})`}
+                        >
+                            <circle
+                                r={5}
+                                fill={colour}
+                                stroke={HALO}
+                                strokeWidth={1.5}
+                                opacity={0.85}
+                            />
+                        </g>
+                        <g
+                            style={{
+                                transform: `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`,
+                                transition: 'transform 1s linear',
+                            }}
+                        >
+                            <g transform={`scale(${grows(k)})`}>
+                                <circle
+                                    r={11}
+                                    fill="#14121a"
+                                    stroke={colour}
+                                    strokeWidth={2.2}
+                                />
+                                <text
+                                    textAnchor="middle"
+                                    dominantBaseline="central"
+                                    fontSize={12}
+                                    y={0.5}
+                                >
+                                    {speciesEmoji(walker.species)}
+                                </text>
+                            </g>
+                        </g>
+                    </g>
+                );
+            })}
+        </g>
+    );
+});
+
 function WalkLine({ from, to, k }: { from: Point; to: Point; k: number }) {
     return (
         <g pointerEvents="none">
@@ -2250,6 +2340,8 @@ export type WorldMapProps = {
     onLoot?: (pile: LootPile) => void;
     /** Your own health, for the bar over you. */
     myHealth?: number | null;
+    /** Everyone else out walking, with their trails. */
+    walkers?: Walker[];
     children?: ReactNode;
 };
 
@@ -2279,6 +2371,7 @@ export function WorldMap({
     loot,
     onLoot,
     myHealth,
+    walkers,
     children,
 }: WorldMapProps) {
     const containerRef = useRef<HTMLDivElement>(null);
@@ -2518,6 +2611,9 @@ export function WorldMap({
                         )}
                         {irongate && <Folk folk={irongate.folk} k={k} />}
                         <Crowd regions={regions} k={k} wanted={wanted} />
+                        {walkers && walkers.length > 0 && (
+                            <OtherWalks walkers={walkers} k={k} />
+                        )}
                         {me?.walk && herePoint && (
                             <WalkLine from={herePoint} to={me.walk.to} k={k} />
                         )}

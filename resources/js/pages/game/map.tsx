@@ -40,6 +40,7 @@ import type {
     MapRegion,
     PlunderBandInfo,
     LootPile,
+    Walker,
     Weather,
     Worn,
 } from '@/types/game';
@@ -83,6 +84,8 @@ type Props = {
     weather: Weather;
     /** What dead animals left lying about. */
     loot: LootPile[];
+    /** Everyone else out walking. */
+    walkers: Walker[];
     /** Out in the open scrub: what there is to gather where you stand. */
     scrub: {
         id: number;
@@ -109,6 +112,7 @@ const LIVE_MAP = [
     'player',
     'weather',
     'loot',
+    'walkers',
 ];
 
 export default function MapPage({
@@ -138,6 +142,7 @@ export default function MapPage({
     raidRules,
     weather,
     loot,
+    walkers,
 }: Props) {
     const { player } = usePage().props;
     const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -475,6 +480,7 @@ export default function MapPage({
                         setPile(pile);
                     }}
                     myHealth={player?.vitals?.health ?? null}
+                    walkers={walkers}
                     weather={weather?.now}
                 >
                     <MapHud

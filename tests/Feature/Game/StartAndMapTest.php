@@ -201,6 +201,11 @@ class StartAndMapTest extends TestCase
         $this->assertEqualsWithDelta($minutes * 60, $player->walk_started_at->diffInSeconds($player->walk_arrives_at), 1.5);
         $this->assertSame('paddock', $player->location()->key, 'Still in the Paddock as it sets off.');
 
+        // Everyone else sees its trail.
+        $this->actingAs($this->player()->user)->get(route('play'))->assertInertia(fn (Assert $page) => $page
+            ->where('walkers.0.id', $player->id)
+            ->where('walkers.0.to', [round($x, 1), round($y, 1)]));
+
         $this->travel((int) ceil($minutes * 60) + 1)->seconds();
         $this->actingAs($player->user)->get(route('play'))->assertInertia(fn (Assert $page) => $page
             ->where('me.walk', null)

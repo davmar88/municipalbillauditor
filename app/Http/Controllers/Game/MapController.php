@@ -40,6 +40,7 @@ use App\Models\PlunderBand;
 use App\Models\Region;
 use App\Models\Season;
 use App\Models\Warrant;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -224,6 +225,25 @@ class MapController extends Controller
                 'fire' => $scorched[$region->id] ?? null,
             ]),
             'here' => $player->region_id ?? $paddock?->id,
+            // Everyone else out walking: where from, where to and when, so the map draws their trail as it does yours.
+            'walkers' => Player::query()->toBase()
+                ->where('valley_id', $valley->id)
+                ->where('id', '!=', $player->id)
+                ->where('walk_arrives_at', '>', now())
+                ->whereNull('inside_home_at')
+                ->orderBy('walk_arrives_at')
+                ->limit(150)
+                ->get(['id', 'name', 'species', 'faction_id', 'walk_from_x', 'walk_from_y', 'walk_to_x', 'walk_to_y', 'walk_started_at', 'walk_arrives_at'])
+                ->map(fn (object $walker) => [
+                    'id' => (int) $walker->id,
+                    'name' => $walker->name,
+                    'species' => $walker->species,
+                    'colour' => $walker->faction_id !== null ? ($colours[$walker->faction_id] ?? null) : null,
+                    'from' => [round((float) $walker->walk_from_x, 1), round((float) $walker->walk_from_y, 1)],
+                    'to' => [round((float) $walker->walk_to_x, 1), round((float) $walker->walk_to_y, 1)],
+                    'startedAt' => CarbonImmutable::parse($walker->walk_started_at)->toIso8601String(),
+                    'arrivesAt' => CarbonImmutable::parse($walker->walk_arrives_at)->toIso8601String(),
+                ]),
             // Spring, summer, fall or winter, and how far through the season we are.
             'weather' => Weather::forMap($season),
             // What dead animals left lying about, for anyone to pick up.
