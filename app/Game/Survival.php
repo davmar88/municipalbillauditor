@@ -125,7 +125,11 @@ final class Survival
             'corn' => (int) ($row->corn ?? 0),
             'water' => (int) ($materials['water'] ?? 0),
             'store' => $store,
-            'thirst' => ($row->species ?? null) === Species::Llama->value ? 0.7 : 1.0,
+            'thirst' => match ($row->species ?? null) {
+                Species::Llama->value => 0.7,
+                Species::CatBlue->value => 0.8,
+                default => 1.0,
+            },
         ], $season)['health']);
     }
 
@@ -154,8 +158,12 @@ final class Survival
                 'corn' => (int) $player->corn,
                 'water' => $player->material('water'),
                 'store' => $store,
-                // Llamas get thirsty more slowly.
-                'thirst' => $player->species === Species::Llama ? 0.7 : 1.0,
+                // Llamas and blue cats get thirsty more slowly.
+                'thirst' => match ($player->species) {
+                    Species::Llama => 0.7,
+                    Species::CatBlue => 0.8,
+                    default => 1.0,
+                },
             ], $season, $now);
 
             $materials = $player->materials ?? [];
@@ -331,8 +339,12 @@ final class Survival
     {
         $holds = self::BARRELS[(int) $player->water_barrel]['holds'] ?? self::BARRELS[0]['holds'];
 
-        // Llamas carry twice as much.
-        return $player->species === Species::Llama ? $holds * 2 : $holds;
+        // Llamas carry twice as much, blue cats half as much again.
+        return match ($player->species) {
+            Species::Llama => $holds * 2,
+            Species::CatBlue => (int) round($holds * 1.5),
+            default => $holds,
+        };
     }
 
     /**

@@ -22,8 +22,11 @@ const ALIASES: Record<string, string[]> = {
     Neck3: ['Neck'],
     Torso2: ['Torso'],
     Torso3: ['Torso'],
-    'FrontShoulder.L': ['Shoulders'],
-    'FrontUpperLeg.L': ['FrontUpLeg.L'],
+    'FrontShoulder.L': ['Shoulders', 'Scapula_L'],
+    'FrontUpperLeg.L': ['FrontUpLeg.L', 'frontHip_L'],
+    // The cats' ears.
+    'Ear1.L': ['Ear_L'],
+    'Ear1.R': ['Ear_R'],
 };
 
 /** The bones of the animal being dressed, while it's being dressed. */

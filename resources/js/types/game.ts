@@ -10,7 +10,19 @@ export type Species =
     | 'cow'
     | 'llama'
     | 'zebra'
-    | 'tortoise';
+    | 'tortoise'
+    | 'cat_silver'
+    | 'cat_black'
+    | 'cat_ginger'
+    | 'cat_marmalade'
+    | 'cat_tabby'
+    | 'cat_white'
+    | 'cat_masked'
+    | 'cat_tuxedo'
+    | 'cat_blue'
+    | 'cat_chocolate'
+    | 'cat_silvertabby'
+    | 'cat_calico';
 
 export type FactionBadge = {
     id: number;

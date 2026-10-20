@@ -36,6 +36,18 @@ const SIZE: Partial<Record<Species, number>> = {
     llama: 0.9,
     zebra: 0.9,
     tortoise: 0.75,
+    cat_silver: 0.6,
+    cat_black: 0.6,
+    cat_ginger: 0.6,
+    cat_marmalade: 0.6,
+    cat_tabby: 0.6,
+    cat_white: 0.6,
+    cat_masked: 0.6,
+    cat_tuxedo: 0.6,
+    cat_blue: 0.6,
+    cat_chocolate: 0.6,
+    cat_silvertabby: 0.6,
+    cat_calico: 0.6,
 };
 
 export type Actor = {

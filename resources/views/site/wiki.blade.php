@@ -16,7 +16,8 @@
             'Horses are builders: they craft with half the materials.',
             'Sheep are the chorus: their chants calm or stir the valley.',
             'Goats are auditors: they spot secret changes to the laws sooner.',
-            'More animals join in later seasons.',
+            'Cows gather more, llamas carry more water, zebras walk faster, and tortoises are hard to beat but slow.',
+            'Twelve cats, one for each coat, each with its own knack: the Ginger Cat fights harder, the Black Cat is harder to catch, the Masked Cat robs more, the Calico Cat gathers more, the Silver Tabby walks fastest, and more.',
         ]],
         'horseshoes' => ['Horseshoes', [
             'You hold up to '.$shoes['max'].' horseshoes, and one comes back every '.$shoes['refill_minutes'].' minutes.',

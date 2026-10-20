@@ -84,6 +84,17 @@ class StartAndMapTest extends TestCase
         $this->assertSame(Species::Tortoise, $user->fresh()->player->species);
         $this->assertSame(1.4, Species::Tortoise->defence());
         $this->assertSame(0.6, Species::Tortoise->pace());
+
+        // Twelve cats, one for each coat, each with its own knack.
+        $cats = array_values(array_filter(Species::playable(), fn (Species $species) => $species->isCat()));
+        $this->assertCount(12, $cats);
+        $this->assertSame(12, count(array_unique(array_map(fn (Species $cat) => $cat->talent(), $cats))));
+        $user = User::factory()->create();
+        $this->actingAs($user)->post(route('play.start.store'), ['name' => 'Midnight', 'species' => 'cat_black', 'adult' => '1'])->assertRedirect(route('play'));
+        $this->assertSame('Black Cat', $user->fresh()->player->species->label());
+        $this->assertSame(1.2, Species::CatGinger->attack());
+        $this->assertSame(1.25, Species::CatSilverTabby->pace());
+        $this->assertSame('Silver Tabbies', Species::CatSilverTabby->plural());
     }
 
     public function test_names_are_unique_in_the_valley(): void

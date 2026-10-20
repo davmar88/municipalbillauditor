@@ -332,6 +332,10 @@ final class Crimes
 
             Horseshoes::spend($victim, self::CATCH_HORSESHOES);
             $chance = self::CATCH_CHANCE + ($victim->species === Species::Dog ? Warrants::DOG_BONUS : 0.0);
+            // A black cat melts into the night.
+            if ($criminal->species === Species::CatBlack) {
+                $chance -= 0.2;
+            }
             $chance -= Homes::arrestCut(Homes::guard($criminal), $chance);
             $chance -= min(Homes::armour($criminal), max(0.0, $chance - Homes::ARREST_FLOOR));
             $roll ??= Dice::roll(Dice::seed(), 'catch');
@@ -442,9 +446,14 @@ final class Crimes
                 $victim = Players::lock(Player::query()->findOrFail($crime->target_player_id));
                 // A cudgel takes twice as much.
                 $share = self::ROB_SHARE * ($crime->armed ? Powers::CUDGEL_LOOT : 1);
-                // A tortoise keeps most of what it carries under its shell.
-                if ($victim->species === Species::Tortoise) {
+                // A tortoise keeps most of what it carries under its shell, and so does a homebody cat.
+                if (in_array($victim->species, [Species::Tortoise, Species::CatChocolate], true)) {
                     $share /= 2;
+                }
+
+                // A masked cat makes off with half as much again.
+                if ($criminal->species === Species::CatMasked) {
+                    $share *= 1.5;
                 }
                 $loot = min(self::ROB_MOST_CORN * ($crime->armed ? Powers::CUDGEL_LOOT : 1), (int) floor($victim->corn * $share));
                 $kept = $victim->materials ?? [];
