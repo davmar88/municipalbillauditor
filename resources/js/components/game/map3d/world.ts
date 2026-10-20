@@ -50,6 +50,8 @@ import type {
     LootPile,
 } from '@/types/game';
 import { bannerFlag, bannerTexture } from '@/lib/banner';
+import { cityLots } from '@/lib/city-lots';
+import { buildCity, loadCity } from './city';
 import { animateAshes, animateFire, ashes, flames } from './fire';
 import { person as makePerson } from './folk';
 import { landmarks, orchardTrees } from './landmarks';
@@ -415,6 +417,36 @@ export class World {
 
     /** Barns, silos and windmills dressing the farms and Hollowmere's yards. */
     private readonly farmyards = new THREE.Group();
+
+    /** Ironfield's town, built once its buildings have loaded. */
+    private readonly city = new THREE.Group();
+
+    private cityAsked = false;
+
+    private askCity() {
+        if (this.cityAsked) {
+            return;
+        }
+        this.cityAsked = true;
+        loadCity()
+            .then((models) => {
+                if (this.disposed || !this.data) {
+                    return;
+                }
+                buildCity(
+                    this.city,
+                    cityLots(this.data.regions, shapeFor, labelPoint),
+                    models,
+                );
+                this.scene.add(this.city);
+                this.changed = true;
+            })
+            .catch((error: unknown) => {
+                // The grey blocks stay bare; the next map load tries again.
+                console.warn("Ironfield's town did not load.", error);
+                this.cityAsked = false;
+            });
+    }
 
     private farmAsked = false;
     private regionLabels = new Map<
@@ -1120,6 +1152,7 @@ export class World {
         }
         if (land) {
             this.buildBuildings();
+            this.askCity();
         }
         if (land || was.gateNight !== data.gateNight) {
             this.buildMarches();

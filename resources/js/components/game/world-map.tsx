@@ -26,6 +26,7 @@ import {
     toPath,
 } from '@/lib/hollowmere';
 import { cn } from '@/lib/utils';
+import { cityLots } from '@/lib/city-lots';
 import type { Warrant } from '@/components/game/region-panel';
 import type {
     BannerData,
@@ -1586,6 +1587,64 @@ export function HealthBar({
     );
 }
 
+/** Ironfield's town from above: rooftops along each grey block, the names left clear (as on the 3D map). */
+const IronfieldTown = memo(function IronfieldTown({
+    regions,
+}: {
+    regions: MapRegion[];
+}) {
+    const ironfield = regions.filter((region) => region.ring === 'ironfield');
+    const lots = useMemo(
+        () => cityLots(ironfield, shapeFor, labelPoint),
+        [ironfield.length], // eslint-disable-line react-hooks/exhaustive-deps
+    );
+
+    return (
+        <g pointerEvents="none">
+            {lots.map((lot, i) => {
+                const tall = /^[46]Story/.test(lot.model);
+                const mid = /^3Story|Balcony|Wide/.test(lot.model);
+                const [w, h] = /Slim/.test(lot.model)
+                    ? [26, 52]
+                    : /Wide/.test(lot.model)
+                      ? [52, 92]
+                      : [50, 54];
+                const roof = tall ? '#6c7380' : mid ? '#8a6f5a' : '#a3735c';
+
+                return (
+                    <g
+                        key={i}
+                        transform={`translate(${lot.x.toFixed(1)} ${lot.y.toFixed(1)}) rotate(${((lot.turn * 180) / Math.PI).toFixed(0)})`}
+                    >
+                        <rect
+                            x={-w / 2 + 4}
+                            y={-h / 2 + 5}
+                            width={w}
+                            height={h}
+                            fill="#000"
+                            opacity={0.35}
+                        />
+                        <rect
+                            x={-w / 2}
+                            y={-h / 2}
+                            width={w}
+                            height={h}
+                            fill={roof}
+                            stroke="#2b2b31"
+                            strokeWidth={1.5}
+                        />
+                        <path
+                            d={`M${-w / 2} 0H${w / 2}`}
+                            stroke="#00000055"
+                            strokeWidth={1.5}
+                        />
+                    </g>
+                );
+            })}
+        </g>
+    );
+});
+
 /** Land a plunder, a raid or Irongate's riders set alight: flames, then ashes for hours. */
 const LandFires = memo(function LandFires({
     regions,
@@ -2451,6 +2510,7 @@ export function WorldMap({
                             gateResult={gateResult}
                         />
                         <Bases regions={regions} k={k} />
+                        <IronfieldTown regions={regions} />
                         <LandFires regions={regions} />
                         {homes && <Homes homes={homes} k={k} />}
                         {loot && loot.length > 0 && (
