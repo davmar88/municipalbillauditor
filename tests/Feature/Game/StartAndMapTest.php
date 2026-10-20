@@ -77,6 +77,13 @@ class StartAndMapTest extends TestCase
         $this->assertSame(1.25, Species::Cow->gathering());
         $this->assertSame(1.3, Species::Zebra->pace());
         $this->assertSame(40, Survival::waterCap(Player::query()->where('name', 'Dolly')->sole()), 'Llamas carry twice the water.');
+
+        // A tortoise: hard to beat, slow to walk.
+        $user = User::factory()->create();
+        $this->actingAs($user)->post(route('play.start.store'), ['name' => 'Shelly', 'species' => 'tortoise', 'adult' => '1'])->assertRedirect(route('play'));
+        $this->assertSame(Species::Tortoise, $user->fresh()->player->species);
+        $this->assertSame(1.4, Species::Tortoise->defence());
+        $this->assertSame(0.6, Species::Tortoise->pace());
     }
 
     public function test_names_are_unique_in_the_valley(): void

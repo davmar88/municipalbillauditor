@@ -19,11 +19,12 @@ enum Species: string
     case Cow = 'cow';
     case Llama = 'llama';
     case Zebra = 'zebra';
+    case Tortoise = 'tortoise';
 
     /** The species players can pick in the test season. */
     public static function playable(): array
     {
-        return [self::Pig, self::Dog, self::Horse, self::Sheep, self::Goat, self::Cow, self::Llama, self::Zebra];
+        return [self::Pig, self::Dog, self::Horse, self::Sheep, self::Goat, self::Cow, self::Llama, self::Zebra, self::Tortoise];
     }
 
     public function label(): string
@@ -53,6 +54,7 @@ enum Species: string
             self::Cow => 'Provider',
             self::Llama => 'Packer',
             self::Zebra => 'Runner',
+            self::Tortoise => 'Fortress',
         };
     }
 
@@ -70,6 +72,7 @@ enum Species: string
             self::Cow => 'You gather 25% more.',
             self::Llama => 'You carry twice as much water, and get thirsty more slowly.',
             self::Zebra => 'You walk 30% faster.',
+            self::Tortoise => 'Your defence counts 40% more, and robbers get only half as much off you.',
         };
     }
 
@@ -87,6 +90,7 @@ enum Species: string
             self::Cow => 'Your attack counts 15% less.',
             self::Llama => 'Your defence counts 15% less.',
             self::Zebra => 'You gather 15% less.',
+            self::Tortoise => 'You walk 40% slower.',
         };
     }
 
@@ -108,6 +112,7 @@ enum Species: string
             self::Sheep => 0.9,
             self::Goat, self::Hen => 0.8,
             self::Llama => 0.85,
+            self::Tortoise => 1.4,
             default => 1.0,
         };
     }
@@ -115,7 +120,11 @@ enum Species: string
     /** How fast it walks, against the others. */
     public function pace(): float
     {
-        return $this === self::Zebra ? 1.3 : 1.0;
+        return match ($this) {
+            self::Zebra => 1.3,
+            self::Tortoise => 0.6,
+            default => 1.0,
+        };
     }
 
     public function gathering(): float

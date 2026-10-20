@@ -417,6 +417,10 @@ final class Crimes
                 $victim = Players::lock(Player::query()->findOrFail($crime->target_player_id));
                 // A cudgel takes twice as much.
                 $share = self::ROB_SHARE * ($crime->armed ? Powers::CUDGEL_LOOT : 1);
+                // A tortoise keeps most of what it carries under its shell.
+                if ($victim->species === Species::Tortoise) {
+                    $share /= 2;
+                }
                 $loot = min(self::ROB_MOST_CORN * ($crime->armed ? Powers::CUDGEL_LOOT : 1), (int) floor($victim->corn * $share));
                 $kept = $victim->materials ?? [];
                 $carried = $criminal->materials ?? [];

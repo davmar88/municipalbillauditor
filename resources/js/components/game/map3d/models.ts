@@ -35,6 +35,7 @@ const SIZE: Partial<Record<Species, number>> = {
     cow: 0.8,
     llama: 0.9,
     zebra: 0.9,
+    tortoise: 0.75,
 };
 
 export type Actor = {
