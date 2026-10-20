@@ -175,6 +175,7 @@ Route::middleware(['auth', 'verified', 'player', 'throttle:120,1'])->prefix('pla
     // Giving another animal an item from your bag.
     Route::get('gifts', [GiftController::class, 'index'])->name('play.gifts');
     Route::post('animals/{player}/gift', [GiftController::class, 'store'])->middleware('throttle:20,1,gifts')->name('play.gift');
+    Route::post('animals/{player}/send', [GiftController::class, 'send'])->middleware('throttle:20,1,gifts')->name('play.send');
 
     // Your own home.
     Route::post('home', [HomeController::class, 'build'])->middleware('throttle:20,1,home')->name('play.home.build');

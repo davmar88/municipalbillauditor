@@ -81,7 +81,8 @@ final class Cashouts
     {
         $bought = (int) AppleEntry::query()
             ->where('player_id', $player->id)
-            ->where(fn ($query) => $query->where('reference', 'like', 'exchange:%')->orWhere('reference', 'like', 'tree:%')->orWhere('reference', 'like', 'purchase:%'))
+            // Apples sent by another animal wait too, so spare accounts can't feed a cash-out.
+            ->where(fn ($query) => $query->where('reference', 'like', 'exchange:%')->orWhere('reference', 'like', 'tree:%')->orWhere('reference', 'like', 'purchase:%')->orWhere('reference', 'like', 'gift:%'))
             ->where('created_at', '>', now()->subDays(self::holdDays()))
             ->sum('amount');
 
@@ -126,6 +127,7 @@ final class Cashouts
                 SUM(amount) AS total,
                 SUM(CASE WHEN reference LIKE 'exchange:%' OR reference LIKE 'tree:%' OR reference LIKE 'purchase:%' THEN amount ELSE 0 END) AS bought,
                 SUM(CASE WHEN reference LIKE 'listing:%' THEN amount ELSE 0 END) AS sales,
+                SUM(CASE WHEN reference LIKE 'gift:%' THEN amount ELSE 0 END) AS gifts,
                 SUM(CASE WHEN reference LIKE 'bounty:%' AND reference NOT LIKE '%:back:%' THEN amount ELSE 0 END) AS bounties,
                 SUM(CASE WHEN reference LIKE '%:back%' THEN amount ELSE 0 END) AS returned")
             ->get()

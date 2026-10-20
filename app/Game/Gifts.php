@@ -64,6 +64,46 @@ final class Gifts
             ->count();
     }
 
+    /**
+     * What every gift needs, items or anything else: a free sender of level
+     * 2 or more who isn't silenced, nobody blocking anybody, a recipient out
+     * of the pound, and no Trade Ban on either faction. Both rows locked.
+     *
+     * @throws GameException
+     */
+    public static function ensureCanGive(Player $from, Player $to): void
+    {
+        Players::ensureFree($from);
+
+        if ($from->level() < (int) config('game.levels.stall')) {
+            throw new GameException('You can give things from level '.config('game.levels.stall').'.');
+        }
+
+        if (($silenced = Players::silenced($from)) !== null) {
+            throw new GameException($silenced);
+        }
+
+        if (Messages::blocks($to, $from)) {
+            throw new GameException("{$to->name} isn't taking anything from you.");
+        }
+
+        if (Messages::blocks($from, $to)) {
+            throw new GameException("You blocked {$to->name}. Unblock them to give them something.");
+        }
+
+        // A gift mustn't spring an animal from the pound.
+        if ($to->inPound()) {
+            throw new GameException("{$to->name} is in the pound until ".Clock::local($to->pound_until)->format('H:i').'. Give it something when it is out.');
+        }
+
+        $season = $from->valley->currentSeason();
+        $ban = $season ? Wall::law($season, LawTemplate::TradeBan) : null;
+
+        if ($ban !== null && in_array((int) $ban->target, [$from->faction_id, $to->faction_id], true)) {
+            throw new GameException('A Trade Ban on the Wall stops gifts to and from that faction.');
+        }
+    }
+
     public function give(Player $from, Player $to, int $itemId): Item
     {
         if ($from->is($to)) {
@@ -80,35 +120,7 @@ final class Gifts
             $first = Players::lock($first);
             $second = Players::lock($second);
             [$from, $to] = $first->id === $from->id ? [$first, $second] : [$second, $first];
-            Players::ensureFree($from);
-
-            if ($from->level() < (int) config('game.levels.stall')) {
-                throw new GameException('You can give items from level '.config('game.levels.stall').'.');
-            }
-
-            if (($silenced = Players::silenced($from)) !== null) {
-                throw new GameException($silenced);
-            }
-
-            if (Messages::blocks($to, $from)) {
-                throw new GameException("{$to->name} isn't taking anything from you.");
-            }
-
-            if (Messages::blocks($from, $to)) {
-                throw new GameException("You blocked {$to->name}. Unblock them to give them something.");
-            }
-
-            // A gift mustn't spring an animal from the pound.
-            if ($to->inPound()) {
-                throw new GameException("{$to->name} is in the pound until ".Clock::local($to->pound_until)->format('H:i').'. Give it something when it is out.');
-            }
-
-            $season = $from->valley->currentSeason();
-            $ban = $season ? Wall::law($season, LawTemplate::TradeBan) : null;
-
-            if ($ban !== null && in_array((int) $ban->target, [$from->faction_id, $to->faction_id], true)) {
-                throw new GameException('A Trade Ban on the Wall stops gifts to and from that faction.');
-            }
+            self::ensureCanGive($from, $to);
 
             $item = Item::query()->with('design')->lockForUpdate()->find($itemId);
 

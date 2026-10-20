@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Game;
 
 use App\Game\Gifts;
+use App\Game\Sends;
 use App\Http\Controllers\Controller;
 use App\Models\Item;
 use App\Models\Player;
@@ -28,6 +29,18 @@ class GiftController extends Controller
             ...$this->bag($me->fresh()),
             'message' => "You gave {$player->name} {$item->design->name}.",
         ]);
+    }
+
+    /** Corn, Apples, Pineapples or a material, sent to another animal. */
+    public function send(Request $request, Player $player, Sends $sends): JsonResponse
+    {
+        $data = $request->validate([
+            'what' => ['required', 'string', 'max:20'],
+            'amount' => ['required', 'integer', 'min:1', 'max:1000000'],
+        ]);
+        $sends->send($request->user()->player, $player, $data['what'], (int) $data['amount']);
+
+        return response()->json(['message' => "You sent {$player->name} {$data['amount']} ".Sends::label($data['what']).'.']);
     }
 
     /** @return array{items: list<array<string, mixed>>, left: int, perDay: int, cant: string|null} */

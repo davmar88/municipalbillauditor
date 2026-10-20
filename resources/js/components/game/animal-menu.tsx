@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import type { CSSProperties } from 'react';
 import { useEffect, useState } from 'react';
-import { GiftPicker } from '@/components/game/gift-picker';
+import { GiftPicker, SendPicker } from '@/components/game/gift-picker';
 import { act, speciesEmoji } from '@/lib/game';
 import type { Point } from '@/lib/hollowmere';
 import { openChat } from '@/lib/pulse';
@@ -136,7 +136,7 @@ export function AnimalMenu({
                         onClick={() => setGiving(true)}
                         className="flex items-center gap-2 rounded-lg px-2 py-2 text-left hover:bg-accent"
                     >
-                        <Gift className="size-4" /> Send an item
+                        <Gift className="size-4" /> Send something
                     </button>
                     {!animal.me && (
                         <button
@@ -170,6 +170,7 @@ export function AnimalMenu({
                         animal={animal}
                         onBack={() => setGiving(false)}
                     />
+                    <SendPicker animal={animal} />
                 </div>
             )}
         </div>

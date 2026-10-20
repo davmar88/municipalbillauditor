@@ -18,7 +18,7 @@ import type { LucideIcon } from 'lucide-react';
 import { useState } from 'react';
 import { AnimalStageSlot } from '@/components/game/animal-stage-slot';
 import { GameBar } from '@/components/game/game-bar';
-import { GiftPicker } from '@/components/game/gift-picker';
+import { GiftPicker, SendPicker } from '@/components/game/gift-picker';
 import { ItemPreview } from '@/components/game/item-preview';
 import { ProgressBar } from '@/components/game/missions';
 import { OrchardBadge } from '@/components/game/orchard-badge';
@@ -177,7 +177,7 @@ export default function AnimalProfile({
                             aria-expanded={giving}
                             onClick={() => setGiving(!giving)}
                         >
-                            <Gift className="size-4" /> Send an item
+                            <Gift className="size-4" /> Send something
                         </Button>
                         {bounty !== null && (
                             <Button
@@ -205,6 +205,7 @@ export default function AnimalProfile({
                     {giving && (
                         <div className="max-w-sm rounded-xl border bg-card p-3 text-sm">
                             <GiftPicker animal={animal} />
+                            <SendPicker animal={animal} />
                         </div>
                     )}
                 </header>

@@ -64,6 +64,14 @@ return [
 
     'starting_corn' => 100,
 
+    // The most an animal can send another in a day, of each: Corn, Apples, Pineapples, and of each material.
+    'sends' => [
+        'corn' => 1000,
+        'apples' => 200,
+        'pineapples' => 2000,
+        'material' => 200,
+    ],
+
     // What each region holds to gather when full, and how much grows back
     // an hour. Corn fields hold the most; the farms' rare crops the least.
     'stock' => [

@@ -4,15 +4,20 @@ namespace Tests\Feature\Game;
 
 use App\Enums\ItemTemplate;
 use App\Enums\Species;
+use App\Game\Apples;
+use App\Game\GameException;
 use App\Game\Gifts;
 use App\Game\Market;
 use App\Game\Messages;
+use App\Game\Pineapples;
+use App\Game\Sends;
 use App\Models\Gift;
 use App\Models\Item;
 use App\Models\ItemDesign;
 use App\Models\Listing;
 use App\Models\Notice;
 use App\Models\Player;
+use App\Payments\Cashouts;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -177,5 +182,43 @@ class GiftsTest extends TestCase
         $late = $this->player(level: 2);
         $this->actingAs($late->user)->postJson(route('play.gift', $friend), ['item' => $this->item($late, 'Late')->id])
             ->assertStatus(422)->assertJsonPath('message', "{$friend->name} has been given ".Gifts::RECEIVE_PER_DAY.' items today. Try again tomorrow.');
+    }
+
+    public function test_an_animal_sends_corn_apples_pineapples_and_materials(): void
+    {
+        $from = $this->player(level: 2, attributes: ['corn' => 500, 'materials' => ['wood' => 30]]);
+        $to = $this->player(attributes: ['corn' => 0]);
+        Apples::award($from, 50, 'Test', 'test:send-apples');
+        Pineapples::award($from, 900, 'Test', 'test:send-pineapples');
+
+        $this->actingAs($from->user)->postJson(route('play.send', $to), ['what' => 'corn', 'amount' => 120])->assertOk()->assertJson(['message' => "You sent {$to->name} 120 Corn."]);
+        $this->actingAs($from->user)->postJson(route('play.send', $to), ['what' => 'apples', 'amount' => 20])->assertOk();
+        $this->actingAs($from->user)->postJson(route('play.send', $to), ['what' => 'pineapples', 'amount' => 450])->assertOk();
+        $this->actingAs($from->user)->postJson(route('play.send', $to), ['what' => 'wood', 'amount' => 10])->assertOk();
+
+        $to->refresh();
+        $this->assertSame([120, 20, 450, 10], [$to->corn, $to->apples, $to->pineapples, $to->material('wood')]);
+        $this->assertSame([380, 30, 450, 20], [$from->fresh()->corn, $from->fresh()->apples, $from->fresh()->pineapples, $from->fresh()->material('wood')]);
+        $this->assertSame(20, Cashouts::held($to), 'Apples sent wait before they can be cashed out.');
+        $this->assertStringContainsString("{$from->name} sent you 120 Corn", Notice::query()->where('player_id', $to->id)->oldest('id')->value('text'));
+    }
+
+    public function test_sending_has_a_daily_limit_and_the_usual_gift_rules(): void
+    {
+        $from = $this->player(level: 2, attributes: ['corn' => 5000]);
+        $to = $this->player();
+
+        app(Sends::class)->send($from, $to, 'corn', Sends::limits()['corn']);
+
+        try {
+            app(Sends::class)->send($from->fresh(), $to->fresh(), 'corn', 1);
+            $this->fail('Over the daily limit.');
+        } catch (GameException $e) {
+            $this->assertStringContainsString('all the Corn you can today', $e->getMessage());
+        }
+
+        app(Messages::class)->block($to->fresh(), $from->fresh());
+        $this->expectExceptionMessage("isn't taking anything from you");
+        app(Sends::class)->send($from->fresh(), $to->fresh(), 'apples', 1);
     }
 }

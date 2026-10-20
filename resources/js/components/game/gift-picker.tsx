@@ -1,8 +1,9 @@
+import { router, usePage } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { gameJson } from '@/lib/game';
-import { gift, gifts } from '@/routes/play';
+import { gift, gifts, send } from '@/routes/play';
 
 type Bag = {
     items: {
@@ -139,6 +140,104 @@ export function GiftPicker({
                     Back
                 </button>
             )}
+        </div>
+    );
+}
+
+/**
+ * Sending Corn, Apples, Pineapples or a material to another animal, a
+ * little a day: Apples sent wait before the other animal can cash them out.
+ */
+export function SendPicker({
+    animal,
+}: {
+    animal: { id: number; name: string };
+}) {
+    const { player } = usePage().props;
+    const materials = Object.entries(
+        (player?.materials ?? {}) as Record<string, number>,
+    ).filter(([, amount]) => amount > 0);
+    const options: [string, string, number][] = [
+        ['corn', 'Corn', player?.corn ?? 0],
+        ['apples', 'Apples', player?.apples ?? 0],
+        ['pineapples', 'Pineapples', player?.pineapples ?? 0],
+        ...materials.map(([name, amount]): [string, string, number] => [
+            name,
+            name,
+            amount,
+        ]),
+    ];
+    const [what, setWhat] = useState('corn');
+    const [amount, setAmount] = useState(10);
+    const [busy, setBusy] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const have = options.find(([value]) => value === what)?.[2] ?? 0;
+
+    const go = async () => {
+        setBusy(true);
+        setError(null);
+        const result = await gameJson<{ message: string }>(
+            send.url(animal.id),
+            'POST',
+            { what, amount },
+        );
+        setBusy(false);
+
+        if (result.ok) {
+            toast.success(result.data.message);
+            router.reload({ only: ['player'] });
+        } else {
+            setError(result.error);
+        }
+    };
+
+    return (
+        <div className="flex flex-col gap-2 border-t pt-2 text-sm">
+            <p className="text-xs font-semibold">
+                Or send {animal.name} something else
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
+                <select
+                    value={what}
+                    onChange={(e) => setWhat(e.target.value)}
+                    className="rounded-md border bg-background px-2 py-1"
+                    aria-label="What to send"
+                >
+                    {options.map(([value, label, count]) => (
+                        <option key={value} value={value}>
+                            {label} ({count.toLocaleString('en-ZA')})
+                        </option>
+                    ))}
+                </select>
+                <input
+                    type="number"
+                    min={1}
+                    max={Math.max(1, have)}
+                    value={amount}
+                    onChange={(e) =>
+                        setAmount(Math.max(1, Number(e.target.value) || 1))
+                    }
+                    className="w-24 rounded-md border bg-background px-2 py-1"
+                    aria-label="How many"
+                />
+                <Button
+                    size="sm"
+                    disabled={busy || have < amount}
+                    onClick={() => void go()}
+                >
+                    Send
+                </Button>
+            </div>
+            {have < amount && (
+                <p className="text-xs text-muted-foreground">
+                    You have {have.toLocaleString('en-ZA')}.
+                </p>
+            )}
+            {error && <p className="text-xs text-destructive">{error}</p>}
+            <p className="text-xs text-muted-foreground">
+                There's a daily limit on each. Apples you send wait a while
+                before {animal.name} can cash them out.
+            </p>
         </div>
     );
 }
