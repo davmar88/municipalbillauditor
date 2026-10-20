@@ -143,6 +143,8 @@ Route::middleware(['auth', 'verified', 'player', 'throttle:120,1'])->prefix('pla
     Route::post('missions/{mission}/claim', [TodayController::class, 'claim'])->name('play.mission.claim');
     Route::get('rankings', [RankingsController::class, 'index'])->name('play.rankings');
     Route::get('online', [OnlineController::class, 'index'])->name('play.online');
+    // The corner buttons on every screen: who's online, and your recent chats.
+    Route::get('dock', [OnlineController::class, 'dock'])->name('play.dock');
     Route::get('exchange', [ExchangeController::class, 'index'])->name('play.exchange');
     Route::put('faction/banner', [BannerController::class, 'design'])->name('play.faction.banner');
     Route::post('faction/banner/image', [BannerController::class, 'upload'])->middleware('throttle:10,10,banner')->name('play.faction.banner.upload');

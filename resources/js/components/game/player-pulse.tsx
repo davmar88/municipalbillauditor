@@ -1,6 +1,7 @@
 import { router, usePage } from '@inertiajs/react';
-import { Bell, X } from 'lucide-react';
-import { useEffect } from 'react';
+import { Bell, MessageCircle, Users, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { DockPanel } from '@/components/game/dock-panel';
 import { FloatingChat } from '@/components/game/floating-chat';
 import { Button } from '@/components/ui/button';
 import { gameJson, speciesEmoji } from '@/lib/game';
@@ -132,56 +133,87 @@ function ChatHeads() {
     const heads = usePulse((state) => state.heads);
     const unread = usePulse((state) => state.unreadHeads);
     const chatWith = usePulse((state) => state.chatWith);
-
-    if (heads.length === 0) {
-        return null;
-    }
+    const unreadMessages = usePulse((state) => state.unreadMessages);
+    const [panel, setPanel] = useState<'online' | 'messages' | null>(null);
 
     return (
-        <nav
-            aria-label="Your chats"
-            className={cn(
-                'fixed right-3 bottom-[calc(4.25rem+env(safe-area-inset-bottom))] z-50 flex-col-reverse gap-2 md:right-5 md:bottom-5',
-                // On a phone the open chat covers the corner, so the heads wait behind it.
-                chatWith === null ? 'flex' : 'hidden md:flex',
-            )}
-        >
-            {heads.map((head) => (
-                <div key={head.id} className="group relative">
+        <>
+            <DockPanel tab={panel} onTab={setPanel} />
+            <nav
+                aria-label="Your chats"
+                className={cn(
+                    'fixed right-3 bottom-[calc(4.25rem+env(safe-area-inset-bottom))] z-50 flex-col-reverse gap-2 md:right-5 md:bottom-5',
+                    // On a phone the open chat covers the corner, so the heads wait behind it.
+                    chatWith === null ? 'flex' : 'hidden md:flex',
+                )}
+            >
+                <button
+                    type="button"
+                    onClick={() => setPanel('online')}
+                    className="flex size-12 items-center justify-center rounded-full border-2 border-emerald-500 bg-card text-emerald-500 shadow-lg transition hover:scale-105"
+                    aria-label="Who's online"
+                    title="Who's online"
+                >
+                    <Users className="size-5" />
+                </button>
+                <div className="relative">
                     <button
                         type="button"
-                        onClick={() =>
-                            chatWith === head.id
-                                ? closeChat()
-                                : openChat(head.id, head)
-                        }
-                        className={cn(
-                            'flex size-12 items-center justify-center rounded-full border-2 bg-card text-2xl shadow-lg transition hover:scale-105',
-                            chatWith === head.id && 'ring-2 ring-primary',
-                        )}
-                        style={{ borderColor: head.colour ?? undefined }}
-                        aria-label={`Chat with ${head.name}`}
-                        title={head.name}
+                        onClick={() => setPanel('messages')}
+                        className="flex size-12 items-center justify-center rounded-full border-2 border-primary bg-card text-primary shadow-lg transition hover:scale-105"
+                        aria-label="Your chats"
+                        title="Your chats"
                     >
-                        <span aria-hidden>{speciesEmoji(head.species)}</span>
+                        <MessageCircle className="size-5" />
                     </button>
-                    {unread.includes(head.id) && (
-                        <span
-                            className="pointer-events-none absolute -top-0.5 -right-0.5 size-3.5 rounded-full border-2 border-card bg-red-500"
-                            aria-label="New message"
-                        />
+                    {(unreadMessages ?? 0) > 0 && (
+                        <span className="pointer-events-none absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[11px] font-bold text-white">
+                            {unreadMessages}
+                        </span>
                     )}
-                    <button
-                        type="button"
-                        onClick={() => dropHead(head.id)}
-                        className="absolute -top-1 -left-1 hidden size-5 items-center justify-center rounded-full border bg-card text-muted-foreground shadow group-hover:flex hover:text-foreground"
-                        aria-label={`Close the chat with ${head.name}`}
-                    >
-                        <X className="size-3" />
-                    </button>
                 </div>
-            ))}
-        </nav>
+                {heads.length > 0 && (
+                    <span className="mx-auto h-px w-8 bg-border" aria-hidden />
+                )}
+                {heads.map((head) => (
+                    <div key={head.id} className="group relative">
+                        <button
+                            type="button"
+                            onClick={() =>
+                                chatWith === head.id
+                                    ? closeChat()
+                                    : openChat(head.id, head)
+                            }
+                            className={cn(
+                                'flex size-12 items-center justify-center rounded-full border-2 bg-card text-2xl shadow-lg transition hover:scale-105',
+                                chatWith === head.id && 'ring-2 ring-primary',
+                            )}
+                            style={{ borderColor: head.colour ?? undefined }}
+                            aria-label={`Chat with ${head.name}`}
+                            title={head.name}
+                        >
+                            <span aria-hidden>
+                                {speciesEmoji(head.species)}
+                            </span>
+                        </button>
+                        {unread.includes(head.id) && (
+                            <span
+                                className="pointer-events-none absolute -top-0.5 -right-0.5 size-3.5 rounded-full border-2 border-card bg-red-500"
+                                aria-label="New message"
+                            />
+                        )}
+                        <button
+                            type="button"
+                            onClick={() => dropHead(head.id)}
+                            className="absolute -top-1 -left-1 hidden size-5 items-center justify-center rounded-full border bg-card text-muted-foreground shadow group-hover:flex hover:text-foreground"
+                            aria-label={`Close the chat with ${head.name}`}
+                        >
+                            <X className="size-3" />
+                        </button>
+                    </div>
+                ))}
+            </nav>
+        </>
     );
 }
 

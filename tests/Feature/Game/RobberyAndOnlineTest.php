@@ -10,6 +10,7 @@ use App\Game\Dice;
 use App\Game\GameException;
 use App\Game\Geography;
 use App\Game\Horseshoes;
+use App\Game\Messages;
 use App\Game\Movement;
 use App\Models\Crime;
 use App\Models\Notice;
@@ -138,6 +139,17 @@ class RobberyAndOnlineTest extends TestCase
             ->where('animals.0.name', $here->name)
             ->where('total', 2));
         $this->assertNotNull(Player::query()->find($here->id)->last_seen_at);
+
+        // The corner slide-out lists the others online, ready to chat, and your chats.
+        $other = $this->player();
+        $other->forceFill(['last_seen_at' => now()])->save();
+        app(Messages::class)->send($other, $here, 'Hello there');
+        $this->actingAs($here->user)->getJson(route('play.dock'))
+            ->assertOk()
+            ->assertJsonPath('online.0.id', $other->id)
+            ->assertJsonCount(1, 'online')
+            ->assertJsonPath('conversations.0.animal.id', $other->id)
+            ->assertJsonPath('conversations.0.unread', 1);
 
         $this->get(route('home'))
             ->assertOk()
