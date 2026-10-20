@@ -6,7 +6,10 @@ export type Species =
     | 'goat'
     | 'hen'
     | 'donkey'
-    | 'raven';
+    | 'raven'
+    | 'cow'
+    | 'llama'
+    | 'zebra';
 
 export type FactionBadge = {
     id: number;

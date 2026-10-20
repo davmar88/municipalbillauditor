@@ -18,7 +18,7 @@ final class Movement
     /** How far an animal walks in a minute, in paces: the map's units. */
     public static function pace(Player $player): float
     {
-        return (float) config('game.walk.paces_per_minute') * Powers::speed($player);
+        return (float) config('game.walk.paces_per_minute') * Powers::speed($player) * $player->species->pace();
     }
 
     /**

@@ -16,11 +16,14 @@ enum Species: string
     case Hen = 'hen';
     case Donkey = 'donkey';
     case Raven = 'raven';
+    case Cow = 'cow';
+    case Llama = 'llama';
+    case Zebra = 'zebra';
 
     /** The species players can pick in the test season. */
     public static function playable(): array
     {
-        return [self::Pig, self::Dog, self::Horse, self::Sheep, self::Goat];
+        return [self::Pig, self::Dog, self::Horse, self::Sheep, self::Goat, self::Cow, self::Llama, self::Zebra];
     }
 
     public function label(): string
@@ -47,6 +50,9 @@ enum Species: string
             self::Hen => 'Producer',
             self::Donkey => 'Witness',
             self::Raven => 'Scout',
+            self::Cow => 'Provider',
+            self::Llama => 'Packer',
+            self::Zebra => 'Runner',
         };
     }
 
@@ -61,6 +67,9 @@ enum Species: string
             self::Hen => 'You lay a free egg for crafting every half hour.',
             self::Donkey => 'You save a copy of the Wall every day without asking.',
             self::Raven => 'You see how big an attack on a neighbouring region is.',
+            self::Cow => 'You gather 25% more.',
+            self::Llama => 'You carry twice as much water, and get thirsty more slowly.',
+            self::Zebra => 'You walk 30% faster.',
         };
     }
 
@@ -75,6 +84,9 @@ enum Species: string
             self::Hen => 'Your attack and defence count 20% less.',
             self::Donkey => 'Your attack counts 10% less.',
             self::Raven => 'Your attack counts 30% less.',
+            self::Cow => 'Your attack counts 15% less.',
+            self::Llama => 'Your defence counts 15% less.',
+            self::Zebra => 'You gather 15% less.',
         };
     }
 
@@ -84,6 +96,7 @@ enum Species: string
             self::Pig, self::Hen => 0.8,
             self::Donkey => 0.9,
             self::Raven => 0.7,
+            self::Cow => 0.85,
             default => 1.0,
         };
     }
@@ -94,8 +107,15 @@ enum Species: string
             self::Dog => 1.3,
             self::Sheep => 0.9,
             self::Goat, self::Hen => 0.8,
+            self::Llama => 0.85,
             default => 1.0,
         };
+    }
+
+    /** How fast it walks, against the others. */
+    public function pace(): float
+    {
+        return $this === self::Zebra ? 1.3 : 1.0;
     }
 
     public function gathering(): float
@@ -104,6 +124,8 @@ enum Species: string
             self::Dog => 0.75,
             self::Horse => 0.8,
             self::Raven => 0.5,
+            self::Cow => 1.25,
+            self::Zebra => 0.85,
             default => 1.0,
         };
     }

@@ -11,6 +11,7 @@ use App\Game\LawTemplate;
 use App\Game\Movement;
 use App\Game\Players;
 use App\Game\Powers;
+use App\Game\Survival;
 use App\Game\Wall;
 use App\Models\Item;
 use App\Models\ItemDesign;
@@ -63,6 +64,19 @@ class StartAndMapTest extends TestCase
         $this->assertSame(100, $player->corn);
         // No newcomer protection: crime can find you from day one.
         $this->assertFalse($player->isShielded());
+    }
+
+    public function test_cows_llamas_and_zebras_can_join_each_with_its_own_knack(): void
+    {
+        foreach (['cow' => 'Daisy', 'llama' => 'Dolly', 'zebra' => 'Stripes'] as $species => $name) {
+            $user = User::factory()->create();
+            $this->actingAs($user)->post(route('play.start.store'), ['name' => $name, 'species' => $species, 'adult' => '1'])->assertRedirect(route('play'));
+            $this->assertSame($species, $user->fresh()->player->species->value);
+        }
+
+        $this->assertSame(1.25, Species::Cow->gathering());
+        $this->assertSame(1.3, Species::Zebra->pace());
+        $this->assertSame(40, Survival::waterCap(Player::query()->where('name', 'Dolly')->sole()), 'Llamas carry twice the water.');
     }
 
     public function test_names_are_unique_in_the_valley(): void

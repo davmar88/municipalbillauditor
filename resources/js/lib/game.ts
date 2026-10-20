@@ -12,6 +12,9 @@ const EMOJI: Record<Species, string> = {
     hen: '🐔',
     donkey: '🫏',
     raven: '🐦',
+    cow: '🐄',
+    llama: '🦙',
+    zebra: '🦓',
 };
 
 /** The materials animals gather, and where. */

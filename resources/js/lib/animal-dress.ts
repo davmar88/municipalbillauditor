@@ -11,8 +11,38 @@ const UP = new THREE.Vector3(0, 1, 0);
 /** A hat's brim radius, as a share of the head's width. */
 const HAT_SIZE = 0.62;
 
+/**
+ * The farm pack's animals (cow, llama, zebra, the new pig) have one neck bone
+ * and fewer back bones than the first pack's: where a bone isn't there, the
+ * nearest one that is stands in for it.
+ */
+const ALIASES: Record<string, string[]> = {
+    Neck1: ['Neck'],
+    Neck2: ['Neck'],
+    Neck3: ['Neck'],
+    Torso2: ['Torso'],
+    Torso3: ['Torso'],
+    'FrontShoulder.L': ['Shoulders'],
+    'FrontUpperLeg.L': ['FrontUpLeg.L'],
+};
+
+/** The bones of the animal being dressed, while it's being dressed. */
+let present: Set<string> | null = null;
+
 /** three.js drops the dots from node names, so the model's "Ear1.L" is the bone "Ear1L". */
-const boneName = (name: string) => THREE.PropertyBinding.sanitizeNodeName(name);
+const boneName = (name: string) => {
+    const plain = THREE.PropertyBinding.sanitizeNodeName(name);
+    if (!present || present.has(plain)) {
+        return plain;
+    }
+    for (const alt of ALIASES[name] ?? []) {
+        const other = THREE.PropertyBinding.sanitizeNodeName(alt);
+        if (present.has(other)) {
+            return other;
+        }
+    }
+    return plain;
+};
 
 /**
  * Rest-pose world positions and normals of the vertices that move mostly with
@@ -191,6 +221,22 @@ const trimOf = (item: Worn) => item.colours[1] ?? item.colours[0] ?? '#41d1ff';
  * made, so the caller can dispose of it.
  */
 export function dress(
+    scene: THREE.Object3D,
+    root: THREE.Object3D,
+    meshes: THREE.SkinnedMesh[],
+    size: number,
+    wearing: Worn[],
+): THREE.Object3D[] {
+    present = new Set();
+    root.traverse((o) => present?.add(o.name));
+    try {
+        return dressWith(scene, root, meshes, size, wearing);
+    } finally {
+        present = null;
+    }
+}
+
+function dressWith(
     scene: THREE.Object3D,
     root: THREE.Object3D,
     meshes: THREE.SkinnedMesh[],

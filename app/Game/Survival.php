@@ -2,6 +2,7 @@
 
 namespace App\Game;
 
+use App\Enums\Species;
 use App\Models\Faction;
 use App\Models\LootDrop;
 use App\Models\Player;
@@ -62,7 +63,7 @@ final class Survival
             [$hunger, $thirst] = Weather::needs(Weather::at($season, $at));
 
             $food -= $config['food_per_hour'] * $hunger * $hours;
-            $drink -= $config['drink_per_hour'] * $thirst * $hours;
+            $drink -= $config['drink_per_hour'] * $thirst * ($from['thirst'] ?? 1.0) * $hours;
 
             // Peckish: eat what it carries.
             if ($food < $config['eat_below'] && $corn > 0) {
@@ -124,6 +125,7 @@ final class Survival
             'corn' => (int) ($row->corn ?? 0),
             'water' => (int) ($materials['water'] ?? 0),
             'store' => $store,
+            'thirst' => ($row->species ?? null) === Species::Llama->value ? 0.7 : 1.0,
         ], $season)['health']);
     }
 
@@ -152,6 +154,8 @@ final class Survival
                 'corn' => (int) $player->corn,
                 'water' => $player->material('water'),
                 'store' => $store,
+                // Llamas get thirsty more slowly.
+                'thirst' => $player->species === Species::Llama ? 0.7 : 1.0,
             ], $season, $now);
 
             $materials = $player->materials ?? [];
@@ -324,7 +328,10 @@ final class Survival
     /** How much water an animal can carry. */
     public static function waterCap(Player $player): int
     {
-        return self::BARRELS[(int) $player->water_barrel]['holds'] ?? self::BARRELS[0]['holds'];
+        $holds = self::BARRELS[(int) $player->water_barrel]['holds'] ?? self::BARRELS[0]['holds'];
+
+        // Llamas carry twice as much.
+        return $player->species === Species::Llama ? $holds * 2 : $holds;
     }
 
     /**

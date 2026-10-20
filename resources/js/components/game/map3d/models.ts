@@ -12,7 +12,7 @@ const loader = new GLTFLoader();
 function load(species: Species): Promise<GLTF> {
     let found = cache.get(species);
     if (!found) {
-        found = loader.loadAsync(`/models/animals/${species}.glb`);
+        found = loader.loadAsync(`/models/animals/${species}.glb?v=2`);
         cache.set(species, found);
         // A failed download can be tried again later.
         found.catch(() => cache.delete(species));
