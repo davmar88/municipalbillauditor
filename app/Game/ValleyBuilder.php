@@ -36,7 +36,7 @@ final class ValleyBuilder
         'henhouse' => ['Henhouse', 'middle', 'eggs', 1, 2],
         'market_square' => ['Market Square', 'inner', 'corn', 2, 2],
         'stables' => ['Stables', 'middle', 'straw', 3, 2],
-        'old_well' => ['Old Well', 'outer', 'clay', 4, 2],
+        'old_well' => ['Old Well', 'outer', 'water', 4, 2],
         'paddock' => ['The Paddock', 'safe', 'corn', 2, 3],
         // Farms beyond the fences: bought with Corn or taken in raids.
         // Each grows something found nowhere in Hollowmere.
@@ -111,7 +111,7 @@ final class ValleyBuilder
         'flint_downs' => ['Flint Downs', 'frontier', 'stone', 9, 11],
         'sheep_down' => ['Sheep Down', 'frontier', 'wool', 10, 11],
         'gallows_copse' => ['Gallows Copse', 'frontier', 'wood', 11, 11],
-        'silt_pools' => ['Silt Pools', 'frontier', 'water', 12, 11],
+        'silt_pools' => ['Silt Pools', 'frontier', 'clay', 12, 11],
         'thistle_down' => ['Thistle Down', 'frontier', 'dye', 13, 11],
         'cairn_hill' => ['Cairn Hill', 'frontier', 'stone', 14, 11],
         'old_copper_seam' => ['Old Copper Seam', 'frontier', 'copper', 15, 11],

@@ -22,7 +22,7 @@ export const MATERIALS: { name: string; from: string }[] = [
     { name: 'wood', from: 'Wildwood' },
     { name: 'straw', from: 'Big Barn, Stables' },
     { name: 'stone', from: 'Quarry' },
-    { name: 'clay', from: 'Old Well' },
+    { name: 'clay', from: 'Silt Pools, on the frontier' },
     { name: 'wool', from: 'Sheepfold' },
     { name: 'dye', from: 'Orchard' },
     { name: 'eggs', from: 'Henhouse' },
@@ -38,7 +38,7 @@ export const MATERIALS: { name: string; from: string }[] = [
     { name: 'carrots', from: 'Hartley Farm' },
     { name: 'berries', from: 'Rushmere Farm' },
     { name: 'pumpkins', from: 'Southmere Farm' },
-    { name: 'water', from: 'the Duck Pond, meres and springs' },
+    { name: 'water', from: 'the Duck Pond, the Old Well, meres and springs' },
 ];
 
 /** The face an animal wears on the map. */
