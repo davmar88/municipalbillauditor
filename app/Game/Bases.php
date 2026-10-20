@@ -299,7 +299,7 @@ final class Bases
         $region->forceFill(['settled_until' => null])->save();
 
         if ($building->kind === BuildingKind::HeadOffice && $building->level === 1) {
-            Notices::send(Notices::valley($region->valley_id), 'house', "🏛 {$faction->name} is building a Head Office in the Farmhouse. It rules Hollowmere once it stands at ".Clock::local($building->ready_at)->format('H:i').', unless someone takes the Farmhouse first.', route('play', [], false));
+            Notices::send(Notices::valley($region->valley_id), 'house', "🏛 {$faction->name} is building a Head Office in the Farmhouse. It rules {$region->valley->name} once it stands at ".Clock::local($building->ready_at)->format('H:i').', unless someone takes the Farmhouse first.', route('play', [], false));
         }
     }
 
@@ -330,7 +330,7 @@ final class Bases
         $season = $valley->currentSeason();
         $season?->forceFill(['house_since' => CarbonImmutable::now(), 'bonus_law_changes' => $season->bonus_law_changes + 3])->save();
         $name = Faction::query()->whereKey($farmhouse->faction_id)->value('name');
-        Notices::send(Notices::valley($valley->id), 'house', "👑 {$name} finished its Head Office in the Farmhouse and now rules Hollowmere.", route('play', [], false));
+        Notices::send(Notices::valley($valley->id), 'house', "👑 {$name} finished its Head Office in the Farmhouse and now rules {$valley->name}.", route('play', [], false));
     }
 
     /** Clear away buildings on land their faction no longer holds. */

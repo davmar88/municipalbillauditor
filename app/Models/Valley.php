@@ -6,17 +6,26 @@ use App\Enums\BuildingKind;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
 
 /**
  * One game world: a farm of regions and up to a few hundred players.
+ * When it's full, newcomers start in the next one (App\Game\Valleys).
  *
  * @property int $id
  * @property string $name
  * @property string $slug
+ * @property bool $closed_to_newcomers
+ * @property Carbon|null $created_at
  */
 #[Fillable(['name', 'slug'])]
 class Valley extends Model
 {
+    protected function casts(): array
+    {
+        return ['closed_to_newcomers' => 'boolean'];
+    }
+
     /** @return HasMany<Region, $this> */
     public function regions(): HasMany
     {

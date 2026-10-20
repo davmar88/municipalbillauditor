@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\CashoutController as CashoutQueueController;
 use App\Http\Controllers\Admin\SettingsController;
+use App\Http\Controllers\Admin\ValleyController as AdminValleyController;
 use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\Game\AppleController;
 use App\Http\Controllers\Game\BaseController;
@@ -210,6 +211,9 @@ Route::middleware(['auth', 'verified', 'can:admin'])->prefix('admin')->group(fun
     Route::post('settings/test/{service}', [SettingsController::class, 'test'])->whereIn('service', ['paypal', 'google', 'claude'])->middleware('throttle:10,1,admin-test')->name('admin.settings.test');
 
     Route::get('cashouts', [CashoutQueueController::class, 'index'])->name('admin.cashouts');
+    Route::get('valleys', [AdminValleyController::class, 'index'])->name('admin.valleys');
+    Route::post('valleys', [AdminValleyController::class, 'store'])->middleware('throttle:5,1,admin-valleys')->name('admin.valleys.store');
+    Route::put('valleys/{valley}', [AdminValleyController::class, 'update'])->name('admin.valleys.update');
     Route::middleware('throttle:30,1,admin-cashouts')->group(function () {
         Route::post('cashouts/{cashout}/pay', [CashoutQueueController::class, 'pay'])->name('admin.cashouts.pay');
         Route::post('cashouts/{cashout}/check', [CashoutQueueController::class, 'check'])->name('admin.cashouts.check');

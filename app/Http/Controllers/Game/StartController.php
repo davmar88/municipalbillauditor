@@ -4,8 +4,8 @@ namespace App\Http\Controllers\Game;
 
 use App\Enums\Species;
 use App\Game\Players;
+use App\Game\Valleys;
 use App\Http\Controllers\Controller;
-use App\Models\Valley;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -22,7 +22,8 @@ class StartController extends Controller
         }
 
         return Inertia::render('game/start', [
-            'valley' => Valley::main()->name,
+            // The oldest valley with room; the next one opens when they're all full.
+            'valley' => Valleys::preview(),
             'species' => array_map(fn (Species $species) => [
                 'value' => $species->value,
                 'label' => $species->label(),
@@ -48,7 +49,7 @@ class StartController extends Controller
 
         $players->start(
             $request->user(),
-            Valley::main(),
+            Valleys::forNewcomer(),
             $data['name'],
             Species::from($data['species']),
             true,

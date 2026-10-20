@@ -5,6 +5,12 @@ return [
     // How long the valley's homes are kept for the map, in seconds: busy valleys don't rebuild them for every look.
     'map_cache_seconds' => (int) env('MAP_CACHE_SECONDS', 3),
 
+    // A valley takes newcomers until this many of its animals were active this week; then the next one opens.
+    // About 100 factions of 15: more crowds the farms and leaves most factions without land.
+    'valleys' => [
+        'full_at' => (int) env('VALLEY_FULL_AT', 1500),
+    ],
+
     /*
     |--------------------------------------------------------------------------
     | The game's rules

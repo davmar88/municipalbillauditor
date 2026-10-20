@@ -10,6 +10,7 @@ import {
     Puzzle,
     ShieldAlert,
     Trophy,
+    Mountain,
 } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavMain } from '@/components/nav-main';
@@ -26,7 +27,7 @@ import {
 import { useCurrentUrl } from '@/hooks/use-current-url';
 import { mainNavigation } from '@/lib/navigation';
 import { admin, play, puzzle } from '@/routes';
-import { cashouts } from '@/routes/admin';
+import { cashouts, valleys } from '@/routes/admin';
 import {
     apples,
     cashout,
@@ -118,6 +119,11 @@ export function AppSidebar() {
                                 href: cashouts(),
                                 icon: Banknote,
                                 badge: cashoutsWaiting,
+                            },
+                            {
+                                title: 'Valleys',
+                                href: valleys(),
+                                icon: Mountain,
                             },
                         ]}
                     />
