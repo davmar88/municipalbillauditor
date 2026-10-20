@@ -11,6 +11,7 @@ use App\Game\Notices;
 use App\Game\Orchard;
 use App\Game\Powers;
 use App\Game\Stores;
+use App\Http\Controllers\Admin\ImpersonateController;
 use App\Models\Cashout;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -52,6 +53,8 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $request->user(),
             ],
+            // An owner playing as this player, to see a bug: a banner and a way back.
+            'impersonating' => $request->hasSession() && $request->session()->has(ImpersonateController::SESSION_KEY),
             // The bar along the top of every game screen.
             'player' => function () use ($request) {
                 $player = $request->user()?->player?->fresh(['faction']);

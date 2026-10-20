@@ -17,6 +17,8 @@ declare module '@inertiajs/core' {
             unreadNotices: number;
             isStaff: boolean;
             isAdmin: boolean;
+            /** An owner playing as this player, to see a bug. */
+            impersonating: boolean;
             /** Cash-outs waiting for the owner, for the admin badge. */
             cashoutsWaiting: number;
             missionsWaiting: number;

@@ -79,7 +79,7 @@ class MapController extends Controller
         $animals = Player::query()
             ->toBase()
             ->where('valley_id', $valley->id)
-            ->where('last_visit_on', '>=', Clock::now()->subDays(7)->toDateString())
+            // Every animal stays on the map, online or not: offline ones can still be robbed, their homes burned.
             ->get(['id', 'name', 'species', 'faction_id', 'region_id', 'inside_home_at'])
             ->sortBy(fn (object $animal) => match (true) {
                 $animal->id === $player->id => 0,

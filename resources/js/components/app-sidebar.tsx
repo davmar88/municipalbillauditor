@@ -12,6 +12,7 @@ import {
     Trophy,
     Mountain,
     Users,
+    Bug,
 } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavMain } from '@/components/nav-main';
@@ -28,7 +29,8 @@ import {
 import { useCurrentUrl } from '@/hooks/use-current-url';
 import { mainNavigation } from '@/lib/navigation';
 import { admin, play, puzzle } from '@/routes';
-import { cashouts, valleys } from '@/routes/admin';
+import { bugs, cashouts, valleys } from '@/routes/admin';
+import { create as reportBug } from '@/routes/play/bugs';
 import {
     apples,
     cashout,
@@ -49,6 +51,7 @@ const moreNavItems: NavItem[] = [
     { title: 'Wanted', href: wanted(), icon: Crosshair },
     { title: 'Apples', href: apples(), icon: Apple },
     { title: 'Cash out', href: cashout(), icon: Banknote },
+    { title: 'Report a bug', href: reportBug(), icon: Bug },
 ];
 
 const staffNavItems: NavItem[] = [
@@ -127,6 +130,11 @@ export function AppSidebar() {
                                 title: 'Valleys',
                                 href: valleys(),
                                 icon: Mountain,
+                            },
+                            {
+                                title: 'Bug reports',
+                                href: bugs(),
+                                icon: Bug,
                             },
                         ]}
                     />

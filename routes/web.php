@@ -1,12 +1,15 @@
 <?php
 
+use App\Http\Controllers\Admin\BugReportController as AdminBugReportController;
 use App\Http\Controllers\Admin\CashoutController as CashoutQueueController;
+use App\Http\Controllers\Admin\ImpersonateController;
 use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\ValleyController as AdminValleyController;
 use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\Game\AppleController;
 use App\Http\Controllers\Game\BaseController;
 use App\Http\Controllers\Game\BattleController;
+use App\Http\Controllers\Game\BugReportController;
 use App\Http\Controllers\Game\CashoutController;
 use App\Http\Controllers\Game\ChatController;
 use App\Http\Controllers\Game\CrimeController;
@@ -131,6 +134,8 @@ Route::middleware(['auth', 'verified', 'player', 'throttle:120,1'])->prefix('pla
     Route::post('missions/{mission}/claim', [TodayController::class, 'claim'])->name('play.mission.claim');
     Route::get('rankings', [RankingsController::class, 'index'])->name('play.rankings');
     Route::get('online', [OnlineController::class, 'index'])->name('play.online');
+    Route::get('report-bug', [BugReportController::class, 'create'])->name('play.bugs.create');
+    Route::post('report-bug', [BugReportController::class, 'store'])->middleware('throttle:5,10,bug-reports')->name('play.bugs.store');
 
     // Apples: buying packs, coming back from paying, swapping for Corn and cashing out.
     Route::get('apples', [AppleController::class, 'index'])->name('play.apples');
@@ -208,6 +213,8 @@ Route::middleware(['auth', 'verified', 'can:staff'])->prefix('staff')->group(fun
 
 // The owner's pages: payment keys, Apple sales and what they brought in, and
 // the cash-outs waiting for the owner's approval.
+Route::post('play-as/stop', [ImpersonateController::class, 'stop'])->middleware('auth')->name('play-as.stop');
+
 Route::middleware(['auth', 'verified', 'can:admin'])->prefix('admin')->group(function () {
     Route::get('/', [SettingsController::class, 'index'])->name('admin');
     Route::put('settings', [SettingsController::class, 'update'])->name('admin.settings.update');
@@ -216,6 +223,10 @@ Route::middleware(['auth', 'verified', 'can:admin'])->prefix('admin')->group(fun
 
     Route::get('cashouts', [CashoutQueueController::class, 'index'])->name('admin.cashouts');
     Route::get('valleys', [AdminValleyController::class, 'index'])->name('admin.valleys');
+    Route::get('bugs', [AdminBugReportController::class, 'index'])->name('admin.bugs');
+    Route::put('bugs/{report}', [AdminBugReportController::class, 'update'])->name('admin.bugs.update');
+    Route::get('bugs/{report}/attachment', [AdminBugReportController::class, 'attachment'])->name('admin.bugs.attachment');
+    Route::post('play-as/{user}', [ImpersonateController::class, 'start'])->name('admin.play-as');
     Route::post('valleys', [AdminValleyController::class, 'store'])->middleware('throttle:5,1,admin-valleys')->name('admin.valleys.store');
     Route::put('valleys/{valley}', [AdminValleyController::class, 'update'])->name('admin.valleys.update');
     Route::middleware('throttle:30,1,admin-cashouts')->group(function () {
