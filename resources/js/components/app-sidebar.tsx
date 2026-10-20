@@ -13,6 +13,7 @@ import {
     Mountain,
     Users,
     Bug,
+    Megaphone,
 } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavMain } from '@/components/nav-main';
@@ -29,7 +30,7 @@ import {
 import { useCurrentUrl } from '@/hooks/use-current-url';
 import { mainNavigation } from '@/lib/navigation';
 import { admin, play, puzzle } from '@/routes';
-import { bugs, cashouts, valleys } from '@/routes/admin';
+import { bugs, cashouts, updates, valleys } from '@/routes/admin';
 import { create as reportBug } from '@/routes/play/bugs';
 import {
     apples,
@@ -135,6 +136,11 @@ export function AppSidebar() {
                                 title: 'Bug reports',
                                 href: bugs(),
                                 icon: Bug,
+                            },
+                            {
+                                title: 'Updates and fixes',
+                                href: updates(),
+                                icon: Megaphone,
                             },
                         ]}
                     />

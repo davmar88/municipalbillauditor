@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Game\Census;
+use App\Models\GameUpdate;
 use Illuminate\Http\Response;
 use Illuminate\View\View;
 
@@ -24,9 +25,17 @@ class PageController extends Controller
         return view('site.terms');
     }
 
+    public function updates(): View
+    {
+        return view('site.updates', [
+            'days' => GameUpdate::query()->latest('published_on')->orderByDesc('kind')->latest('id')->limit(200)->get()
+                ->groupBy(fn (GameUpdate $update) => $update->published_on->toDateString()),
+        ]);
+    }
+
     public function sitemap(): Response
     {
-        $urls = [route('home'), route('puzzle'), route('privacy'), route('terms')];
+        $urls = [route('home'), route('puzzle'), route('privacy'), route('terms'), route('updates')];
         $xml = '<?xml version="1.0" encoding="UTF-8"?>'."\n".'<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
             .implode('', array_map(fn (string $url) => '<url><loc>'.e($url).'</loc></url>', $urls))
             .'</urlset>';

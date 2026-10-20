@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\BugReportController as AdminBugReportController;
 use App\Http\Controllers\Admin\CashoutController as CashoutQueueController;
+use App\Http\Controllers\Admin\GameUpdateController;
 use App\Http\Controllers\Admin\ImpersonateController;
 use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\ValleyController as AdminValleyController;
@@ -41,6 +42,7 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', [PageController::class, 'home'])->name('home');
 Route::get('privacy', [PageController::class, 'privacy'])->name('privacy');
 Route::get('terms', [PageController::class, 'terms'])->name('terms');
+Route::get('updates', [PageController::class, 'updates'])->name('updates');
 Route::get('sitemap.xml', [PageController::class, 'sitemap'])->name('sitemap');
 Route::get('robots.txt', [PageController::class, 'robots'])->name('robots');
 
@@ -224,6 +226,9 @@ Route::middleware(['auth', 'verified', 'can:admin'])->prefix('admin')->group(fun
     Route::get('cashouts', [CashoutQueueController::class, 'index'])->name('admin.cashouts');
     Route::get('valleys', [AdminValleyController::class, 'index'])->name('admin.valleys');
     Route::get('bugs', [AdminBugReportController::class, 'index'])->name('admin.bugs');
+    Route::get('updates', [GameUpdateController::class, 'index'])->name('admin.updates');
+    Route::post('updates', [GameUpdateController::class, 'store'])->name('admin.updates.store');
+    Route::delete('updates/{update}', [GameUpdateController::class, 'destroy'])->name('admin.updates.destroy');
     Route::put('bugs/{report}', [AdminBugReportController::class, 'update'])->name('admin.bugs.update');
     Route::get('bugs/{report}/attachment', [AdminBugReportController::class, 'attachment'])->name('admin.bugs.attachment');
     Route::post('play-as/{user}', [ImpersonateController::class, 'start'])->name('admin.play-as');

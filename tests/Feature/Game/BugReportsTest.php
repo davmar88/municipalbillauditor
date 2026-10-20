@@ -76,4 +76,15 @@ class BugReportsTest extends TestCase
         $this->actingAs($player->user)->post(route('admin.play-as', $this->player()->user))->assertForbidden();
         $this->actingAs($player->user)->post(route('play-as.stop'))->assertForbidden();
     }
+
+    public function test_the_updates_page_shows_what_the_owner_posts(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $this->get(route('updates'))->assertOk()->assertSee('Updates and fixes')->assertSee('Rob other animals');
+
+        $this->actingAs($admin)->post(route('admin.updates.store'), ['kind' => 'fix', 'title' => 'Plunderer banner stuck', 'body' => 'It now goes away when the fight ends.'])->assertRedirect();
+        $this->get(route('updates'))->assertSee('Plunderer banner stuck');
+        $this->actingAs($this->player()->user)->post(route('admin.updates.store'), ['kind' => 'new', 'title' => 'x', 'body' => 'y'])->assertForbidden();
+    }
 }
