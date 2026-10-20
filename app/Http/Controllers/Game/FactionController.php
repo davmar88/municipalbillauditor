@@ -135,7 +135,7 @@ class FactionController extends Controller
                 'targets' => Player::query()
                     ->where('valley_id', $player->valley_id)
                     ->whereKeyNot($player->id)
-                    ->where(fn ($query) => $query->whereNotNull('faction_id')->orWhereHas('home'))
+                    ->whereHas('home')
                     ->with('faction:id,name,colour')
                     ->orderBy('name')
                     ->limit(200)

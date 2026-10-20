@@ -28,6 +28,8 @@ use Illuminate\Support\Carbon;
  * @property Player $player
  * @property Faction|null $targetFaction
  * @property Player|null $targetPlayer
+ * @property int|null $doused_by Who put the fire out, for a burn
+ * @property Carbon|null $repaid_at When the outlaw paid back what it took
  */
 #[Fillable(['season_id', 'player_id', 'kind', 'target_faction_id', 'target_player_id', 'region_id', 'settles_at', 'seed', 'cloaked'])]
 class Crime extends Model
@@ -40,6 +42,7 @@ class Crime extends Model
             'resolved_at' => 'datetime',
             'caught' => 'boolean',
             'cloaked' => 'boolean',
+            'repaid_at' => 'datetime',
         ];
     }
 

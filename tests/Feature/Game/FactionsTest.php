@@ -153,8 +153,11 @@ class FactionsTest extends TestCase
     public function test_the_faction_page_shows_members_to_members_and_the_underworld_to_everyone(): void
     {
         $leader = $this->player();
-        $this->faction('Visible', $leader, $this->player());
+        $this->faction('Visible', $leader, $mate = $this->player());
         $wolf = $this->player(level: 3);
+        // Only animals with a home stand to be burned.
+        $this->homeFor($leader);
+        $this->homeFor($mate);
 
         $this->actingAs($leader->user)->get(route('play.faction'))->assertInertia(fn (Assert $page) => $page
             ->component('game/faction')

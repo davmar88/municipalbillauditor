@@ -110,7 +110,7 @@ class NoticesTest extends TestCase
         $crimes->resolveDue($this->season());
 
         $this->assertSame(['💰 You got away with 50 Corn.'], $this->news($wolf));
-        $this->assertSame(["🔥 A lone wolf looted 50 Corn from your faction's treasury."], $this->news($guard));
+        $this->assertSame(["🔥 Someone looted 50 Corn from your faction's treasury. Your leader can put a bounty on whoever the informants name."], $this->news($guard));
     }
 
     public function test_a_new_law_is_news_for_the_whole_valley(): void

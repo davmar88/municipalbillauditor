@@ -20,6 +20,7 @@ import {
     walkTo as walkToRoute,
 } from '@/routes/play';
 import { camp as campRoute } from '@/routes/play/home';
+import { fight as fightPlunderers } from '@/routes/play/plunderers';
 import type {
     GateNightInfo,
     MapMe,
@@ -32,6 +33,7 @@ import type {
     MapBattle,
     MapLaw,
     MapRegion,
+    PlunderBandInfo,
     Worn,
 } from '@/types/game';
 
@@ -45,6 +47,7 @@ type Props = {
     battles: MapBattle[];
     recent: { id: number; text: string; at: string }[];
     gate: GateNightInfo;
+    plunderers: PlunderBandInfo | null;
     me: MapMe;
     /** What your animal wears, for the 3D map. */
     wearing: Worn[];
@@ -87,6 +90,7 @@ export default function MapPage({
     battles,
     recent,
     gate: gateNight,
+    plunderers,
     me,
     wearing,
     yields,
@@ -215,7 +219,7 @@ export default function MapPage({
 
                 {gateNight.result && <GateResult result={gateNight.result} />}
 
-                {(gateNight.open || battles.length > 0) && (
+                {(gateNight.open || battles.length > 0 || plunderers) && (
                     <section
                         aria-label="Needs you now"
                         className="flex flex-col gap-2"
@@ -253,6 +257,75 @@ export default function MapPage({
                                         >
                                             Hold the gate
                                         </Button>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                        {plunderers && (
+                            <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-orange-500/40 bg-orange-500/10 px-4 py-2.5 text-sm">
+                                <Swords
+                                    className="size-4 shrink-0 text-orange-300"
+                                    aria-hidden
+                                />
+                                <p className="min-w-0 flex-1">
+                                    <span className="font-bold">
+                                        {plunderers.men} plunderers from
+                                        Irongate are riding for{' '}
+                                        {plunderers.regionName}.
+                                    </span>{' '}
+                                    They strike at{' '}
+                                    {clockTime(plunderers.landsAt)} (
+                                    {fromNow(plunderers.landsAt)}). Every
+                                    faction can fight them from here:{' '}
+                                    {plunderers.fighters}{' '}
+                                    {plunderers.fighters === 1
+                                        ? 'animal is'
+                                        : 'animals are'}{' '}
+                                    in, about {plunderers.strength} against{' '}
+                                    {plunderers.men} men. Win and the fighters
+                                    share {plunderers.corn} Corn; lose and they
+                                    sack {plunderers.holders ?? 'the farm'} and
+                                    lay the fighters up for an hour.
+                                </p>
+                                {plunderers.fighting ? (
+                                    <span className="font-semibold text-primary">
+                                        You're riding out against them.
+                                    </span>
+                                ) : (
+                                    <div className="flex items-center gap-2">
+                                        <HorseshoePicker
+                                            value={horseshoes}
+                                            onChange={setHorseshoes}
+                                        />
+                                        <Button
+                                            size="sm"
+                                            disabled={
+                                                !plunderers.canFight ||
+                                                (player?.horseshoes ?? 0) <
+                                                    horseshoes
+                                            }
+                                            onClick={() =>
+                                                act(
+                                                    fightPlunderers.url(
+                                                        plunderers.id,
+                                                    ),
+                                                    { horseshoes },
+                                                )
+                                            }
+                                        >
+                                            Fight them
+                                        </Button>
+                                        <WhyNot
+                                            reason={
+                                                !plunderers.canFight
+                                                    ? 'Factions fight the plunderers: join or found one first.'
+                                                    : needHorseshoes(
+                                                          player?.horseshoes ??
+                                                              0,
+                                                          horseshoes,
+                                                      )
+                                            }
+                                        />
                                     </div>
                                 )}
                             </div>

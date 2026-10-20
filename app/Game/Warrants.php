@@ -16,12 +16,13 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 /**
- * The House's justice. Its informants know who has been committing crimes;
- * its leader and council put out warrants with a bounty of Apples from the
- * House's store, anyone can add Apples of their own, and any animal who
- * catches the outlaw where they stand sends them to the pound and collects
- * the bounty, less the game's share. A warrant nobody serves by the
- * season's end hands every Apple back to whoever put them up.
+ * Bounties. The informants know who has been committing crimes; any
+ * faction's leader and council can put out a warrant with a bounty of
+ * Apples from their faction's store, anyone can add Apples of their own,
+ * and any animal who catches the outlaw where they stand sends them to the
+ * pound and collects the bounty, less the game's share. The outlaw pays
+ * back what their crimes took, as far as their Corn goes. A warrant nobody
+ * serves by the season's end hands every Apple back to whoever put them up.
  */
 final class Warrants
 {
@@ -92,15 +93,18 @@ final class Warrants
         $season = $player->valley->currentSeason() ?? throw new GameException('The season is changing. Try again in a moment.');
 
         return DB::transaction(function () use ($player, $suspect, $bounty, $season) {
-            $house = $season->valley->house() ?? throw new GameException('There is no House to put out warrants.');
             $player = Players::lock($player);
 
-            if ($player->faction_id !== $house->id || ! $player->decides()) {
-                throw new GameException("Only the House's leader and council put out warrants.");
+            if ($player->faction_id === null || ! $player->decides()) {
+                throw new GameException("Only a faction's leader and council put out warrants.");
             }
 
             if ($suspect->valley_id !== $player->valley_id || self::suspects($season)->doesntContain(fn (array $s) => $s['player']->id === $suspect->id)) {
-                throw new GameException("{$suspect->name} has done nothing the House's informants know of.");
+                throw new GameException("{$suspect->name} has done nothing the informants know of.");
+            }
+
+            if ($suspect->id === $player->id) {
+                throw new GameException("You can't put a bounty on yourself.");
             }
 
             if (Warrant::query()->where('season_id', $season->id)->where('player_id', $suspect->id)->where('status', 'open')->exists()) {
@@ -111,10 +115,10 @@ final class Warrants
                 throw new GameException('Put a bounty of '.self::MIN_BOUNTY.' to '.self::MAX_BOUNTY.' Apples on a warrant.');
             }
 
-            $house = Faction::query()->lockForUpdate()->findOrFail($house->id);
+            $house = Faction::query()->lockForUpdate()->findOrFail($player->faction_id);
 
             if ($house->apples < $bounty) {
-                throw new GameException("The House's store holds ".self::apples($house->apples).'. Members can give Apples from the Faction page.');
+                throw new GameException("{$house->name}'s store holds ".self::apples($house->apples).'. Members can give Apples from the Faction page.');
             }
 
             $house->decrement('apples', $bounty);
@@ -229,8 +233,10 @@ final class Warrants
             Apples::award($hunter, $apples, "Caught {$wanted->name}", "bounty:{$warrant->id}");
             $warrant->forceFill(['status' => 'served', 'hunter_id' => $hunter->id, 'served_at' => CarbonImmutable::now()])->save();
             Rosettes::award($hunter, 15, "Caught {$wanted->name}", "arrest:{$warrant->id}", $hunter->valley->currentSeason());
+            $repaid = self::payBack($wanted, $warrant->season_id);
+            $owing = $repaid > 0 ? " You paid back {$repaid} Corn to those your crimes hurt." : '';
 
-            Notices::send($wanted->id, 'warrant', "🚨 {$hunter->name} caught you in {$where->name}. You're in the pound until ".Clock::local($wanted->pound_until)->format('H:i').'.', $wantedPage);
+            Notices::send($wanted->id, 'warrant', "🚨 {$hunter->name} caught you in {$where->name}. You're in the pound until ".Clock::local($wanted->pound_until)->format('H:i').".{$owing}", $wantedPage);
             Notices::send(Notices::valley($hunter->valley_id)->reject(fn (int $id) => in_array($id, [$hunter->id, $wanted->id], true)), 'warrant', "🎯 {$hunter->name} caught {$wanted->name} and collected a bounty of {$apples} Apples.", $wantedPage);
 
             return true;
@@ -271,6 +277,52 @@ final class Warrants
 
             $warrant->forceFill(['status' => 'lapsed'])->save();
         }
+    }
+
+    /**
+     * A caught outlaw pays back what its crimes this season took, as far as
+     * its Corn goes: the Corn it looted or plundered to the faction it robbed,
+     * and the cost of rebuilding to anyone whose home it burned down.
+     */
+    private static function payBack(Player $outlaw, int $seasonId): int
+    {
+        $crimes = Crime::query()
+            ->where('player_id', $outlaw->id)
+            ->where('season_id', $seasonId)
+            ->whereNotNull('resolved_at')
+            ->where('caught', false)
+            ->whereNull('repaid_at')
+            ->whereNull('doused_by')
+            ->orderBy('id')
+            ->lockForUpdate()
+            ->get();
+        $paid = 0;
+
+        foreach ($crimes as $crime) {
+            $owed = $crime->kind === CrimeKind::Burn ? Crimes::REBUILD_CORN : $crime->loot;
+            $owed = min($owed, $outlaw->corn);
+
+            if ($owed > 0) {
+                if ($crime->kind === CrimeKind::Burn && $crime->target_player_id !== null) {
+                    Player::query()->whereKey($crime->target_player_id)->increment('corn', $owed);
+                    Notices::send($crime->target_player_id, 'warrant', "🌽 {$outlaw->name} was caught and paid you {$owed} Corn for burning down your home.", route('play.wanted', [], false));
+                } elseif ($crime->target_faction_id !== null) {
+                    Faction::query()->whereKey($crime->target_faction_id)->increment('treasury', $owed);
+                    Notices::send(Notices::deciders($crime->target_faction_id), 'warrant', "🌽 {$outlaw->name} was caught and paid back {$owed} Corn to your treasury.", route('play.wanted', [], false));
+                } else {
+                    $owed = 0;
+                }
+
+                $outlaw->corn -= $owed;
+                $paid += $owed;
+            }
+
+            $crime->forceFill(['repaid_at' => CarbonImmutable::now()])->save();
+        }
+
+        $outlaw->save();
+
+        return $paid;
     }
 
     /** "1 Apple", "12 Apples". */

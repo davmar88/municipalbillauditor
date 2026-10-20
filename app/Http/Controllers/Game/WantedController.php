@@ -13,7 +13,7 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
-/** The Wanted board: the House's warrants, bounties, suspects and arrests. */
+/** The Wanted board: every faction's warrants, bounties, suspects and arrests. */
 class WantedController extends Controller
 {
     public function index(Request $request): Response
@@ -21,7 +21,8 @@ class WantedController extends Controller
         /** @var Player $player */
         $player = $request->user()->player;
         $season = $player->valley->currentSeason();
-        $house = $player->valley->house();
+        // Any faction's leader and council put out warrants, from their own store.
+        $house = $player->faction;
         $here = $player->location()->id;
 
         $warrants = $season === null ? collect() : Warrant::query()
@@ -39,7 +40,7 @@ class WantedController extends Controller
             ->limit(8)
             ->get();
 
-        $decides = $house !== null && $player->faction_id === $house->id && $player->decides();
+        $decides = $house !== null && $player->decides();
 
         return Inertia::render('game/wanted', [
             'warrants' => $warrants->map(function (Warrant $warrant) use ($player, $here) {
@@ -77,7 +78,6 @@ class WantedController extends Controller
                     ])
                     ->values(),
             ] : null,
-            'houseName' => $house?->name,
             'rules' => [
                 'minBounty' => Warrants::MIN_BOUNTY,
                 'maxBounty' => Warrants::MAX_BOUNTY,

@@ -47,6 +47,7 @@ import type {
     Species,
     Worn,
 } from '@/types/game';
+import { animateAshes, animateFire, ashes, flames } from './fire';
 import { person as makePerson } from './folk';
 import { landmarks, orchardTrees } from './landmarks';
 import { loadVillage, villageHome } from './village';
@@ -1803,6 +1804,9 @@ export class World {
 
     private homeModels: { group: THREE.Group; level: number }[] = [];
 
+    /** Homes alight, and the ash of homes burned down, moved on every frame. */
+    private fires: { group: THREE.Group; ash: boolean }[] = [];
+
     private villageAsked = false;
 
     /** Where the nature pack goes, and the simple shapes it replaces once loaded. */
@@ -1857,7 +1861,18 @@ export class World {
     private buildHomes() {
         const data = this.data as WorldData;
         this.clearGroup(this.dwellings);
+        this.fires = [];
         this.homeModels = data.homes.map((home) => {
+            // Burned down: only ash and charred beams where it stood, until it's rebuilt.
+            if (home.fire === 'ash') {
+                const heap = new THREE.Group();
+                heap.add(ashes(home.id));
+                heap.userData.ash = true;
+                heap.position.set(home.x, 0, home.y);
+                this.dwellings.add(heap);
+                this.fires.push({ group: heap, ash: true });
+                return { group: heap, level: home.level };
+            }
             // The farm building its owner picked, or a village house for its level.
             let styled: THREE.Group | null = null;
             const look = home.style ? HOME_STYLE[home.style] : undefined;
@@ -1884,6 +1899,16 @@ export class World {
                     fire.position.set(0.65, 0, 0.35);
                     group.add(fire);
                 }
+            }
+            // Alight: flames lick up its walls and off its roof, smoke rolling away.
+            if (home.fire === 'burning') {
+                group.updateMatrixWorld(true);
+                const box = new THREE.Box3().setFromObject(group);
+                const size = box.getSize(new THREE.Vector3());
+                const fire = flames(home.id, Math.max(0.6, size.y));
+                fire.scale.set(Math.max(1, size.x), 1, Math.max(1, size.z));
+                group.add(fire);
+                this.fires.push({ group: fire, ash: false });
             }
             group.position.set(home.x, 0, home.y);
             this.dwellings.add(group);
@@ -1938,7 +1963,12 @@ export class World {
         for (const { group, level } of this.homeModels) {
             // Kit homes grow with their level by themselves; tents and the simple shapes by this.
             group.scale.setScalar(
-                group.userData.village ? s : s * (0.8 + level * 0.2),
+                group.userData.village
+                    ? s
+                    : // Ash covers the ground the home stood on.
+                      group.userData.ash
+                      ? s * (1.1 + level * 0.15)
+                      : s * (0.8 + level * 0.2),
             );
         }
     }
@@ -2198,6 +2228,16 @@ export class World {
 
         let moving = zoomed || this.changed;
         this.changed = false;
+        if (!reduce && this.fires.length > 0) {
+            for (const { group, ash } of this.fires) {
+                if (ash) {
+                    animateAshes(group, now);
+                } else {
+                    animateFire(group, now);
+                }
+            }
+            moving = true;
+        }
         const me = this.me;
         const target = this.herePoint(now);
         if (target) {

@@ -147,7 +147,8 @@ final class Ironfield
             // Caught: the men drag you back over the gate and into the pound, longer the deeper you went.
             $paddock = $player->valley->region('paddock');
             [$x, $y] = Geography::hub('paddock');
-            $until = CarbonImmutable::now()->addHours($depth);
+            // A faction Hospital patches its members up sooner.
+            $until = CarbonImmutable::now()->addMinutes((int) round($depth * 60 * (1 - Bases::healing($player->faction))));
             $player->forceFill([
                 'pound_until' => $until,
                 'region_id' => $paddock?->id,

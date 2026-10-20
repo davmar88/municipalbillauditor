@@ -33,6 +33,7 @@ final class Tick
         private readonly Bases $bases,
         private readonly Farms $farms,
         private readonly Research $research,
+        private readonly Plunderers $plunderers,
     ) {}
 
     public function run(Valley $valley): void
@@ -57,6 +58,10 @@ final class Tick
         $this->uprisings->riseIfFurious($season->fresh());
         $this->factions->promoteRecruits();
         $this->gateNight->resolveIfDue($season->fresh(), $this->wall);
+
+        // Irongate's plunderers strike when due, and a new band rides out when it's time.
+        $this->plunderers->resolveDue($season);
+        $this->plunderers->muster($season);
 
         // Upkeep and the Night Watch are paid once per half hour.
         if ($this->claim($season)) {

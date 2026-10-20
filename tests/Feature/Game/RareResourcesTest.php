@@ -128,6 +128,7 @@ class RareResourcesTest extends TestCase
         $wolf = $this->player(level: 3);
         $target = $this->player();
         $this->faction('Homesteaders', $target);
+        $this->homeFor($target);
         $this->powers->use($target->fresh(), $this->item($target, ItemTemplate::Lock));
 
         $this->expectExceptionMessage('Iron Lock');

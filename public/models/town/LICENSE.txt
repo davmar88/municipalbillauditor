@@ -1,0 +1,3 @@
+Town houses, flats, a shop and a hospital from the "House Packs" download (2018 low-poly set).
+The download carried no licence file: check its licence before relying on it commercially.
+Converted from .blend to GLB: the palette texture baked into flat colours, centred and set on the ground.

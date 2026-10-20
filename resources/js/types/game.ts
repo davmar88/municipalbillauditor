@@ -151,7 +151,8 @@ export type BuildingKindValue =
     | 'mill'
     | 'well'
     | 'coop'
-    | 'silo';
+    | 'silo'
+    | 'hospital';
 
 /** What a building costs and does at each level. */
 export type BuildingKindCard = {
@@ -326,6 +327,8 @@ export type MapRegion = {
         } | null;
     } | null;
     neighbours: number[];
+    /** Irongate's plunderers riding for it. */
+    plunderers: { men: number; landsAt: string } | null;
     incoming: {
         id: number;
         faction: { name: string; colour: string };
@@ -417,6 +420,22 @@ export type IrongateInfo = {
     meal: number;
 };
 
+/** A band of Irongate's plunderers riding for a farm. */
+export type PlunderBandInfo = {
+    id: number;
+    region: string;
+    regionName: string;
+    holders: string | null;
+    men: number;
+    landsAt: string;
+    fighters: number;
+    strength: number;
+    fighting: boolean;
+    canFight: boolean;
+    /** What the band carries, shared among its fighters if they win. */
+    corn: number;
+};
+
 /** An animal's own home on the map. */
 export type MapHome = {
     id: number;
@@ -432,6 +451,8 @@ export type MapHome = {
     /** How it looks on the 3D map: null for a village house, or a farm building. */
     style: string | null;
     mine: boolean;
+    /** On fire while a burner's fire takes hold, then ash until it's rebuilt. */
+    fire: 'burning' | 'ash' | null;
     /** A faction mate's home going up that you could lend a hand on. */
     helpable: boolean;
 };

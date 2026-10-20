@@ -42,7 +42,6 @@ type Props = {
             warranted: boolean;
         }[];
     } | null;
-    houseName: string | null;
     rules: {
         minBounty: number;
         maxBounty: number;
@@ -57,13 +56,7 @@ type Props = {
  * The Wanted board: the House's warrants and their bounties, where each
  * outlaw was last seen, and for the House, the suspects its informants name.
  */
-export default function WantedPage({
-    warrants,
-    caught,
-    house,
-    houseName,
-    rules,
-}: Props) {
+export default function WantedPage({ warrants, caught, house, rules }: Props) {
     return (
         <>
             <Head title="Wanted" />
@@ -78,17 +71,15 @@ export default function WantedPage({
                         Wanted
                     </h1>
                     <p className="text-sm text-muted-foreground">
-                        {houseName
-                            ? `${houseName} puts out warrants`
-                            : 'Whoever rules the Farmhouse puts out warrants'}{' '}
-                        for animals its informants catch breaking the law. Walk
-                        to where an outlaw stands and try an arrest for{' '}
-                        {rules.horseshoes} horseshoes: it works {rules.chance}%
-                        of the time, {rules.dogChance}% for dogs. A catch sends
-                        them to the pound and pays you the bounty, less the
-                        game's share; a miss lets them slip away for{' '}
-                        {rules.escapeMinutes} minutes. Anyone can add Apples of
-                        their own to a bounty.
+                        Any faction's leader and council can put out a warrant,
+                        with a bounty from their faction's store, for animals
+                        the informants catch breaking the law. Walk to where an
+                        outlaw stands and try an arrest for {rules.horseshoes}{' '}
+                        horseshoes: it works {rules.chance}% of the time,{' '}
+                        {rules.dogChance}% for dogs. A catch sends them to the
+                        pound and pays you the bounty, less the game's share; a
+                        miss lets them slip away for {rules.escapeMinutes}{' '}
+                        minutes. Anyone can add Apples of their own to a bounty.
                     </p>
                 </header>
 
@@ -275,11 +266,11 @@ function Suspects({
     return (
         <section className="flex flex-col gap-3 rounded-xl border bg-card p-4">
             <div>
-                <h2 className="text-lg font-bold">The House's informants</h2>
+                <h2 className="text-lg font-bold">What the informants say</h2>
                 <p className="text-sm text-muted-foreground">
                     Animals seen breaking the law in the last three days. A
-                    warrant's bounty comes out of the House's store of Apples,
-                    which holds {house.apples.toLocaleString('en-ZA')}{' '}
+                    warrant's bounty comes out of {house.name}'s store of
+                    Apples, which holds {house.apples.toLocaleString('en-ZA')}{' '}
                     {house.apples === 1 ? 'Apple' : 'Apples'}. Members give
                     Apples to it on the{' '}
                     <Link
@@ -370,7 +361,7 @@ function Suspects({
                                                 bounty < rules.minBounty
                                                     ? `A bounty is at least ${rules.minBounty} Apples.`
                                                     : bounty > house.apples
-                                                      ? `The House has only ${house.apples} Apples to put up.`
+                                                      ? `${house.name} has only ${house.apples} Apples to put up.`
                                                       : null
                                             }
                                         />

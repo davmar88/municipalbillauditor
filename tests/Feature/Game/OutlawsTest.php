@@ -68,6 +68,28 @@ class OutlawsTest extends TestCase
         }
     }
 
+    public function test_a_caught_outlaw_pays_back_what_its_crimes_took(): void
+    {
+        [, $ruler] = $this->houseAndSuspect();
+        $burner = $this->player(level: 3, attributes: ['corn' => 500]);
+        $victim = $this->player(attributes: ['corn' => 0]);
+        $this->faction('Burned', $victim);
+        $this->homeFor($victim);
+        $crime = $this->crimes->commit($burner, CrimeKind::Burn, null, $victim->fresh());
+        $this->getAway($crime);
+        $this->travel(31)->minutes();
+        $this->crimes->resolveDue($this->season());
+        $this->assertTrue($victim->fresh()->homeIsClosed());
+
+        $warrant = $this->warrants->issue($ruler->fresh(), $burner->fresh(), 20);
+        $ruler->forceFill(['region_id' => $burner->fresh()->region_id])->save();
+        $this->assertTrue($this->warrants->arrest($ruler->fresh(), $warrant, 0.0));
+
+        $this->assertSame(Crimes::REBUILD_CORN, $victim->fresh()->corn, 'The victim is paid what rebuilding costs.');
+        $this->assertSame(500 - Crimes::REBUILD_CORN, $burner->fresh()->corn);
+        $this->assertNotNull($crime->fresh()->repaid_at);
+    }
+
     /** A House, and a lone wolf it can put a warrant on. */
     private function houseAndSuspect(): array
     {
@@ -191,20 +213,26 @@ class OutlawsTest extends TestCase
         $this->warrants->raise($member->fresh(), $warrant, 6);
     }
 
-    public function test_only_the_house_warrants_and_only_suspects(): void
+    public function test_any_faction_leader_warrants_but_only_suspects(): void
     {
         [, $ruler, $suspect] = $this->houseAndSuspect();
         $outsider = $this->player();
-        $this->faction('Outsiders', $outsider);
+        $rival = $this->faction('Outsiders', $outsider, $this->player());
+        $rival->forceFill(['apples' => 50])->save();
+
+        // Not just the House: any faction's leader puts a bounty up from its own store.
+        $warrant = $this->warrants->issue($outsider->fresh(), $suspect, 40);
+        $this->assertSame($rival->id, $warrant->faction_id);
+        $this->assertSame(10, $rival->fresh()->apples);
 
         try {
-            $this->warrants->issue($outsider->fresh(), $suspect, 100);
-            $this->fail('Only the House.');
+            $this->warrants->issue($this->player(), $this->player(), 10);
+            $this->fail('Only a leader or council.');
         } catch (GameException $e) {
-            $this->assertStringContainsString("Only the House's leader and council", $e->getMessage());
+            $this->assertStringContainsString("Only a faction's leader and council", $e->getMessage());
         }
 
-        $this->expectExceptionMessage('done nothing the House');
+        $this->expectExceptionMessage('done nothing the informants');
         $this->warrants->issue($ruler, $this->player(), 100);
     }
 

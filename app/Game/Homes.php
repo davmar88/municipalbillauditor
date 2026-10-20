@@ -2,7 +2,9 @@
 
 namespace App\Game;
 
+use App\Enums\CrimeKind;
 use App\Enums\ItemTemplate;
+use App\Models\Crime;
 use App\Models\Home;
 use App\Models\HomeHelp;
 use App\Models\Item;
@@ -49,7 +51,18 @@ final class Homes
         'mill_house' => 'Mill house',
         'sawmill' => 'Sawmill',
         'bell_tower' => 'Bell tower',
+        'family_house' => 'Family house',
+        'veranda_house' => 'Veranda house',
+        'two_storey' => 'Two-storey house',
+        'garage_house' => 'House with a garage',
+        'double_house' => 'Double house',
+        'tall_flat' => 'Block of flats',
+        'porch_flat' => 'Flats with a porch',
+        'corner_shop' => 'Corner shop',
     ];
+
+    /** What putting out a fire costs. */
+    public const DOUSE_HORSESHOES = 1;
 
     /** How close an animal must stand to its home to go in or work on it, in paces. */
     public const DOOR = 40;
@@ -402,6 +415,49 @@ final class Homes
         }
 
         return ['name' => $item->design->name, 'colours' => $item->design->colours, 'pattern' => $item->design->pattern];
+    }
+
+    /**
+     * Put out a fire at a home before it burns down: anyone but the burner,
+     * standing at its door, with a bucket and a horseshoe. The home stands,
+     * and the burner, seen at it, is likelier to be caught.
+     *
+     * @throws GameException
+     */
+    public function douse(Player $helper, Home $home): Crime
+    {
+        return DB::transaction(function () use ($helper, $home) {
+            $helper = Players::lock($helper);
+            Players::ensureFree($helper);
+            $home = Home::query()->with('owner')->findOrFail($home->id);
+            $owner = $home->owner;
+            $crime = Crime::query()
+                ->lockForUpdate()
+                ->where('kind', CrimeKind::Burn)
+                ->where('target_player_id', $owner->id)
+                ->whereNull('resolved_at')
+                ->latest('id')
+                ->first() ?? throw new GameException("Nothing is burning at {$owner->name}'s home.");
+
+            if ($crime->player_id === $helper->id) {
+                throw new GameException('You set this fire. Let it burn, or be seen putting it out.');
+            }
+
+            if ($crime->doused_by !== null) {
+                throw new GameException('The fire is already out.');
+            }
+
+            $this->ensureAtDoor($helper, $home, $home->player_id === $helper->id ? 'your home' : "{$owner->name}'s home");
+            Horseshoes::spend($helper, self::DOUSE_HORSESHOES);
+            $crime->forceFill(['doused_by' => $helper->id])->save();
+            Rosettes::award($helper, 5, "Put out the fire at {$owner->name}'s home", "douse:{$crime->id}", $helper->valley->currentSeason());
+
+            if ($owner->id !== $helper->id) {
+                Notices::send($owner->id, 'crime', "🪣 {$helper->name} put out a fire at your home before it burned down.", route('play', [], false));
+            }
+
+            return $crime;
+        });
     }
 
     private function mine(Player $player): Home

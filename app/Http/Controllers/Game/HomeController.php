@@ -44,6 +44,13 @@ class HomeController extends Controller
         return $this->told("You lent a hand. {$home->owner->name}'s home goes up a third faster.");
     }
 
+    public function douse(Request $request, Home $home, Homes $homes): RedirectResponse
+    {
+        $homes->douse($request->user()->player, $home);
+
+        return $this->told('You put the fire out. The home still stands, and whoever set it was seen.');
+    }
+
     public function enter(Request $request, Homes $homes): RedirectResponse
     {
         $homes->enter($request->user()->player);

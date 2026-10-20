@@ -1026,6 +1026,13 @@ export function subtitle(
         };
     }
 
+    if (region.plunderers) {
+        return {
+            text: `🏴 ${region.plunderers.men} plunderers strike ${clockTime(region.plunderers.landsAt)}`,
+            colour: '#f5a27a',
+        };
+    }
+
     if (gateNight && region.key === 'ironfield_gate') {
         return { text: '⚔ Ironfield raids at 19:00', colour: '#f5a27a' };
     }
@@ -1430,6 +1437,18 @@ const Homes = memo(function Homes({
                 const wall = home.skin?.colours[1] ?? '#cfc3ad';
                 const roof = home.skin?.colours[0] ?? '#6a6479';
 
+                if (home.fire === 'ash') {
+                    return (
+                        <g
+                            key={home.id}
+                            transform={`translate(${home.x.toFixed(1)} ${home.y.toFixed(1)}) scale(${HOME_SIZE / OBJECT_FLOOR})`}
+                        >
+                            <title>{`The ashes of ${home.owner.name}'s ${home.name}`}</title>
+                            <Ashes w={w} />
+                        </g>
+                    );
+                }
+
                 return (
                     <g
                         key={home.id}
@@ -1488,12 +1507,143 @@ const Homes = memo(function Homes({
                                 />
                             </>
                         )}
+                        {home.fire === 'burning' && <Flames w={w} />}
                     </g>
                 );
             })}
         </g>
     );
 });
+
+/** Flames licking over a home, flickering, with smoke rolling off. */
+function Flames({ w }: { w: number }) {
+    const tongues = [-0.35, -0.12, 0.1, 0.32];
+
+    return (
+        <g>
+            <title>On fire</title>
+            <ellipse
+                rx={w * 0.9}
+                ry={w * 0.35}
+                cy={w * 0.4}
+                fill="#ff7a1a"
+                opacity={0.3}
+            >
+                <animate
+                    attributeName="opacity"
+                    values="0.2;0.4;0.25;0.35;0.2"
+                    dur="0.9s"
+                    repeatCount="indefinite"
+                />
+            </ellipse>
+            {tongues.map((at, i) => (
+                <g
+                    key={at}
+                    transform={`translate(${(at * w).toFixed(1)} ${(w * 0.25).toFixed(1)})`}
+                >
+                    <path
+                        d="M0 0C-6 -4 -7 -12 -2 -20C-2 -14 2 -14 1 -24C7 -16 8 -6 0 0z"
+                        fill="#ff6a13"
+                    >
+                        <animateTransform
+                            attributeName="transform"
+                            type="scale"
+                            values={
+                                i % 2
+                                    ? '1 1;1.1 1.4;0.9 1.1;1 1'
+                                    : '1 1.2;0.9 0.9;1.1 1.5;1 1.2'
+                            }
+                            dur={`${0.6 + i * 0.13}s`}
+                            repeatCount="indefinite"
+                        />
+                    </path>
+                    <path
+                        d="M0 -1C-3 -3 -4 -8 -1 -12C0 -8 2 -9 1 -14C4 -9 4 -4 0 -1z"
+                        fill="#ffd34d"
+                    >
+                        <animateTransform
+                            attributeName="transform"
+                            type="scale"
+                            values="1 1;1.1 1.5;0.9 1;1 1"
+                            dur={`${0.5 + i * 0.11}s`}
+                            repeatCount="indefinite"
+                        />
+                    </path>
+                </g>
+            ))}
+            {[0, 1, 2].map((i) => (
+                <circle key={i} r={4} fill="#4a4442" opacity={0}>
+                    <animate
+                        attributeName="cy"
+                        values={`${-w * 0.6};${-w * 2}`}
+                        dur="2.4s"
+                        begin={`${i * 0.8}s`}
+                        repeatCount="indefinite"
+                    />
+                    <animate
+                        attributeName="r"
+                        values="3;9"
+                        dur="2.4s"
+                        begin={`${i * 0.8}s`}
+                        repeatCount="indefinite"
+                    />
+                    <animate
+                        attributeName="opacity"
+                        values="0;0.55;0"
+                        dur="2.4s"
+                        begin={`${i * 0.8}s`}
+                        repeatCount="indefinite"
+                    />
+                </circle>
+            ))}
+        </g>
+    );
+}
+
+/** What a burned-down home leaves: a grey heap, fallen beams and embers still glowing. */
+function Ashes({ w }: { w: number }) {
+    return (
+        <g>
+            <ellipse
+                rx={w * 0.65}
+                ry={w * 0.32}
+                cy={w * 0.2}
+                fill="#6f6a66"
+                stroke="#2a2522"
+                strokeWidth={1}
+            />
+            <ellipse
+                rx={w * 0.35}
+                ry={w * 0.15}
+                cx={-w * 0.1}
+                cy={w * 0.15}
+                fill="#9c9792"
+            />
+            <path
+                d={`M${-w * 0.5} ${w * 0.1}L${w * 0.3} ${w * 0.3}M${-w * 0.2} ${w * 0.35}L${w * 0.45} ${w * 0.02}M${-w * 0.35} ${-w * 0.1}V${w * 0.15}`}
+                stroke="#2a2522"
+                strokeWidth={2.4}
+                strokeLinecap="round"
+            />
+            {[-0.25, 0.1, 0.3].map((at, i) => (
+                <circle
+                    key={at}
+                    cx={at * w}
+                    cy={w * (0.12 + i * 0.07)}
+                    r={1.6}
+                    fill="#ff5a1f"
+                >
+                    <animate
+                        attributeName="opacity"
+                        values="0.3;1;0.3"
+                        dur={`${1.4 + i * 0.5}s`}
+                        repeatCount="indefinite"
+                    />
+                </circle>
+            ))}
+        </g>
+    );
+}
 
 /** How big homes and tents are drawn, so they stand out on the map. */
 const HOME_SIZE = 2.4;
@@ -1577,6 +1727,7 @@ export const BUILDING_GLYPH: Record<BuildingKindValue, string> = {
     well: '🪣',
     coop: '🐔',
     silo: '🌾',
+    hospital: '🏥',
 };
 
 /** Faction buildings, a badge in the holder's colour on each plot. */

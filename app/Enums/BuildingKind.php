@@ -22,6 +22,7 @@ enum BuildingKind: string
     case Well = 'well';
     case Coop = 'coop';
     case Silo = 'silo';
+    case Hospital = 'hospital';
 
     public const MAX_LEVEL = 3;
 
@@ -38,6 +39,7 @@ enum BuildingKind: string
             self::Well => 'Well',
             self::Coop => 'Coop',
             self::Silo => 'Silo',
+            self::Hospital => 'Hospital',
         };
     }
 
@@ -65,6 +67,7 @@ enum BuildingKind: string
                 : "Keeps this region's farm watered.",
             self::Coop => "Lays {$this->eggs($level)} eggs into the store every half hour.",
             self::Silo => "Holds the faction's Corn.",
+            self::Hospital => "Members beaten in a fight, by Ironfield's men or Irongate's plunderers, heal here: they're laid up {$percent} less long.",
         };
     }
 
@@ -85,6 +88,7 @@ enum BuildingKind: string
             self::Workshop => [0.25, 0.5, 0.75][$level - 1],
             self::HeadOffice => [0.2, 0.35, 0.5][$level - 1],
             self::Mill => [0.25, 0.5, 0.75][$level - 1],
+            self::Hospital => [0.25, 0.4, 0.55][$level - 1],
             self::Well, self::Coop, self::Silo => 0.0,
         };
     }
@@ -204,6 +208,11 @@ enum BuildingKind: string
                 [60, ['wood' => 20, 'clay' => 10]],
                 [150, ['wood' => 30, 'clay' => 25, 'stone' => 15]],
                 [300, ['stone' => 40, 'clay' => 40, 'iron' => 3]],
+            ],
+            self::Hospital => [
+                [80, ['wood' => 25, 'stone' => 15, 'wool' => 10]],
+                [180, ['stone' => 30, 'clay' => 20, 'wool' => 20]],
+                [320, ['stone' => 50, 'clay' => 30, 'dye' => 20, 'iron' => 2]],
             ],
         };
 

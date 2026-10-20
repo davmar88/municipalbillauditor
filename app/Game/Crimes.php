@@ -24,6 +24,9 @@ final class Crimes
 
     public const POUND_HOURS = 6;
 
+    /** A burner whose fire was put out was seen at it: this much likelier to be caught. */
+    public const DOUSE_SPOTTED = 0.25;
+
     public const REBUILD_CORN = 100;
 
     /** What a plunder carries off: crop gathered, and Corn from the holders' treasury. */
@@ -48,6 +51,7 @@ final class Crimes
 
         $season = $player->valley->currentSeason() ?? throw new GameException('The season is changing. Try again in a moment.');
         $level = (int) config('game.levels.crime');
+        Players::ensureFree($player);
 
         // Faction members commit crimes too, against their own faction if they dare: its rules decide what that costs them.
         if ($player->level() < $level) {
@@ -97,8 +101,13 @@ final class Crimes
                 throw new GameException("{$faction->name} has already been targeted today.");
             }
         } else {
-            if ($target === null || $target->valley_id !== $player->valley_id || ($target->faction_id === null && Homes::of($target) === null)) {
+            if ($target === null || $target->valley_id !== $player->valley_id) {
                 throw new GameException('Pick a home to burn.');
+            }
+
+            // Only a home that stands can burn: an animal without one has nothing to set alight.
+            if (Homes::of($target) === null) {
+                throw new GameException("{$target->name} hasn't built a home yet. There's nothing to burn.");
             }
 
             if ($target->is($player)) {
@@ -210,7 +219,7 @@ final class Crimes
                     $faction->decrement('treasury', $loot);
                     $criminal->increment('corn', $loot);
                 }
-            } elseif ($crime->kind === CrimeKind::Burn && $crime->target_player_id !== null) {
+            } elseif ($crime->kind === CrimeKind::Burn && $crime->target_player_id !== null && $crime->doused_by === null) {
                 Player::query()->whereKey($crime->target_player_id)->update([
                     'home_closed_until' => CarbonImmutable::now()->addDay(),
                     'home_burned_at' => CarbonImmutable::now(),
@@ -233,9 +242,9 @@ final class Crimes
         if ($caught) {
             Notices::send($criminal->id, 'crime', '🚨 You were caught and sent to the pound until '.Clock::local($criminal->pound_until)->format('H:i').'.', $underworld);
             Notices::send($victims, 'crime', match ($crime->kind) {
-                CrimeKind::Loot => "🚨 A lone wolf tried to loot your faction's treasury and was caught.",
-                CrimeKind::Plunder => "🚨 A lone wolf tried to plunder {$section} and was caught.",
-                CrimeKind::Burn => '🚨 Someone tried to burn down your home and was caught.',
+                CrimeKind::Loot => "🚨 {$criminal->name} tried to loot your faction's treasury and was caught.",
+                CrimeKind::Plunder => "🚨 {$criminal->name} tried to plunder {$section} and was caught.",
+                CrimeKind::Burn => "🚨 {$criminal->name} tried to burn down your home and was caught.",
             }, $underworld);
 
             return;
@@ -244,19 +253,27 @@ final class Crimes
         if ($crime->kind === CrimeKind::Plunder) {
             $crop = $crime->region?->produces;
             Notices::send($criminal->id, 'crime', '🌾 You plundered '.self::PLUNDER_CROP." {$crop} and {$loot} Corn from {$section}.", route('play', [], false));
-            Notices::send($victims, 'crime', "🔥 A lone wolf plundered {$section}, taking {$loot} Corn from your treasury. Ask the House for a warrant.", route('play', [], false));
+            Notices::send($victims, 'crime', "🔥 Someone plundered {$section}, taking {$loot} Corn from your treasury. Your leader can put a bounty on whoever the informants name.", route('play.wanted', [], false));
 
             return;
         }
 
         if ($crime->kind === CrimeKind::Loot) {
             Notices::send($criminal->id, 'crime', "💰 You got away with {$loot} Corn.", $underworld);
-            Notices::send($victims, 'crime', "🔥 A lone wolf looted {$loot} Corn from your faction's treasury.", $underworld);
+            Notices::send($victims, 'crime', "🔥 Someone looted {$loot} Corn from your faction's treasury. Your leader can put a bounty on whoever the informants name.", route('play.wanted', [], false));
 
             return;
         }
 
         $target = Player::query()->whereKey($crime->target_player_id)->value('name');
+
+        if ($crime->doused_by !== null) {
+            $hero = Player::query()->whereKey($crime->doused_by)->value('name');
+            Notices::send($criminal->id, 'crime', "🪣 {$hero} put out the fire you set at {$target}'s home. It still stands.", $underworld);
+
+            return;
+        }
+
         Notices::send($criminal->id, 'crime', "🔥 You burned down {$target}'s home.", $underworld);
         Notices::send($victims, 'crime', '🔥 Your home was burned down. Your shop is closed for a day, or rebuild it now for '.self::REBUILD_CORN.' Corn.', route('play.market', [], false));
     }
@@ -297,7 +314,9 @@ final class Crimes
         $walls = $crime->kind === CrimeKind::Burn && $crime->target_player_id !== null
             ? (Home::query()->where('player_id', $crime->target_player_id)->value('level') ?? 0) * Homes::BURN_GUARD
             : 0.0;
-        $chance = min(0.9, 0.3 + 0.05 * min(4, $dogs) + $watch + Powers::bell($crime->target_faction_id) + $walls);
+        // Whoever put the fire out saw who set it.
+        $spotted = $crime->kind === CrimeKind::Burn && $crime->doused_by !== null ? self::DOUSE_SPOTTED : 0.0;
+        $chance = min(0.9, 0.3 + 0.05 * min(4, $dogs) + $watch + Powers::bell($crime->target_faction_id) + $walls + $spotted);
 
         // A Night Cloak halves it.
         return $crime->cloaked ? $chance * Powers::CLOAK : $chance;

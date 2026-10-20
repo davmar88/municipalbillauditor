@@ -16,6 +16,7 @@ use App\Game\Homes;
 use App\Game\Ironfield;
 use App\Game\Irongate;
 use App\Game\Movement;
+use App\Game\Plunderers;
 use App\Game\Powers;
 use App\Game\RaidRules;
 use App\Game\Stock;
@@ -25,6 +26,7 @@ use App\Game\Wardrobe;
 use App\Http\Controllers\Controller;
 use App\Models\Attack;
 use App\Models\BattleCommitment;
+use App\Models\Crime;
 use App\Models\GateDefence;
 use App\Models\Home;
 use App\Models\HomeHelp;
@@ -66,6 +68,7 @@ class MapController extends Controller
             && ($attack->faction_id === $player->faction_id || $regions->firstWhere('id', $attack->region_id)?->faction_id === $player->faction_id));
         $committed = BattleCommitment::query()->where('player_id', $player->id)->whereIn('attack_id', $open->pluck('id'))->pluck('attack_id')->all();
         $paddock = $regions->firstWhere('key', 'paddock');
+        $band = $season !== null ? Plunderers::riding($season->id) : null;
 
         // Who stands where. Animals without a region are in the Paddock. You come
         // first, so the crowd count never counts you, then outlaws, so the map
@@ -161,6 +164,8 @@ class MapController extends Controller
                     ];
                 })(),
                 'neighbours' => $region->neighbours->pluck('id'),
+                // Irongate's plunderers riding for it.
+                'plunderers' => $band?->region_id === $region->id ? ['men' => $band->men, 'landsAt' => $band->lands_at->toIso8601String()] : null,
                 'incoming' => $open->where('region_id', $region->id)->values()->map(fn (Attack $attack) => [
                     'id' => $attack->id,
                     'faction' => ['name' => $attack->faction->name, 'colour' => $attack->faction->colour],
@@ -260,8 +265,22 @@ class MapController extends Controller
             ],
             'yields' => ['corn' => Gathering::CORN, 'material' => Gathering::MATERIAL],
             // Every animal's home, and yours with what building it further takes.
-            'homes' => Home::query()
-                ->with(['owner:id,name,species,faction_id', 'skin.design', 'skin.openListing'])
+            // The band of Irongate's plunderers riding now, and whether you're fighting it.
+            'plunderers' => $band === null ? null : [
+                'id' => $band->id,
+                'region' => $band->region->key,
+                'regionName' => $band->region->name,
+                'holders' => $band->faction?->name,
+                'men' => $band->men,
+                'landsAt' => $band->lands_at->toIso8601String(),
+                'fighters' => $band->fighters()->count(),
+                'strength' => round(Plunderers::strength($band), 1),
+                'fighting' => $band->fighters()->where('player_id', $player->id)->exists(),
+                'canFight' => $player->faction_id !== null,
+                'corn' => Plunderers::CORN_PER_MAN * $band->men,
+            ],
+            'homes' => (fn ($burning) => Home::query()
+                ->with(['owner:id,name,species,faction_id,home_closed_until,home_burned_at', 'skin.design', 'skin.openListing'])
                 ->whereHas('owner', fn ($query) => $query->where('valley_id', $valley->id))
                 ->get()
                 ->map(fn (Home $home) => [
@@ -275,10 +294,16 @@ class MapController extends Controller
                     'skin' => Homes::skin($home),
                     'style' => $home->style,
                     'mine' => $home->player_id === $player->id,
+                    // Alight while a burner's fire takes hold, then ash until it's rebuilt.
+                    'fire' => $burning->contains($home->player_id) ? 'burning' : ($home->owner->homeIsClosed() && $home->owner->home_burned_at !== null ? 'ash' : null),
                     // A faction mate's home going up that you could lend a hand on.
                     'helpable' => $home->player_id !== $player->id && $player->faction_id !== null && $home->owner->faction_id === $player->faction_id && $home->building()
                         && ! HomeHelp::query()->where('home_id', $home->id)->where('level', $home->level)->where('player_id', $player->id)->exists(),
-                ])->values(),
+                ])->values())($season === null ? collect() : Crime::query()
+                ->where('season_id', $season->id)
+                ->where('kind', CrimeKind::Burn)
+                ->whereNull('resolved_at')
+                ->pluck('target_player_id')),
             'home' => [
                 'inside' => $player->inside_home_at !== null,
                 // The levels so far and the next one: homes grow without end.

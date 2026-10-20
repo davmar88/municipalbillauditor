@@ -492,6 +492,19 @@ class BasesTest extends TestCase
         $this->assertSame(4, $faction->fresh()->material('wood'));
     }
 
+    public function test_a_hospital_patches_members_up_sooner(): void
+    {
+        $leader = $this->player();
+        $faction = $this->faction('Medics', $leader);
+        $this->hold($faction, 'thornbury');
+        $this->assertSame(0.0, Bases::healing($faction));
+
+        Building::create(['faction_id' => $faction->id, 'region_id' => $this->region('thornbury')->id, 'kind' => BuildingKind::Hospital, 'level' => 2, 'ready_at' => now()->subMinute()]);
+
+        $this->assertSame(0.4, Bases::healing($faction->fresh()));
+        $this->assertSame(0.0, Bases::healing(null));
+    }
+
     public function test_the_map_and_faction_page_show_the_base(): void
     {
         $leader = $this->player();
@@ -506,7 +519,7 @@ class BasesTest extends TestCase
             ->where('regions.11.building', null)
             ->where('base.canBuild', true)
             ->where('base.hasDen', true)
-            ->has('buildingKinds', 10));
+            ->has('buildingKinds', 11));
 
         $this->actingAs($leader->user)->get(route('play.faction'))->assertInertia(fn (Assert $page) => $page
             ->has('faction.base.buildings', 1)

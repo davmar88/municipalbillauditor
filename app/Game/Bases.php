@@ -402,6 +402,20 @@ final class Bases
         return $store ? BuildingKind::Storehouse->lootShare($store) : Crimes::LOOT_SHARE;
     }
 
+    /** How much shorter a member beaten in a fight is laid up, from the faction's best Hospital: 0.25 is a quarter less. */
+    public static function healing(?Faction $faction): float
+    {
+        if ($faction === null) {
+            return 0.0;
+        }
+
+        $best = self::standing($faction)
+            ->where('kind', BuildingKind::Hospital)
+            ->max(fn (Building $building) => $building->workingLevel());
+
+        return $best ? BuildingKind::Hospital->bonus($best) : 0.0;
+    }
+
     /** How many more materials an animal gathers where its faction has a Workshop. */
     public static function gathering(Player $player, Region $region): float
     {

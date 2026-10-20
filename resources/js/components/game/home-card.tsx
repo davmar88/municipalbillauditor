@@ -8,6 +8,7 @@ import type { Point } from '@/lib/hollowmere';
 import {
     build,
     demolish,
+    douse,
     enter,
     help,
     leave,
@@ -287,6 +288,65 @@ export function HomeCard({
                         </label>
                     )}
                 </>
+            )}
+            {homes.some((h) => h.fire === 'burning') && (
+                <div className="flex flex-col gap-1 rounded-lg border border-orange-500/40 bg-orange-500/10 p-2">
+                    <p className="text-xs font-semibold text-orange-600 dark:text-orange-300">
+                        🔥 Homes on fire
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                        Get to the door before it burns down and put the fire
+                        out with a bucket. It costs 1 horseshoe, saves the home,
+                        and whoever set it is likelier to be caught.
+                    </p>
+                    {homes
+                        .filter((h) => h.fire === 'burning')
+                        .map((h) => {
+                            const far =
+                                Math.hypot(h.x - me.x, h.y - me.y) > info.door;
+                            const shoes = player?.horseshoes ?? 0;
+
+                            return (
+                                <div
+                                    key={h.id}
+                                    className="flex flex-wrap items-center gap-2"
+                                >
+                                    <span className="min-w-0 flex-1 truncate">
+                                        {h.mine
+                                            ? 'Your home'
+                                            : `${h.owner.name}'s ${h.name}`}
+                                    </span>
+                                    <Button
+                                        size="sm"
+                                        variant="secondary"
+                                        onClick={() => onWalk([h.x, h.y])}
+                                    >
+                                        Run there
+                                    </Button>
+                                    <Button
+                                        size="sm"
+                                        disabled={
+                                            me.walk !== null || far || shoes < 1
+                                        }
+                                        onClick={() => act(douse.url(h.id))}
+                                    >
+                                        Put the fire out
+                                    </Button>
+                                    <WhyNot
+                                        reason={
+                                            me.walk !== null
+                                                ? 'Stop walking first.'
+                                                : far
+                                                  ? 'Get to its door first: you throw the water where you stand.'
+                                                  : shoes < 1
+                                                    ? 'You need 1 horseshoe.'
+                                                    : null
+                                        }
+                                    />
+                                </div>
+                            );
+                        })}
+                </div>
             )}
             {homes.some((h) => h.helpable) && (
                 <div className="flex flex-col gap-1 border-t pt-2">

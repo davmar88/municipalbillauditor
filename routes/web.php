@@ -18,6 +18,7 @@ use App\Http\Controllers\Game\MarketController;
 use App\Http\Controllers\Game\MessageController;
 use App\Http\Controllers\Game\NoticeController;
 use App\Http\Controllers\Game\OrchardController;
+use App\Http\Controllers\Game\PlunderController;
 use App\Http\Controllers\Game\ProfileController;
 use App\Http\Controllers\Game\RankingsController;
 use App\Http\Controllers\Game\StartController;
@@ -70,6 +71,7 @@ Route::middleware(['auth', 'verified', 'player', 'throttle:120,1'])->prefix('pla
     Route::post('regions/{region}/attack', [BattleController::class, 'launch'])->name('play.attack');
     Route::post('attacks/{attack}/commit', [BattleController::class, 'commit'])->name('play.commit');
     Route::post('gate', [BattleController::class, 'gate'])->name('play.gate');
+    Route::post('plunderers/{band}/fight', [PlunderController::class, 'fight'])->middleware('throttle:20,1,plunder')->name('play.plunderers.fight');
 
     Route::get('wall', [WallController::class, 'index'])->name('play.wall');
     Route::post('wall/laws', [WallController::class, 'setLaw'])->name('play.wall.law');
@@ -160,6 +162,7 @@ Route::middleware(['auth', 'verified', 'player', 'throttle:120,1'])->prefix('pla
     Route::post('home/style', [HomeController::class, 'style'])->middleware('throttle:20,1,home')->name('play.home.style');
     Route::post('home/demolish', [HomeController::class, 'demolish'])->middleware('throttle:20,1,home')->name('play.home.demolish');
     Route::post('homes/{home}/help', [HomeController::class, 'help'])->middleware('throttle:20,1,home')->name('play.home.help');
+    Route::post('homes/{home}/douse', [HomeController::class, 'douse'])->middleware('throttle:20,1,home')->name('play.home.douse');
 
     // Irongate's people: the fence and the informer.
     Route::post('irongate/fence', [IrongateController::class, 'fence'])->middleware('throttle:20,1,irongate')->name('play.irongate.fence');

@@ -37,9 +37,23 @@ export const MEDIEVAL_MODELS = [
     'Bonfire_Lit',
 ] as const;
 
+/** Town houses, flats, a shop and the hospital from the House Packs, fetched only when needed. */
+export const TOWN_MODELS = [
+    'House',
+    'House2',
+    'House3',
+    'House4',
+    'House5',
+    'Flat',
+    'Flat2',
+    'Shop',
+    'Hospital',
+] as const;
+
 export type FarmModel =
     | (typeof FARM_MODELS)[number]
-    | (typeof MEDIEVAL_MODELS)[number];
+    | (typeof MEDIEVAL_MODELS)[number]
+    | (typeof TOWN_MODELS)[number];
 
 /** The buildings a home can look like, by the style its owner picked. */
 export const HOME_STYLE: Record<string, FarmModel> = {
@@ -58,6 +72,14 @@ export const HOME_STYLE: Record<string, FarmModel> = {
     mill_house: 'Mill',
     sawmill: 'Sawmill',
     bell_tower: 'Bell_Tower',
+    family_house: 'House2',
+    veranda_house: 'House',
+    two_storey: 'House3',
+    garage_house: 'House4',
+    double_house: 'House5',
+    tall_flat: 'Flat',
+    porch_flat: 'Flat2',
+    corner_shop: 'Shop',
 };
 
 /** Which building stands for each kind a faction can raise. */
@@ -72,6 +94,7 @@ export const FOR_KIND: Record<BuildingKindValue, FarmModel> = {
     well: 'Well',
     coop: 'ChickenCoop',
     silo: 'Silo',
+    hospital: 'Hospital',
 };
 
 const loader = new GLTFLoader();
@@ -79,8 +102,11 @@ const loads = new Map<FarmModel, Promise<void>>();
 const ready = new Map<FarmModel, THREE.Object3D>();
 
 function folder(name: FarmModel): string {
-    return (FARM_MODELS as readonly string[]).includes(name)
-        ? 'farm'
+    if ((FARM_MODELS as readonly string[]).includes(name)) {
+        return 'farm';
+    }
+    return (TOWN_MODELS as readonly string[]).includes(name)
+        ? 'town'
         : 'medieval';
 }
 

@@ -5,11 +5,13 @@ namespace Tests\Feature\Game;
 use App\Enums\BuildingKind;
 use App\Enums\FactionRole;
 use App\Enums\Species;
+use App\Game\Geography;
 use App\Game\Levels;
 use App\Game\Players;
 use App\Game\ValleyBuilder;
 use App\Models\Building;
 use App\Models\Faction;
+use App\Models\Home;
 use App\Models\Player;
 use App\Models\Region;
 use App\Models\Season;
@@ -91,6 +93,24 @@ trait MakesPlayers
                 ]);
             }
         }
+    }
+
+    /** A Hut already standing, where the animal is. */
+    protected function homeFor(Player $player, int $level = 1): Home
+    {
+        static $spot = 0;
+        $spot++;
+
+        [$x, $y] = Geography::hub($player->location()->key);
+
+        return Home::create([
+            'player_id' => $player->id,
+            'region_id' => $player->region_id,
+            'x' => $x + ($spot % 4) * 16 - 24,
+            'y' => $y + 10,
+            'level' => $level,
+            'ready_at' => now()->subMinute(),
+        ]);
     }
 
     protected function stand(Player $player, string $key): void

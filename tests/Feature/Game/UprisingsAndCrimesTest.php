@@ -10,6 +10,7 @@ use App\Game\Crimes;
 use App\Game\Dice;
 use App\Game\GameException;
 use App\Game\GateNight;
+use App\Game\Homes;
 use App\Game\LawTemplate;
 use App\Game\RaidRules;
 use App\Game\Uprisings;
@@ -164,6 +165,7 @@ class UprisingsAndCrimesTest extends TestCase
         $burner->forceFill(['faction_id' => $faction->id, 'faction_role' => 'member'])->save();
         $mate->forceFill(['faction_id' => $faction->id, 'faction_role' => 'member'])->save();
         app(RaidRules::class)->set($leader->fresh(), ['mates'], [], false);
+        $this->homeFor($mate);
 
         $crime = app(Crimes::class)->commit($burner->fresh(), CrimeKind::Burn, target: $mate->fresh());
 
@@ -195,6 +197,7 @@ class UprisingsAndCrimesTest extends TestCase
         $wolf = $this->player(level: 3);
         $target = $this->player();
         $target->forceFill(['faction_id' => $this->house->id])->save();
+        $this->homeFor($target);
 
         $crime = app(Crimes::class)->commit($wolf, CrimeKind::Burn, null, $target->fresh());
         $crime->forceFill(['seed' => $this->seedWhere(fn (float $roll) => $roll < 0.1)])->save();
@@ -213,6 +216,7 @@ class UprisingsAndCrimesTest extends TestCase
         $wolf = $this->player(level: 3);
         $target = $this->player(attributes: ['corn' => 150]);
         $target->forceFill(['faction_id' => $this->house->id])->save();
+        $this->homeFor($target);
 
         $crime = app(Crimes::class)->commit($wolf, CrimeKind::Burn, null, $target->fresh());
         $crime->forceFill(['seed' => $this->seedWhere(fn (float $roll) => $roll > 0.95)])->save();
@@ -311,6 +315,63 @@ class UprisingsAndCrimesTest extends TestCase
         $this->assertSame([], $night['burned']);
         $this->assertSame("🔥 Ironfield's 6 men broke through the gate at 19:00. No field beyond the fences was held, so nothing burned. You earned 5 Rosettes for fighting.", Notice::query()->where('player_id', $defender->id)->latest('id')->value('text'));
         $this->assertSame("Ironfield's men broke through the gate", UnrestEvent::query()->latest('id')->value('reason'));
+    }
+
+    public function test_only_a_home_that_stands_can_burn(): void
+    {
+        $wolf = $this->player(level: 3);
+        $homeless = $this->player();
+        $homeless->forceFill(['faction_id' => $this->house->id])->save();
+
+        $this->assertRefused(fn () => app(Crimes::class)->commit($wolf, CrimeKind::Burn, null, $homeless->fresh()), "There's nothing to burn");
+    }
+
+    public function test_putting_a_fire_out_saves_the_home_and_spots_the_burner(): void
+    {
+        $wolf = $this->player(level: 3);
+        $target = $this->player();
+        $target->forceFill(['faction_id' => $this->house->id])->save();
+        $home = $this->homeFor($target);
+        $crime = app(Crimes::class)->commit($wolf, CrimeKind::Burn, null, $target->fresh());
+        $before = app(Crimes::class)->catchChance($this->season(), $crime);
+
+        // The map shows it alight while it burns.
+        $this->actingAs($target->user)->get(route('play'))->assertInertia(fn (Assert $page) => $page
+            ->where('homes', fn ($homes) => collect($homes)->firstWhere('id', $home->id)['fire'] === 'burning'));
+
+        $this->assertRefused(fn () => app(Homes::class)->douse($wolf->fresh(), $home), 'You set this fire');
+        $mate = $this->player(attributes: ['region_id' => $home->region_id, 'pos_x' => $home->x + 2, 'pos_y' => $home->y]);
+        app(Homes::class)->douse($mate, $home);
+
+        $crime->refresh();
+        $this->assertSame($mate->id, $crime->doused_by);
+        $this->assertEqualsWithDelta($before + Crimes::DOUSE_SPOTTED, app(Crimes::class)->catchChance($this->season(), $crime), 0.001);
+        $this->assertRefused(fn () => app(Homes::class)->douse($mate->fresh(), $home), 'already out');
+
+        $crime->forceFill(['seed' => $this->seedWhere(fn (float $roll) => $roll > 0.95)])->save();
+        $this->travel(31)->minutes();
+        app(Crimes::class)->resolveDue($this->season());
+
+        $this->assertFalse($target->fresh()->homeIsClosed(), 'The home still stands.');
+        $this->assertTrue(Notice::query()->where('player_id', $target->id)->where('text', "🪣 {$mate->name} put out a fire at your home before it burned down.")->exists());
+    }
+
+    public function test_a_burned_down_home_shows_as_ash_until_rebuilt(): void
+    {
+        $wolf = $this->player(level: 3);
+        $target = $this->player(attributes: ['corn' => 150]);
+        $target->forceFill(['faction_id' => $this->house->id])->save();
+        $home = $this->homeFor($target);
+        $crime = app(Crimes::class)->commit($wolf, CrimeKind::Burn, null, $target->fresh());
+        $crime->forceFill(['seed' => $this->seedWhere(fn (float $roll) => $roll > 0.95)])->save();
+        $this->travel(31)->minutes();
+        app(Crimes::class)->resolveDue($this->season());
+
+        $fire = fn () => collect($this->actingAs($target->user)->get(route('play'))->viewData('page')['props']['homes'])->firstWhere('id', $home->id)['fire'];
+        $this->assertSame('ash', $fire());
+
+        app(Crimes::class)->rebuild($target->fresh());
+        $this->assertNull($fire());
     }
 
     private function seedWhere(callable $wanted): int
