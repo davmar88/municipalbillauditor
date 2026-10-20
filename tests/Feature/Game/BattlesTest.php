@@ -34,6 +34,8 @@ class BattlesTest extends TestCase
         $this->makeValley();
         $this->battles = app(Battles::class);
         $this->travelTo(Clock::now()->setTime(12, 0));
+        // Noon may be earlier than the season started today: start it the day before, so what happens now counts this season.
+        $this->season()->forceFill(['starts_at' => now()->subDay()])->save();
 
         $this->red = [$this->player(Species::Horse), $this->player(Species::Horse), $this->player(Species::Horse)];
         $this->redHooves = $this->faction('Red Hooves', ...$this->red);
