@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Game;
 
 use App\Game\Clock;
+use App\Game\Crimes;
 use App\Game\Messages;
 use App\Game\Warrants;
 use App\Http\Controllers\Controller;
+use App\Models\Crime;
 use App\Models\Player;
 use App\Models\Warrant;
 use Illuminate\Http\RedirectResponse;
@@ -78,6 +80,25 @@ class WantedController extends Controller
                     ])
                     ->values(),
             ] : null,
+            // Who wronged you lately: catch them where they stand, or put a bounty on them.
+            'againstMe' => Crimes::against($player)->unique('player_id')->values()->map(function (Crime $crime) use ($here, $warrants) {
+                $where = $crime->player->location();
+
+                return [
+                    'crimeId' => $crime->id,
+                    'animal' => Messages::card($crime->player),
+                    'deed' => Warrants::deed($crime),
+                    'at' => $crime->resolved_at->toIso8601String(),
+                    'until' => $crime->resolved_at->addHours(Crimes::CATCH_HOURS)->toIso8601String(),
+                    'lastSeen' => $where->isCity() ? 'Irongate' : $where->name,
+                    'here' => $where->id === $here,
+                    'inPound' => $crime->player->inPound(),
+                    'escapedUntil' => $crime->escaped_until?->isFuture() ? $crime->escaped_until->toIso8601String() : null,
+                    'warranted' => $warrants->contains('player_id', $crime->player_id),
+                ];
+            }),
+            'apples' => (int) $player->apples,
+            'catch' => ['horseshoes' => Crimes::CATCH_HORSESHOES, 'chance' => (int) round(Crimes::CATCH_CHANCE * 100), 'hours' => Crimes::CATCH_HOURS],
             'rules' => [
                 'minBounty' => Warrants::MIN_BOUNTY,
                 'maxBounty' => Warrants::MAX_BOUNTY,
@@ -109,6 +130,15 @@ class WantedController extends Controller
         $warrants->raise($request->user()->player, $warrant, $amount);
 
         return $this->told("You added {$amount} Apples to the bounty on {$warrant->wanted->name}.");
+    }
+
+    public function catch(Request $request, Crime $crime, Crimes $crimes): RedirectResponse
+    {
+        $name = $crime->player->name;
+
+        return $crimes->catchCulprit($request->user()->player, $crime)
+            ? $this->told("You caught {$name}! They're in the pound now.")
+            : $this->told("{$name} slipped away. You can try again in ".Warrants::ESCAPE_MINUTES.' minutes.', 'error');
     }
 
     public function arrest(Request $request, Warrant $warrant, Warrants $warrants): RedirectResponse

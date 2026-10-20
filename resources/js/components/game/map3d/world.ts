@@ -28,6 +28,7 @@ import {
     FRONTIER_KIND,
     FIELD_SHAPES,
     FIELDS,
+    REACH,
     SHAPES,
     anchor,
     hub,
@@ -268,6 +269,37 @@ function outline(polygon: Point[], height: number): number[] {
     return out;
 }
 
+/** Rolling swells on the sea: a tile of wave lines, repeated far and wide. */
+function seaTexture(): THREE.CanvasTexture {
+    const size = 256;
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = size;
+    const g = canvas.getContext('2d') as CanvasRenderingContext2D;
+    g.fillStyle = '#1767a0';
+    g.fillRect(0, 0, size, size);
+    g.lineCap = 'round';
+    for (let row = 0; row < 6; row++) {
+        const y = row * (size / 6) + 18;
+        g.strokeStyle = `rgba(190, 235, 255, ${row % 2 ? 0.3 : 0.5})`;
+        g.lineWidth = row % 2 ? 2 : 3;
+        g.beginPath();
+        for (let x = 0; x <= size; x += 4) {
+            const wave = Math.sin((x / size) * Math.PI * 4 + row) * 6;
+            if (x === 0) {
+                g.moveTo(x, y + wave);
+            } else {
+                g.lineTo(x, y + wave);
+            }
+        }
+        g.stroke();
+    }
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+    texture.repeat.set(160, 160);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    return texture;
+}
+
 /** A little health bar for over an animal or a home: out of 100, green to red. */
 function healthBar(value: number, width: number): HTMLDivElement {
     const outer = div('', {
@@ -440,22 +472,81 @@ export class World {
     };
     private disposed = false;
 
+    /** The sea's swell, moved a little every few frames. */
+    private seaTexture!: THREE.CanvasTexture;
+
+    private surf!: THREE.Mesh;
+
+    private seaAt = 0;
+
     constructor(coarse: boolean) {
         this.actorBudget = coarse ? 24 : 60;
         const s = this.scene;
-        s.background = new THREE.Color('#13151a');
-        s.fog = new THREE.Fog('#13151a', 2000, 9000);
+        s.background = new THREE.Color('#0b3a5c');
+        s.fog = new THREE.Fog('#0b3a5c', 2000, 9000);
         s.add(new THREE.HemisphereLight('#c9c2ff', '#1d1a24', 1.5));
         const sun = new THREE.DirectionalLight('#fff4e6', 1.8);
         sun.position.set(-600, 1400, 900);
         s.add(sun);
+        // The valley's own ground, out to its edge; a beach round it, and the sea beyond.
+        const roundRect = (by: number) => {
+            const x = REACH.x - by;
+            const y = REACH.y - by;
+            const w = REACH.width + by * 2;
+            const h = REACH.height + by * 2;
+            const r = 180 + by;
+            const shape = new THREE.Shape();
+            shape.moveTo(x + r, y);
+            shape.lineTo(x + w - r, y);
+            shape.quadraticCurveTo(x + w, y, x + w, y + r);
+            shape.lineTo(x + w, y + h - r);
+            shape.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+            shape.lineTo(x + r, y + h);
+            shape.quadraticCurveTo(x, y + h, x, y + h - r);
+            shape.lineTo(x, y + r);
+            shape.quadraticCurveTo(x, y, x + r, y);
+            // Drawn in x/y, laid flat with y running south as the map's does.
+            const geometry = new THREE.ShapeGeometry(shape, 12);
+            geometry.rotateX(Math.PI / 2);
+            return geometry;
+        };
         const ground = new THREE.Mesh(
-            new THREE.PlaneGeometry(30000, 30000),
-            new THREE.MeshLambertMaterial({ color: '#18211d' }),
+            roundRect(0),
+            new THREE.MeshLambertMaterial({
+                color: '#18211d',
+                side: THREE.DoubleSide,
+            }),
         );
-        ground.rotation.x = -Math.PI / 2;
         ground.position.y = -0.6;
-        s.add(ground);
+        const beach = new THREE.Mesh(
+            roundRect(240),
+            new THREE.MeshLambertMaterial({
+                color: '#d6bd84',
+                side: THREE.DoubleSide,
+            }),
+        );
+        beach.position.y = -6;
+        this.surf = new THREE.Mesh(
+            roundRect(290),
+            new THREE.MeshBasicMaterial({
+                color: '#e8f7ff',
+                transparent: true,
+                opacity: 0.5,
+                side: THREE.DoubleSide,
+            }),
+        );
+        this.surf.position.y = -9;
+        this.seaTexture = seaTexture();
+        const sea = new THREE.Mesh(
+            new THREE.PlaneGeometry(40000, 40000),
+            new THREE.MeshLambertMaterial({
+                color: '#ffffff',
+                map: this.seaTexture,
+            }),
+        );
+        sea.rotation.x = -Math.PI / 2;
+        sea.position.y = -14;
+        s.add(sea, this.surf, beach, ground);
         s.add(
             this.terrain,
             this.overlay,
@@ -2381,6 +2472,15 @@ export class World {
 
         let moving = zoomed || this.changed;
         this.changed = false;
+        // The sea rolls in and the surf washes up and back, a few times a second.
+        if (!reduce && now - this.seaAt > 90) {
+            this.seaAt = now;
+            this.seaTexture.offset.set(now / 60000, now / 45000);
+            (this.surf.material as THREE.MeshBasicMaterial).opacity =
+                0.35 + 0.3 * Math.sin(now / 950);
+            this.surf.scale.setScalar(1);
+            moving = true;
+        }
         if (!reduce && this.fires.length + this.landFlames.length > 0) {
             for (const { group, ash } of [...this.fires, ...this.landFlames]) {
                 if (ash) {

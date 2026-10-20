@@ -4,6 +4,7 @@ namespace Tests\Feature\Game;
 
 use App\Enums\CrimeKind;
 use App\Enums\Species;
+use App\Game\Apples;
 use App\Game\Battles;
 use App\Game\Clock;
 use App\Game\Crimes;
@@ -22,6 +23,7 @@ use App\Models\Law;
 use App\Models\Notice;
 use App\Models\Player;
 use App\Models\UnrestEvent;
+use App\Models\Warrant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
@@ -194,23 +196,63 @@ class UprisingsAndCrimesTest extends TestCase
         $this->assertSame(100 + 100, $wolf->fresh()->corn);
     }
 
-    public function test_a_caught_criminal_goes_to_the_pound(): void
+    public function test_nobody_goes_to_the_pound_by_chance_the_victim_catches_them(): void
     {
-        $wolf = $this->player(level: 3);
-        $target = $this->player();
+        $wolf = $this->player(level: 3, attributes: ['corn' => 300]);
+        $target = $this->player(attributes: ['corn' => 0]);
         $target->forceFill(['faction_id' => $this->house->id])->save();
         $this->homeFor($target);
 
         $crime = app(Crimes::class)->commit($wolf, CrimeKind::Burn, null, $target->fresh());
-        $crime->forceFill(['seed' => $this->seedWhere(fn (float $roll) => $roll < 0.1)])->save();
+        // Even the unluckiest roll doesn't catch anyone any more.
+        $crime->forceFill(['seed' => $this->seedWhere(fn (float $roll) => $roll < 0.01)])->save();
 
         $this->travel(31)->minutes();
         app(Crimes::class)->resolveDue($this->season());
 
+        $this->assertFalse($wolf->fresh()->inPound());
+        $this->assertTrue($target->fresh()->homeIsClosed());
+        $this->stand($wolf, 'granary');
+        $this->actingAs($target->user)->get(route('play.wanted'))->assertInertia(fn ($page) => $page
+            ->where('againstMe.0.animal.id', $wolf->id)
+            ->where('againstMe.0.here', false));
+
+        // From afar it can't be done; standing by them, it can.
+        $this->actingAs($target->user)->post(route('play.crime.catch', $crime));
+        $this->assertFalse($wolf->fresh()->inPound());
+        $this->stand($target, 'granary');
+        $this->assertTrue(app(Crimes::class)->catchCulprit($target->fresh(), $crime->fresh(), roll: 0.0));
+
         $wolf->refresh();
         $this->assertTrue($wolf->inPound());
         $this->assertSame(1, $wolf->wanted);
-        $this->assertFalse($target->fresh()->homeIsClosed());
+        $this->assertSame(Crimes::REBUILD_CORN, $target->fresh()->corn, 'They pay for the rebuild.');
+        $this->assertSame($target->id, $crime->fresh()->caught_by);
+
+        // Once caught, not twice.
+        $this->expectExceptionMessage('too old to catch anyone for, or someone already caught them');
+        app(Crimes::class)->catchCulprit($target->fresh(), $crime->fresh(), roll: 0.0);
+    }
+
+    public function test_a_victim_puts_a_bounty_on_the_criminal_from_their_own_apples(): void
+    {
+        $wolf = $this->player(level: 3);
+        $target = $this->player();
+        $this->homeFor($target);
+        Apples::award($target, 30, 'Test', 'test:victim');
+
+        $crime = app(Crimes::class)->commit($wolf, CrimeKind::Burn, null, $target->fresh());
+        $this->travel(31)->minutes();
+        app(Crimes::class)->resolveDue($this->season());
+
+        $this->actingAs($target->user)->post(route('play.warrant.issue'), ['player_id' => $wolf->id, 'bounty' => 20])->assertRedirect();
+        $warrant = Warrant::sole();
+        $this->assertSame([$target->id, null, 20], [$warrant->issuer_id, $warrant->faction_id, $warrant->bounty]);
+        $this->assertSame(10, $target->fresh()->apples);
+
+        // A bystander can't.
+        $this->actingAs($this->player()->user)->post(route('play.warrant.issue'), ['player_id' => $wolf->id, 'bounty' => 20]);
+        $this->assertSame(1, Warrant::query()->count());
     }
 
     public function test_a_burned_home_closes_its_shop_until_rebuilt(): void

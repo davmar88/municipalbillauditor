@@ -124,6 +124,8 @@ Route::middleware(['auth', 'verified', 'player', 'throttle:120,1'])->prefix('pla
     Route::post('warrants', [WantedController::class, 'issue'])->name('play.warrant.issue');
     Route::post('warrants/{warrant}/raise', [WantedController::class, 'raise'])->name('play.warrant.raise');
     Route::post('warrants/{warrant}/arrest', [WantedController::class, 'arrest'])->middleware('throttle:20,1,arrests')->name('play.warrant.arrest');
+    // The victim of a crime catches whoever did it, where they stand.
+    Route::post('crimes/{crime}/catch', [WantedController::class, 'catch'])->middleware('throttle:20,1,arrests')->name('play.crime.catch');
     Route::post('home/rebuild', [CrimeController::class, 'rebuild'])->name('play.rebuild');
 
     Route::get('chat', [ChatController::class, 'index'])->name('play.chat');

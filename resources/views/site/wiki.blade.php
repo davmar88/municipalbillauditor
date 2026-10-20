@@ -67,7 +67,9 @@
         'crime' => ['Crime', [
             'From level '.$levels['crime'].', anyone can commit crimes, faction members too, against their own faction if they dare.',
             'Loot a faction\'s treasury, or set a home alight, once a day. Plunder a farm on its own clock. Rob an animal standing close to you every two hours.',
-            'Crimes settle after a while: robbery after 10 minutes, the rest after half an hour. Dogs, a Night Watch, a Watch Bell and a strong home make you likelier to be caught; a Night Cloak makes you less likely. Caught criminals go to the pound.',
+            'Crimes settle after a while: robbery after 10 minutes, the rest after half an hour. Nobody goes to the pound by chance: the victim is told who did it.',
+            'The victim (or any member of the faction robbed) has a day to walk to where the criminal stands and catch them, for 2 horseshoes. It usually works, less often if they hide in a strong home. A catch sends them to the pound and they pay back what they took.',
+            'Or the victim puts a bounty on them from their own Apples, and the bounty hunters do it.',
         ]],
         'fire' => ['Fire and ash', [
             'Tap any animal\'s home on the map to set it alight. It burns with real flames for half an hour.',

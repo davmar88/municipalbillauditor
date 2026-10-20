@@ -839,7 +839,7 @@ export default function WorldMap3D({
     return (
         <div
             ref={containerRef}
-            className="dark relative h-[calc(100svh-15rem)] min-h-[400px] w-full overflow-hidden rounded-2xl border border-[#2e2e32] bg-[#13151a] text-foreground md:h-[calc(100svh-10.5rem)] md:min-h-[520px]"
+            className="dark relative h-[calc(100svh-15rem)] min-h-[400px] w-full overflow-hidden rounded-2xl border border-[#2e2e32] bg-[#0b3a5c] text-foreground md:h-[calc(100svh-10.5rem)] md:min-h-[520px]"
         >
             <div
                 ref={surfaceRef}

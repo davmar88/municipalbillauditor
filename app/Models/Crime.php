@@ -45,6 +45,7 @@ class Crime extends Model
             'cloaked' => 'boolean',
             'repaid_at' => 'datetime',
             'armed' => 'boolean',
+            'escaped_until' => 'datetime',
         ];
     }
 

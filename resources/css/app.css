@@ -258,6 +258,22 @@
     animation: map-shimmer 7s linear infinite;
 }
 
+@keyframes map-surf {
+    0%,
+    100% {
+        stroke-dashoffset: 0;
+        stroke-opacity: 0.55;
+    }
+    50% {
+        stroke-dashoffset: -134;
+        stroke-opacity: 0.9;
+    }
+}
+
+.map-surf {
+    animation: map-surf 6s ease-in-out infinite;
+}
+
 .map-sails {
     transform-origin: 0 0;
     animation: map-turn 18s linear infinite;
@@ -270,6 +286,7 @@
 
 @media (prefers-reduced-motion: reduce) {
     .map-march,
+    .map-surf,
     .map-shimmer,
     .map-sails,
     .map-ping {

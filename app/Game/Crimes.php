@@ -10,6 +10,7 @@ use App\Models\Home;
 use App\Models\Player;
 use App\Models\Season;
 use Carbon\CarbonImmutable;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -41,6 +42,17 @@ final class Crimes
 
     /** A robber takes this share of what its victim carries: Corn and each material. */
     public const ROB_SHARE = 0.15;
+
+    /** How long a victim has to catch whoever wronged them. */
+    public const CATCH_HOURS = 24;
+
+    /** What a victim's catch costs. */
+    public const CATCH_HORSESHOES = 2;
+
+    /** How likely a victim standing by the criminal is to catch them, before any home they hide in; dogs do better. */
+    public const CATCH_CHANCE = 0.8;
+
+    private const CATCH_IT = ' Catch them where they stand and send them to the pound, or put a bounty on them, from the Wanted page.';
 
     /** @var list<string> The materials taken in the robbery being settled. */
     private array $haul = [];
@@ -234,6 +246,111 @@ final class Crimes
         return Crime::query()->where('player_id', $player->id)->where('kind', '!=', CrimeKind::Plunder)->where('created_at', '>=', Clock::startOfToday())->exists();
     }
 
+    /**
+     * The crimes against an animal, or its faction, that it can still catch
+     * the criminal for.
+     *
+     * @return Collection<int, Crime>
+     */
+    public static function against(Player $victim): Collection
+    {
+        return Crime::query()
+            ->with(['player.faction:id,name,colour', 'region:id,name', 'targetFaction:id,name', 'targetPlayer:id,name'])
+            ->whereNotNull('resolved_at')
+            ->where('resolved_at', '>=', CarbonImmutable::now()->subHours(self::CATCH_HOURS))
+            ->where('caught', false)
+            ->whereNull('caught_by')
+            ->where('player_id', '!=', $victim->id)
+            ->where(fn ($query) => $query->where('target_player_id', $victim->id)
+                ->when($victim->faction_id !== null, fn ($query) => $query->orWhere('target_faction_id', $victim->faction_id)))
+            ->latest('id')
+            ->get();
+    }
+
+    /**
+     * The victim catches whoever wronged them, standing where they stand:
+     * to the pound with them, and they pay back what this crime took. A
+     * miss lets them slip away for half an hour.
+     *
+     * @param  float|null  $roll  A fixed roll, for tests; otherwise luck decides.
+     *
+     * @throws GameException
+     */
+    public function catchCulprit(Player $victim, Crime $crime, ?float $roll = null): bool
+    {
+        return DB::transaction(function () use ($victim, $crime, $roll) {
+            $crime = Crime::query()->lockForUpdate()->findOrFail($crime->id);
+            $victim = Players::lock($victim);
+            Players::ensureFree($victim);
+
+            if (self::against($victim)->doesntContain('id', $crime->id)) {
+                throw new GameException('That crime is too old to catch anyone for, or someone already caught them.');
+            }
+
+            $criminal = Players::lock($crime->player);
+
+            if ($criminal->inPound()) {
+                throw new GameException("{$criminal->name} is already in the pound.");
+            }
+
+            if ($crime->escaped_until !== null && $crime->escaped_until->isFuture()) {
+                throw new GameException("{$criminal->name} slipped away. You can pick up the trail at ".Clock::local($crime->escaped_until)->format('H:i').'.');
+            }
+
+            $where = $criminal->location();
+
+            if ($victim->location()->id !== $where->id) {
+                throw new GameException($where->isCity()
+                    ? "{$criminal->name} is hiding somewhere in Irongate. Find the district, or pay Wick in the Iron Yards to tell you."
+                    : "{$criminal->name} is in {$where->name}. Walk there to catch them.");
+            }
+
+            Horseshoes::spend($victim, self::CATCH_HORSESHOES);
+            $chance = self::CATCH_CHANCE + ($victim->species === Species::Dog ? Warrants::DOG_BONUS : 0.0);
+            $chance -= Homes::arrestCut(Homes::guard($criminal), $chance);
+            $chance -= min(Homes::armour($criminal), max(0.0, $chance - Homes::ARREST_FLOOR));
+            $roll ??= Dice::roll(Dice::seed(), 'catch');
+            $wanted = route('play.wanted', [], false);
+
+            if ($roll >= $chance) {
+                $crime->forceFill(['escaped_until' => CarbonImmutable::now()->addMinutes(Warrants::ESCAPE_MINUTES)])->save();
+                Notices::send($criminal->id, 'crime', "🏃 {$victim->name} tried to catch you in {$where->name}. You slipped away, for now.", $wanted);
+
+                return false;
+            }
+
+            $criminal->forceFill([
+                'pound_until' => CarbonImmutable::now()->addHours(self::POUND_HOURS),
+                'wanted' => $criminal->wanted + 1,
+            ])->save();
+
+            // They pay back what this crime took, as far as their Corn goes.
+            $owed = min($crime->kind === CrimeKind::Burn && $crime->doused_by === null ? self::REBUILD_CORN : (int) $crime->loot, $criminal->corn);
+
+            if ($owed > 0) {
+                $criminal->decrement('corn', $owed);
+
+                if ($crime->target_faction_id !== null && in_array($crime->kind, [CrimeKind::Loot, CrimeKind::Plunder], true)) {
+                    Faction::query()->whereKey($crime->target_faction_id)->increment('treasury', $owed);
+                } else {
+                    $victim->increment('corn', $owed);
+                }
+            }
+
+            $crime->forceFill(['caught' => true, 'caught_by' => $victim->id, 'repaid_at' => CarbonImmutable::now()])->save();
+            Rosettes::award($victim, 10, "Caught {$criminal->name}", "catch:{$crime->id}", $victim->valley->currentSeason());
+            Missions::record($victim, 'bounty');
+            $back = $owed > 0 ? " They paid back {$owed} Corn." : '';
+            Notices::send($criminal->id, 'crime', "🚨 {$victim->name} caught you in {$where->name}. You're in the pound until ".Clock::local($criminal->fresh()->pound_until)->format('H:i').'.'.($owed > 0 ? " You paid back {$owed} Corn." : ''), $wanted);
+
+            if ($crime->target_faction_id !== null) {
+                Notices::send(Notices::members($crime->target_faction_id)->reject(fn ($id) => $id === $victim->id), 'crime', "🚨 {$victim->name} caught {$criminal->name} and sent them to the pound.{$back}", $wanted);
+            }
+
+            return true;
+        });
+    }
+
     public function resolveDue(Season $season): void
     {
         $season->crimes()
@@ -245,7 +362,7 @@ final class Crimes
 
     public function resolve(Season $season, Crime $crime): void
     {
-        DB::transaction(function () use ($season, $crime) {
+        DB::transaction(function () use ($crime) {
             $crime = Crime::query()->lockForUpdate()->findOrFail($crime->id);
 
             if ($crime->resolved_at !== null) {
@@ -253,8 +370,8 @@ final class Crimes
             }
 
             $criminal = Players::lock($crime->player);
-            $chance = $this->catchChance($season, $crime);
-            $caught = Dice::roll($crime->seed, 'caught') < $chance;
+            // Nobody is caught by chance any more: the victim catches the criminal, or puts a bounty on them (her call, 2026-10-20).
+            $caught = false;
             $loot = 0;
 
             if ($caught) {
@@ -356,7 +473,7 @@ final class Crimes
         if ($crime->kind === CrimeKind::Plunder) {
             $crop = $crime->region?->produces;
             Notices::send($criminal->id, 'crime', '🌾 You plundered '.self::PLUNDER_CROP." {$crop} and {$loot} Corn from {$section}.", route('play', [], false));
-            Notices::send($victims, 'crime', "🔥 Someone plundered {$section}, taking {$loot} Corn from your treasury. Your leader can put a bounty on whoever the informants name.", route('play.wanted', [], false));
+            Notices::send($victims, 'crime', "🔥 {$criminal->name} plundered {$section}, taking {$loot} Corn from your treasury.".self::CATCH_IT, route('play.wanted', [], false));
 
             return;
         }
@@ -365,14 +482,14 @@ final class Crimes
             $victimName = Player::query()->whereKey($crime->target_player_id)->value('name');
             $took = $haul === [] ? "{$loot} Corn" : "{$loot} Corn, ".implode(', ', $haul);
             Notices::send($criminal->id, 'crime', "💰 You robbed {$victimName} of {$took}.", route('play', [], false));
-            Notices::send($victims, 'crime', "🦹 Someone robbed you of {$took}. The informants will name them to anyone putting up a bounty.", route('play.wanted', [], false));
+            Notices::send($victims, 'crime', "🦹 {$criminal->name} robbed you of {$took}.".self::CATCH_IT, route('play.wanted', [], false));
 
             return;
         }
 
         if ($crime->kind === CrimeKind::Loot) {
             Notices::send($criminal->id, 'crime', "💰 You got away with {$loot} Corn.", $underworld);
-            Notices::send($victims, 'crime', "🔥 Someone looted {$loot} Corn from your faction's treasury. Your leader can put a bounty on whoever the informants name.", route('play.wanted', [], false));
+            Notices::send($victims, 'crime', "🔥 {$criminal->name} looted {$loot} Corn from your faction's treasury.".self::CATCH_IT, route('play.wanted', [], false));
 
             return;
         }
@@ -387,7 +504,7 @@ final class Crimes
         }
 
         Notices::send($criminal->id, 'crime', "🔥 You burned down {$target}'s home.", $underworld);
-        Notices::send($victims, 'crime', '🔥 Your home was burned down. Your shop is closed for a day, or rebuild it now for '.self::REBUILD_CORN.' Corn.', route('play.market', [], false));
+        Notices::send($victims, 'crime', "🔥 {$criminal->name} burned your home down. Your shop is closed for a day, or rebuild it now for ".self::REBUILD_CORN.' Corn.'.self::CATCH_IT, route('play.wanted', [], false));
     }
 
     /**

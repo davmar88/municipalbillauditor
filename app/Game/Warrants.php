@@ -96,8 +96,18 @@ final class Warrants
         return DB::transaction(function () use ($player, $suspect, $bounty, $season) {
             $player = Players::lock($player);
 
-            if ($player->faction_id === null || ! $player->decides()) {
-                throw new GameException("Only a faction's leader and council put out warrants.");
+            // A faction's leader and council put one out from the faction's store; anyone wronged, from their own Apples.
+            $victim = Crime::query()
+                ->where('season_id', $season->id)
+                ->where('player_id', $suspect->id)
+                ->where('created_at', '>=', CarbonImmutable::now()->subDays(self::SUSPECT_DAYS))
+                ->where(fn ($query) => $query->where('target_player_id', $player->id)
+                    ->when($player->faction_id !== null, fn ($query) => $query->orWhere('target_faction_id', $player->faction_id)))
+                ->exists();
+            $fromFaction = $player->faction_id !== null && $player->decides();
+
+            if (! $fromFaction && ! $victim) {
+                throw new GameException("Only a faction's leader and council, or someone they wronged, put out warrants.");
             }
 
             if ($suspect->valley_id !== $player->valley_id || self::suspects($season)->doesntContain(fn (array $s) => $s['player']->id === $suspect->id)) {
@@ -116,27 +126,36 @@ final class Warrants
                 throw new GameException('Put a bounty of '.self::MIN_BOUNTY.' to '.self::MAX_BOUNTY.' Apples on a warrant.');
             }
 
-            $house = Faction::query()->lockForUpdate()->findOrFail($player->faction_id);
+            $house = $fromFaction ? Faction::query()->lockForUpdate()->findOrFail($player->faction_id) : null;
 
-            if ($house->apples < $bounty) {
+            if ($house !== null && $house->apples >= $bounty) {
+                $house->decrement('apples', $bounty);
+            } elseif ($house !== null && ! $victim) {
                 throw new GameException("{$house->name}'s store holds ".self::apples($house->apples).'. Members can give Apples from the Faction page.');
+            } else {
+                // The victim's own Apples.
+                $house = null;
             }
-
-            $house->decrement('apples', $bounty);
 
             Missions::record($player, 'bounty');
 
-            $warrant = Warrant::create([
+            $warrant = Warrant::query()->forceCreate([
                 'season_id' => $season->id,
                 'player_id' => $suspect->id,
-                'faction_id' => $house->id,
+                'faction_id' => $house?->id,
+                'issuer_id' => $house === null ? $player->id : null,
                 'bounty' => $bounty,
                 'status' => 'open',
             ]);
 
+            if ($house === null) {
+                Apples::spend($player, $bounty, "A bounty on {$suspect->name}", "bounty:{$warrant->id}:issue");
+            }
+
+            $from = $house?->name ?? $player->name;
             $wanted = route('play.wanted', [], false);
-            Notices::send($suspect->id, 'warrant', "🎯 {$house->name} put a warrant out for your arrest, with a bounty of {$bounty} Apples. Bounty hunters are coming.", $wanted);
-            Notices::send(Notices::valley($player->valley_id)->reject(fn (int $id) => $id === $suspect->id), 'warrant', "🎯 Wanted: {$suspect->name}, with a bounty of {$bounty} Apples from {$house->name}.", $wanted);
+            Notices::send($suspect->id, 'warrant', "🎯 {$from} put a warrant out for your arrest, with a bounty of {$bounty} Apples. Bounty hunters are coming.", $wanted);
+            Notices::send(Notices::valley($player->valley_id)->reject(fn (int $id) => $id === $suspect->id), 'warrant', "🎯 Wanted: {$suspect->name}, with a bounty of {$bounty} Apples from {$from}.", $wanted);
 
             return $warrant;
         });
@@ -278,8 +297,10 @@ final class Warrants
 
             $house = $warrant->bounty - $added->sum();
 
-            if ($house > 0) {
+            if ($house > 0 && $warrant->faction_id !== null) {
                 Faction::query()->whereKey($warrant->faction_id)->increment('apples', $house);
+            } elseif ($house > 0 && $warrant->issuer_id !== null && ($issuer = Player::find($warrant->issuer_id)) !== null) {
+                Apples::award($issuer, $house, "The warrant on {$warrant->wanted->name} lapsed", "bounty:{$warrant->id}:back:issuer");
             }
 
             $warrant->forceFill(['status' => 'lapsed'])->save();

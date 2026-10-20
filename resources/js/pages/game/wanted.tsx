@@ -10,6 +10,7 @@ import { act, clockTime, fromNow, speciesEmoji } from '@/lib/game';
 import { openChat } from '@/lib/pulse';
 import { play } from '@/routes';
 import { faction } from '@/routes/play';
+import { catchMethod as catchRoute } from '@/routes/play/crime';
 import { arrest, issue, raise } from '@/routes/play/warrant';
 import type { MessageAnimal } from '@/types/game';
 
@@ -42,6 +43,23 @@ type Props = {
             warranted: boolean;
         }[];
     } | null;
+    /** Who wronged you lately: catch them, or put a bounty on them. */
+    againstMe: {
+        crimeId: number;
+        animal: MessageAnimal;
+        deed: string;
+        at: string;
+        /** Until when you can still catch them for it. */
+        until: string;
+        lastSeen: string;
+        here: boolean;
+        inPound: boolean;
+        escapedUntil: string | null;
+        warranted: boolean;
+    }[];
+    /** Your own Apples, for a bounty of your own. */
+    apples: number;
+    catch: { horseshoes: number; chance: number; hours: number };
     rules: {
         minBounty: number;
         maxBounty: number;
@@ -56,7 +74,15 @@ type Props = {
  * The Wanted board: the House's warrants and their bounties, where each
  * outlaw was last seen, and for the House, the suspects its informants name.
  */
-export default function WantedPage({ warrants, caught, house, rules }: Props) {
+export default function WantedPage({
+    warrants,
+    caught,
+    house,
+    rules,
+    againstMe,
+    apples,
+    catch: catchRules,
+}: Props) {
     return (
         <>
             <Head title="Wanted" />
@@ -71,17 +97,28 @@ export default function WantedPage({ warrants, caught, house, rules }: Props) {
                         Wanted
                     </h1>
                     <p className="text-sm text-muted-foreground">
-                        Any faction's leader and council can put out a warrant,
-                        with a bounty from their faction's store, for animals
-                        the informants catch breaking the law. Walk to where an
-                        outlaw stands and try an arrest for {rules.horseshoes}{' '}
-                        horseshoes: it works {rules.chance}% of the time,{' '}
-                        {rules.dogChance}% for dogs. A catch sends them to the
-                        pound and pays you the bounty, less the game's share; a
-                        miss lets them slip away for {rules.escapeMinutes}{' '}
-                        minutes. Anyone can add Apples of their own to a bounty.
+                        Nobody goes to the pound by chance. The animal wronged
+                        catches the criminal, or puts a warrant out with a
+                        bounty from their own Apples; any faction's leader and
+                        council can too, from their faction's store. Walk to
+                        where an outlaw stands and try an arrest for{' '}
+                        {rules.horseshoes} horseshoes: it works {rules.chance}%
+                        of the time, {rules.dogChance}% for dogs. A catch sends
+                        them to the pound and pays you the bounty, less the
+                        game's share; a miss lets them slip away for{' '}
+                        {rules.escapeMinutes} minutes. Anyone can add Apples of
+                        their own to a bounty.
                     </p>
                 </header>
+
+                {againstMe.length > 0 && (
+                    <AgainstMe
+                        crimes={againstMe}
+                        apples={apples}
+                        rules={rules}
+                        catchRules={catchRules}
+                    />
+                )}
 
                 {warrants.length === 0 ? (
                     <p className="rounded-xl border border-dashed p-6 text-sm text-muted-foreground">
@@ -373,5 +410,133 @@ function Suspects({
                 </ul>
             )}
         </section>
+    );
+}
+
+/**
+ * Who wronged you lately. Nobody goes to the pound by chance: you catch
+ * them yourself where they stand, or put a bounty on them for others to.
+ */
+function AgainstMe({
+    crimes,
+    apples,
+    rules,
+    catchRules,
+}: {
+    crimes: Props['againstMe'];
+    apples: number;
+    rules: Props['rules'];
+    catchRules: Props['catch'];
+}) {
+    return (
+        <section className="flex flex-col gap-3 rounded-xl border border-red-500/40 bg-red-500/5 p-4">
+            <div>
+                <h2 className="flex items-center gap-2 text-lg font-bold">
+                    <Siren className="size-5 text-red-400" aria-hidden /> Crimes
+                    against you
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                    Walk to where they stand and catch them for{' '}
+                    {catchRules.horseshoes} horseshoes: it works{' '}
+                    {catchRules.chance}% of the time, less if they hide in a
+                    strong home. A catch sends them to the pound and they pay
+                    back what they took. You have {catchRules.hours} hours. Or
+                    put a bounty on them from your own Apples and let the bounty
+                    hunters do it.
+                </p>
+            </div>
+            <ul className="flex flex-col gap-2">
+                {crimes.map((crime) => (
+                    <AgainstMeRow
+                        key={crime.crimeId}
+                        crime={crime}
+                        apples={apples}
+                        rules={rules}
+                    />
+                ))}
+            </ul>
+        </section>
+    );
+}
+
+function AgainstMeRow({
+    crime,
+    apples,
+    rules,
+}: {
+    crime: Props['againstMe'][number];
+    apples: number;
+    rules: Props['rules'];
+}) {
+    const [bounty, setBounty] = useState(
+        Math.max(rules.minBounty, Math.min(20, apples)),
+    );
+    const why = crime.inPound
+        ? `${crime.animal.name} is already in the pound.`
+        : crime.escapedUntil
+          ? `${crime.animal.name} slipped away. Try again ${fromNow(crime.escapedUntil)}.`
+          : !crime.here
+            ? `${crime.animal.name} was last seen in ${crime.lastSeen}. Walk there first.`
+            : null;
+
+    return (
+        <li className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border bg-card p-3 text-sm">
+            <span className="text-xl" aria-hidden>
+                {speciesEmoji(crime.animal.species)}
+            </span>
+            <div className="min-w-0 flex-1">
+                <p className="font-semibold">
+                    <ProfileLink animal={crime.animal} /> {crime.deed}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                    {clockTime(crime.at)} · last seen in {crime.lastSeen} ·
+                    catch them {fromNow(crime.until)} at the latest
+                </p>
+            </div>
+            <Button
+                size="sm"
+                variant="destructive"
+                disabled={why !== null}
+                onClick={() => act(catchRoute.url(crime.crimeId))}
+            >
+                <Gavel className="size-4" /> Catch them
+            </Button>
+            {crime.warranted ? (
+                <span className="text-xs font-semibold text-orange-300">
+                    🎯 A warrant is out for them
+                </span>
+            ) : (
+                <div className="flex items-center gap-2">
+                    <Input
+                        type="number"
+                        min={rules.minBounty}
+                        max={rules.maxBounty}
+                        value={bounty}
+                        onChange={(e) => setBounty(Number(e.target.value))}
+                        className="h-8 w-20"
+                        aria-label="Bounty in Apples"
+                    />
+                    <Button
+                        size="sm"
+                        variant="secondary"
+                        disabled={bounty < rules.minBounty || bounty > apples}
+                        onClick={() =>
+                            act(issue.url(), {
+                                player_id: crime.animal.id,
+                                bounty,
+                            })
+                        }
+                    >
+                        🎯 Put a bounty
+                    </Button>
+                </div>
+            )}
+            <WhyNot reason={why} />
+            {!crime.warranted && bounty > apples && (
+                <WhyNot
+                    reason={`You have ${apples} Apples. Swap Pineapples for Apples on the Apples page.`}
+                />
+            )}
+        </li>
     );
 }

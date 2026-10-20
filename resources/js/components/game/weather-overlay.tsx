@@ -87,6 +87,12 @@ export const WeatherOverlay = memo(function WeatherOverlay({
                     from { transform: translate3d(0, -10vh, 0) rotate(0deg); }
                     to { transform: translate3d(var(--sway), 110vh, 0) rotate(360deg); }
                 }
+                @keyframes weather-wind {
+                    0% { transform: translateX(-30vw) scaleX(0.6); opacity: 0; }
+                    15% { opacity: 0.55; }
+                    85% { opacity: 0.4; }
+                    100% { transform: translateX(130vw) scaleX(1.2); opacity: 0; }
+                }
                 @keyframes weather-glint {
                     0%, 100% { opacity: 0; transform: scale(0.6); }
                     50% { opacity: 0.8; transform: scale(1.1); }
@@ -104,6 +110,20 @@ export const WeatherOverlay = memo(function WeatherOverlay({
                     }}
                 />
             )}
+            {/* The wind, gusting across the valley and the sea. */}
+            {scatter(7, 4242).map(([y, delay, speed, size], i) => (
+                <span
+                    key={`wind-${i}`}
+                    className="weather-bit absolute left-0 h-px rounded-full"
+                    style={{
+                        top: `${(8 + y * 84).toFixed(1)}%`,
+                        width: `${(80 + size * 140).toFixed(0)}px`,
+                        background:
+                            'linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,0.7), rgba(255,255,255,0))',
+                        animation: `weather-wind ${(5 + speed * 5).toFixed(2)}s ease-in ${(delay * 9).toFixed(2)}s infinite`,
+                    }}
+                />
+            ))}
             {bits.map(([x, delay, speed, size], i) => (
                 <span
                     key={i}
@@ -121,7 +141,7 @@ export const WeatherOverlay = memo(function WeatherOverlay({
                                     ? 'rgba(255,255,255,0.85)'
                                     : '#ffe9a8',
                             opacity: now === 'winter' ? 0.55 + size * 0.4 : 0.9,
-                            '--sway': `${((size - 0.5) * look.sway * 2).toFixed(0)}px`,
+                            '--sway': `${(look.sway + size * look.sway * 2).toFixed(0)}px`,
                             animation:
                                 now === 'summer'
                                     ? `weather-glint ${(2.5 + speed * 3).toFixed(2)}s ease-in-out ${(delay * 4).toFixed(2)}s infinite`

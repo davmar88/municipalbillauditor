@@ -6,6 +6,7 @@ import {
     FRONTIER_KIND,
     FIELD_SHAPES,
     FIELDS,
+    REACH,
     SHAPES,
     WORLD,
     scrubPoints,
@@ -528,6 +529,167 @@ const Scrub = memo(function Scrub() {
     );
 });
 
+/** How far out the sea reaches past the valley, to fill the view however far you drag. */
+const SEA = 9000;
+
+/** How wide the sand is between the valley's edge and the surf. */
+const SAND = 240;
+
+/** A rounded rectangle round the valley, grown by `by`. */
+function shore(by: number) {
+    return {
+        x: REACH.x - by,
+        y: REACH.y - by,
+        width: REACH.width + by * 2,
+        height: REACH.height + by * 2,
+        rx: 180 + by,
+    };
+}
+
+/**
+ * The sea all round the valley: rolling swells, surf breaking on a beach,
+ * and the wind blowing foam across the water.
+ */
+function Ocean() {
+    const beach = shore(SAND);
+
+    return (
+        <g>
+            <defs>
+                <linearGradient id="sea" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0" stopColor="#0a3a5c" />
+                    <stop offset="0.5" stopColor="#0d4f78" />
+                    <stop offset="1" stopColor="#0a3a5c" />
+                </linearGradient>
+                <pattern
+                    id="swell"
+                    width={240}
+                    height={90}
+                    patternUnits="userSpaceOnUse"
+                >
+                    <path
+                        d="M0 45 Q30 25 60 45 T120 45 T180 45 T240 45"
+                        fill="none"
+                        stroke="#7fd3ff"
+                        strokeOpacity={0.22}
+                        strokeWidth={3}
+                        strokeLinecap="round"
+                    />
+                    <path
+                        d="M-60 85 Q-30 70 0 85 T60 85 T120 85 T180 85 T240 85"
+                        fill="none"
+                        stroke="#bfe9ff"
+                        strokeOpacity={0.12}
+                        strokeWidth={2}
+                    />
+                    <animateTransform
+                        attributeName="patternTransform"
+                        type="translate"
+                        from="0 0"
+                        to="240 90"
+                        dur="14s"
+                        repeatCount="indefinite"
+                    />
+                </pattern>
+                <linearGradient id="sand" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0" stopColor="#e2cc94" />
+                    <stop offset="1" stopColor="#c9ad6f" />
+                </linearGradient>
+            </defs>
+            <rect
+                x={REACH.x - SEA}
+                y={REACH.y - SEA}
+                width={REACH.width + SEA * 2}
+                height={REACH.height + SEA * 2}
+                fill="url(#sea)"
+            />
+            <rect
+                x={REACH.x - SEA}
+                y={REACH.y - SEA}
+                width={REACH.width + SEA * 2}
+                height={REACH.height + SEA * 2}
+                fill="url(#swell)"
+            />
+            {/* Swells rolling in to the shore, one after another. */}
+            {[0, 1, 2, 3].map((i) => (
+                <rect
+                    key={i}
+                    {...shore(SAND + 40)}
+                    fill="none"
+                    stroke="#d9f3ff"
+                    strokeWidth={10}
+                    strokeOpacity={0}
+                >
+                    <animate
+                        attributeName="stroke-opacity"
+                        values="0;0.35;0"
+                        dur="6s"
+                        begin={`${i * 1.5}s`}
+                        repeatCount="indefinite"
+                    />
+                    <animate
+                        attributeName="x"
+                        values={`${REACH.x - SAND - 420};${REACH.x - SAND - 30}`}
+                        dur="6s"
+                        begin={`${i * 1.5}s`}
+                        repeatCount="indefinite"
+                    />
+                    <animate
+                        attributeName="y"
+                        values={`${REACH.y - SAND - 420};${REACH.y - SAND - 30}`}
+                        dur="6s"
+                        begin={`${i * 1.5}s`}
+                        repeatCount="indefinite"
+                    />
+                    <animate
+                        attributeName="width"
+                        values={`${REACH.width + (SAND + 420) * 2};${REACH.width + (SAND + 30) * 2}`}
+                        dur="6s"
+                        begin={`${i * 1.5}s`}
+                        repeatCount="indefinite"
+                    />
+                    <animate
+                        attributeName="height"
+                        values={`${REACH.height + (SAND + 420) * 2};${REACH.height + (SAND + 30) * 2}`}
+                        dur="6s"
+                        begin={`${i * 1.5}s`}
+                        repeatCount="indefinite"
+                    />
+                </rect>
+            ))}
+            {/* Wet sand where the waves wash up and draw back. */}
+            <rect {...shore(SAND + 40)} fill="#8fb7b4" opacity={0.55}>
+                <animate
+                    attributeName="opacity"
+                    values="0.35;0.7;0.35"
+                    dur="6s"
+                    repeatCount="indefinite"
+                />
+            </rect>
+            <rect {...beach} fill="url(#sand)" />
+            {/* The surf, breaking white along the beach. */}
+            <rect
+                {...shore(SAND + 8)}
+                fill="none"
+                stroke="#ffffff"
+                strokeWidth={14}
+                strokeOpacity={0.75}
+                strokeDasharray="60 24 20 30"
+                strokeLinecap="round"
+                className="map-surf"
+            />
+            <rect
+                {...shore(SAND - 30)}
+                fill="none"
+                stroke="#b89a5c"
+                strokeWidth={3}
+                strokeDasharray="4 22"
+                opacity={0.6}
+            />
+        </g>
+    );
+}
+
 function Surroundings() {
     const edge = trees(
         [
@@ -623,18 +785,21 @@ function Surroundings() {
 
     return (
         <g>
+            <Ocean />
             <rect
-                x={WORLD.x}
-                y={WORLD.y}
-                width={WORLD.width}
-                height={WORLD.height}
+                x={REACH.x}
+                y={REACH.y}
+                width={REACH.width}
+                height={REACH.height}
+                rx={180}
                 fill={INK.beyond}
             />
             <rect
                 x={1490}
-                y={WORLD.y}
-                width={WORLD.x + WORLD.width - 1490}
-                height={WORLD.height}
+                y={REACH.y}
+                width={REACH.x + REACH.width - 1490}
+                height={REACH.height}
+                rx={180}
                 fill="url(#ironfield)"
             />
             <path
