@@ -284,17 +284,13 @@
     animation: map-ping 2.2s cubic-bezier(0, 0, 0.2, 1) infinite;
 }
 
-/* While a phone's map moves, its details step aside so it slides smoothly. */
-svg[data-moving] .map-detail {
-    visibility: hidden;
-}
-
 /* A phone keeps the map still: it's far quicker there. */
 @media (pointer: coarse) {
     .map-march,
     .map-surf,
     .map-shimmer,
-    .map-sails {
+    .map-sails,
+    .map-ping {
         animation: none;
     }
 }

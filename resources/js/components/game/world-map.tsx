@@ -1,6 +1,14 @@
 import { LocateFixed, Minus, Plus, Scan } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+    memo,
+    useCallback,
+    useEffect,
+    useLayoutEffect,
+    useMemo,
+    useRef,
+    useState,
+} from 'react';
 import { AnimalMenu } from '@/components/game/animal-menu';
 import { FolkCard, folkFace } from '@/components/game/irongate-folk';
 import {
@@ -180,6 +188,7 @@ const LONG_PRESS_MS = 500;
 function useCamera(
     container: React.RefObject<HTMLDivElement | null>,
     svg: React.RefObject<SVGSVGElement | null>,
+    stage: React.RefObject<HTMLDivElement | null>,
     focus: Point | null,
     onTap: (target: Element | null, world: Point) => void,
     onInfo: (target: Element | null, world: Point) => void,
@@ -214,23 +223,56 @@ function useCamera(
         }
     };
 
+    // What the map was last drawn at. On a phone, a moving map slides that
+    // drawing as a picture, and is drawn afresh once it stops.
+    const shownRef = useRef(view);
+    const slide = useCallback(() => {
+        const element = stage.current;
+
+        if (!element) {
+            return;
+        }
+
+        const shown = shownRef.current;
+        const live = viewRef.current;
+        const s = live.k / shown.k;
+        element.style.transform =
+            shown === live
+                ? ''
+                : `translate(${(live.x - shown.x * s).toFixed(2)}px, ${(live.y - shown.y * s).toFixed(2)}px) scale(${s.toFixed(5)})`;
+    }, [stage]);
+    useLayoutEffect(() => {
+        shownRef.current = view;
+        slide();
+    }, [view, slide]);
+
     // While the map moves (a drag, a pinch, a glide, a fly), and a moment after.
     const [moving, setMoving] = useState(false);
     const movingRef = useRef<number | null>(null);
-    const apply = useCallback((next: View) => {
-        const clamped = clampView(next, sizeRef.current);
-        viewRef.current = clamped;
-        setView(clamped);
-        if (movingRef.current === null) {
-            setMoving(true);
-        } else {
-            window.clearTimeout(movingRef.current);
-        }
-        movingRef.current = window.setTimeout(() => {
-            movingRef.current = null;
-            setMoving(false);
-        }, 220);
-    }, []);
+    const apply = useCallback(
+        (next: View) => {
+            const clamped = clampView(next, sizeRef.current);
+            viewRef.current = clamped;
+
+            if (PHONE && shownRef.current.k > 0) {
+                slide();
+            } else {
+                setView(clamped);
+            }
+
+            if (movingRef.current === null) {
+                setMoving(true);
+            } else {
+                window.clearTimeout(movingRef.current);
+            }
+            movingRef.current = window.setTimeout(() => {
+                movingRef.current = null;
+                setMoving(false);
+                setView(viewRef.current);
+            }, 160);
+        },
+        [slide],
+    );
 
     const stop = useCallback(() => {
         if (frame.current !== null) {
@@ -357,7 +399,7 @@ function useCamera(
             sizeRef.current = { width, height };
             setSize({ width, height });
 
-            if (!old || viewRef.current.k === 0) {
+            if (!old || !(viewRef.current.k > 0)) {
                 apply(firstView({ width, height }, focusRef.current));
 
                 return;
@@ -389,7 +431,7 @@ function useCamera(
         // A native listener, so the page doesn't scroll while the map zooms.
         const onWheel = (event: WheelEvent) => {
             event.preventDefault();
-            const rect = element.getBoundingClientRect();
+            const rect = container.current!.getBoundingClientRect();
             const unit =
                 event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? 400 : 1;
             const factor = Math.exp(
@@ -404,12 +446,12 @@ function useCamera(
         element.addEventListener('wheel', onWheel, { passive: false });
 
         return () => element.removeEventListener('wheel', onWheel);
-    }, [svg, zoomAt]);
+    }, [svg, container, zoomAt]);
 
     useEffect(() => stop, [stop]);
 
     const local = (event: { clientX: number; clientY: number }): Point => {
-        const rect = svg.current!.getBoundingClientRect();
+        const rect = container.current!.getBoundingClientRect();
 
         return [event.clientX - rect.left, event.clientY - rect.top];
     };
@@ -1478,97 +1520,109 @@ const Crowd = memo(function Crowd({
 const Homes = memo(function Homes({
     homes,
     k,
+    seen,
 }: {
     homes: MapHome[];
     k: number;
+    seen: Seen | null;
 }) {
     return (
         <g pointerEvents="none">
-            {homes.map((home) => {
-                const w = 16 + home.level * 5;
-                const wall = home.skin?.colours[1] ?? '#cfc3ad';
-                const roof = home.skin?.colours[0] ?? '#6a6479';
+            {homes
+                .filter((home) => inSeen(seen, home.x, home.y))
+                .map((home) => {
+                    const w = 16 + home.level * 5;
+                    const wall = home.skin?.colours[1] ?? '#cfc3ad';
+                    const roof = home.skin?.colours[0] ?? '#6a6479';
 
-                if (home.fire === 'ash') {
+                    if (home.fire === 'ash') {
+                        return (
+                            <g
+                                key={home.id}
+                                transform={`translate(${home.x.toFixed(1)} ${home.y.toFixed(1)}) scale(${HOME_SIZE / OBJECT_FLOOR})`}
+                            >
+                                {!PHONE && (
+                                    <title>{`The ashes of ${home.owner.name}'s ${home.name}`}</title>
+                                )}
+                                <Ashes w={w} />
+                                <HealthBar value={0} y={-w * 0.55} width={w} />
+                            </g>
+                        );
+                    }
+
                     return (
                         <g
                             key={home.id}
                             transform={`translate(${home.x.toFixed(1)} ${home.y.toFixed(1)}) scale(${HOME_SIZE / OBJECT_FLOOR})`}
+                            opacity={home.readyAt ? 0.6 : 1}
                         >
-                            <title>{`The ashes of ${home.owner.name}'s ${home.name}`}</title>
-                            <Ashes w={w} />
-                            <HealthBar value={0} y={-w * 0.55} width={w} />
+                            {!PHONE && (
+                                <title>{`${home.owner.name}'s ${home.name}`}</title>
+                            )}
+                            {home.level === 0 ? (
+                                <>
+                                    <path
+                                        d="M-11 8L0 -10L11 8z"
+                                        fill={
+                                            roof === '#6a6479'
+                                                ? '#b9a57c'
+                                                : roof
+                                        }
+                                        stroke={home.mine ? VIOLET : HALO}
+                                        strokeWidth={home.mine ? 2.4 : 1.2}
+                                        strokeDasharray={
+                                            home.readyAt ? '3 2' : undefined
+                                        }
+                                    />
+                                    <path d="M-2 8L0 0L2 8z" fill="#3a2a1e" />
+                                </>
+                            ) : (
+                                <>
+                                    <rect
+                                        x={-w / 2}
+                                        y={-w * 0.3}
+                                        width={w}
+                                        height={w * 0.75}
+                                        fill={wall}
+                                        stroke={home.mine ? VIOLET : HALO}
+                                        strokeWidth={home.mine ? 2.4 : 1.2}
+                                        strokeDasharray={
+                                            home.readyAt ? '3 2' : undefined
+                                        }
+                                    />
+                                    {home.level === 3 ? (
+                                        <path
+                                            d={`M${-w / 2} ${-w * 0.3}v${-w * 0.3}h${w / 5}v${w * 0.15}h${w / 5}v${-w * 0.15}h${w / 5}v${w * 0.15}h${w / 5}v${-w * 0.15}h${w / 5}v${w * 0.3}z`}
+                                            fill={roof}
+                                            stroke={HALO}
+                                            strokeWidth={1}
+                                        />
+                                    ) : (
+                                        <path
+                                            d={`M${-w / 2 - 2} ${-w * 0.3}L0 ${-w * 0.85}L${w / 2 + 2} ${-w * 0.3}z`}
+                                            fill={roof}
+                                            stroke={HALO}
+                                            strokeWidth={1}
+                                        />
+                                    )}
+                                    <rect
+                                        x={-w * 0.1}
+                                        y={w * 0.1}
+                                        width={w * 0.2}
+                                        height={w * 0.35}
+                                        fill="#3a2a1e"
+                                    />
+                                </>
+                            )}
+                            {home.fire === 'burning' && <Flames w={w} />}
+                            <HealthBar
+                                value={home.health ?? 100}
+                                y={-w * (home.level === 0 ? 0.75 : 1.05)}
+                                width={Math.max(18, w)}
+                            />
                         </g>
                     );
-                }
-
-                return (
-                    <g
-                        key={home.id}
-                        transform={`translate(${home.x.toFixed(1)} ${home.y.toFixed(1)}) scale(${HOME_SIZE / OBJECT_FLOOR})`}
-                        opacity={home.readyAt ? 0.6 : 1}
-                    >
-                        <title>{`${home.owner.name}'s ${home.name}`}</title>
-                        {home.level === 0 ? (
-                            <>
-                                <path
-                                    d="M-11 8L0 -10L11 8z"
-                                    fill={roof === '#6a6479' ? '#b9a57c' : roof}
-                                    stroke={home.mine ? VIOLET : HALO}
-                                    strokeWidth={home.mine ? 2.4 : 1.2}
-                                    strokeDasharray={
-                                        home.readyAt ? '3 2' : undefined
-                                    }
-                                />
-                                <path d="M-2 8L0 0L2 8z" fill="#3a2a1e" />
-                            </>
-                        ) : (
-                            <>
-                                <rect
-                                    x={-w / 2}
-                                    y={-w * 0.3}
-                                    width={w}
-                                    height={w * 0.75}
-                                    fill={wall}
-                                    stroke={home.mine ? VIOLET : HALO}
-                                    strokeWidth={home.mine ? 2.4 : 1.2}
-                                    strokeDasharray={
-                                        home.readyAt ? '3 2' : undefined
-                                    }
-                                />
-                                {home.level === 3 ? (
-                                    <path
-                                        d={`M${-w / 2} ${-w * 0.3}v${-w * 0.3}h${w / 5}v${w * 0.15}h${w / 5}v${-w * 0.15}h${w / 5}v${w * 0.15}h${w / 5}v${-w * 0.15}h${w / 5}v${w * 0.3}z`}
-                                        fill={roof}
-                                        stroke={HALO}
-                                        strokeWidth={1}
-                                    />
-                                ) : (
-                                    <path
-                                        d={`M${-w / 2 - 2} ${-w * 0.3}L0 ${-w * 0.85}L${w / 2 + 2} ${-w * 0.3}z`}
-                                        fill={roof}
-                                        stroke={HALO}
-                                        strokeWidth={1}
-                                    />
-                                )}
-                                <rect
-                                    x={-w * 0.1}
-                                    y={w * 0.1}
-                                    width={w * 0.2}
-                                    height={w * 0.35}
-                                    fill="#3a2a1e"
-                                />
-                            </>
-                        )}
-                        {home.fire === 'burning' && <Flames w={w} />}
-                        <HealthBar
-                            value={home.health ?? 100}
-                            y={-w * (home.level === 0 ? 0.75 : 1.05)}
-                            width={Math.max(18, w)}
-                        />
-                    </g>
-                );
-            })}
+                })}
         </g>
     );
 });
@@ -1588,7 +1642,7 @@ export function HealthBar({
 
     return (
         <g transform={`translate(${(-width / 2).toFixed(1)} ${y.toFixed(1)})`}>
-            <title>{`Health ${Math.round(v)}/100`}</title>
+            {!PHONE && <title>{`Health ${Math.round(v)}/100`}</title>}
             <rect
                 width={width}
                 height={4}
@@ -1599,6 +1653,28 @@ export function HealthBar({
             />
             <rect width={(width * v) / 100} height={4} rx={2} fill={fill} />
         </g>
+    );
+}
+
+/** A rooftop's size and colour, by the kind of building under it. */
+function lotLook(model: string) {
+    const tall = /^[46]Story/.test(model);
+    const mid = /^3Story|Balcony|Wide/.test(model);
+    const [w, h] = /Slim/.test(model)
+        ? [26, 52]
+        : /Wide/.test(model)
+          ? [52, 92]
+          : [50, 54];
+
+    return { w, h, roof: tall ? '#6c7380' : mid ? '#8a6f5a' : '#a3735c' };
+}
+
+/** The part of the world near the screen, on a phone, so far-off things aren't drawn. */
+type Seen = { x0: number; y0: number; x1: number; y1: number };
+
+function inSeen(seen: Seen | null, x: number, y: number) {
+    return (
+        !seen || (x >= seen.x0 && x <= seen.x1 && y >= seen.y0 && y <= seen.y1)
     );
 }
 
@@ -1613,6 +1689,48 @@ const IronfieldTown = memo(function IronfieldTown({
         () => cityLots(ironfield, shapeFor, labelPoint),
         [ironfield.length], // eslint-disable-line react-hooks/exhaustive-deps
     );
+
+    const flat = useMemo(() => {
+        if (!PHONE) {
+            return null;
+        }
+
+        const roofs = new Map<string, string>();
+        let ridges = '';
+
+        for (const lot of lots) {
+            const { w, h, roof } = lotLook(lot.model);
+            const c = Math.cos(lot.turn);
+            const sn = Math.sin(lot.turn);
+            const at = (px: number, py: number) =>
+                `${(lot.x + px * c - py * sn).toFixed(1)} ${(lot.y + px * sn + py * c).toFixed(1)}`;
+            roofs.set(
+                roof,
+                (roofs.get(roof) ?? '') +
+                    `M${at(-w / 2, -h / 2)}L${at(w / 2, -h / 2)}L${at(w / 2, h / 2)}L${at(-w / 2, h / 2)}z`,
+            );
+            ridges += `M${at(-w / 2, 0)}L${at(w / 2, 0)}`;
+        }
+
+        return { roofs: [...roofs], ridges };
+    }, [lots]);
+
+    if (flat) {
+        return (
+            <g pointerEvents="none">
+                {flat.roofs.map(([roof, d]) => (
+                    <path
+                        key={roof}
+                        d={d}
+                        fill={roof}
+                        stroke="#2b2b31"
+                        strokeWidth={1.5}
+                    />
+                ))}
+                <path d={flat.ridges} stroke="#00000055" strokeWidth={1.5} />
+            </g>
+        );
+    }
 
     return (
         <g pointerEvents="none">
@@ -2538,6 +2656,7 @@ export function WorldMap({
 }: WorldMapProps) {
     const containerRef = useRef<HTMLDivElement>(null);
     const svgRef = useRef<SVGSVGElement>(null);
+    const stageRef = useRef<HTMLDivElement>(null);
     // On a phone the map holds still: flames, embers, the sea and its surf don't move, so it isn't redrawn nonstop.
     useEffect(() => {
         if (PHONE) {
@@ -2646,6 +2765,7 @@ export function WorldMap({
     const camera = useCamera(
         containerRef,
         svgRef,
+        stageRef,
         herePoint,
         onTap,
         onInfo,
@@ -2704,6 +2824,29 @@ export function WorldMap({
 
     const pick = useCallback((id: number) => onSelect(id), [onSelect]);
     const k = view.k || 1;
+    const GRID = 300;
+    const near =
+        PHONE && size && view.k > 0
+            ? [
+                  Math.floor((-view.x - size.width) / k / GRID),
+                  Math.floor((-view.y - size.height) / k / GRID),
+                  Math.ceil((2 * size.width - view.x) / k / GRID),
+                  Math.ceil((2 * size.height - view.y) / k / GRID),
+              ]
+            : null;
+    const nearKey = near?.join(',') ?? '';
+    const seen = useMemo<Seen | null>(
+        () =>
+            near
+                ? {
+                      x0: near[0] * GRID,
+                      y0: near[1] * GRID,
+                      x1: near[2] * GRID,
+                      y1: near[3] * GRID,
+                  }
+                : null,
+        [nearKey], // eslint-disable-line react-hooks/exhaustive-deps
+    );
     const scale = (() => {
         // A scale bar of a round number of paces, about 90 pixels long.
         const paces = [25, 50, 100, 200, 400].find((p) => p * k >= 70) ?? 400;
@@ -2716,94 +2859,119 @@ export function WorldMap({
             ref={containerRef}
             className="dark relative h-[calc(100svh-15rem)] min-h-[400px] w-full overflow-hidden rounded-2xl border border-[#2e2e32] bg-[#0b3a5c] text-foreground md:h-[calc(100svh-10.5rem)] md:min-h-[520px]"
         >
-            <svg
-                ref={svgRef}
-                className={cn(
-                    'absolute inset-0 size-full touch-none outline-none select-none [-webkit-touch-callout:none]',
-                    camera.dragging ? 'cursor-grabbing' : 'cursor-grab',
-                )}
-                // On a phone, the details step aside while the map moves, so it slides smoothly.
-                data-moving={PHONE && camera.moving ? '' : undefined}
-                role="group"
-                aria-label={`Map of ${valley}. Drag to look around, scroll or pinch to zoom, tap a spot to walk there, and press and hold or right-click to see what's there.`}
-                tabIndex={0}
-                {...camera.handlers}
-                onPointerDownCapture={() => {
-                    setMenu(null);
-                    setPerson(null);
+            <div
+                ref={stageRef}
+                className="absolute inset-0"
+                style={{
+                    transformOrigin: '0 0',
+                    willChange: PHONE ? 'transform' : undefined,
                 }}
             >
-                <defs>
-                    <linearGradient id="house-edge" x1="0" y1="0" x2="1" y2="1">
-                        <stop offset="0" stopColor="#41d1ff" />
-                        <stop offset="0.5" stopColor="#b39aff" />
-                        <stop offset="1" stopColor="#d18cff" />
-                    </linearGradient>
-                </defs>
-                {ready && (
-                    <g
-                        transform={`translate(${view.x.toFixed(2)} ${view.y.toFixed(2)}) scale(${view.k.toFixed(4)})`}
-                    >
-                        <MapGround />
-                        <Territory regions={regions} />
-                        <MapFeatures />
-                        <Borders
-                            regions={regions}
-                            houseId={house?.id ?? null}
-                            houseColour={house?.colour ?? null}
-                            houseBanner={house?.banner ?? null}
-                            selectedId={selectedId}
-                        />
-                        <HitAreas
-                            regions={regions}
-                            selectedId={selectedId}
-                            onPick={pick}
-                        />
-                        <g className="map-detail">
-                            <Trenches regions={regions} />
-                            <Marches
+                <svg
+                    ref={svgRef}
+                    className={cn(
+                        'absolute inset-0 size-full touch-none outline-none select-none [-webkit-touch-callout:none]',
+                        camera.dragging ? 'cursor-grabbing' : 'cursor-grab',
+                    )}
+                    role="group"
+                    aria-label={`Map of ${valley}. Drag to look around, scroll or pinch to zoom, tap a spot to walk there, and press and hold or right-click to see what's there.`}
+                    tabIndex={0}
+                    {...camera.handlers}
+                    onPointerDownCapture={() => {
+                        setMenu(null);
+                        setPerson(null);
+                    }}
+                >
+                    <defs>
+                        <linearGradient
+                            id="house-edge"
+                            x1="0"
+                            y1="0"
+                            x2="1"
+                            y2="1"
+                        >
+                            <stop offset="0" stopColor="#41d1ff" />
+                            <stop offset="0.5" stopColor="#b39aff" />
+                            <stop offset="1" stopColor="#d18cff" />
+                        </linearGradient>
+                    </defs>
+                    {ready && (
+                        <g
+                            transform={`translate(${view.x.toFixed(2)} ${view.y.toFixed(2)}) scale(${view.k.toFixed(4)})`}
+                        >
+                            <MapGround />
+                            <Territory regions={regions} />
+                            <MapFeatures />
+                            <Borders
                                 regions={regions}
-                                k={k}
-                                gateNight={gateNight}
-                            />
-                            <Labels
-                                regions={regions}
-                                k={k}
                                 houseId={house?.id ?? null}
-                                gateNight={gateNight}
-                                gateResult={gateResult}
+                                houseColour={house?.colour ?? null}
+                                houseBanner={house?.banner ?? null}
+                                selectedId={selectedId}
                             />
-                            <Bases regions={regions} k={k} />
-                            <IronfieldTown regions={regions} />
-                            <LandFires regions={regions} />
-                            {homes && <Homes homes={homes} k={k} />}
-                            {loot && loot.length > 0 && (
-                                <LootPiles loot={loot} k={k} />
+                            <HitAreas
+                                regions={regions}
+                                selectedId={selectedId}
+                                onPick={pick}
+                            />
+                            <g className="map-detail">
+                                <Trenches regions={regions} />
+                                <Marches
+                                    regions={regions}
+                                    k={k}
+                                    gateNight={gateNight}
+                                />
+                                <Labels
+                                    regions={regions}
+                                    k={k}
+                                    houseId={house?.id ?? null}
+                                    gateNight={gateNight}
+                                    gateResult={gateResult}
+                                />
+                                <Bases regions={regions} k={k} />
+                                <IronfieldTown regions={regions} />
+                                <LandFires regions={regions} />
+                                {homes && (
+                                    <Homes homes={homes} k={k} seen={seen} />
+                                )}
+                                {loot && loot.length > 0 && (
+                                    <LootPiles loot={loot} k={k} />
+                                )}
+                                {irongate && (
+                                    <Folk folk={irongate.folk} k={k} />
+                                )}
+                                <Crowd
+                                    regions={regions}
+                                    k={k}
+                                    wanted={wanted}
+                                />
+                                {walkers && walkers.length > 0 && (
+                                    <OtherWalks walkers={walkers} k={k} />
+                                )}
+                                {strikes && strikes.length > 0 && (
+                                    <Strikes strikes={strikes} k={k} />
+                                )}
+                            </g>
+                            {me?.walk && herePoint && (
+                                <WalkLine
+                                    from={herePoint}
+                                    to={me.walk.to}
+                                    k={k}
+                                />
                             )}
-                            {irongate && <Folk folk={irongate.folk} k={k} />}
-                            <Crowd regions={regions} k={k} wanted={wanted} />
-                            {walkers && walkers.length > 0 && (
-                                <OtherWalks walkers={walkers} k={k} />
-                            )}
-                            {strikes && strikes.length > 0 && (
-                                <Strikes strikes={strikes} k={k} />
+                            {herePoint && species && (
+                                <Me
+                                    at={herePoint}
+                                    species={species}
+                                    k={k}
+                                    walking={me?.walk != null}
+                                    health={myHealth ?? null}
+                                />
                             )}
                         </g>
-                        {me?.walk && herePoint && (
-                            <WalkLine from={herePoint} to={me.walk.to} k={k} />
-                        )}
-                        {herePoint && species && (
-                            <Me
-                                at={herePoint}
-                                species={species}
-                                k={k}
-                                walking={me?.walk != null}
-                                health={myHealth ?? null}
-                            />
-                        )}
-                    </g>
-                )}
-            </svg>
+                    )}
+                </svg>
+            </div>
 
             <div className="pointer-events-none absolute top-3 right-3 flex flex-col gap-2">
                 <div className="pointer-events-auto flex flex-col overflow-hidden rounded-xl border bg-card/90 shadow-lg backdrop-blur">
