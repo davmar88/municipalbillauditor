@@ -38,7 +38,7 @@ class PageController extends Controller
     public function updates(): View
     {
         return view('site.updates', [
-            'days' => GameUpdate::query()->latest('published_on')->orderByDesc('kind')->latest('id')->limit(200)->get()
+            'days' => GameUpdate::query()->latest('published_on')->orderByDesc('kind')->orderBy('id')->limit(200)->get()
                 ->groupBy(fn (GameUpdate $update) => $update->published_on->toDateString()),
         ]);
     }
