@@ -100,7 +100,7 @@ class AnimalProfileTest extends TestCase
             // Without etc(), any key not named here fails the test.
             ->has('animal', fn (Assert $animal) => $animal->hasAll([
                 'id', 'name', 'species', 'faction', 'colour', 'orchard', 'speciesLabel', 'role', 'talent', 'weakSpot',
-                'factionRole', 'level', 'rosettes', 'levelFrom', 'nextLevelAt', 'seasonRosettes', 'joined', 'inPoundUntil', 'homeClosed',
+                'factionRole', 'factionId', 'level', 'rosettes', 'levelFrom', 'nextLevelAt', 'seasonRosettes', 'joined', 'inPoundUntil', 'homeClosed',
             ]))
             ->has('record', fn (Assert $record) => $record->hasAll(['battles', 'gates', 'arrests', 'exposes', 'missions', 'sales', 'designs', 'caught']))
             ->where('bounty', null)

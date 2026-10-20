@@ -145,7 +145,7 @@ class FactionController extends Controller
                         'id' => $target->id,
                         'name' => $target->name,
                         'faction' => $target->faction?->name ?? 'lone wolf',
-                        'protected' => $target->isShielded() || $target->homeIsClosed(),
+                        'protected' => $target->homeIsClosed(),
                     ]),
                 'history' => Crime::query()->with(['targetFaction:id,name', 'targetPlayer:id,name', 'region:id,name'])->where('player_id', $player->id)->latest('id')->limit(5)->get()
                     ->map(fn (Crime $crime) => [

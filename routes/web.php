@@ -17,6 +17,7 @@ use App\Http\Controllers\Game\ChatController;
 use App\Http\Controllers\Game\CrimeController;
 use App\Http\Controllers\Game\ExchangeController;
 use App\Http\Controllers\Game\FactionController;
+use App\Http\Controllers\Game\FactionProfileController;
 use App\Http\Controllers\Game\GiftController;
 use App\Http\Controllers\Game\HomeController;
 use App\Http\Controllers\Game\IrongateController;
@@ -98,6 +99,7 @@ Route::middleware(['auth', 'verified', 'player', 'throttle:120,1'])->prefix('pla
 
     Route::get('faction', [FactionController::class, 'index'])->name('play.faction');
     Route::post('factions', [FactionController::class, 'store'])->name('play.faction.store');
+    Route::get('factions/{faction}', [FactionProfileController::class, 'show'])->name('play.factions.show');
     Route::post('factions/{faction}/join', [FactionController::class, 'join'])->name('play.faction.join');
     Route::post('faction/requests/{joinRequest}/answer', [FactionController::class, 'answer'])->name('play.faction.answer');
     Route::post('faction/leave', [FactionController::class, 'leave'])->name('play.faction.leave');

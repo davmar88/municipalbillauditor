@@ -79,4 +79,30 @@ class BannersAndExchangeTest extends TestCase
             ->where('least.0.name', 'Old Fork')
             ->where('kinds.0.kind', 'Hat'));
     }
+
+    public function test_anyone_in_the_valley_sees_a_factions_page_and_the_map_flies_its_banner(): void
+    {
+        $leader = $this->player();
+        $faction = $this->faction('Open Book', $leader, $this->player());
+        $this->hold($faction, 'thornbury');
+        $faction->forceFill(['banner' => ['mode' => 'pattern', 'pattern' => 'cross', 'colours' => ['#224488', '#ffffff'], 'emblem' => '⭐']])->save();
+        $visitor = $this->player();
+
+        $this->actingAs($visitor->user)->get(route('play.factions.show', $faction))->assertInertia(fn (Assert $page) => $page
+            ->component('game/faction-profile')
+            ->where('faction.name', 'Open Book')
+            ->where('faction.banner.pattern', 'cross')
+            ->has('members', 2)
+            ->has('land', 1)
+            ->where('faction.mine', false)
+            ->missing('faction.treasury'));
+
+        $this->actingAs($visitor->user)->get(route('play'))->assertInertia(fn (Assert $page) => $page
+            ->where('regions', function ($regions) {
+                $thornbury = collect($regions)->firstWhere('key', 'thornbury');
+                $this->assertSame('⭐', $thornbury['faction']['banner']['emblem'] ?? null, json_encode($thornbury['faction'] ?? null));
+
+                return true;
+            }));
+    }
 }

@@ -8,6 +8,7 @@ import {
     MapFeatures,
     MapGround,
 } from '@/components/game/map-terrain';
+import { bannerUrl } from '@/lib/banner';
 import { clockTime, speciesEmoji } from '@/lib/game';
 import type { Point } from '@/lib/hollowmere';
 import {
@@ -27,6 +28,7 @@ import {
 import { cn } from '@/lib/utils';
 import type { Warrant } from '@/components/game/region-panel';
 import type {
+    BannerData,
     BuildingKindValue,
     FactionRef,
     Folk as FolkPerson,
@@ -724,11 +726,13 @@ const Borders = memo(function Borders({
     regions,
     houseId,
     houseColour,
+    houseBanner,
     selectedId,
 }: {
     regions: MapRegion[];
     houseId: number | null;
     houseColour: string | null;
+    houseBanner: BannerData | null;
     selectedId: number | null;
 }) {
     const selected = regions.find((region) => region.id === selectedId);
@@ -801,12 +805,23 @@ const Borders = memo(function Borders({
                     stroke="#cfc8dd"
                     strokeWidth={2.2}
                 />
-                <path
-                    d="M1 -38 L28 -31 L1 -23 Z"
-                    fill={houseColour ?? '#6a6479'}
-                    stroke={HALO}
-                    strokeWidth={1}
-                />
+                {houseBanner ? (
+                    <image
+                        href={bannerUrl(houseBanner)}
+                        x={1}
+                        y={-38}
+                        width={18}
+                        height={24}
+                        preserveAspectRatio="xMidYMin meet"
+                    />
+                ) : (
+                    <path
+                        d="M1 -38 L28 -31 L1 -23 Z"
+                        fill={houseColour ?? '#6a6479'}
+                        stroke={HALO}
+                        strokeWidth={1}
+                    />
+                )}
             </g>
             {selected && (
                 <>
@@ -1790,6 +1805,26 @@ const Bases = memo(function Bases({
                         >
                             {BUILDING_GLYPH[building.kind]}
                         </text>
+                        {region.faction.banner && (
+                            <g transform="translate(19 -30)">
+                                <line
+                                    x1={0}
+                                    y1={0}
+                                    x2={0}
+                                    y2={30}
+                                    stroke="#cfc8dd"
+                                    strokeWidth={1.6}
+                                />
+                                <image
+                                    href={bannerUrl(region.faction.banner)}
+                                    x={1}
+                                    y={0}
+                                    width={13}
+                                    height={17}
+                                    preserveAspectRatio="xMidYMin meet"
+                                />
+                            </g>
+                        )}
                         <g transform="translate(13 13)">
                             <circle
                                 r={8}
@@ -2241,6 +2276,7 @@ export function WorldMap({
                             regions={regions}
                             houseId={house?.id ?? null}
                             houseColour={house?.colour ?? null}
+                            houseBanner={house?.banner ?? null}
                             selectedId={selectedId}
                         />
                         <HitAreas

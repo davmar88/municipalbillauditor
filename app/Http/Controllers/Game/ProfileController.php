@@ -103,6 +103,7 @@ class ProfileController extends Controller
                 'talent' => $player->species->talent(),
                 'weakSpot' => $player->species->weakSpot(),
                 'factionRole' => $player->faction_role?->label(),
+                'factionId' => $player->faction_id,
                 'level' => $level,
                 'rosettes' => $player->rosettes,
                 'levelFrom' => Levels::threshold($level),

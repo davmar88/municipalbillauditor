@@ -17,6 +17,7 @@ import { NativeSelect } from '@/components/ui/native-select';
 import { act, capitalise, clockTime } from '@/lib/game';
 import { cn } from '@/lib/utils';
 import { chat, crime } from '@/routes/play';
+import { show as factionProfile } from '@/routes/play/factions';
 import { show as conversation } from '@/routes/play/messages';
 import {
     answer,
@@ -243,6 +244,8 @@ function MyFaction({
             />
 
             <RaidRulesSection raidRules={faction.raidRules} />
+
+            <OtherFactions factions={factions} />
 
             {decides && (
                 <BannerEditor banner={faction.banner} name={faction.name} />
@@ -635,8 +638,9 @@ function LoneWolf({ factions, founding, underworld, entryModes }: Props) {
                                 key={faction.id}
                                 className="flex flex-col gap-2 rounded-xl border bg-card p-4"
                             >
-                                <p
-                                    className="flex items-center gap-2 font-bold"
+                                <Link
+                                    href={factionProfile(faction.id)}
+                                    className="flex items-center gap-2 font-bold hover:underline"
                                     style={{ color: faction.colour }}
                                 >
                                     <FactionBanner
@@ -651,7 +655,7 @@ function LoneWolf({ factions, founding, underworld, entryModes }: Props) {
                                         />
                                     )}
                                     {faction.name}
-                                </p>
+                                </Link>
                                 {faction.motto && (
                                     <p className="text-sm text-muted-foreground italic">
                                         "{faction.motto}"
@@ -1003,6 +1007,52 @@ function RaidRulesSection({ raidRules }: { raidRules: RaidRulesInfo }) {
             ) : (
                 <WhyNot reason="Only your faction's leader and council set the raid rules." />
             )}
+        </section>
+    );
+}
+
+/** Every other faction in the valley, each to its page: banner, members, land, buildings and record. */
+function OtherFactions({ factions }: { factions: Props['factions'] }) {
+    if (factions.length === 0) {
+        return null;
+    }
+
+    return (
+        <section className="flex flex-col gap-2">
+            <h2 className="text-lg font-bold">Factions in the valley</h2>
+            <p className="text-sm text-muted-foreground">
+                Tap one to see its members, land, buildings, studies and how its
+                raids went this season.
+            </p>
+            <ul className="grid gap-2 sm:grid-cols-2">
+                {factions.map((other) => (
+                    <li key={other.id}>
+                        <Link
+                            href={factionProfile(other.id)}
+                            className="flex items-center gap-3 rounded-xl border bg-card p-3 hover:border-primary/60"
+                        >
+                            <FactionBanner
+                                banner={other.banner}
+                                name={other.name}
+                                size={36}
+                            />
+                            <span className="min-w-0 flex-1">
+                                <span
+                                    className="block truncate font-bold"
+                                    style={{ color: other.colour }}
+                                >
+                                    {other.isHouse && '👑 '}
+                                    {other.name}
+                                </span>
+                                <span className="text-xs text-muted-foreground">
+                                    {other.members} members · {other.regions}{' '}
+                                    {other.regions === 1 ? 'region' : 'regions'}
+                                </span>
+                            </span>
+                        </Link>
+                    </li>
+                ))}
+            </ul>
         </section>
     );
 }

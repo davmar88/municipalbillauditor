@@ -60,7 +60,8 @@ return [
         'members_to_raid' => 3,
     ],
 
-    'newcomer_shield_days' => 7,
+    // Newcomers aren't protected from crime: anyone can be robbed or have their home burned from the start (her call, 2026-10-20).
+    'newcomer_shield_days' => 0,
 
     'starting_corn' => 100,
 

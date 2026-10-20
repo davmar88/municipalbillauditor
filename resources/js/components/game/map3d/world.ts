@@ -47,6 +47,7 @@ import type {
     Species,
     Worn,
 } from '@/types/game';
+import { bannerFlag, bannerTexture } from '@/lib/banner';
 import { animateAshes, animateFire, ashes, flames } from './fire';
 import { person as makePerson } from './folk';
 import { landmarks, orchardTrees } from './landmarks';
@@ -1145,21 +1146,32 @@ export class World {
                 new THREE.MeshLambertMaterial({ color: '#8b6b4a' }),
             );
             pole.position.y = 23;
+            // A hanging banner, taller than wide, below the top of the pole.
             const cloth = new THREE.Mesh(
-                new THREE.PlaneGeometry(26, 15),
+                new THREE.PlaneGeometry(18, 24),
                 new THREE.MeshLambertMaterial({ side: THREE.DoubleSide }),
             );
-            cloth.position.set(13, 38, 0);
+            cloth.position.set(10, 33, 0);
             flag.add(pole, cloth);
             flag.position.set(cx + 58, 0, cy - 40);
             this.flag = flag;
             this.scene.add(flag);
         }
         if (this.flag) {
-            (
-                (this.flag.children[1] as THREE.Mesh)
-                    .material as THREE.MeshLambertMaterial
-            ).color.set(data.house?.colour ?? '#6a6479');
+            const cloth = (this.flag.children[1] as THREE.Mesh)
+                .material as THREE.MeshLambertMaterial;
+            // The House flies its own banner; with none, its colour.
+            if (data.house?.banner) {
+                cloth.map = bannerTexture(data.house.banner, () => {
+                    this.changed = true;
+                });
+                cloth.color.set('#ffffff');
+                cloth.transparent = true;
+            } else {
+                cloth.map = null;
+                cloth.color.set(data.house?.colour ?? '#6a6479');
+            }
+            cloth.needsUpdate = true;
         }
     }
 
@@ -1359,6 +1371,14 @@ export class World {
             tag.renderOrder = 2;
             tag.position.set(0, 1.25, 0);
             group.add(tag);
+            // The faction's own banner, on a pole beside its building.
+            if (region.faction?.banner) {
+                const flag = bannerFlag(region.faction.banner, 1.5, () => {
+                    this.changed = true;
+                });
+                flag.position.set(0.62, 0, -0.35);
+                group.add(flag);
+            }
             this.marks.add(group);
             this.buildings.push({ group, at });
         }

@@ -133,10 +133,6 @@ final class Crimes
                 throw new GameException("That's your own home.");
             }
 
-            if ($target->isShielded()) {
-                throw new GameException("{$target->name} is new to the valley and protected for now.");
-            }
-
             if (Powers::locked($target->id)) {
                 throw new GameException("{$target->name}'s home is shut with an Iron Lock. Try another.");
             }
@@ -199,10 +195,6 @@ final class Crimes
 
         if ($target->is($player)) {
             throw new GameException("You can't rob yourself.");
-        }
-
-        if ($target->isShielded()) {
-            throw new GameException("{$target->name} is new to the valley and protected for now.");
         }
 
         if ($target->inPound()) {

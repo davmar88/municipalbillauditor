@@ -1,12 +1,7 @@
 import { useId } from 'react';
+import type { BannerData } from '@/types/game';
 
-export type BannerData = {
-    mode: 'pattern' | 'image';
-    pattern: string;
-    colours: string[];
-    emblem: string;
-    image: string | null;
-};
+export type { BannerData };
 
 /** The shapes a banner can wear, by name, as drawn on a 60 x 80 cloth. */
 function Pattern({ pattern, charge }: { pattern: string; charge: string }) {

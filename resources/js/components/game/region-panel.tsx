@@ -22,6 +22,7 @@ import {
     shortOf,
 } from '@/components/game/faction-base';
 import { useEscape } from '@/components/game/animal-menu';
+import { show as factionProfile } from '@/routes/play/factions';
 import { Horseshoe } from '@/components/game/game-bar';
 import { WhyNot, needHorseshoes, storeShort } from '@/components/game/why-not';
 import { HorseshoePicker } from '@/components/game/horseshoe-picker';
@@ -236,12 +237,13 @@ export function RegionPanel({
                                 )}
                                 <span>
                                     Held by{' '}
-                                    <span
-                                        className="font-bold"
+                                    <Link
+                                        href={factionProfile(region.faction.id)}
+                                        className="font-bold underline-offset-2 hover:underline"
                                         style={{ color: region.faction.colour }}
                                     >
                                         {region.faction.name}
-                                    </span>
+                                    </Link>
                                     {isHouse && ', the House'}
                                     {holds(region) && ' (yours)'}
                                 </span>

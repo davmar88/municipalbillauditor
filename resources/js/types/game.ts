@@ -105,7 +105,22 @@ export type DesignCard = {
     status: 'pending' | 'approved' | 'rejected';
 };
 
-export type FactionRef = { id: number; name: string; colour: string };
+/** A faction's banner: a pattern in two colours with an emblem, or an uploaded picture. */
+export type BannerData = {
+    mode: 'pattern' | 'image';
+    pattern: string;
+    colours: string[];
+    emblem: string;
+    image: string | null;
+};
+
+export type FactionRef = {
+    id: number;
+    name: string;
+    colour: string;
+    /** Sent where the map flies it. */
+    banner?: BannerData;
+};
 
 /** What a shop prices an item in: Corn from play, or Apples. */
 export type Currency = 'corn' | 'apples';

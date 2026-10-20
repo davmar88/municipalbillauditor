@@ -32,6 +32,7 @@ import { clockTime, dayMonth, speciesEmoji } from '@/lib/game';
 import type { Worn } from '@/lib/animal-dress';
 import { openChat } from '@/lib/pulse';
 import { create as reportCheat } from '@/routes/play/bugs';
+import { show as factionProfile } from '@/routes/play/factions';
 import { wanted } from '@/routes/play';
 import type { DesignCard } from '@/types';
 import type { Currency, MessageAnimal, SkillCard } from '@/types/game';
@@ -54,6 +55,7 @@ type Props = {
         talent: string;
         weakSpot: string;
         factionRole: string | null;
+        factionId: number | null;
         level: number;
         rosettes: number;
         levelFrom: number;
@@ -145,9 +147,21 @@ export default function AnimalProfile({
                                 className="text-sm"
                                 style={{ color: animal.colour ?? undefined }}
                             >
-                                {animal.faction
-                                    ? `${animal.factionRole} of ${animal.faction}`
-                                    : 'Lone wolf'}
+                                {animal.faction && animal.factionId ? (
+                                    <>
+                                        {animal.factionRole} of{' '}
+                                        <Link
+                                            href={factionProfile(
+                                                animal.factionId,
+                                            )}
+                                            className="font-semibold underline-offset-2 hover:underline"
+                                        >
+                                            {animal.faction}
+                                        </Link>
+                                    </>
+                                ) : (
+                                    'Lone wolf'
+                                )}
                             </p>
                         </div>
                     </div>

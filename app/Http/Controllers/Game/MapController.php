@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Game;
 use App\Enums\BuildingKind;
 use App\Enums\CrimeKind;
 use App\Enums\ItemTemplate;
+use App\Game\Banners;
 use App\Game\Bases;
 use App\Game\Clock;
 use App\Game\Crimes;
@@ -60,7 +61,7 @@ class MapController extends Controller
         $regions = $valley->regions()
             ->where('wild', false)
             ->where('ring', '!=', 'scrub')
-            ->with(['faction:id,name,colour', 'neighbours' => fn ($query) => $query->where('regions.wild', false), 'building'])
+            ->with(['faction:id,name,colour,banner,banner_path', 'neighbours' => fn ($query) => $query->where('regions.wild', false), 'building'])
             ->orderBy('row')
             ->orderBy('col')
             ->get();
@@ -125,7 +126,7 @@ class MapController extends Controller
                 'endsAt' => $season->ends_at->toIso8601String(),
                 'unrest' => Wall::unrest($season),
             ] : null,
-            'house' => $house ? ['id' => $house->id, 'name' => $house->name, 'colour' => $house->colour] : null,
+            'house' => $house ? ['id' => $house->id, 'name' => $house->name, 'colour' => $house->colour, 'banner' => Banners::of($house)] : null,
             'regions' => $regions->map(fn (Region $region) => [
                 'id' => $region->id,
                 'key' => $region->key,
@@ -147,7 +148,7 @@ class MapController extends Controller
                 ],
                 'col' => $region->col,
                 'row' => $region->row,
-                'faction' => $region->faction ? ['id' => $region->faction->id, 'name' => $region->faction->name, 'colour' => $region->faction->colour] : null,
+                'faction' => $region->faction ? ['id' => $region->faction->id, 'name' => $region->faction->name, 'colour' => $region->faction->colour, 'banner' => Banners::of($region->faction)] : null,
                 'settledUntil' => $region->settled_until?->isFuture() ? $region->settled_until->toIso8601String() : null,
                 // Farms need water: until when this one is watered, or null where it doesn't matter.
                 'wateredUntil' => $region->isFarm() && ! $region->wild ? ($region->watered_until?->isFuture() ? $region->watered_until->toIso8601String() : '') : null,

@@ -87,10 +87,10 @@ class RobberyAndOnlineTest extends TestCase
             $this->assertStringContainsString('Get closer', $e->getMessage());
         }
 
-        $newcomer = $this->player(attributes: ['shield_until' => now()->addDay()]);
+        // Newcomers can be robbed from their first day.
+        $newcomer = $this->player(attributes: ['shield_until' => now()->addDay(), 'corn' => 100]);
         $this->stand($newcomer, 'granary');
-        $this->expectExceptionMessage('protected for now');
-        app(Crimes::class)->commit($robber, CrimeKind::Rob, target: $newcomer->fresh());
+        $this->assertSame(CrimeKind::Rob, app(Crimes::class)->commit($robber, CrimeKind::Rob, target: $newcomer->fresh())->kind);
     }
 
     public function test_horseshoes_bought_with_apples_stack_past_the_usual_ten(): void
