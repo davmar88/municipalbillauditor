@@ -29,7 +29,7 @@
                     'Your name, email address and password, to run your account.',
                     'If you sign in with Google, Google tells us your name and email address, and that it has checked the email is yours. We get nothing else from your Google account, and never your Google password.',
                     "Your animal and everything it does in the game: its name, faction, items, shop, chat messages, private messages and the game's records of battles, laws and crimes.",
-                    'If you buy Pineapples, PayPal takes the payment on its own page. We see the amount and whether it went through, never your card.',
+                    'If you buy Pineapples, PayPal takes the payment in its own window or card form on our page. We see the amount and whether it went through, never your card. We also record that you accepted the Terms and Conditions, and which version, with each purchase.',
                     'If you cash Apples out, your full name, your ID or passport number, and the PayPal email address to send the money to. We keep these encrypted.',
                     'We do not collect your location, your phone contacts or your phone number.',
                 ]],

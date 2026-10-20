@@ -229,6 +229,12 @@ class MapController extends Controller
                     'bounty' => $warrant->bounty,
                     'escapedUntil' => $warrant->escaped_until?->isFuture() ? $warrant->escaped_until->toIso8601String() : null,
                 ]) : [],
+            // Setting another animal's home alight, from its card on the map.
+            'burn' => [
+                'level' => (int) config('game.levels.crime'),
+                'horseshoes' => CrimeKind::Burn->horseshoes(),
+                'usedToday' => Crimes::triedToday($player),
+            ],
             'plunder' => ['crop' => Crimes::PLUNDER_CROP, 'corn' => Crimes::PLUNDER_CORN, 'level' => (int) config('game.levels.crime'), 'horseshoes' => CrimeKind::Plunder->horseshoes()],
             'buildingKinds' => array_map(fn (BuildingKind $kind) => $kind->card(), BuildingKind::cases()),
             'laws' => $season ? Wall::laws($season)->map(fn (Law $law) => [

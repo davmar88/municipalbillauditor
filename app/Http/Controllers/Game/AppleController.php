@@ -43,6 +43,7 @@ class AppleController extends Controller
             'onSale' => $checkout->onSale(),
             // PayPal's buttons pay right here on the page.
             'paypal' => $checkout->open() ? ['clientId' => $paypal->clientId(), 'currency' => 'USD'] : null,
+            'termsUrl' => route('terms'),
             'open' => $checkout->open(),
             'cornPerApple' => Apples::cornPerApple(),
             'pending' => ApplePurchase::query()
@@ -84,7 +85,7 @@ class AppleController extends Controller
     /** Off to PayPal to pay for a pack. */
     public function buy(Request $request, Checkout $checkout): HttpResponse
     {
-        $pack = (string) $request->validate(['pack' => ['required', 'string', 'max:32']])['pack'];
+        $pack = (string) $request->validate(['pack' => ['required', 'string', 'max:32'], 'terms' => ['accepted']])['pack'];
 
         return Inertia::location($checkout->start($request->user()->player, $pack));
     }
@@ -92,7 +93,13 @@ class AppleController extends Controller
     /** PayPal's buttons on the page ask for an order for a pack. */
     public function order(Request $request, Checkout $checkout): JsonResponse
     {
-        $pack = (string) $request->validate(['pack' => ['required', 'string', 'max:32']])['pack'];
+        $data = $request->validate([
+            'pack' => ['required', 'string', 'max:32'],
+            'terms' => ['accepted'],
+        ], [
+            'terms.accepted' => 'Tick the box to agree to the Terms and Conditions: purchases are final, with no refunds.',
+        ]);
+        $pack = (string) $data['pack'];
 
         try {
             return response()->json(['id' => $checkout->order($request->user()->player, $pack)['id']]);

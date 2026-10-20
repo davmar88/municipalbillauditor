@@ -4,6 +4,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { GameBar } from '@/components/game/game-bar';
 import { GameMap } from '@/components/game/game-map';
 import { HomeCard } from '@/components/game/home-card';
+import { OtherHomeCard } from '@/components/game/other-home-card';
+import type { BurnRules } from '@/components/game/other-home-card';
 import { LiveMap, liveEnabled } from '@/components/game/live';
 import { GateStrength } from '@/components/game/gate-strength';
 import { HorseshoePicker } from '@/components/game/horseshoe-picker';
@@ -64,6 +66,7 @@ type Props = {
     };
     warrants: Warrant[];
     plunder: Plunder;
+    burn: BurnRules;
     irongate: IrongateInfo;
     homes: MapHome[];
     home: HomeInfo;
@@ -117,6 +120,7 @@ export default function MapPage({
     farms,
     warrants,
     plunder,
+    burn,
     irongate,
     homes,
     home,
@@ -129,6 +133,8 @@ export default function MapPage({
     const [ground, setGround] = useState<[number, number] | null>(null);
     // Your own home, tapped on the map, to manage it there.
     const [homeOpen, setHomeOpen] = useState(false);
+    const [otherHome, setOtherHome] = useState<number | null>(null);
+    const tappedHome = homes.find((h) => h.id === otherHome) ?? null;
     const [horseshoes, setHorseshoes] = useState(1);
     const selected = regions.find((region) => region.id === selectedId) ?? null;
 
@@ -430,10 +436,12 @@ export default function MapPage({
                     me={me}
                     onWalk={walkTo}
                     onGround={setGround}
-                    onHome={() => {
+                    onHome={(tapped) => {
                         setSelectedId(null);
                         setGround(null);
-                        setHomeOpen(true);
+                        // Your own home's card, or another animal's, to set alight.
+                        setHomeOpen(tapped.mine);
+                        setOtherHome(tapped.mine ? null : tapped.id);
                     }}
                     gateResult={
                         gateNight.result === null
@@ -456,6 +464,23 @@ export default function MapPage({
                         regions={regions}
                         compact={selected !== null}
                     />
+                    {tappedHome && !selected && (
+                        <div className="absolute bottom-3 left-3 z-20 flex max-h-[calc(100%-1.5rem)] w-80 max-w-[calc(100%-1.5rem)] flex-col overflow-y-auto rounded-2xl shadow-lg">
+                            <button
+                                type="button"
+                                className="absolute top-3 right-3 z-10 text-muted-foreground hover:text-foreground"
+                                aria-label="Close"
+                                onClick={() => setOtherHome(null)}
+                            >
+                                ✕
+                            </button>
+                            <OtherHomeCard
+                                home={tappedHome}
+                                rules={burn}
+                                onWalk={walkTo}
+                            />
+                        </div>
+                    )}
                     {homeOpen && !selected && (
                         <div className="absolute bottom-3 left-3 z-20 flex max-h-[calc(100%-1.5rem)] w-80 max-w-[calc(100%-1.5rem)] flex-col overflow-y-auto rounded-2xl shadow-lg">
                             <button

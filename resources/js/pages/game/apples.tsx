@@ -3,6 +3,7 @@ import { Banknote, Clock3, RefreshCw, Wheat } from 'lucide-react';
 import { useCallback, useState } from 'react';
 import { GameBar } from '@/components/game/game-bar';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { WhyNot } from '@/components/game/why-not';
 import { Input } from '@/components/ui/input';
 import { act, dayMonth, dollars, shortWhen } from '@/lib/game';
@@ -60,6 +61,7 @@ type Props = {
     open: boolean;
     /** For PayPal's buttons on the page, when paying is open. */
     paypal: { clientId: string; currency: string } | null;
+    termsUrl: string;
     cornPerApple: number;
     pending: {
         id: number;
@@ -99,6 +101,7 @@ export default function ApplesPage({
     onSale,
     open,
     paypal,
+    termsUrl,
     cornPerApple,
     pending,
     history,
@@ -108,6 +111,8 @@ export default function ApplesPage({
     // The pack whose PayPal buttons are showing.
     const [buying, setBuying] = useState<string | null>(null);
     const done = useCallback(() => setBuying(null), []);
+    // Buyers agree that purchases are final before PayPal opens.
+    const [agreed, setAgreed] = useState(false);
 
     const { player } = usePage().props;
     const pineapples = player?.pineapples ?? 0;
@@ -144,6 +149,38 @@ export default function ApplesPage({
                         · you have {pineapples.toLocaleString('en-ZA')}
                     </span>
                 </h2>
+                {open && paypal && (
+                    <label className="flex items-start gap-3 rounded-xl border bg-card p-3 text-sm">
+                        <Checkbox
+                            className="mt-0.5"
+                            checked={agreed}
+                            onCheckedChange={(value) => {
+                                setAgreed(value === true);
+                                if (value !== true) {
+                                    setBuying(null);
+                                }
+                            }}
+                        />
+                        <span>
+                            I agree to the{' '}
+                            <a
+                                href={termsUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="font-semibold underline underline-offset-2"
+                            >
+                                Terms and Conditions
+                            </a>
+                            . I understand that Pineapples are game content with
+                            no value outside the game, that they arrive straight
+                            away, and that{' '}
+                            <strong>
+                                purchases are final, with no refunds
+                            </strong>
+                            .
+                        </span>
+                    </label>
+                )}
                 <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                     {pineapplePacks.map((pack) => (
                         <li
@@ -184,12 +221,21 @@ export default function ApplesPage({
                             ) : (
                                 open &&
                                 paypal && (
-                                    <Button
-                                        className="mt-auto"
-                                        onClick={() => setBuying(pack.id)}
-                                    >
-                                        Pay {dollars(pack.usd)} with PayPal
-                                    </Button>
+                                    <div className="mt-auto flex flex-col gap-1">
+                                        <Button
+                                            disabled={!agreed}
+                                            onClick={() => setBuying(pack.id)}
+                                        >
+                                            Pay {dollars(pack.usd)} with PayPal
+                                        </Button>
+                                        <WhyNot
+                                            reason={
+                                                agreed
+                                                    ? null
+                                                    : 'Tick the box above first: you agree to the Terms, and that purchases are final.'
+                                            }
+                                        />
+                                    </div>
                                 )
                             )}
                         </li>

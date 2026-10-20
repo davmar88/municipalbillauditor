@@ -73,6 +73,8 @@ final class Checkout
             'reference' => 'rg-'.Str::lower((string) Str::ulid()),
             'status' => 'pending',
         ]);
+        // The buyer ticked the Terms (purchases are final) before paying.
+        $purchase->forceFill(['terms_version' => config('game.terms_version'), 'terms_accepted_at' => now()])->save();
 
         try {
             $order = $this->paypal->start($purchase, $returnUrl, $cancelUrl);

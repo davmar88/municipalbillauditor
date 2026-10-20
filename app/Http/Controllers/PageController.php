@@ -18,9 +18,14 @@ class PageController extends Controller
         return view('site.privacy');
     }
 
+    public function terms(): View
+    {
+        return view('site.terms');
+    }
+
     public function sitemap(): Response
     {
-        $urls = [route('home'), route('puzzle'), route('privacy')];
+        $urls = [route('home'), route('puzzle'), route('privacy'), route('terms')];
         $xml = '<?xml version="1.0" encoding="UTF-8"?>'."\n".'<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
             .implode('', array_map(fn (string $url) => '<url><loc>'.e($url).'</loc></url>', $urls))
             .'</urlset>';

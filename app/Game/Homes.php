@@ -498,8 +498,9 @@ final class Homes
 
             return DB::table('homes')
                 ->join('players', 'players.id', '=', 'homes.player_id')
+                ->leftJoin('factions', 'factions.id', '=', 'players.faction_id')
                 ->where('players.valley_id', $valley->id)
-                ->get(['homes.id', 'homes.x', 'homes.y', 'homes.level', 'homes.ready_at', 'homes.style', 'homes.skin_level', 'homes.skin_item_id',
+                ->get(['factions.name as faction_name', 'homes.id', 'homes.x', 'homes.y', 'homes.level', 'homes.ready_at', 'homes.style', 'homes.skin_level', 'homes.skin_item_id',
                     'players.id as owner_id', 'players.name as owner_name', 'players.species', 'players.faction_id', 'players.home_closed_until', 'players.home_burned_at'])
                 ->map(function (object $row) use ($now, $burning, $skins) {
                     $building = $row->ready_at !== null && CarbonImmutable::parse($row->ready_at)->gt($now);
@@ -519,6 +520,7 @@ final class Homes
                         // Alight while a burner's fire takes hold, then ash until it's rebuilt.
                         'fire' => isset($burning[$row->owner_id]) ? 'burning' : ($closed && $row->home_burned_at !== null ? 'ash' : null),
                         'factionId' => $row->faction_id === null ? null : (int) $row->faction_id,
+                        'factionName' => $row->faction_name,
                     ];
                 })
                 ->all();

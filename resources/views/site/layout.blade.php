@@ -72,6 +72,7 @@
                     <nav aria-label="Site" class="flex flex-col gap-1">
                         <a href="{{ route('puzzle') }}" class="py-1.5 text-night-text no-underline hover:text-white hover:underline">Spot the Edit</a>
                         <a href="{{ route('privacy') }}" class="py-1.5 text-night-text no-underline hover:text-white hover:underline">Privacy and POPIA</a>
+                        <a href="{{ route('terms') }}" class="py-1.5 text-night-text no-underline hover:text-white hover:underline">Terms and Conditions</a>
                         @if ($contact)
                             <a href="mailto:{{ $contact }}" class="py-1.5 text-night-text no-underline hover:text-white hover:underline">Contact</a>
                         @endif

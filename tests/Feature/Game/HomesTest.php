@@ -282,4 +282,25 @@ class HomesTest extends TestCase
             ->has('home.skinShop', count(Homes::SKIN_SHOP))
             ->where('homes.0.skin.name', 'Gilded Keep'));
     }
+
+    public function test_the_map_lets_you_set_another_animals_home_alight_even_a_mates(): void
+    {
+        $owner = $this->builder();
+        $this->homes->build($owner);
+        $burner = $this->player(level: 3, attributes: ['horseshoes' => 10]);
+        $this->faction('Mates', $owner, $burner);
+
+        $this->actingAs($burner->user)->get(route('play'))->assertInertia(fn (Assert $page) => $page
+            ->where('burn.level', (int) config('game.levels.crime'))
+            ->where('burn.usedToday', false)
+            ->where('homes.0.factionName', 'Mates')
+            ->where('homes.0.mine', false));
+
+        $this->actingAs($burner->user)->post(route('play.crime'), ['kind' => 'burn', 'player_id' => $owner->id])->assertRedirect();
+        $this->assertSame($owner->id, Crime::sole()->target_player_id);
+
+        $this->actingAs($burner->user)->get(route('play'))->assertInertia(fn (Assert $page) => $page
+            ->where('burn.usedToday', true)
+            ->where('homes.0.fire', 'burning'));
+    }
 }

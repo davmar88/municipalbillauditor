@@ -1293,16 +1293,31 @@ export function grows(k: number): number {
     return 1 / Math.min(k, CLOSE_ZOOM);
 }
 
-/** Your own home, if a point on the map falls on it at this zoom. */
+/** The home a point on the map falls on at this zoom, yours first, else the nearest. */
 export function myHomeAt(
     homes: MapHome[] | undefined,
     [x, y]: Point,
     k: number,
 ): MapHome | null {
-    const mine = homes?.find((home) => home.mine);
+    void k;
     const reach = 26 / OBJECT_FLOOR;
+    let best: MapHome | null = null;
+    let bestDistance = reach;
 
-    return mine && Math.hypot(mine.x - x, mine.y - y) <= reach ? mine : null;
+    for (const home of homes ?? []) {
+        const distance = Math.hypot(home.x - x, home.y - y);
+
+        if (home.mine && distance <= reach) {
+            return home;
+        }
+
+        if (distance <= bestDistance) {
+            best = home;
+            bestDistance = distance;
+        }
+    }
+
+    return best;
 }
 
 /** The other animals in the valley, standing where they are. */

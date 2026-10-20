@@ -455,6 +455,8 @@ export type MapHome = {
     mine: boolean;
     /** On fire while a burner's fire takes hold, then ash until it's rebuilt. */
     fire: 'burning' | 'ash' | null;
+    /** The owner's faction, if any. */
+    factionName: string | null;
     /** A faction mate's home going up that you could lend a hand on. */
     helpable: boolean;
 };

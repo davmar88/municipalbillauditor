@@ -64,7 +64,7 @@ final class Crimes
         }
 
         // Plunder runs on its own clock; looting and burning are once a day.
-        if ($kind !== CrimeKind::Plunder && Crime::query()->where('player_id', $player->id)->where('kind', '!=', CrimeKind::Plunder)->where('created_at', '>=', Clock::startOfToday())->exists()) {
+        if ($kind !== CrimeKind::Plunder && self::triedToday($player)) {
             throw new GameException('You have already tried a crime today. Lie low until tomorrow.');
         }
 
@@ -156,6 +156,12 @@ final class Crimes
                 'cloaked' => Powers::cloak($locked),
             ]);
         });
+    }
+
+    /** Whether the animal has already tried a loot or a burn today. */
+    public static function triedToday(Player $player): bool
+    {
+        return Crime::query()->where('player_id', $player->id)->where('kind', '!=', CrimeKind::Plunder)->where('created_at', '>=', Clock::startOfToday())->exists();
     }
 
     public function resolveDue(Season $season): void

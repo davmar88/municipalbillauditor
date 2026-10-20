@@ -33,6 +33,9 @@ return [
     'information_officer' => 'The Animal Farm Dev Team',
     'contact_email' => env('CONTACT_EMAIL'),
 
+    // The Terms and Conditions buyers agree to; a purchase records the version it was made under.
+    'terms_version' => '2026-10-20',
+
     'season_days' => (int) env('GAME_SEASON_DAYS', 14),
 
     'horseshoes' => [

@@ -108,7 +108,10 @@ export function PayPalButtons({
                         label: 'pay',
                     },
                     createOrder: async () => {
-                        const answer = await post(order.url(), { pack });
+                        const answer = await post(order.url(), {
+                            pack,
+                            terms: true,
+                        });
 
                         if (!answer.ok || !answer.data.id) {
                             throw new Error(

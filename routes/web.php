@@ -36,6 +36,7 @@ use Illuminate\Support\Facades\Route;
 // Public pages, server-rendered for search engines.
 Route::get('/', [PageController::class, 'home'])->name('home');
 Route::get('privacy', [PageController::class, 'privacy'])->name('privacy');
+Route::get('terms', [PageController::class, 'terms'])->name('terms');
 Route::get('sitemap.xml', [PageController::class, 'sitemap'])->name('sitemap');
 Route::get('robots.txt', [PageController::class, 'robots'])->name('robots');
 

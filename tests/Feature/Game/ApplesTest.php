@@ -115,7 +115,7 @@ class ApplesTest extends TestCase
         $settings->put('paypal_client_secret', 'client-secret');
 
         $this->actingAs($player->user)
-            ->post(route('play.apples.buy'), ['pack' => 'pineapples-900'])
+            ->post(route('play.apples.buy'), ['pack' => 'pineapples-900', 'terms' => '1'])
             ->assertRedirect()
             ->assertInertiaFlash('toast.message', "Pineapples aren't on sale yet.");
 
@@ -123,7 +123,7 @@ class ApplesTest extends TestCase
         $settings->put('apples_on_sale', '1');
 
         $this->actingAs($player->user)
-            ->post(route('play.apples.buy'), ['pack' => 'pineapples-900'])
+            ->post(route('play.apples.buy'), ['pack' => 'pineapples-900', 'terms' => '1'])
             ->assertInertiaFlash('toast.message', "Paying with PayPal isn't open yet.");
 
         $this->assertSame(0, ApplePurchase::count());
@@ -137,7 +137,7 @@ class ApplesTest extends TestCase
         $player = $this->player();
 
         $this->actingAs($player->user)
-            ->post(route('play.apples.buy'), ['pack' => 'pineapples-900'])
+            ->post(route('play.apples.buy'), ['pack' => 'pineapples-900', 'terms' => '1'])
             ->assertRedirect('https://www.sandbox.paypal.com/checkoutnow?token=ORDER-1');
 
         $purchase = ApplePurchase::sole();
@@ -171,7 +171,7 @@ class ApplesTest extends TestCase
             ->assertInertia(fn ($page) => $page->where('paypal.clientId', 'client-id')->where('paypal.currency', 'USD'));
 
         $this->actingAs($player->user)
-            ->postJson(route('play.apples.order'), ['pack' => 'pineapples-900'])
+            ->postJson(route('play.apples.order'), ['pack' => 'pineapples-900', 'terms' => '1'])
             ->assertOk()
             ->assertExactJson(['id' => 'ORDER-1']);
 
@@ -190,18 +190,38 @@ class ApplesTest extends TestCase
         $this->actingAs($this->player()->user)->postJson(route('play.apples.capture', 'ORDER-1'))->assertNotFound();
     }
 
+    public function test_buyers_tick_the_terms_and_each_purchase_records_them(): void
+    {
+        $this->openPayPal();
+        $this->fakePayPal();
+        $player = $this->player();
+
+        $this->actingAs($player->user)
+            ->postJson(route('play.apples.order'), ['pack' => 'pineapples-900'])
+            ->assertStatus(422)
+            ->assertJsonPath('message', 'Tick the box to agree to the Terms and Conditions: purchases are final, with no refunds.');
+        $this->assertSame(0, ApplePurchase::query()->count());
+
+        $this->actingAs($player->user)->postJson(route('play.apples.order'), ['pack' => 'pineapples-900', 'terms' => true])->assertOk();
+        $purchase = ApplePurchase::sole();
+        $this->assertSame(config('game.terms_version'), $purchase->terms_version);
+        $this->assertNotNull($purchase->terms_accepted_at);
+
+        $this->get(route('terms'))->assertOk()->assertSee('Terms and Conditions')->assertSee('Purchases are final');
+    }
+
     public function test_closing_paypals_window_charges_nothing(): void
     {
         $this->openPayPal();
         $this->fakePayPal();
         $player = $this->player();
 
-        $this->actingAs($player->user)->postJson(route('play.apples.order'), ['pack' => 'pineapples-900']);
+        $this->actingAs($player->user)->postJson(route('play.apples.order'), ['pack' => 'pineapples-900', 'terms' => '1']);
         $this->actingAs($player->user)->postJson(route('play.apples.cancel', 'ORDER-1'))->assertOk();
 
         $this->assertSame('failed', ApplePurchase::sole()->status);
         $this->assertSame(0, $player->fresh()->pineapples);
-        $this->actingAs($player->user)->postJson(route('play.apples.order'), ['pack' => 'nonsense'])->assertStatus(422)->assertJson(['message' => 'Pick one of the packs.']);
+        $this->actingAs($player->user)->postJson(route('play.apples.order'), ['pack' => 'nonsense', 'terms' => '1'])->assertStatus(422)->assertJson(['message' => 'Pick one of the packs.']);
     }
 
     public function test_a_pending_paypal_capture_waits_and_a_cancel_charges_nothing(): void
@@ -209,7 +229,7 @@ class ApplesTest extends TestCase
         $this->openPayPal();
         $this->fakePayPal('PENDING');
         $player = $this->player();
-        $this->actingAs($player->user)->post(route('play.apples.buy'), ['pack' => 'pineapples-900']);
+        $this->actingAs($player->user)->post(route('play.apples.buy'), ['pack' => 'pineapples-900', 'terms' => '1']);
 
         $this->actingAs($player->user)
             ->get(route('play.apples.paypal', ['token' => 'ORDER-1']))
@@ -232,7 +252,7 @@ class ApplesTest extends TestCase
         $this->openPayPal();
         $this->fakePayPal(value: '5.70');
         $player = $this->player();
-        $this->actingAs($player->user)->post(route('play.apples.buy'), ['pack' => 'pineapples-4200']);
+        $this->actingAs($player->user)->post(route('play.apples.buy'), ['pack' => 'pineapples-4200', 'terms' => '1']);
         $purchase = ApplePurchase::sole();
 
         $this->actingAs($player->user)->get(route('play.apples.paypal', ['token' => 'ORDER-1']));
@@ -246,7 +266,7 @@ class ApplesTest extends TestCase
         $this->openPayPal();
         $this->fakePayPal('DECLINED');
         $player = $this->player();
-        $this->actingAs($player->user)->post(route('play.apples.buy'), ['pack' => 'pineapples-900']);
+        $this->actingAs($player->user)->post(route('play.apples.buy'), ['pack' => 'pineapples-900', 'terms' => '1']);
         $purchase = ApplePurchase::sole();
 
         $this->actingAs($player->user)
@@ -262,7 +282,7 @@ class ApplesTest extends TestCase
         $this->openPayPal();
         $this->fakePayPal();
         $player = $this->player();
-        $this->actingAs($player->user)->post(route('play.apples.buy'), ['pack' => 'pineapples-450']);
+        $this->actingAs($player->user)->post(route('play.apples.buy'), ['pack' => 'pineapples-450', 'terms' => '1']);
         $purchase = ApplePurchase::sole();
         $other = $this->player();
 
