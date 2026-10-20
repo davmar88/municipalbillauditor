@@ -32,7 +32,7 @@ final class ValleyBuilder
         'farmhouse' => ['The Farmhouse', 'seat', null, 2, 1],
         'windmill_hill' => ['Windmill Hill', 'inner', 'corn', 3, 1],
         'ironfield_gate' => ['Ironfield Gate', 'outer', 'corn', 4, 1],
-        'duck_pond' => ['Duck Pond', 'outer', 'clay', 0, 2],
+        'duck_pond' => ['Duck Pond', 'outer', 'water', 0, 2],
         'henhouse' => ['Henhouse', 'middle', 'eggs', 1, 2],
         'market_square' => ['Market Square', 'inner', 'corn', 2, 2],
         'stables' => ['Stables', 'middle', 'straw', 3, 2],

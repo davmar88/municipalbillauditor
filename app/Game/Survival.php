@@ -314,7 +314,8 @@ final class Survival
 
         $region = $player->location();
 
-        if ($region->produces === 'water') {
+        // The Duck Pond is shallow: it dries up in fall, like the trough. Springs and meres don't.
+        if ($region->produces === 'water' && ! ($region->key === 'duck_pond' && Weather::dry($player->valley->currentSeason()))) {
             return $region->name;
         }
 
