@@ -38,7 +38,9 @@ class LiveTest extends TestCase
 
         Event::assertDispatched(NoticesSent::class, fn (NoticesSent $e) => $e->playerIds === [$from->id, $to->id]
             && collect($e->broadcastOn())->map->name->all() === ["private-player.{$from->id}", "private-player.{$to->id}"]);
-        Event::assertDispatched(MessageSent::class, fn (MessageSent $e) => $e->broadcastOn()->name === "private-player.{$to->id}" && $e->senderName === $from->name);
+        Event::assertDispatched(MessageSent::class, fn (MessageSent $e) => $e->broadcastOn()->name === "private-player.{$to->id}" && $e->senderName === $from->name
+            // The chat card that pops up needs who sent it and which message it was.
+            && $e->broadcastWith()['sender']['id'] === $from->id && $e->broadcastWith()['id'] > 0);
     }
 
     public function test_chat_and_actions_tell_the_valley_without_saying_what(): void

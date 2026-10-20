@@ -2,7 +2,9 @@
 
 namespace App\Events;
 
+use App\Game\Messages;
 use App\Models\DirectMessage;
+use App\Models\Player;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
@@ -15,11 +17,12 @@ class MessageSent implements ShouldBroadcast, ShouldDispatchAfterCommit
 {
     use Dispatchable, InteractsWithSockets;
 
-    public function __construct(public int $recipientId, public int $senderId, public string $senderName, public string $preview) {}
+    /** @param  array<string, mixed>  $sender  The sender's card, as the chat window shows it. */
+    public function __construct(public int $recipientId, public int $senderId, public string $senderName, public string $preview, public int $messageId = 0, public array $sender = []) {}
 
-    public static function of(DirectMessage $message, string $senderName): self
+    public static function of(DirectMessage $message, Player $from): self
     {
-        return new self($message->recipient_id, $message->sender_id, $senderName, Str::limit($message->body, 120));
+        return new self($message->recipient_id, $message->sender_id, $from->name, Str::limit($message->body, 120), $message->id, Messages::card($from));
     }
 
     public function broadcastOn(): PrivateChannel
@@ -35,6 +38,6 @@ class MessageSent implements ShouldBroadcast, ShouldDispatchAfterCommit
     /** @return array<string, mixed> */
     public function broadcastWith(): array
     {
-        return ['from' => $this->senderId, 'name' => $this->senderName, 'preview' => $this->preview];
+        return ['id' => $this->messageId, 'from' => $this->senderId, 'name' => $this->senderName, 'preview' => $this->preview, 'sender' => $this->sender];
     }
 }

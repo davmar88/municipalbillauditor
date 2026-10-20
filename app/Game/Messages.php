@@ -100,7 +100,7 @@ final class Messages
                 ->where(fn ($query) => $query->whereNull('last_message_id')->orWhere('last_message_id', '<', $message->id))
                 ->update(['last_message_id' => $message->id, 'updated_at' => CarbonImmutable::now()]);
 
-            Live::send(MessageSent::of($message, $from->name));
+            Live::send(MessageSent::of($message, $from));
 
             return $message;
         });

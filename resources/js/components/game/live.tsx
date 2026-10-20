@@ -3,7 +3,8 @@ import { useEcho } from '@laravel/echo-react';
 import { useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 import { messages as messagesPage } from '@/routes/play';
-import { show as conversationPage } from '@/routes/play/messages';
+import { chatOpenWith, messageFrom, openChat, pushPopup } from '@/lib/pulse';
+import type { MessageAnimal } from '@/types/game';
 
 /**
  * Live updates over the websocket (Laravel Reverb). Nothing here runs
@@ -48,7 +49,13 @@ function useThrottled(run: () => void, ms: number): () => void {
 }
 
 type Notice = { kind: string; text: string; url: string | null };
-type Message = { from: number; name: string; preview: string };
+type Message = {
+    id: number;
+    from: number;
+    name: string;
+    preview: string;
+    sender?: MessageAnimal;
+};
 
 /** Your bell and your letters: each notice and private message pops up as it arrives. */
 export function LiveBell({ playerId }: { playerId: number }) {
@@ -93,18 +100,30 @@ export function LiveBell({ playerId }: { playerId: number }) {
                 page.component === 'game/conversation' &&
                 props.animal?.id === message.from;
 
-            if (!reading) {
-                toast(`✉️ ${message.name}: ${message.preview}`, {
-                    action: {
-                        label: 'Reply',
-                        onClick: () =>
-                            router.visit(conversationPage.url(message.from)),
-                    },
-                    cancel: {
-                        label: 'All messages',
-                        onClick: () => router.visit(messagesPage.url()),
-                    },
-                });
+            if (message.sender) {
+                messageFrom(message.sender);
+            }
+
+            if (!reading && chatOpenWith() !== message.from) {
+                if (message.sender) {
+                    pushPopup({
+                        key: `message-${message.id}`,
+                        kind: 'message',
+                        text: message.preview,
+                        from: message.sender,
+                    });
+                } else {
+                    toast(`✉️ ${message.name}: ${message.preview}`, {
+                        action: {
+                            label: 'Reply',
+                            onClick: () => openChat(message.from),
+                        },
+                        cancel: {
+                            label: 'All messages',
+                            onClick: () => router.visit(messagesPage.url()),
+                        },
+                    });
+                }
             }
             refresh();
         },

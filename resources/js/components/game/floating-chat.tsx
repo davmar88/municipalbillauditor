@@ -1,9 +1,9 @@
 import { Link } from '@inertiajs/react';
-import { Maximize2, Send, X } from 'lucide-react';
+import { Maximize2, Minus, Send, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { ProfileLink } from '@/components/game/profile-link';
 import { gameJson, shortWhen, speciesEmoji } from '@/lib/game';
-import { closeChat, usePulse } from '@/lib/pulse';
+import { closeChat, dropHead, keepHead, usePulse } from '@/lib/pulse';
 import { cn } from '@/lib/utils';
 import { talk } from '@/routes/play';
 import { show as conversation } from '@/routes/play/messages';
@@ -29,6 +29,7 @@ type Talk = {
  */
 export function FloatingChat() {
     const chatWith = usePulse((state) => state.chatWith);
+    const tick = usePulse((state) => state.chatTick);
     const [talking, setTalking] = useState<Talk | null>(null);
     const [body, setBody] = useState('');
     const [sending, setSending] = useState(false);
@@ -53,6 +54,7 @@ export function FloatingChat() {
 
             if (result.ok) {
                 setTalking(result.data);
+                keepHead(result.data.animal);
             } else if (result.status === 404) {
                 closeChat();
 
@@ -62,15 +64,20 @@ export function FloatingChat() {
             timer = setTimeout(load, document.hidden ? 20000 : 5000);
         };
 
-        setTalking(null);
-        setError(null);
         void load();
-        input.current?.focus();
 
         return () => {
             stopped = true;
             clearTimeout(timer);
         };
+    }, [chatWith, tick]);
+
+    // A different animal: start clean.
+    useEffect(() => {
+        setTalking(null);
+        setError(null);
+        setBody('');
+        input.current?.focus();
     }, [chatWith]);
 
     const count = talking?.messages.length ?? 0;
@@ -111,7 +118,7 @@ export function FloatingChat() {
     return (
         <section
             aria-label={animal ? `Chat with ${animal.name}` : 'Chat'}
-            className="fixed right-3 bottom-[calc(4.25rem+env(safe-area-inset-bottom))] z-50 flex h-[min(30rem,65svh)] w-[min(22rem,calc(100vw-1.5rem))] flex-col overflow-hidden rounded-2xl border bg-card shadow-2xl md:right-5 md:bottom-5"
+            className="fixed right-3 bottom-[calc(4.25rem+env(safe-area-inset-bottom))] z-50 flex h-[min(30rem,65svh)] w-[min(22rem,calc(100vw-1.5rem))] animate-in flex-col overflow-hidden rounded-2xl border bg-card shadow-2xl fade-in slide-in-from-bottom-4 md:right-[5.5rem] md:bottom-5"
         >
             <header className="flex items-center gap-2 border-b px-3 py-2.5">
                 <span
@@ -157,7 +164,17 @@ export function FloatingChat() {
                     type="button"
                     onClick={() => closeChat()}
                     className="flex size-8 items-center justify-center rounded-full text-muted-foreground hover:bg-accent hover:text-foreground"
+                    aria-label="Fold the chat into the corner"
+                    title="Fold it into the corner"
+                >
+                    <Minus className="size-4" />
+                </button>
+                <button
+                    type="button"
+                    onClick={() => dropHead(chatWith)}
+                    className="flex size-8 items-center justify-center rounded-full text-muted-foreground hover:bg-accent hover:text-foreground"
                     aria-label="Close the chat"
+                    title="Close the chat"
                 >
                     <X className="size-4" />
                 </button>

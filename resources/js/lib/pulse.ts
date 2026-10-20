@@ -16,13 +16,45 @@ type PulseState = {
     /** The animal the chat window is open on. */
     chatWith: number | null;
     popups: Popup[];
+    /** The animals you've been chatting with, kept as heads in the corner. */
+    heads: MessageAnimal[];
+    /** Heads with a message you haven't opened yet. */
+    unreadHeads: number[];
+    /** Bumped when a message arrives for the open chat, so it fetches at once. */
+    chatTick: number;
 };
+
+const HEADS_KEY = 'animalfarm.chat-heads';
+const MOST_HEADS = 5;
+
+function storedHeads(): MessageAnimal[] {
+    try {
+        const raw = window.localStorage.getItem(HEADS_KEY);
+
+        return raw
+            ? (JSON.parse(raw) as MessageAnimal[]).slice(0, MOST_HEADS)
+            : [];
+    } catch {
+        return [];
+    }
+}
+
+function storeHeads(heads: MessageAnimal[]): void {
+    try {
+        window.localStorage.setItem(HEADS_KEY, JSON.stringify(heads));
+    } catch {
+        // Private windows may refuse; the heads just don't outlive the page.
+    }
+}
 
 let state: PulseState = {
     unreadMessages: null,
     unreadNotices: null,
     chatWith: null,
     popups: [],
+    heads: typeof window === 'undefined' ? [] : storedHeads(),
+    unreadHeads: [],
+    chatTick: 0,
 };
 const listeners = new Set<() => void>();
 
@@ -46,15 +78,53 @@ export function usePulse<T>(select: (state: PulseState) => T): T {
     );
 }
 
-export function openChat(animalId: number): void {
+export function openChat(animalId: number, animal?: MessageAnimal): void {
     set({
         chatWith: animalId,
         popups: state.popups.filter((popup) => popup.from?.id !== animalId),
+        unreadHeads: state.unreadHeads.filter((id) => id !== animalId),
+    });
+
+    if (animal) {
+        keepHead(animal);
+    }
+}
+
+/** Fold the chat window down to its head in the corner. */
+export function closeChat(): void {
+    set({ chatWith: null });
+}
+
+/** Put an animal's head at the front of the corner, or refresh it there. */
+export function keepHead(animal: MessageAnimal): void {
+    const heads = [
+        animal,
+        ...state.heads.filter((head) => head.id !== animal.id),
+    ].slice(0, MOST_HEADS);
+    storeHeads(heads);
+    set({ heads });
+}
+
+/** Close a chat for good: its head leaves the corner. */
+export function dropHead(animalId: number): void {
+    const heads = state.heads.filter((head) => head.id !== animalId);
+    storeHeads(heads);
+    set({
+        heads,
+        unreadHeads: state.unreadHeads.filter((id) => id !== animalId),
+        chatWith: state.chatWith === animalId ? null : state.chatWith,
     });
 }
 
-export function closeChat(): void {
-    set({ chatWith: null });
+/** A message came in: its sender's head moves to the front, marked unread unless its chat is open. */
+export function messageFrom(animal: MessageAnimal): void {
+    keepHead(animal);
+
+    if (state.chatWith === animal.id) {
+        set({ chatTick: state.chatTick + 1 });
+    } else if (!state.unreadHeads.includes(animal.id)) {
+        set({ unreadHeads: [...state.unreadHeads, animal.id] });
+    }
 }
 
 export function chatOpenWith(): number | null {
