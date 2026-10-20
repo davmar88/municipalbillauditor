@@ -203,7 +203,7 @@ class FactionController extends Controller
     public function rules(Request $request, Factions $factions): RedirectResponse
     {
         $data = $this->validated($request, founding: false);
-        $factions->setRules($request->user()->player, $data, $data['motto'] ?? null);
+        $factions->setRules($request->user()->player, $data, $data['motto'] ?? null, $data['name'] ?? null);
 
         return $this->told('The faction rules are updated.');
     }
@@ -260,6 +260,7 @@ class FactionController extends Controller
             'name' => $faction->name,
             'colour' => $faction->colour,
             'motto' => $faction->motto,
+            'canRename' => auth()->user()?->player?->faction_id === $faction->id && auth()->user()->player->faction_role === FactionRole::Leader,
             'banner' => Banners::of($faction),
             'isHouse' => $faction->id === $houseId,
             'rules' => [

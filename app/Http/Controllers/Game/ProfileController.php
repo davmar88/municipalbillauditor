@@ -66,6 +66,8 @@ class ProfileController extends Controller
             ],
             'languages' => Players::LANGUAGES,
             'language' => $player->language,
+            // When the name can change again; null when it can now.
+            'renameFrom' => $player->renamed_at?->addDays(Players::RENAME_DAYS)->isFuture() ? $player->renamed_at->addDays(Players::RENAME_DAYS)->toIso8601String() : null,
         ]);
     }
 
@@ -135,6 +137,14 @@ class ProfileController extends Controller
                 'count' => $items->count(),
             ],
         ]);
+    }
+
+    public function rename(Request $request, Players $players): RedirectResponse
+    {
+        $name = (string) $request->validate(['name' => ['required', 'string', 'max:40']])['name'];
+        $players->rename($request->user()->player, $name);
+
+        return $this->told('You go by '.$request->user()->player->fresh()->name.' now.');
     }
 
     public function language(Request $request, Players $players): RedirectResponse

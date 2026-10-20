@@ -77,6 +77,7 @@ class Player extends Model
             'horseshoes_at' => 'datetime',
             'faction_joined_at' => 'datetime',
             'shield_until' => 'datetime',
+            'renamed_at' => 'datetime',
             'home_closed_until' => 'datetime',
             'home_burned_at' => 'datetime',
             'pound_until' => 'datetime',

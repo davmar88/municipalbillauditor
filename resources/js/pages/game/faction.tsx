@@ -50,6 +50,7 @@ type FactionSummary = {
     name: string;
     colour: string;
     motto: string | null;
+    canRename: boolean;
     banner: BannerData;
     isHouse: boolean;
     rules: Rules;
@@ -475,6 +476,7 @@ function RulesForm({
     editable: boolean;
 }) {
     const [motto, setMotto] = useState(faction.motto ?? '');
+    const [name, setName] = useState(faction.name);
     const [entryMode, setEntryMode] = useState(faction.rules.entryMode);
     const [minLevel, setMinLevel] = useState(faction.rules.minLevel);
     const [fee, setFee] = useState(faction.rules.entryFee);
@@ -488,6 +490,16 @@ function RulesForm({
                 disabled={!editable}
                 className="grid gap-3 sm:grid-cols-2"
             >
+                {faction.canRename && (
+                    <label className="grid gap-1 text-sm sm:col-span-2">
+                        Name (only the leader can change it, once a week)
+                        <Input
+                            value={name}
+                            maxLength={30}
+                            onChange={(e) => setName(e.target.value)}
+                        />
+                    </label>
+                )}
                 <label className="grid gap-1 text-sm sm:col-span-2">
                     Motto
                     <Input
@@ -579,6 +591,10 @@ function RulesForm({
                         act(
                             rulesRoute.url(),
                             {
+                                ...(faction.canRename &&
+                                name.trim() !== faction.name
+                                    ? { name }
+                                    : {}),
                                 motto,
                                 entry_mode: entryMode,
                                 min_level: minLevel,

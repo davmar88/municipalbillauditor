@@ -82,6 +82,54 @@ final class Players
         Rosettes::award($player, 5, 'First visit of the day', "visit:{$player->id}:{$today}", $player->valley->currentSeason());
     }
 
+    /** How often an animal or a faction may change its name: often enough to fix a mistake, not to slip a bounty. */
+    public const RENAME_DAYS = 7;
+
+    /**
+     * Change an animal's name, once a week, under the same rules as a new one.
+     *
+     * @throws GameException
+     */
+    public function rename(Player $player, string $name): void
+    {
+        $name = self::checkedName($player->valley, $name, $player->id);
+
+        if ($name === $player->name) {
+            return;
+        }
+
+        if ($player->renamed_at !== null && $player->renamed_at->gt(now()->subDays(self::RENAME_DAYS))) {
+            throw new GameException('You changed your name lately. You can change it again from '.Clock::local($player->renamed_at->addDays(self::RENAME_DAYS))->format('j M H:i').'.');
+        }
+
+        $old = $player->name;
+        $player->forceFill(['name' => $name, 'renamed_at' => now()])->save();
+
+        if ($player->faction_id !== null) {
+            Notices::send(Notices::members($player->faction_id)->reject(fn ($id) => $id === $player->id), 'faction', "{$old} goes by {$name} now.", route('play.animal', $player->id, false));
+        }
+    }
+
+    /**
+     * A tidy name that follows the rules and nobody else in the valley has.
+     *
+     * @throws GameException
+     */
+    public static function checkedName(Valley $valley, string $name, ?int $except = null): string
+    {
+        $name = trim(preg_replace('/\s+/', ' ', $name) ?? '');
+
+        if (mb_strlen($name) < 2 || mb_strlen($name) > 20 || ! preg_match("/^[\pL][\pL '\-]*$/u", $name)) {
+            throw new GameException("Your animal's name needs 2 to 20 letters, and may use spaces, hyphens and apostrophes.");
+        }
+
+        if (Player::query()->where('valley_id', $valley->id)->where('name', $name)->when($except, fn ($query) => $query->whereKeyNot($except))->exists()) {
+            throw new GameException("There is already an animal called {$name} in {$valley->name}. Pick another name.");
+        }
+
+        return $name;
+    }
+
     public function setLanguage(Player $player, string $language): void
     {
         if (! in_array($language, self::LANGUAGES, true)) {

@@ -227,10 +227,14 @@ final class Factions
      *
      * @throws GameException
      */
-    public function setRules(Player $player, array $rules, ?string $motto): void
+    public function setRules(Player $player, array $rules, ?string $motto, ?string $name = null): void
     {
         if (! $player->decides() || $player->faction === null) {
             throw new GameException("Only the faction's leader or council can change its rules.");
+        }
+
+        if ($name !== null) {
+            $this->rename($player, $name);
         }
 
         if ($motto !== null && mb_strlen(trim($motto)) > 60) {
@@ -238,6 +242,41 @@ final class Factions
         }
 
         $player->faction->update([...$this->validRules($rules), 'motto' => $motto !== null ? (trim($motto) ?: null) : $player->faction->motto]);
+    }
+
+    /**
+     * The leader renames the faction, once a week.
+     *
+     * @throws GameException
+     */
+    public function rename(Player $player, string $name): void
+    {
+        $faction = $player->faction;
+        $name = trim(preg_replace('/\s+/', ' ', $name) ?? '');
+
+        if ($faction === null || $name === $faction->name) {
+            return;
+        }
+
+        if ($player->faction_role !== FactionRole::Leader) {
+            throw new GameException("Only the faction's leader can change its name.");
+        }
+
+        if (mb_strlen($name) < 3 || mb_strlen($name) > 30) {
+            throw new GameException("A faction's name needs 3 to 30 characters.");
+        }
+
+        if (Faction::query()->where('valley_id', $faction->valley_id)->where('name', $name)->whereKeyNot($faction->id)->exists()) {
+            throw new GameException("There is already a faction called {$name}.");
+        }
+
+        if ($faction->renamed_at !== null && $faction->renamed_at->gt(now()->subDays(Players::RENAME_DAYS))) {
+            throw new GameException('The faction changed its name lately. It can change again from '.Clock::local($faction->renamed_at->addDays(Players::RENAME_DAYS))->format('j M H:i').'.');
+        }
+
+        $old = $faction->name;
+        $faction->forceFill(['name' => $name, 'renamed_at' => now()])->save();
+        Notices::send(Notices::members($faction->id), 'faction', "{$old} is called {$name} now.", route('play.faction', [], false));
     }
 
     /** Recruits get their vote after 48 hours. */

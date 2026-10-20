@@ -7,7 +7,10 @@ import { OrchardBadge } from '@/components/game/orchard-badge';
 import { NativeSelect } from '@/components/ui/native-select';
 import { act, dayMonth } from '@/lib/game';
 import { apples } from '@/routes/play';
-import { language as languageRoute } from '@/routes/play/me';
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { language as languageRoute, name as nameRoute } from '@/routes/play/me';
 import type { Worn } from '@/lib/animal-dress';
 import type { DesignCard } from '@/types';
 import type { Species } from '@/types/game';
@@ -41,6 +44,7 @@ type Props = {
     };
     languages: string[];
     language: string;
+    renameFrom: string | null;
 };
 
 export default function Me({
@@ -51,7 +55,9 @@ export default function Me({
     collection,
     languages,
     language,
+    renameFrom,
 }: Props) {
+    const [name, setName] = useState(animal.name);
     const progress = Math.min(
         100,
         Math.round(
@@ -176,6 +182,40 @@ export default function Me({
                             ))}
                         </ul>
                     )}
+                </section>
+
+                <section className="flex flex-col gap-2">
+                    <h2 className="text-lg font-bold">Your name</h2>
+                    <form
+                        className="flex max-w-md gap-2"
+                        onSubmit={(e) => {
+                            e.preventDefault();
+                            act(nameRoute.url(), { name }, 'put');
+                        }}
+                    >
+                        <Input
+                            value={name}
+                            maxLength={20}
+                            aria-label="Your animal's name"
+                            disabled={renameFrom !== null}
+                            onChange={(e) => setName(e.target.value)}
+                        />
+                        <Button
+                            type="submit"
+                            disabled={
+                                renameFrom !== null ||
+                                name.trim() === '' ||
+                                name.trim() === animal.name
+                            }
+                        >
+                            Change
+                        </Button>
+                    </form>
+                    <p className="text-sm text-muted-foreground">
+                        {renameFrom
+                            ? `You can change it again from ${dayMonth(renameFrom)}.`
+                            : 'You can change it once a week. Your faction hears about it.'}
+                    </p>
                 </section>
 
                 <section className="flex flex-col gap-2">

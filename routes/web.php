@@ -174,6 +174,7 @@ Route::middleware(['auth', 'verified', 'player', 'throttle:120,1'])->prefix('pla
 
     Route::get('me', [ProfileController::class, 'show'])->name('play.me');
     Route::put('me/language', [ProfileController::class, 'language'])->name('play.me.language');
+    Route::put('me/name', [ProfileController::class, 'rename'])->name('play.me.name');
     Route::get('animals/{player}', [ProfileController::class, 'animal'])->name('play.animal');
 
     // Giving another animal an item from your bag.

@@ -51,6 +51,7 @@ class Faction extends Model
             'raid_rules' => 'array',
             'rogue' => 'boolean',
             'studying_until' => 'datetime',
+            'renamed_at' => 'datetime',
         ];
     }
 
