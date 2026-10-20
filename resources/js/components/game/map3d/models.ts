@@ -25,6 +25,18 @@ function load(species: Species): Promise<GLTF> {
  * ground at its origin, 1 unit tall, facing north, dressed in what it wears.
  * Scale it to the size it should show at.
  */
+/**
+ * Every animal is brought to the same height, but the farm pack's are much
+ * longer and stockier for their height than the first pack's: these bring
+ * them back to about the others' size on the map.
+ */
+const SIZE: Partial<Record<Species, number>> = {
+    pig: 0.65,
+    cow: 0.8,
+    llama: 0.9,
+    zebra: 0.9,
+};
+
 export type Actor = {
     root: THREE.Group;
     mixer: THREE.AnimationMixer;
@@ -61,7 +73,10 @@ export async function makeActor(
     stage.add(model);
     model.updateMatrixWorld(true);
     const first = new THREE.Box3().setFromObject(model);
-    model.scale.multiplyScalar(1.6 / Math.max(0.01, first.max.y - first.min.y));
+    model.scale.multiplyScalar(
+        (1.6 * (SIZE[species] ?? 1)) /
+            Math.max(0.01, first.max.y - first.min.y),
+    );
     model.updateMatrixWorld(true);
     const placed = new THREE.Box3().setFromObject(model);
     model.position.y -= placed.min.y;
