@@ -312,30 +312,62 @@ function Patterns() {
     );
 }
 
+/** A phone draws a third of the scrub bushes: thousands of them slow its map down. */
+const PHONE =
+    typeof window !== 'undefined' &&
+    (window.matchMedia?.('(pointer: coarse)').matches ?? false);
+
+/**
+ * A pattern's plain colour, for a phone: patterned ground is costly to
+ * repaint as the map moves, a flat colour isn't.
+ */
+const PLAIN: Record<string, string> = {
+    meadow: INK.meadow,
+    cobbles: INK.yard,
+    scree: INK.rock,
+    ironfield: '#16141b',
+    swell: 'transparent',
+};
+
+/** The fill for a pattern by id: the pattern itself, or on a phone its plain colour. */
+function paint(id: string): string {
+    if (!PHONE) {
+        return `url(#${id})`;
+    }
+    if (id.startsWith('rows-')) {
+        return ['hayfield', 'brookside', 'fennick', 'marlow'].includes(
+            id.slice(5),
+        )
+            ? INK.hay
+            : INK.field;
+    }
+    return PLAIN[id] ?? `url(#${id})`;
+}
+
 /** What each region's ground is made of. */
 const GROUND: Record<string, string> = {
     wildwood: INK.woods,
-    orchard: 'url(#meadow)',
-    big_barn: 'url(#cobbles)',
-    hayfield: 'url(#rows-hayfield)',
-    quarry: 'url(#scree)',
-    sheepfold: 'url(#meadow)',
-    granary: 'url(#rows-granary)',
-    farmhouse: 'url(#cobbles)',
-    windmill_hill: 'url(#rows-windmill_hill)',
-    ironfield_gate: 'url(#rows-ironfield_gate)',
-    duck_pond: 'url(#meadow)',
-    henhouse: 'url(#cobbles)',
-    market_square: 'url(#cobbles)',
-    stables: 'url(#meadow)',
-    old_well: 'url(#meadow)',
-    paddock: 'url(#meadow)',
-    thornbury: 'url(#rows-thornbury)',
-    brookside: 'url(#rows-brookside)',
-    willowby: 'url(#rows-willowby)',
-    ashcombe: 'url(#rows-ashcombe)',
-    fennick: 'url(#rows-fennick)',
-    marlow: 'url(#rows-marlow)',
+    orchard: paint('meadow'),
+    big_barn: paint('cobbles'),
+    hayfield: paint('rows-hayfield'),
+    quarry: paint('scree'),
+    sheepfold: paint('meadow'),
+    granary: paint('rows-granary'),
+    farmhouse: paint('cobbles'),
+    windmill_hill: paint('rows-windmill_hill'),
+    ironfield_gate: paint('rows-ironfield_gate'),
+    duck_pond: paint('meadow'),
+    henhouse: paint('cobbles'),
+    market_square: paint('cobbles'),
+    stables: paint('meadow'),
+    old_well: paint('meadow'),
+    paddock: paint('meadow'),
+    thornbury: paint('rows-thornbury'),
+    brookside: paint('rows-brookside'),
+    willowby: paint('rows-willowby'),
+    ashcombe: paint('rows-ashcombe'),
+    fennick: paint('rows-fennick'),
+    marlow: paint('rows-marlow'),
 };
 
 /** A building in Irongate: [x, y, width, depth, angle]. */
@@ -429,7 +461,7 @@ function Irongate() {
                 <path
                     key={i}
                     d={toPath(shape.polygon)}
-                    fill="url(#cobbles)"
+                    fill={paint('cobbles')}
                     stroke="#3d3646"
                     strokeWidth={2}
                 />
@@ -505,11 +537,6 @@ function Irongate() {
 
 /** The land around the farm: the Ridge, Hollow Brook and Ironfield. */
 /** The open scrub between the regions: low bushes anyone can gather from and camp among. */
-/** A phone draws a third of the scrub bushes: thousands of them slow its map down. */
-const PHONE =
-    typeof window !== 'undefined' &&
-    (window.matchMedia?.('(pointer: coarse)').matches ?? false);
-
 const Scrub = memo(function Scrub() {
     const list = PHONE
         ? scrubPoints().filter((_, i) => i % 3 === 0)
@@ -615,7 +642,7 @@ function Ocean() {
                 y={REACH.y - SEA}
                 width={REACH.width + SEA * 2}
                 height={REACH.height + SEA * 2}
-                fill="url(#swell)"
+                fill={paint('swell')}
             />
             {/* Swells rolling in to the shore, one after another. */}
             {[0, 1, 2, 3].map((i) => (
@@ -807,7 +834,7 @@ function Surroundings() {
                 width={REACH.x + REACH.width - 1490}
                 height={REACH.height}
                 rx={180}
-                fill="url(#ironfield)"
+                fill={paint('ironfield')}
             />
             <path
                 d={[26, 52, 78]
@@ -1142,7 +1169,7 @@ function Granary() {
             d={smoothLoop(
                 blob(at('granary', -6, -32), 104, 40, 'granary:yard', 0.1),
             )}
-            fill="url(#cobbles)"
+            fill={paint('cobbles')}
         />
     );
 }
@@ -1355,7 +1382,7 @@ function MarketSquare() {
                 width={132}
                 height={92}
                 rx={12}
-                fill="url(#cobbles)"
+                fill={paint('cobbles')}
                 opacity={0.55}
             />
         </>
@@ -1496,7 +1523,7 @@ function farmland(key: string) {
                             0.12,
                         ),
                     )}
-                    fill="url(#meadow)"
+                    fill={paint('meadow')}
                 />
                 <Trees
                     list={trees(
@@ -1850,8 +1877,12 @@ export const MapGround = memo(function MapGround() {
                     UNDER[key] ??
                     (FRONTIER_KIND[key] ? frontierland(key) : undefined);
 
+                // A phone draws each field flat, without its crops, trees and stones: the farm stays quick to move.
                 return (
-                    <g key={key} clipPath={`url(#clip-${key})`}>
+                    <g
+                        key={key}
+                        clipPath={PHONE ? undefined : `url(#clip-${key})`}
+                    >
                         <path
                             d={toPath(shape.polygon)}
                             fill={
@@ -1859,7 +1890,7 @@ export const MapGround = memo(function MapGround() {
                                 FRONTIER_FILL[FRONTIER_KIND[key] ?? 'grass']
                             }
                         />
-                        {Under && <Under />}
+                        {Under && !PHONE && <Under />}
                     </g>
                 );
             })}
