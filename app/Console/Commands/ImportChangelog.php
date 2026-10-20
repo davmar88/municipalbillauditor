@@ -25,7 +25,8 @@ class ImportChangelog extends Command
     public function handle(): int
     {
         $separator = '---commit---';
-        $result = Process::path(base_path())->run(['git', 'log', '--no-merges', '--since='.$this->option('since'), '--format='.$separator.'%H%n%cI%n%s%n%b']);
+        // The deploy runs this as the app's own user, while the checkout belongs to another: tell Git that's fine.
+        $result = Process::path(base_path())->run(['git', '-c', 'safe.directory='.base_path(), 'log', '--no-merges', '--since='.$this->option('since'), '--format='.$separator.'%H%n%cI%n%s%n%b']);
 
         if (! $result->successful()) {
             $this->warn('Git log could not be read: '.trim($result->errorOutput()));
