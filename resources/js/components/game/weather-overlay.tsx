@@ -74,14 +74,11 @@ export const WeatherOverlay = memo(function WeatherOverlay({
     now: WeatherKey;
 }) {
     const look = LOOK[now];
-    // A phone gets a light sprinkle: every falling flake is work for it.
     const phone =
         typeof window !== 'undefined' &&
         (window.matchMedia?.('(pointer: coarse)').matches ?? false);
-    const bits = scatter(
-        phone ? Math.ceil(look.count / 4) : look.count,
-        now.length * 977,
-    );
+    // A phone gets only the season's tint: no falling flakes or leaves, no wind.
+    const bits = phone ? [] : scatter(look.count, now.length * 977);
 
     return (
         <div
@@ -118,19 +115,21 @@ export const WeatherOverlay = memo(function WeatherOverlay({
                 />
             )}
             {/* The wind, gusting across the valley and the sea. */}
-            {scatter(phone ? 2 : 7, 4242).map(([y, delay, speed, size], i) => (
-                <span
-                    key={`wind-${i}`}
-                    className="weather-bit absolute left-0 h-px rounded-full"
-                    style={{
-                        top: `${(8 + y * 84).toFixed(1)}%`,
-                        width: `${(80 + size * 140).toFixed(0)}px`,
-                        background:
-                            'linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,0.7), rgba(255,255,255,0))',
-                        animation: `weather-wind ${(5 + speed * 5).toFixed(2)}s ease-in ${(delay * 9).toFixed(2)}s infinite`,
-                    }}
-                />
-            ))}
+            {(phone ? [] : scatter(7, 4242)).map(
+                ([y, delay, speed, size], i) => (
+                    <span
+                        key={`wind-${i}`}
+                        className="weather-bit absolute left-0 h-px rounded-full"
+                        style={{
+                            top: `${(8 + y * 84).toFixed(1)}%`,
+                            width: `${(80 + size * 140).toFixed(0)}px`,
+                            background:
+                                'linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,0.7), rgba(255,255,255,0))',
+                            animation: `weather-wind ${(5 + speed * 5).toFixed(2)}s ease-in ${(delay * 9).toFixed(2)}s infinite`,
+                        }}
+                    />
+                ),
+            )}
             {bits.map(([x, delay, speed, size], i) => (
                 <span
                     key={i}

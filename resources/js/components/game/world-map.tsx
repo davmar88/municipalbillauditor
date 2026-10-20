@@ -2525,6 +2525,12 @@ export function WorldMap({
 }: WorldMapProps) {
     const containerRef = useRef<HTMLDivElement>(null);
     const svgRef = useRef<SVGSVGElement>(null);
+    // On a phone the map holds still: flames, embers, the sea and its surf don't move, so it isn't redrawn nonstop.
+    useEffect(() => {
+        if (PHONE) {
+            svgRef.current?.pauseAnimations();
+        }
+    });
     const byId = useMemo(
         () => new Map(regions.map((region) => [region.id, region])),
         [regions],

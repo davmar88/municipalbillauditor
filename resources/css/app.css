@@ -284,6 +284,16 @@
     animation: map-ping 2.2s cubic-bezier(0, 0, 0.2, 1) infinite;
 }
 
+/* A phone keeps the map still: it's far quicker there. */
+@media (pointer: coarse) {
+    .map-march,
+    .map-surf,
+    .map-shimmer,
+    .map-sails {
+        animation: none;
+    }
+}
+
 @media (prefers-reduced-motion: reduce) {
     .map-march,
     .map-surf,

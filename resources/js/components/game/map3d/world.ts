@@ -2711,6 +2711,7 @@ export class World {
         // Flames flicker about a dozen times a second (half that on a phone): every frame would keep the map drawing flat out.
         if (
             !reduce &&
+            !this.coarse &&
             this.fires.length + this.landFlames.length > 0 &&
             now - this.fireAt > (this.coarse ? 160 : 80)
         ) {
