@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { GameBar } from '@/components/game/game-bar';
 import { GameMap } from '@/components/game/game-map';
 import { HomeCard } from '@/components/game/home-card';
+import { LiveMap, liveEnabled } from '@/components/game/live';
 import { GateStrength } from '@/components/game/gate-strength';
 import { HorseshoePicker } from '@/components/game/horseshoe-picker';
 import { MapHud } from '@/components/game/map-hud';
@@ -79,6 +80,23 @@ type Props = {
         richness: number;
     } | null;
 };
+
+/** What the map fetches when something changes in the valley. */
+const LIVE_MAP = [
+    'regions',
+    'homes',
+    'battles',
+    'recent',
+    'plunderers',
+    'gate',
+    'warrants',
+    'plunder',
+    'me',
+    'here',
+    'season',
+    'house',
+    'player',
+];
 
 export default function MapPage({
     valley,
@@ -190,6 +208,9 @@ export default function MapPage({
     return (
         <>
             <Head title="Map" />
+            {liveEnabled && player && (
+                <LiveMap valleyId={player.valleyId} only={LIVE_MAP} />
+            )}
             <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 p-3 md:p-5">
                 <GameBar />
 

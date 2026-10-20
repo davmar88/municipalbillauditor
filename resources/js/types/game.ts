@@ -17,6 +17,8 @@ export type FactionBadge = {
 
 export type PlayerSummary = {
     id: number;
+    /** Its valley, for the live channel everyone in it shares. */
+    valleyId: number;
     name: string;
     species: Species;
     level: number;

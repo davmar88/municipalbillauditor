@@ -1,7 +1,15 @@
-import { Head, Link, router, useForm, usePoll } from '@inertiajs/react';
+import {
+    Head,
+    Link,
+    router,
+    useForm,
+    usePage,
+    usePoll,
+} from '@inertiajs/react';
 import { Languages, Send } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { LiveChat, liveEnabled } from '@/components/game/live';
 import { OrchardBadge } from '@/components/game/orchard-badge';
 import { ProfileLink } from '@/components/game/profile-link';
 import { Button } from '@/components/ui/button';
@@ -46,13 +54,14 @@ export default function ChatPage({
     maxLength,
     silenced,
 }: Props) {
+    const { player } = usePage().props;
     const form = useForm({ channel, body: '' });
     const [translations, setTranslations] = useState<Record<number, string>>(
         {},
     );
 
-    // New messages arrive every 10 seconds while the page is open.
-    usePoll(10000, { only: ['messages'] });
+    // New lines come in live; without a live connection, every 10 seconds.
+    usePoll(liveEnabled ? 60000 : 10000, { only: ['messages'] });
 
     async function translateMessage(message: Message) {
         const result = await fetchTranslation(translate.url(message.id));
@@ -72,6 +81,9 @@ export default function ChatPage({
     return (
         <>
             <Head title="Chat" />
+            {liveEnabled && player && (
+                <LiveChat valleyId={player.valleyId} channel={channel} />
+            )}
             <div className="mx-auto flex w-full max-w-3xl flex-col gap-4 p-4 md:p-6">
                 <h1 className="text-2xl font-extrabold tracking-tight">Chat</h1>
 

@@ -4,6 +4,7 @@ namespace App\Game;
 
 use App\Models\Faction;
 use App\Models\Player;
+use App\Models\PlunderBand;
 use App\Models\Season;
 use App\Models\Tick as TickRecord;
 use App\Models\Valley;
@@ -44,6 +45,14 @@ final class Tick
             return;
         }
 
+        // Whether anything on the map is due this minute: then every map refreshes once at the end.
+        $now = CarbonImmutable::now();
+        $due = Player::query()->where('valley_id', $valley->id)->whereNotNull('walk_arrives_at')->where('walk_arrives_at', '<=', $now)->exists()
+            || $season->attacks()->whereNull('resolved_at')->where('lands_at', '<=', $now)->exists()
+            || $season->crimes()->whereNull('resolved_at')->where('settles_at', '<=', $now)->exists()
+            || PlunderBand::query()->where('season_id', $season->id)->whereNull('resolved_at')->where('lands_at', '<=', $now)->exists();
+        $bands = PlunderBand::query()->where('season_id', $season->id)->count();
+
         Movement::settleArrived($valley->id);
         app(Homes::class)->buildArrivedCamps($valley->id);
 
@@ -76,6 +85,11 @@ final class Tick
 
         // Buildings fall with land lost this tick: to raids, upkeep, Gate Night or a new season.
         $this->bases->clearRuins($valley);
+
+        if ($due || PlunderBand::query()->where('season_id', $season->id)->count() !== $bands) {
+            Live::touch($valley->id);
+            Live::flush();
+        }
     }
 
     /** Whether this half hour hasn't been run yet. */

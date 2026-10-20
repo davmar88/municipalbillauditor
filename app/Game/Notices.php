@@ -3,6 +3,7 @@
 namespace App\Game;
 
 use App\Enums\FactionRole;
+use App\Events\NoticesSent;
 use App\Models\Notice;
 use App\Models\Player;
 use Carbon\CarbonImmutable;
@@ -27,6 +28,9 @@ final class Notices
         }
 
         $now = CarbonImmutable::now();
+
+        // Each animal sees it pop up straight away.
+        Live::send(new NoticesSent($ids->all(), $kind, Str::limit($text, 297), $url));
 
         foreach ($ids->chunk(500) as $chunk) {
             Notice::query()->insert($chunk->map(fn (int $id) => [

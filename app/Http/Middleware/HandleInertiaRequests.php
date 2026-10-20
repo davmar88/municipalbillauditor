@@ -64,6 +64,7 @@ class HandleInertiaRequests extends Middleware
 
                 return [
                     'id' => $player->id,
+                    'valleyId' => $player->valley_id,
                     'name' => $player->name,
                     'species' => $player->species->value,
                     'level' => $level,

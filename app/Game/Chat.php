@@ -2,6 +2,7 @@
 
 namespace App\Game;
 
+use App\Events\ValleyChanged;
 use App\Game\Translation\Translator;
 use App\Models\ChatMessage;
 use App\Models\ChatTranslation;
@@ -127,6 +128,8 @@ final class Chat
         ]);
 
         Missions::record($player, 'chat');
+        // Whoever has this channel open sees it straight away.
+        Live::send(new ValleyChanged($player->valley_id, 'chat', $channel));
 
         return $message;
     }

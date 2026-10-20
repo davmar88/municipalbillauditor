@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Game\Live;
 use App\Game\Players;
 use Closure;
 use Illuminate\Http\Request;
@@ -24,7 +25,14 @@ class EnsurePlayer
         }
 
         $this->players->visit($player);
+        $response = $next($request);
 
-        return $next($request);
+        // Anything an animal did that went through shows on everyone's map straight away.
+        if (! $request->isMethodSafe() && $response->isRedirection() && ! $request->session()->has('errors')) {
+            Live::touch($player->valley_id);
+            Live::flush();
+        }
+
+        return $response;
     }
 }
