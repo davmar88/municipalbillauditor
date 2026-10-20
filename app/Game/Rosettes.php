@@ -5,6 +5,7 @@ namespace App\Game;
 use App\Models\Player;
 use App\Models\RosetteEntry;
 use App\Models\Season;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -30,13 +31,18 @@ final class Rosettes
                 return false;
             }
 
-            RosetteEntry::create([
-                'player_id' => $player->id,
-                'season_id' => $season?->id,
-                'amount' => $amount,
-                'reason' => $reason,
-                'reference' => $reference,
-            ]);
+            // Two requests at once (a page and its live reload, at midnight) can both get here: the second earns nothing.
+            try {
+                RosetteEntry::create([
+                    'player_id' => $player->id,
+                    'season_id' => $season?->id,
+                    'amount' => $amount,
+                    'reason' => $reason,
+                    'reference' => $reference,
+                ]);
+            } catch (UniqueConstraintViolationException) {
+                return false;
+            }
 
             Player::query()->whereKey($player->id)->increment('rosettes', $amount);
             $player->rosettes += $amount;

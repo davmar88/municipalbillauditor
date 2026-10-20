@@ -27,7 +27,7 @@ export function SeasonBar({ weather }: { weather: Weather }) {
                 <p className="text-base font-bold">
                     <span aria-hidden>{weather.emoji}</span> {weather.label}
                 </p>
-                <p className="min-w-0 flex-1 text-sm text-muted-foreground">
+                <p className="order-last w-full text-sm text-muted-foreground sm:order-none sm:w-auto sm:min-w-0 sm:flex-1">
                     {weather.note}
                 </p>
                 {until && (

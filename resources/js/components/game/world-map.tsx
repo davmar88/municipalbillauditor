@@ -1647,6 +1647,11 @@ const IronfieldTown = memo(function IronfieldTown({
     );
 });
 
+/** A phone: one flame per burning region instead of four, to keep the map quick. */
+const PHONE =
+    typeof window !== 'undefined' &&
+    (window.matchMedia?.('(pointer: coarse)').matches ?? false);
+
 /** Land a plunder, a raid or Irongate's riders set alight: flames, then ashes for hours. */
 const LandFires = memo(function LandFires({
     regions,
@@ -1667,12 +1672,15 @@ const LandFires = memo(function LandFires({
                                     ? `${region.name} is burning`
                                     : `Ashes where ${region.name} burned`}
                             </title>
-                            {[
-                                [-34, 18],
-                                [26, 30],
-                                [6, -26],
-                                [-12, 44],
-                            ].map(([dx, dy], i) => (
+                            {(PHONE
+                                ? [[0, 18]]
+                                : [
+                                      [-34, 18],
+                                      [26, 30],
+                                      [6, -26],
+                                      [-12, 44],
+                                  ]
+                            ).map(([dx, dy], i) => (
                                 <g
                                     key={i}
                                     transform={`translate(${hx + dx} ${hy + dy})`}

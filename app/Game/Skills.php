@@ -5,6 +5,7 @@ namespace App\Game;
 use App\Models\Player;
 use App\Models\Season;
 use App\Models\SkillEntry;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -36,14 +37,19 @@ final class Skills
                 return false;
             }
 
-            SkillEntry::create([
-                'player_id' => $playerId,
-                'season_id' => $season?->id,
-                'skill' => $skill,
-                'amount' => $amount,
-                'reason' => $reason,
-                'reference' => $reference,
-            ]);
+            // The same award twice at once: the second gets nothing.
+            try {
+                SkillEntry::create([
+                    'player_id' => $playerId,
+                    'season_id' => $season?->id,
+                    'skill' => $skill,
+                    'amount' => $amount,
+                    'reason' => $reason,
+                    'reference' => $reference,
+                ]);
+            } catch (UniqueConstraintViolationException) {
+                return false;
+            }
 
             Player::query()->whereKey($playerId)->increment("{$skill}_skill", $amount);
 

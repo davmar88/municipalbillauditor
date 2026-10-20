@@ -219,7 +219,7 @@ export default function WorldMap3D({
             return;
         }
         renderer.setPixelRatio(
-            Math.min(window.devicePixelRatio || 1, coarse ? 1.5 : 2),
+            Math.min(window.devicePixelRatio || 1, coarse ? 1 : 2),
         );
         renderer.domElement.className = 'absolute inset-0 size-full';
         surface.prepend(renderer.domElement);

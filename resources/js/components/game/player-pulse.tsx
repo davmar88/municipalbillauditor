@@ -115,6 +115,17 @@ export function PlayerPulse() {
     return (
         <>
             <div className="pointer-events-none fixed top-[4.5rem] right-3 z-50 flex w-[min(21rem,calc(100vw-1.5rem))] flex-col gap-2 md:right-5">
+                {popups.length > 1 && (
+                    <button
+                        type="button"
+                        onClick={() =>
+                            popups.forEach((p) => dismissPopup(p.key))
+                        }
+                        className="pointer-events-auto self-end rounded-full border bg-card/95 px-3 py-1 text-xs font-semibold shadow hover:bg-accent"
+                    >
+                        Clear all
+                    </button>
+                )}
                 {popups.map((popup) => (
                     <PopupCard key={popup.key} popup={popup} />
                 ))}

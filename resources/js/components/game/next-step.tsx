@@ -1,7 +1,8 @@
 import { Link, usePage } from '@inertiajs/react';
-import { ArrowRight, Gift } from 'lucide-react';
+import { ArrowRight, Gift, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useCurrentUrl } from '@/hooks/use-current-url';
+import { useDismissed } from '@/lib/dismiss';
 import { act } from '@/lib/game';
 import { missionPlace } from '@/lib/missions';
 import { today } from '@/routes/play';
@@ -14,8 +15,15 @@ import { claim } from '@/routes/play/mission';
 export function NextStep() {
     const { nextStep } = usePage().props;
     const { isCurrentUrl } = useCurrentUrl();
+    const [isClosed, close] = useDismissed();
 
     if (!nextStep || nextStep.locked) {
+        return null;
+    }
+
+    // Closed, it stays away until the step changes or is done.
+    const key = `step:${nextStep.key}:${nextStep.done ? 'done' : 'open'}`;
+    if (isClosed(key)) {
         return null;
     }
 
@@ -77,6 +85,15 @@ export function NextStep() {
                     </Link>
                 </Button>
             )}
+            <button
+                type="button"
+                onClick={() => close(key)}
+                className="flex size-7 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-accent hover:text-foreground"
+                aria-label="Hide the next step"
+                title="Hide it until the next step"
+            >
+                <X className="size-4" />
+            </button>
         </div>
     );
 }

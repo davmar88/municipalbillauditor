@@ -74,7 +74,14 @@ export const WeatherOverlay = memo(function WeatherOverlay({
     now: WeatherKey;
 }) {
     const look = LOOK[now];
-    const bits = scatter(look.count, now.length * 977);
+    // A phone gets a light sprinkle: every falling flake is work for it.
+    const phone =
+        typeof window !== 'undefined' &&
+        (window.matchMedia?.('(pointer: coarse)').matches ?? false);
+    const bits = scatter(
+        phone ? Math.ceil(look.count / 4) : look.count,
+        now.length * 977,
+    );
 
     return (
         <div
@@ -111,7 +118,7 @@ export const WeatherOverlay = memo(function WeatherOverlay({
                 />
             )}
             {/* The wind, gusting across the valley and the sea. */}
-            {scatter(7, 4242).map(([y, delay, speed, size], i) => (
+            {scatter(phone ? 2 : 7, 4242).map(([y, delay, speed, size], i) => (
                 <span
                     key={`wind-${i}`}
                     className="weather-bit absolute left-0 h-px rounded-full"

@@ -4,6 +4,7 @@ namespace App\Game;
 
 use App\Models\AppleEntry;
 use App\Models\Player;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -57,12 +58,17 @@ final class Apples
                 return false;
             }
 
-            AppleEntry::create([
-                'player_id' => $player->id,
-                'amount' => $amount,
-                'reason' => $reason,
-                'reference' => $reference,
-            ]);
+            // The same award twice at once: the second gets nothing.
+            try {
+                AppleEntry::create([
+                    'player_id' => $player->id,
+                    'amount' => $amount,
+                    'reason' => $reason,
+                    'reference' => $reference,
+                ]);
+            } catch (UniqueConstraintViolationException) {
+                return false;
+            }
 
             Player::query()->whereKey($player->id)->increment('apples', $amount);
             $player->apples += $amount;

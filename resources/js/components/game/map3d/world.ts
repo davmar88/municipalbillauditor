@@ -517,8 +517,15 @@ export class World {
 
     private seaAt = 0;
 
+    /** A phone: fewer real animals, slower ambient animation, fewer labels. */
+    private coarse = false;
+
+    /** When flames, embers and the sea last moved: they move a few times a second, not every frame. */
+    private fireAt = 0;
+
     constructor(coarse: boolean) {
-        this.actorBudget = coarse ? 24 : 60;
+        this.actorBudget = coarse ? 10 : 60;
+        this.coarse = coarse;
         const s = this.scene;
         s.background = new THREE.Color('#0b3a5c');
         s.fog = new THREE.Fog('#0b3a5c', 2000, 9000);
@@ -2085,7 +2092,8 @@ export class World {
                 continue;
             }
             const [hx, hy] = hub(region.key);
-            spots.forEach(([dx, dy], i) => {
+            // A phone gets one fire per region, not four.
+            (this.coarse ? spots.slice(0, 1) : spots).forEach(([dx, dy], i) => {
                 const ash = region.fire === 'ash';
                 const group = ash
                     ? ashes(region.id * 7 + i)
@@ -2347,9 +2355,12 @@ export class World {
             // Its health, over the roof, for anyone to see.
             group.updateMatrixWorld(true);
             const top = new THREE.Box3().setFromObject(group).max.y;
-            const bar = new CSS2DObject(healthBar(home.health ?? 100, 34));
-            bar.position.set(0, Math.max(0.6, top) + 0.25, 0);
-            group.add(bar);
+            // On a phone, only the homes that are hurt carry a bar: hundreds of labels slow it down.
+            if (!this.coarse || (home.health ?? 100) < 100) {
+                const bar = new CSS2DObject(healthBar(home.health ?? 100, 34));
+                bar.position.set(0, Math.max(0.6, top) + 0.25, 0);
+                group.add(bar);
+            }
             group.position.set(home.x, 0, home.y);
             this.dwellings.add(group);
             return { group, level: home.level };
@@ -2681,7 +2692,7 @@ export class World {
         // Others out walking move along their trails, a few times a second.
         if (
             this.walking.length + this.striking.length > 0 &&
-            now - this.walksAt > 200
+            now - this.walksAt > (this.coarse ? 500 : 200)
         ) {
             this.walksAt = now;
             this.placeWalks(Date.now());
@@ -2689,7 +2700,7 @@ export class World {
             moving = true;
         }
         // The sea rolls in and the surf washes up and back, a few times a second.
-        if (!reduce && now - this.seaAt > 90) {
+        if (!reduce && !this.coarse && now - this.seaAt > 250) {
             this.seaAt = now;
             this.seaTexture.offset.set(now / 60000, now / 45000);
             (this.surf.material as THREE.MeshBasicMaterial).opacity =
@@ -2697,7 +2708,13 @@ export class World {
             this.surf.scale.setScalar(1);
             moving = true;
         }
-        if (!reduce && this.fires.length + this.landFlames.length > 0) {
+        // Flames flicker about a dozen times a second (half that on a phone): every frame would keep the map drawing flat out.
+        if (
+            !reduce &&
+            this.fires.length + this.landFlames.length > 0 &&
+            now - this.fireAt > (this.coarse ? 160 : 80)
+        ) {
+            this.fireAt = now;
             for (const { group, ash } of [...this.fires, ...this.landFlames]) {
                 if (ash) {
                     animateAshes(group, now);

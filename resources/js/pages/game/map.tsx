@@ -12,6 +12,7 @@ import { HorseshoePicker } from '@/components/game/horseshoe-picker';
 import { MapHud } from '@/components/game/map-hud';
 import { RegionPanel } from '@/components/game/region-panel';
 import { SeasonBar } from '@/components/game/season-bar';
+import { useDismissed } from '@/lib/dismiss';
 import type { Plunder, Warrant } from '@/components/game/region-panel';
 import { Button } from '@/components/ui/button';
 import { WhyNot, needHorseshoes } from '@/components/game/why-not';
@@ -154,6 +155,9 @@ export default function MapPage({
     // The open scrub right-clicked, to walk or set up camp there.
     const [ground, setGround] = useState<[number, number] | null>(null);
     const [pile, setPile] = useState<LootPile | null>(null);
+    const [isClosed, close] = useDismissed();
+    // The notices above the map, as a set: cleared, they stay away until one changes.
+    const needsKey = `needs:${gateNight.open ? (gateNight.defended ? 'gate-in' : 'gate') : ''}:${plunderers ? `${plunderers.id}:${plunderers.fighting}` : ''}:${battles.map((b) => `${b.id}:${b.joined}`).join(',')}`;
     // Your own home, tapped on the map, to manage it there.
     const [homeOpen, setHomeOpen] = useState(false);
     const [otherHome, setOtherHome] = useState<number | null>(null);
@@ -270,180 +274,195 @@ export default function MapPage({
 
                 {gateNight.result && <GateResult result={gateNight.result} />}
 
-                {(gateNight.open || battles.length > 0 || plunderers) && (
-                    <section
-                        aria-label="Needs you now"
-                        className="flex flex-col gap-2"
-                    >
-                        {gateNight.open && (
-                            <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-orange-500/40 bg-orange-500/10 px-4 py-2.5 text-sm">
-                                <Flame
-                                    className="size-4 shrink-0 text-orange-300"
-                                    aria-hidden
-                                />
-                                <p className="min-w-0 flex-1">
-                                    <span className="font-bold">
-                                        Gate Night is tonight.
-                                    </span>{' '}
-                                    Ironfield's {gateNight.humans} men raid at
-                                    19:00. If the gate holds, every defender
-                                    earns 15 Rosettes; if not, two outer fields
-                                    burn. <GateStrength gate={gateNight} />
-                                </p>
-                                {gateNight.defended ? (
-                                    <span className="font-semibold text-primary">
-                                        You're at the gate.
-                                    </span>
-                                ) : (
-                                    <div className="flex items-center gap-2">
-                                        <HorseshoePicker
-                                            value={horseshoes}
-                                            onChange={setHorseshoes}
-                                        />
-                                        <Button
-                                            size="sm"
-                                            onClick={() =>
-                                                act(gate.url(), { horseshoes })
-                                            }
-                                        >
-                                            Hold the gate
-                                        </Button>
-                                    </div>
-                                )}
-                            </div>
-                        )}
-                        {plunderers && (
-                            <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-orange-500/40 bg-orange-500/10 px-4 py-2.5 text-sm">
-                                <Swords
-                                    className="size-4 shrink-0 text-orange-300"
-                                    aria-hidden
-                                />
-                                <p className="min-w-0 flex-1">
-                                    <span className="font-bold">
-                                        {plunderers.men} plunderers from
-                                        Irongate are riding for{' '}
-                                        {plunderers.regionName}.
-                                    </span>{' '}
-                                    They strike at{' '}
-                                    {clockTime(plunderers.landsAt)} (
-                                    {fromNow(plunderers.landsAt)}). Every
-                                    faction can fight them from here:{' '}
-                                    {plunderers.fighters}{' '}
-                                    {plunderers.fighters === 1
-                                        ? 'animal is'
-                                        : 'animals are'}{' '}
-                                    in, about {plunderers.strength} against{' '}
-                                    {plunderers.men} men. Win and the fighters
-                                    share {plunderers.corn} Corn; lose and they
-                                    sack {plunderers.holders ?? 'the farm'} and
-                                    lay the fighters up for an hour.
-                                </p>
-                                {plunderers.fighting ? (
-                                    <span className="font-semibold text-primary">
-                                        You're riding out against them.
-                                    </span>
-                                ) : (
-                                    <div className="flex items-center gap-2">
-                                        <HorseshoePicker
-                                            value={horseshoes}
-                                            onChange={setHorseshoes}
-                                        />
-                                        <Button
-                                            size="sm"
-                                            disabled={
-                                                !plunderers.canFight ||
-                                                (player?.horseshoes ?? 0) <
-                                                    horseshoes
-                                            }
-                                            onClick={() =>
-                                                act(
-                                                    fightPlunderers.url(
-                                                        plunderers.id,
-                                                    ),
-                                                    { horseshoes },
-                                                )
-                                            }
-                                        >
-                                            Fight them
-                                        </Button>
-                                        <WhyNot
-                                            reason={
-                                                !plunderers.canFight
-                                                    ? 'Factions fight the plunderers: join or found one first.'
-                                                    : needHorseshoes(
-                                                          player?.horseshoes ??
-                                                              0,
-                                                          horseshoes,
-                                                      )
-                                            }
-                                        />
-                                    </div>
-                                )}
-                            </div>
-                        )}
-                        {battles.map((battle) => (
-                            <div
-                                key={battle.id}
-                                className={
-                                    battle.side === 'attack'
-                                        ? 'flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-primary/40 bg-primary/10 px-4 py-2.5 text-sm'
-                                        : 'flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-orange-500/40 bg-orange-500/10 px-4 py-2.5 text-sm'
-                                }
+                {(gateNight.open || battles.length > 0 || plunderers) &&
+                    !isClosed(needsKey) && (
+                        <section
+                            aria-label="Needs you now"
+                            className="relative flex flex-col gap-2"
+                        >
+                            <button
+                                type="button"
+                                onClick={() => close(needsKey)}
+                                className="absolute -top-2 -right-2 z-10 flex size-7 items-center justify-center rounded-full border bg-card text-muted-foreground shadow hover:text-foreground"
+                                aria-label="Clear these notices"
+                                title="Clear these notices: they come back when something new happens"
                             >
-                                {battle.side === 'attack' ? (
-                                    <Swords
-                                        className="size-4 shrink-0 text-primary"
-                                        aria-hidden
-                                    />
-                                ) : (
-                                    <Shield
+                                ✕
+                            </button>
+                            {gateNight.open && (
+                                <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-orange-500/40 bg-orange-500/10 px-4 py-2.5 text-sm">
+                                    <Flame
                                         className="size-4 shrink-0 text-orange-300"
                                         aria-hidden
                                     />
-                                )}
-                                <p className="min-w-0 flex-1">
-                                    <span className="font-bold">
-                                        {battle.side === 'attack'
-                                            ? `Your faction is attacking ${battle.region}.`
-                                            : `${battle.attacker} is attacking ${battle.region}.`}
-                                    </span>{' '}
-                                    Lands at {clockTime(battle.landsAt)} (
-                                    {fromNow(battle.landsAt)}); your side has{' '}
-                                    {battle.ourHorseshoes} horseshoes in.
-                                </p>
-                                {fromNow(battle.landsAt) === 'now' ? (
-                                    <span className="font-semibold text-primary">
-                                        Landing now: the result comes in a
-                                        minute.
-                                    </span>
-                                ) : battle.joined ? (
-                                    <span className="font-semibold text-primary">
-                                        You're in this battle.
-                                    </span>
-                                ) : (
-                                    <div className="flex items-center gap-2">
-                                        <HorseshoePicker
-                                            value={horseshoes}
-                                            onChange={setHorseshoes}
+                                    <p className="min-w-0 flex-[1_1_15rem]">
+                                        <span className="font-bold">
+                                            Gate Night is tonight.
+                                        </span>{' '}
+                                        Ironfield's {gateNight.humans} men raid
+                                        at 19:00. If the gate holds, every
+                                        defender earns 15 Rosettes; if not, two
+                                        outer fields burn.{' '}
+                                        <GateStrength gate={gateNight} />
+                                    </p>
+                                    {gateNight.defended ? (
+                                        <span className="font-semibold text-primary">
+                                            You're at the gate.
+                                        </span>
+                                    ) : (
+                                        <div className="flex items-center gap-2">
+                                            <HorseshoePicker
+                                                value={horseshoes}
+                                                onChange={setHorseshoes}
+                                            />
+                                            <Button
+                                                size="sm"
+                                                onClick={() =>
+                                                    act(gate.url(), {
+                                                        horseshoes,
+                                                    })
+                                                }
+                                            >
+                                                Hold the gate
+                                            </Button>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                            {plunderers && (
+                                <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-orange-500/40 bg-orange-500/10 px-4 py-2.5 text-sm">
+                                    <Swords
+                                        className="size-4 shrink-0 text-orange-300"
+                                        aria-hidden
+                                    />
+                                    <p className="min-w-0 flex-[1_1_15rem]">
+                                        <span className="font-bold">
+                                            {plunderers.men} plunderers from
+                                            Irongate are riding for{' '}
+                                            {plunderers.regionName}.
+                                        </span>{' '}
+                                        They strike at{' '}
+                                        {clockTime(plunderers.landsAt)} (
+                                        {fromNow(plunderers.landsAt)}). Every
+                                        faction can fight them from here:{' '}
+                                        {plunderers.fighters}{' '}
+                                        {plunderers.fighters === 1
+                                            ? 'animal is'
+                                            : 'animals are'}{' '}
+                                        in, about {plunderers.strength} against{' '}
+                                        {plunderers.men} men. Win and the
+                                        fighters share {plunderers.corn} Corn;
+                                        lose and they sack{' '}
+                                        {plunderers.holders ?? 'the farm'} and
+                                        lay the fighters up for an hour.
+                                    </p>
+                                    {plunderers.fighting ? (
+                                        <span className="font-semibold text-primary">
+                                            You're riding out against them.
+                                        </span>
+                                    ) : (
+                                        <div className="flex items-center gap-2">
+                                            <HorseshoePicker
+                                                value={horseshoes}
+                                                onChange={setHorseshoes}
+                                            />
+                                            <Button
+                                                size="sm"
+                                                disabled={
+                                                    !plunderers.canFight ||
+                                                    (player?.horseshoes ?? 0) <
+                                                        horseshoes
+                                                }
+                                                onClick={() =>
+                                                    act(
+                                                        fightPlunderers.url(
+                                                            plunderers.id,
+                                                        ),
+                                                        { horseshoes },
+                                                    )
+                                                }
+                                            >
+                                                Fight them
+                                            </Button>
+                                            <WhyNot
+                                                reason={
+                                                    !plunderers.canFight
+                                                        ? 'Factions fight the plunderers: join or found one first.'
+                                                        : needHorseshoes(
+                                                              player?.horseshoes ??
+                                                                  0,
+                                                              horseshoes,
+                                                          )
+                                                }
+                                            />
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                            {battles.map((battle) => (
+                                <div
+                                    key={battle.id}
+                                    className={
+                                        battle.side === 'attack'
+                                            ? 'flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-primary/40 bg-primary/10 px-4 py-2.5 text-sm'
+                                            : 'flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-orange-500/40 bg-orange-500/10 px-4 py-2.5 text-sm'
+                                    }
+                                >
+                                    {battle.side === 'attack' ? (
+                                        <Swords
+                                            className="size-4 shrink-0 text-primary"
+                                            aria-hidden
                                         />
-                                        <Button
-                                            size="sm"
-                                            onClick={() =>
-                                                act(commit.url(battle.id), {
-                                                    horseshoes,
-                                                })
-                                            }
-                                        >
+                                    ) : (
+                                        <Shield
+                                            className="size-4 shrink-0 text-orange-300"
+                                            aria-hidden
+                                        />
+                                    )}
+                                    <p className="min-w-0 flex-[1_1_15rem]">
+                                        <span className="font-bold">
                                             {battle.side === 'attack'
-                                                ? 'Join the attack'
-                                                : 'Defend'}
-                                        </Button>
-                                    </div>
-                                )}
-                            </div>
-                        ))}
-                    </section>
-                )}
+                                                ? `Your faction is attacking ${battle.region}.`
+                                                : `${battle.attacker} is attacking ${battle.region}.`}
+                                        </span>{' '}
+                                        Lands at {clockTime(battle.landsAt)} (
+                                        {fromNow(battle.landsAt)}); your side
+                                        has {battle.ourHorseshoes} horseshoes
+                                        in.
+                                    </p>
+                                    {fromNow(battle.landsAt) === 'now' ? (
+                                        <span className="font-semibold text-primary">
+                                            Landing now: the result comes in a
+                                            minute.
+                                        </span>
+                                    ) : battle.joined ? (
+                                        <span className="font-semibold text-primary">
+                                            You're in this battle.
+                                        </span>
+                                    ) : (
+                                        <div className="flex items-center gap-2">
+                                            <HorseshoePicker
+                                                value={horseshoes}
+                                                onChange={setHorseshoes}
+                                            />
+                                            <Button
+                                                size="sm"
+                                                onClick={() =>
+                                                    act(commit.url(battle.id), {
+                                                        horseshoes,
+                                                    })
+                                                }
+                                            >
+                                                {battle.side === 'attack'
+                                                    ? 'Join the attack'
+                                                    : 'Defend'}
+                                            </Button>
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+                        </section>
+                    )}
 
                 <GameMap
                     valley={valley}
