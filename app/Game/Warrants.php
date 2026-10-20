@@ -124,6 +124,8 @@ final class Warrants
 
             $house->decrement('apples', $bounty);
 
+            Missions::record($player, 'bounty');
+
             $warrant = Warrant::create([
                 'season_id' => $season->id,
                 'player_id' => $suspect->id,
@@ -164,6 +166,7 @@ final class Warrants
             }
 
             Apples::spend($player, $amount, "Added to the bounty on {$warrant->wanted->name}", "bounty:{$warrant->id}:raise:".Str::uuid());
+            Missions::record($player, 'bounty');
             $warrant->increment('bounty', $amount);
         });
     }
@@ -236,6 +239,7 @@ final class Warrants
             Apples::award($hunter, $apples, "Caught {$wanted->name}", "bounty:{$warrant->id}");
             $warrant->forceFill(['status' => 'served', 'hunter_id' => $hunter->id, 'served_at' => CarbonImmutable::now()])->save();
             Rosettes::award($hunter, 15, "Caught {$wanted->name}", "arrest:{$warrant->id}", $hunter->valley->currentSeason());
+            Missions::record($hunter, 'bounty');
             $repaid = self::payBack($wanted, $warrant->season_id);
             $owing = $repaid > 0 ? " You paid back {$repaid} Corn to those your crimes hurt." : '';
 

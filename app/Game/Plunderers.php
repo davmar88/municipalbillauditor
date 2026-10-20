@@ -168,6 +168,7 @@ final class Plunderers
 
             Horseshoes::spend($player, $horseshoes);
             Missions::record($player, 'battle');
+            Missions::record($player, 'plunderers');
 
             return PlunderFighter::create([
                 'plunder_band_id' => $band->id,

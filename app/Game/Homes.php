@@ -196,6 +196,7 @@ final class Homes
             }
 
             $this->pay($player, $level);
+            Missions::record($player, 'home');
 
             return Home::create([
                 'player_id' => $player->id,
@@ -463,6 +464,7 @@ final class Homes
 
             // A skin from the shop shows instead of a home-made one.
             $home->forceFill(['skin_level' => $next, 'skin_item_id' => null])->save();
+            Missions::record($player, 'skin');
 
             return $home;
         });
@@ -580,6 +582,7 @@ final class Homes
             $this->ensureAtDoor($helper, $home, $home->player_id === $helper->id ? 'your home' : "{$owner->name}'s home");
             Horseshoes::spend($helper, self::DOUSE_HORSESHOES);
             $crime->forceFill(['doused_by' => $helper->id])->save();
+            Missions::record($helper, 'douse');
             Rosettes::award($helper, 5, "Put out the fire at {$owner->name}'s home", "douse:{$crime->id}", $helper->valley->currentSeason());
 
             if ($owner->id !== $helper->id) {

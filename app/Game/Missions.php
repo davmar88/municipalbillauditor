@@ -138,6 +138,52 @@ final class Missions
             'level' => 2,
             'reward' => ['corn' => 200, 'rosettes' => 30],
         ],
+        'fire.camp' => [
+            'chapter' => 'Fire and Steel',
+            'title' => 'A roof of your own',
+            'story' => 'Out in the scrub or on a farm, a Tent or a Hut is somewhere to hide from bounty hunters and to come home to.',
+            'goal' => 'Pitch a Tent or build a Hut.',
+            'events' => ['home'],
+            'target' => 1,
+            'reward' => ['corn' => 30, 'rosettes' => 10],
+        ],
+        'fire.skin' => [
+            'chapter' => 'Fire and Steel',
+            'title' => 'Dress your walls',
+            'story' => 'A good skin keeps the weather out, and burners and bounty hunters too.',
+            'goal' => 'Buy a skin for your home in the skin shop.',
+            'events' => ['skin'],
+            'target' => 1,
+            'reward' => ['corn' => 40, 'rosettes' => 10],
+        ],
+        'fire.bucket' => [
+            'chapter' => 'Fire and Steel',
+            'title' => 'Bucket brigade',
+            'story' => 'When a home goes up in flames, whoever gets to the door first can save it.',
+            'goal' => 'Put out a fire at a home.',
+            'events' => ['douse'],
+            'target' => 1,
+            'reward' => ['corn' => 40, 'rosettes' => 15],
+        ],
+        'fire.riders' => [
+            'chapter' => 'Fire and Steel',
+            'title' => 'Riders from Irongate',
+            'story' => 'The humans send plunderers for the farms. Every faction rides out against them together.',
+            'goal' => "Fight a band of Irongate's plunderers.",
+            'events' => ['plunderers'],
+            'target' => 1,
+            'reward' => ['corn' => 50, 'rosettes' => 15],
+        ],
+        'fire.justice' => [
+            'chapter' => 'Fire and Steel',
+            'title' => 'Wanted',
+            'story' => 'Outlaws pay for what they took when they are caught. Put up a bounty, add to one, or make the arrest yourself.',
+            'goal' => 'Put Apples on a bounty, or arrest an outlaw.',
+            'events' => ['bounty'],
+            'target' => 1,
+            'level' => 3,
+            'reward' => ['corn' => 60, 'rosettes' => 20],
+        ],
     ];
 
     /**
@@ -155,7 +201,8 @@ final class Missions
         'daily.give' => ['title' => 'For the store', 'goal' => 'Give 10 to your faction\'s store.', 'events' => ['give'], 'target' => 10, 'for' => 'faction', 'reward' => ['corn' => 30, 'rosettes' => 5]],
         'daily.battle' => ['title' => 'Call to arms', 'goal' => 'Join a raid or a defence.', 'events' => ['battle'], 'target' => 1, 'for' => 'faction', 'reward' => ['corn' => 40, 'rosettes' => 8]],
         'daily.ironfield' => ['title' => 'Into Ironfield', 'goal' => 'Get away with an Ironfield mission.', 'events' => ['ironfield'], 'target' => 1, 'for' => 'all', 'reward' => ['corn' => 40, 'rosettes' => 8]],
-        'daily.crime' => ['title' => 'Night work', 'goal' => 'Commit a crime.', 'events' => ['crime'], 'target' => 1, 'for' => 'lone', 'reward' => ['corn' => 40, 'rosettes' => 8]],
+        'daily.crime' => ['title' => 'Night work', 'goal' => 'Commit a crime: loot, burn, plunder or rob.', 'events' => ['crime'], 'target' => 1, 'for' => 'outlaw', 'reward' => ['corn' => 40, 'rosettes' => 8]],
+        'daily.riders' => ['title' => 'Ride out', 'goal' => "Fight Irongate's plunderers.", 'events' => ['plunderers'], 'target' => 1, 'for' => 'faction', 'reward' => ['corn' => 40, 'rosettes' => 8]],
         'daily.craft' => ['title' => 'At the bench', 'goal' => 'Make 2 copies of your designs.', 'events' => ['craft'], 'target' => 2, 'for' => 'maker', 'reward' => ['corn' => 30, 'rosettes' => 5, 'materials' => ['wood' => 3, 'wool' => 3]]],
         'daily.sell' => ['title' => 'Busy shop', 'goal' => 'Sell 2 items.', 'events' => ['sale'], 'target' => 2, 'for' => 'shop', 'reward' => ['corn' => 50, 'rosettes' => 8]],
     ];
@@ -431,6 +478,8 @@ final class Missions
         return match ($for) {
             'faction' => $player->faction_id !== null,
             'lone' => $player->faction_id === null && $player->level() >= (int) config('game.levels.crime'),
+            // Anyone old enough for crime, faction members too.
+            'outlaw' => $player->level() >= (int) config('game.levels.crime'),
             'maker' => $player->designs()->where('status', 'approved')->exists(),
             'shop' => $player->level() >= (int) config('game.levels.stall'),
             default => true,
