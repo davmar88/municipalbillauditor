@@ -70,7 +70,7 @@ final class Plunderers
             $holder = $fighter->faction_id !== null && $fighter->faction_id === $region->faction_id;
             $animal = $fighter->player->species;
 
-            return $fighter->horseshoes
+            return $fighter->horseshoes * $fighter->boost
                 * ($holder ? $animal->defence() * Bases::defence($region) : $animal->attack())
                 * Research::defence($fighter->faction_id);
         });
@@ -175,6 +175,7 @@ final class Plunderers
                 'player_id' => $player->id,
                 'faction_id' => $player->faction_id,
                 'horseshoes' => $horseshoes,
+                'boost' => Powers::plunderWeapon($player),
             ]);
         });
     }

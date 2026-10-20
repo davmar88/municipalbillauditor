@@ -29,7 +29,7 @@ final class Wardrobe
         'gloves' => [ItemTemplate::Gloves],
         'shoes' => [ItemTemplate::Shoes],
         // Animals have no hands, so one tool or banner rides on the back.
-        'carried' => [ItemTemplate::Banner, ItemTemplate::Pickaxe, ItemTemplate::Basket],
+        'carried' => [ItemTemplate::Sword, ItemTemplate::Pitchfork, ItemTemplate::Cudgel, ItemTemplate::Banner, ItemTemplate::Pickaxe, ItemTemplate::Sling, ItemTemplate::Basket],
     ];
 
     /** @return list<array{spot: string, template: string, name: string, colours: array<int, string>, pattern: string}> */

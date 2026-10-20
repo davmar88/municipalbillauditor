@@ -91,7 +91,7 @@ final class Battles
                 'seed' => Dice::seed(),
             ]);
 
-            BattleCommitment::create(['attack_id' => $attack->id, 'player_id' => $locked->id, 'side' => 'attack', 'horseshoes' => $horseshoes, 'boost' => Powers::commitment($locked)]);
+            BattleCommitment::create(['attack_id' => $attack->id, 'player_id' => $locked->id, 'side' => 'attack', 'horseshoes' => $horseshoes, 'boost' => Powers::commitment($locked) * Powers::weapon($locked, 'attack')]);
             Missions::record($locked, 'battle');
             // The raid goes ahead whatever; the faction's own rules may give its leader a strike.
             RaidRules::judge($locked, $faction, $target);
@@ -135,7 +135,7 @@ final class Battles
             Players::ensureFree($locked);
             Horseshoes::spend($locked, $horseshoes);
 
-            $commitment = BattleCommitment::create(['attack_id' => $attack->id, 'player_id' => $locked->id, 'side' => $side, 'horseshoes' => $horseshoes, 'boost' => Powers::commitment($locked)]);
+            $commitment = BattleCommitment::create(['attack_id' => $attack->id, 'player_id' => $locked->id, 'side' => $side, 'horseshoes' => $horseshoes, 'boost' => Powers::commitment($locked) * Powers::weapon($locked, $side)]);
             Missions::record($locked, 'battle');
 
             return $commitment;

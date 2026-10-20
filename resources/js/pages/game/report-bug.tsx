@@ -5,6 +5,7 @@ import { GameBar } from '@/components/game/game-bar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { NativeSelect } from '@/components/ui/native-select';
 import { Textarea } from '@/components/ui/textarea';
 import { shortWhen } from '@/lib/game';
 import { store } from '@/routes/play/bugs';
@@ -12,6 +13,10 @@ import { store } from '@/routes/play/bugs';
 type Props = {
     /** The page they came from, if the link carried it. */
     from: string;
+    /** Reporting another animal for cheating. */
+    reported: { id: number; name: string } | null;
+    rules: { code: string; title: string }[];
+    fairPlayUrl: string;
     maxMb: number;
     mine: {
         id: number;
@@ -29,28 +34,61 @@ const STATUS: Record<Props['mine'][number]['status'], string> = {
 };
 
 /** Tell us about a bug, with a photo or a short video of it. */
-export default function ReportBugPage({ from, maxMb, mine }: Props) {
+export default function ReportBugPage({
+    from,
+    maxMb,
+    mine,
+    reported,
+    rules,
+    fairPlayUrl,
+}: Props) {
     const form = useForm<{
         title: string;
         description: string;
         page: string;
         attachment: File | null;
-    }>({ title: '', description: '', page: from, attachment: null });
+        reported: number | null;
+        rule: string;
+    }>({
+        title: '',
+        description: '',
+        page: from,
+        attachment: null,
+        reported: reported?.id ?? null,
+        rule: '',
+    });
 
     return (
         <>
-            <Head title="Report a bug" />
+            <Head title={reported ? 'Report for cheating' : 'Report a bug'} />
             <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 p-4 md:p-6">
                 <GameBar showNextStep={false} />
                 <header>
                     <h1 className="flex items-center gap-2 text-2xl font-extrabold tracking-tight">
-                        <Bug className="size-6" aria-hidden /> Report a bug
+                        <Bug className="size-6" aria-hidden />{' '}
+                        {reported
+                            ? `Report ${reported.name} for cheating`
+                            : 'Report a bug'}
                     </h1>
                     <p className="text-sm text-muted-foreground">
-                        Something broken, stuck or wrong? Tell us what you did
-                        and what happened. A screenshot or a short screen
-                        recording helps us find it fastest. We see your animal
-                        with the report, so we can look at it as you see it.
+                        {reported ? (
+                            <>
+                                Pick the{' '}
+                                <a
+                                    href={fairPlayUrl}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="underline underline-offset-2"
+                                >
+                                    fair play rule
+                                </a>{' '}
+                                {reported.name} broke, and say what you saw and
+                                when. A screenshot or recording helps. They
+                                won't be told who reported them.
+                            </>
+                        ) : (
+                            'Something broken, stuck or wrong? Tell us what you did and what happened. A screenshot or a short screen recording helps us find it fastest. We see your animal with the report, so we can look at it as you see it.'
+                        )}
                     </p>
                 </header>
 
@@ -65,6 +103,27 @@ export default function ReportBugPage({ from, maxMb, mine }: Props) {
                         });
                     }}
                 >
+                    {reported && (
+                        <div className="flex flex-col gap-1.5">
+                            <Label htmlFor="rule">The rule they broke</Label>
+                            <NativeSelect
+                                id="rule"
+                                value={form.data.rule}
+                                onChange={(e) =>
+                                    form.setData('rule', e.target.value)
+                                }
+                                required
+                            >
+                                <option value="">Pick a rule…</option>
+                                {rules.map((rule) => (
+                                    <option key={rule.code} value={rule.code}>
+                                        {rule.code}: {rule.title}
+                                    </option>
+                                ))}
+                            </NativeSelect>
+                            <InputError message={form.errors.rule} />
+                        </div>
+                    )}
                     <div className="flex flex-col gap-1.5">
                         <Label htmlFor="title">What's wrong, in a line</Label>
                         <Input

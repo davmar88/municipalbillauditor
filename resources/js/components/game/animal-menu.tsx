@@ -1,5 +1,12 @@
 import { Link } from '@inertiajs/react';
-import { Gift, HandCoins, MessageCircle, UserRound, X } from 'lucide-react';
+import {
+    Flag,
+    Gift,
+    HandCoins,
+    MessageCircle,
+    UserRound,
+    X,
+} from 'lucide-react';
 import type { CSSProperties } from 'react';
 import { useEffect, useState } from 'react';
 import { GiftPicker } from '@/components/game/gift-picker';
@@ -7,6 +14,7 @@ import { act, speciesEmoji } from '@/lib/game';
 import type { Point } from '@/lib/hollowmere';
 import { openChat } from '@/lib/pulse';
 import { crime, animal as profile } from '@/routes/play';
+import { create as reportCheat } from '@/routes/play/bugs';
 import type { MapAnimal } from '@/types/game';
 
 const WIDTH = 236;
@@ -146,6 +154,14 @@ export function AnimalMenu({
                         >
                             <HandCoins className="size-4" /> Rob (2 horseshoes)
                         </button>
+                    )}
+                    {!animal.me && (
+                        <Link
+                            href={reportCheat({ query: { player: animal.id } })}
+                            className="flex items-center gap-2 rounded-lg px-2 py-2 text-muted-foreground hover:bg-accent"
+                        >
+                            <Flag className="size-4" /> Report for cheating
+                        </Link>
                     )}
                 </div>
             ) : (

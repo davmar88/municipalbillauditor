@@ -31,6 +31,7 @@ import { Button } from '@/components/ui/button';
 import { clockTime, dayMonth, speciesEmoji } from '@/lib/game';
 import type { Worn } from '@/lib/animal-dress';
 import { openChat } from '@/lib/pulse';
+import { create as reportCheat } from '@/routes/play/bugs';
 import { wanted } from '@/routes/play';
 import type { DesignCard } from '@/types';
 import type { Currency, MessageAnimal, SkillCard } from '@/types/game';
@@ -191,6 +192,15 @@ export default function AnimalProfile({
                                 </Link>
                             </Button>
                         )}
+                        <Button variant="ghost" asChild>
+                            <Link
+                                href={reportCheat({
+                                    query: { player: animal.id },
+                                })}
+                            >
+                                <Flag className="size-4" /> Report for cheating
+                            </Link>
+                        </Button>
                     </div>
                     {giving && (
                         <div className="max-w-sm rounded-xl border bg-card p-3 text-sm">

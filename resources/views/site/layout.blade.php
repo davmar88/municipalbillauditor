@@ -74,6 +74,8 @@
                         <a href="{{ route('privacy') }}" class="py-1.5 text-night-text no-underline hover:text-white hover:underline">Privacy and POPIA</a>
                         <a href="{{ route('terms') }}" class="py-1.5 text-night-text no-underline hover:text-white hover:underline">Terms and Conditions</a>
                         <a href="{{ route('updates') }}" class="py-1.5 text-night-text no-underline hover:text-white hover:underline">Updates and fixes</a>
+                        <a href="{{ route('wiki') }}" class="py-1.5 text-night-text no-underline hover:text-white hover:underline">Wiki</a>
+                        <a href="{{ route('fair-play') }}" class="py-1.5 text-night-text no-underline hover:text-white hover:underline">No cheating</a>
                         @if ($contact)
                             <a href="mailto:{{ $contact }}" class="py-1.5 text-night-text no-underline hover:text-white hover:underline">Contact</a>
                         @endif

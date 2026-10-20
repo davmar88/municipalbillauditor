@@ -1,6 +1,9 @@
 import { Head, Link, usePage } from '@inertiajs/react';
 import { Crown, Flame, Mail, MessagesSquare, Skull } from 'lucide-react';
 import { useState } from 'react';
+import { BannerEditor } from '@/components/game/banner-editor';
+import { FactionBanner } from '@/components/game/faction-banner';
+import type { BannerData } from '@/components/game/faction-banner';
 import { FactionBase } from '@/components/game/faction-base';
 import { FactionStudyList } from '@/components/game/faction-studies';
 import { GameBar } from '@/components/game/game-bar';
@@ -46,6 +49,7 @@ type FactionSummary = {
     name: string;
     colour: string;
     motto: string | null;
+    banner: BannerData;
     isHouse: boolean;
     rules: Rules;
 };
@@ -170,21 +174,31 @@ function MyFaction({
     return (
         <>
             <header className="flex flex-wrap items-end justify-between gap-3">
-                <div>
-                    <h1
-                        className="flex items-center gap-2 text-2xl font-extrabold tracking-tight"
-                        style={{ color: faction.colour }}
-                    >
-                        {faction.isHouse && (
-                            <Crown className="size-6" aria-label="The House" />
+                <div className="flex items-end gap-3">
+                    <FactionBanner
+                        banner={faction.banner}
+                        name={faction.name}
+                        size={64}
+                    />
+                    <div>
+                        <h1
+                            className="flex items-center gap-2 text-2xl font-extrabold tracking-tight"
+                            style={{ color: faction.colour }}
+                        >
+                            {faction.isHouse && (
+                                <Crown
+                                    className="size-6"
+                                    aria-label="The House"
+                                />
+                            )}
+                            {faction.name}
+                        </h1>
+                        {faction.motto && (
+                            <p className="text-muted-foreground italic">
+                                "{faction.motto}"
+                            </p>
                         )}
-                        {faction.name}
-                    </h1>
-                    {faction.motto && (
-                        <p className="text-muted-foreground italic">
-                            "{faction.motto}"
-                        </p>
-                    )}
+                    </div>
                 </div>
                 <div className="flex gap-2">
                     <Button variant="secondary" asChild>
@@ -229,6 +243,10 @@ function MyFaction({
             />
 
             <RaidRulesSection raidRules={faction.raidRules} />
+
+            {decides && (
+                <BannerEditor banner={faction.banner} name={faction.name} />
+            )}
 
             {underworld && (
                 <Underworld underworld={underworld} factions={factions} />
@@ -621,6 +639,11 @@ function LoneWolf({ factions, founding, underworld, entryModes }: Props) {
                                     className="flex items-center gap-2 font-bold"
                                     style={{ color: faction.colour }}
                                 >
+                                    <FactionBanner
+                                        banner={faction.banner}
+                                        name={faction.name}
+                                        size={32}
+                                    />
                                     {faction.isHouse && (
                                         <Crown
                                             className="size-4"

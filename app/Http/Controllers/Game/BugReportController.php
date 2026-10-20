@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Game;
 use App\Game\Notices;
 use App\Http\Controllers\Controller;
 use App\Models\BugReport;
+use App\Models\Player;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -19,7 +20,13 @@ class BugReportController extends Controller
 
     public function create(Request $request): Response
     {
+        $reported = $request->integer('player') ? Player::query()->where('valley_id', $request->user()->player?->valley_id)->find($request->integer('player')) : null;
+
         return Inertia::render('game/report-bug', [
+            // Reporting another animal for cheating, with the rule it broke.
+            'reported' => $reported && $reported->id !== $request->user()->player?->id ? ['id' => $reported->id, 'name' => $reported->name] : null,
+            'rules' => collect(config('fairplay.rules'))->map(fn (array $rule, string $code) => ['code' => $code, 'title' => $rule['title']])->values(),
+            'fairPlayUrl' => route('fair-play'),
             'from' => (string) $request->query('from', ''),
             'maxMb' => intdiv(self::MAX_KB, 1024),
             'mine' => BugReport::query()
@@ -43,6 +50,8 @@ class BugReportController extends Controller
             'title' => ['required', 'string', 'max:120'],
             'description' => ['required', 'string', 'max:5000'],
             'page' => ['nullable', 'string', 'max:255'],
+            'reported' => ['nullable', 'integer'],
+            'rule' => ['nullable', 'required_with:reported', 'string', 'in:'.implode(',', array_keys(config('fairplay.rules')))],
             'attachment' => ['nullable', 'file', 'max:'.self::MAX_KB, 'mimetypes:image/jpeg,image/png,image/webp,image/gif,video/mp4,video/quicktime,video/webm'],
         ], [
             'attachment.max' => 'A photo or video can be at most '.intdiv(self::MAX_KB, 1024).' MB.',
@@ -50,6 +59,7 @@ class BugReportController extends Controller
         ]);
 
         $file = $request->file('attachment');
+        $reported = isset($data['reported']) ? Player::query()->where('valley_id', $request->user()->player?->valley_id)->whereKeyNot($request->user()->player?->id ?? 0)->find($data['reported']) : null;
         $report = BugReport::create([
             'user_id' => $request->user()->id,
             'player_id' => $request->user()->player?->id,
@@ -59,12 +69,17 @@ class BugReportController extends Controller
             'attachment_path' => $file?->store('bug-reports', 'local'),
             'attachment_mime' => $file?->getMimeType(),
             'device' => substr((string) $request->userAgent(), 0, 255),
+            'kind' => $reported ? 'cheat' : 'bug',
+            'reported_player_id' => $reported?->id,
+            'rule' => $reported ? $data['rule'] : null,
         ]);
 
         // The owners hear of it.
         $admins = User::query()->where('is_admin', true)->with('player:id,user_id')->get()->pluck('player.id')->filter();
-        Notices::send($admins, 'bug', "🐞 Bug report #{$report->id}: {$report->title}", route('admin.bugs', [], false));
+        Notices::send($admins, 'bug', $reported ? "🚩 Cheating report #{$report->id} about {$reported->name} ({$report->rule}): {$report->title}" : "🐞 Bug report #{$report->id}: {$report->title}", route('admin.bugs', $reported ? ['kind' => 'cheat'] : [], false));
 
-        return $this->told("Thanks. Bug report #{$report->id} is in, and we'll look at it.");
+        return $this->told($reported
+            ? "Thanks. Report #{$report->id} is in. We'll look into it, and {$reported->name} won't be told who reported them."
+            : "Thanks. Bug report #{$report->id} is in, and we'll look at it.");
     }
 }

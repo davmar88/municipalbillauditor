@@ -22,16 +22,36 @@ type Report = {
     user: { id: number; name: string; email: string; admin: boolean };
     player: { id: number; name: string; species: Species } | null;
     attachment: { url: string; video: boolean } | null;
+    /** For a cheating report: the rule and who it's about. */
+    rule: string | null;
+    reported: {
+        id: number;
+        name: string;
+        species: Species;
+        userId: number;
+        userEmail: string | null;
+        admin: boolean;
+    } | null;
 };
 
 type Props = {
     status: Status;
+    kind: 'bug' | 'cheat';
     counts: Partial<Record<Status, number>>;
+    openCheats: number;
+    rules: Record<string, { title: string }>;
     reports: Report[];
 };
 
 /** Bug reports from players: read, watch, play as them to see it, and mark fixed. */
-export default function BugsPage({ status, counts, reports }: Props) {
+export default function BugsPage({
+    status,
+    kind,
+    counts,
+    openCheats,
+    rules,
+    reports,
+}: Props) {
     return (
         <>
             <Head title="Bug reports" />
@@ -47,10 +67,26 @@ export default function BugsPage({ status, counts, reports }: Props) {
                         them is done as them.
                     </p>
                     <nav className="flex gap-2">
+                        {(
+                            [
+                                ['bug', 'Bugs'],
+                                ['cheat', `Cheating (${openCheats} open)`],
+                            ] as const
+                        ).map(([value, label]) => (
+                            <Link
+                                key={value}
+                                href={bugs({ query: { kind: value } })}
+                                className={`rounded-md border px-3 py-1 text-sm font-semibold ${value === kind ? 'border-primary bg-primary/10' : ''}`}
+                            >
+                                {label}
+                            </Link>
+                        ))}
+                    </nav>
+                    <nav className="flex gap-2">
                         {(['open', 'fixed', 'closed'] as Status[]).map((s) => (
                             <Link
                                 key={s}
-                                href={bugs({ query: { status: s } })}
+                                href={bugs({ query: { status: s, kind } })}
                                 className={`rounded-full border px-3 py-1 text-sm font-semibold capitalize ${s === status ? 'border-primary bg-primary/10' : ''}`}
                             >
                                 {s} ({counts[s] ?? 0})
@@ -66,7 +102,11 @@ export default function BugsPage({ status, counts, reports }: Props) {
                 ) : (
                     <ul className="flex flex-col gap-4">
                         {reports.map((report) => (
-                            <ReportCard key={report.id} report={report} />
+                            <ReportCard
+                                key={report.id}
+                                report={report}
+                                rules={rules}
+                            />
                         ))}
                     </ul>
                 )}
@@ -75,7 +115,13 @@ export default function BugsPage({ status, counts, reports }: Props) {
     );
 }
 
-function ReportCard({ report }: { report: Report }) {
+function ReportCard({
+    report,
+    rules,
+}: {
+    report: Report;
+    rules: Props['rules'];
+}) {
     const [note, setNote] = useState(report.note ?? '');
 
     return (
@@ -101,6 +147,21 @@ function ReportCard({ report }: { report: Report }) {
                 )}
                 {report.page && <> · on {report.page}</>}
             </p>
+            {report.reported && (
+                <p className="rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2">
+                    🚩 About animal #{report.reported.id}{' '}
+                    {speciesEmoji(report.reported.species)}{' '}
+                    <strong>{report.reported.name}</strong> (user #
+                    {report.reported.userId}
+                    {report.reported.userEmail
+                        ? `, ${report.reported.userEmail}`
+                        : ''}
+                    ) · rule <strong>{report.rule}</strong>
+                    {report.rule && rules[report.rule]
+                        ? `: ${rules[report.rule].title}`
+                        : ''}
+                </p>
+            )}
             <p className="whitespace-pre-wrap">{report.description}</p>
             {report.attachment &&
                 (report.attachment.video ? (
@@ -141,6 +202,16 @@ function ReportCard({ report }: { report: Report }) {
                     >
                         <LogIn className="size-4" aria-hidden /> Play as{' '}
                         {report.player?.name ?? report.user.name}
+                    </Button>
+                )}
+                {report.reported && !report.reported.admin && (
+                    <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => act(playAs.url(report.reported!.userId))}
+                    >
+                        <LogIn className="size-4" aria-hidden /> Play as{' '}
+                        {report.reported.name}
                     </Button>
                 )}
                 {(['open', 'fixed', 'closed'] as Status[])

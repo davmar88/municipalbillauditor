@@ -8,12 +8,14 @@ use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\ValleyController as AdminValleyController;
 use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\Game\AppleController;
+use App\Http\Controllers\Game\BannerController;
 use App\Http\Controllers\Game\BaseController;
 use App\Http\Controllers\Game\BattleController;
 use App\Http\Controllers\Game\BugReportController;
 use App\Http\Controllers\Game\CashoutController;
 use App\Http\Controllers\Game\ChatController;
 use App\Http\Controllers\Game\CrimeController;
+use App\Http\Controllers\Game\ExchangeController;
 use App\Http\Controllers\Game\FactionController;
 use App\Http\Controllers\Game\GiftController;
 use App\Http\Controllers\Game\HomeController;
@@ -43,6 +45,9 @@ Route::get('/', [PageController::class, 'home'])->name('home');
 Route::get('privacy', [PageController::class, 'privacy'])->name('privacy');
 Route::get('terms', [PageController::class, 'terms'])->name('terms');
 Route::get('updates', [PageController::class, 'updates'])->name('updates');
+Route::get('fair-play', [PageController::class, 'fairPlay'])->name('fair-play');
+Route::get('wiki', [PageController::class, 'wiki'])->name('wiki');
+Route::get('banners/{faction}', [BannerController::class, 'show'])->name('faction.banner');
 Route::get('sitemap.xml', [PageController::class, 'sitemap'])->name('sitemap');
 Route::get('robots.txt', [PageController::class, 'robots'])->name('robots');
 
@@ -136,6 +141,10 @@ Route::middleware(['auth', 'verified', 'player', 'throttle:120,1'])->prefix('pla
     Route::post('missions/{mission}/claim', [TodayController::class, 'claim'])->name('play.mission.claim');
     Route::get('rankings', [RankingsController::class, 'index'])->name('play.rankings');
     Route::get('online', [OnlineController::class, 'index'])->name('play.online');
+    Route::get('exchange', [ExchangeController::class, 'index'])->name('play.exchange');
+    Route::put('faction/banner', [BannerController::class, 'design'])->name('play.faction.banner');
+    Route::post('faction/banner/image', [BannerController::class, 'upload'])->middleware('throttle:10,10,banner')->name('play.faction.banner.upload');
+    Route::delete('faction/banner/image', [BannerController::class, 'takeDown'])->name('play.faction.banner.take-down');
     Route::get('report-bug', [BugReportController::class, 'create'])->name('play.bugs.create');
     Route::post('report-bug', [BugReportController::class, 'store'])->middleware('throttle:5,10,bug-reports')->name('play.bugs.store');
 
@@ -226,6 +235,7 @@ Route::middleware(['auth', 'verified', 'can:admin'])->prefix('admin')->group(fun
     Route::get('cashouts', [CashoutQueueController::class, 'index'])->name('admin.cashouts');
     Route::get('valleys', [AdminValleyController::class, 'index'])->name('admin.valleys');
     Route::get('bugs', [AdminBugReportController::class, 'index'])->name('admin.bugs');
+    Route::delete('factions/{faction}/banner', [AdminBugReportController::class, 'takeDownBanner'])->name('admin.banner.take-down');
     Route::get('updates', [GameUpdateController::class, 'index'])->name('admin.updates');
     Route::post('updates', [GameUpdateController::class, 'store'])->name('admin.updates.store');
     Route::delete('updates/{update}', [GameUpdateController::class, 'destroy'])->name('admin.updates.destroy');

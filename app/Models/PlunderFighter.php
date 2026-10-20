@@ -14,12 +14,18 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int $player_id
  * @property int|null $faction_id
  * @property int $horseshoes
+ * @property float $boost From a weapon: a Sling or an Iron Sword
  * @property Player $player
  */
-#[Fillable(['plunder_band_id', 'player_id', 'faction_id', 'horseshoes'])]
+#[Fillable(['plunder_band_id', 'player_id', 'faction_id', 'horseshoes', 'boost'])]
 class PlunderFighter extends Model
 {
     public const UPDATED_AT = null;
+
+    protected function casts(): array
+    {
+        return ['boost' => 'float'];
+    }
 
     /** @return BelongsTo<Player, $this> */
     public function player(): BelongsTo

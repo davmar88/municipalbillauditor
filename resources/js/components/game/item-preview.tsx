@@ -458,6 +458,78 @@ function Shape({
                     />
                 </>
             );
+        case 'sword':
+            return (
+                <>
+                    <path
+                        d="M32 6l5 6v30h-10V12z"
+                        fill={fill}
+                        stroke={METAL}
+                        strokeWidth="1.5"
+                    />
+                    <rect
+                        x="20"
+                        y="42"
+                        width="24"
+                        height="5"
+                        rx="2"
+                        fill={second}
+                    />
+                    <rect
+                        x="29"
+                        y="47"
+                        width="6"
+                        height="11"
+                        rx="2"
+                        fill={WOOD}
+                    />
+                </>
+            );
+        case 'pitchfork':
+            return (
+                <>
+                    <path
+                        d="M32 60V26"
+                        stroke={WOOD}
+                        strokeWidth="5"
+                        strokeLinecap="round"
+                    />
+                    <path
+                        d="M20 8v14a12 6 0 0 0 24 0V8M32 8v18"
+                        fill="none"
+                        stroke={fill}
+                        strokeWidth="3.5"
+                        strokeLinecap="round"
+                    />
+                </>
+            );
+        case 'cudgel':
+            return (
+                <>
+                    <path
+                        d="M24 58l6-30c1-8 4-16 10-20 6 0 8 6 6 12l-10 40z"
+                        fill={fill}
+                        stroke={WOOD}
+                        strokeWidth="1.5"
+                    />
+                    <circle cx="38" cy="18" r="2" fill={second} />
+                    <circle cx="35" cy="28" r="2" fill={second} />
+                </>
+            );
+        case 'sling':
+            return (
+                <>
+                    <path
+                        d="M12 12c8 20 12 30 20 34 8-4 12-14 20-34"
+                        fill="none"
+                        stroke={fill}
+                        strokeWidth="3"
+                        strokeLinecap="round"
+                    />
+                    <ellipse cx="32" cy="46" rx="8" ry="5" fill={second} />
+                    <circle cx="32" cy="45" r="3" fill={METAL} />
+                </>
+            );
         case 'pickaxe':
             return (
                 <>

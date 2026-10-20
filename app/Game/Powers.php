@@ -66,6 +66,21 @@ final class Powers
 
     public const SPEEDO_HOURS = 1;
 
+    public const PITCHFORK = 1.5;
+
+    public const PITCHFORK_USES = 3;
+
+    public const SWORD = 2.0;
+
+    public const SWORD_USES = 3;
+
+    public const SLING = 2.0;
+
+    /** A robber with a cudgel takes this many times as much, and is caught this much as often. */
+    public const CUDGEL_LOOT = 2;
+
+    public const CUDGEL_CATCH = 0.75;
+
     /**
      * Use a powered item. It is used up and its power starts.
      *
@@ -119,6 +134,10 @@ final class Powers
                 ItemTemplate::Gate => $this->gate($player),
                 ItemTemplate::Plough => $this->time(['faction_id' => $this->faction($player)->id], 'plough', self::PLOUGH_HOURS, "You hitched the Iron Plough: your faction's farms pay double"),
                 ItemTemplate::Speedo => $this->speedo($player),
+                ItemTemplate::Pitchfork => $this->charge($player, 'pitchfork', self::PITCHFORK_USES, 'Pitchfork in hand: your horseshoes count half as much again in your next 3 raids.'),
+                ItemTemplate::Cudgel => $this->charge($player, 'cudgel', 1, 'Cudgel in hand: your next robbery takes twice as much and is less likely to be caught.'),
+                ItemTemplate::Sling => $this->charge($player, 'sling', 1, "Sling loaded: your horseshoes count double in your next fight against Irongate's plunderers."),
+                ItemTemplate::Sword => $this->charge($player, 'sword', self::SWORD_USES, 'Iron Sword drawn: your horseshoes count double in your next 3 raids, defences or plunderer fights.'),
                 default => throw new GameException('That item has no power to use.'),
             };
 
@@ -154,6 +173,35 @@ final class Powers
     public static function commitment(Player $player): float
     {
         return self::spend(['player_id' => $player->id], 'shoes') ? self::SHOES : 1.0;
+    }
+
+    /**
+     * Weapons in a battle: a Pitchfork for raids, an Iron Sword for raids
+     * and defences. Each fight uses one charge.
+     */
+    public static function weapon(Player $player, string $side): float
+    {
+        if ($side === 'attack' && self::spend(['player_id' => $player->id], 'pitchfork')) {
+            return self::PITCHFORK;
+        }
+
+        return self::spend(['player_id' => $player->id], 'sword') ? self::SWORD : 1.0;
+    }
+
+    /** Weapons against Irongate's plunderers: a Sling first, else an Iron Sword. */
+    public static function plunderWeapon(Player $player): float
+    {
+        if (self::spend(['player_id' => $player->id], 'sling')) {
+            return self::SLING;
+        }
+
+        return self::spend(['player_id' => $player->id], 'sword') ? self::SWORD : 1.0;
+    }
+
+    /** A robber's cudgel, if it has one ready: used up on the robbery. */
+    public static function cudgel(Player $player): bool
+    {
+        return self::spend(['player_id' => $player->id], 'cudgel');
     }
 
     /** A War Banner makes a faction's raids hit harder. */

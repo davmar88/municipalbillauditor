@@ -25,6 +25,16 @@ class PageController extends Controller
         return view('site.terms');
     }
 
+    public function fairPlay(): View
+    {
+        return view('site.fair-play');
+    }
+
+    public function wiki(): View
+    {
+        return view('site.wiki');
+    }
+
     public function updates(): View
     {
         return view('site.updates', [
@@ -35,7 +45,7 @@ class PageController extends Controller
 
     public function sitemap(): Response
     {
-        $urls = [route('home'), route('puzzle'), route('privacy'), route('terms'), route('updates')];
+        $urls = [route('home'), route('puzzle'), route('privacy'), route('terms'), route('updates'), route('fair-play'), route('wiki')];
         $xml = '<?xml version="1.0" encoding="UTF-8"?>'."\n".'<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
             .implode('', array_map(fn (string $url) => '<url><loc>'.e($url).'</loc></url>', $urls))
             .'</urlset>';

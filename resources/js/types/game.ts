@@ -84,7 +84,11 @@ export type ItemShape =
     | 'crown'
     | 'ring'
     | 'pie'
-    | 'stew';
+    | 'stew'
+    | 'pitchfork'
+    | 'cudgel'
+    | 'sling'
+    | 'sword';
 
 export type DesignCard = {
     id: number;

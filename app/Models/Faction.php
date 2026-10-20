@@ -46,6 +46,7 @@ class Faction extends Model
             'species' => 'array',
             'accepts_criminals' => 'boolean',
             'materials' => 'array',
+            'banner' => 'array',
             'studies' => 'array',
             'raid_rules' => 'array',
             'rogue' => 'boolean',

@@ -3,6 +3,7 @@
 namespace Tests\Feature\Game;
 
 use App\Models\BugReport;
+use App\Models\GameUpdate;
 use App\Models\Notice;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -81,10 +82,40 @@ class BugReportsTest extends TestCase
     {
         $admin = User::factory()->create(['is_admin' => true]);
 
-        $this->get(route('updates'))->assertOk()->assertSee('Updates and fixes')->assertSee('Rob other animals');
+        // Filled from Git on every deploy, once per commit.
+        $this->artisan('game:changelog')->assertSuccessful();
+        $imported = GameUpdate::query()->whereNotNull('commit')->count();
+        $this->assertGreaterThan(0, $imported);
+        $this->artisan('game:changelog')->assertSuccessful();
+        $this->assertSame($imported, GameUpdate::query()->whereNotNull('commit')->count());
+        $this->get(route('updates'))->assertOk()->assertSee('Updates and fixes')->assertSee('Add a skin shop for homes');
 
         $this->actingAs($admin)->post(route('admin.updates.store'), ['kind' => 'fix', 'title' => 'Plunderer banner stuck', 'body' => 'It now goes away when the fight ends.'])->assertRedirect();
         $this->get(route('updates'))->assertSee('Plunderer banner stuck');
         $this->actingAs($this->player()->user)->post(route('admin.updates.store'), ['kind' => 'new', 'title' => 'x', 'body' => 'y'])->assertForbidden();
+    }
+
+    public function test_a_player_reports_another_for_cheating_naming_the_rule(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+        $reporter = $this->player();
+        $cheat = $this->player();
+
+        $this->actingAs($reporter->user)->get(route('play.bugs.create', ['player' => $cheat->id]))->assertInertia(fn (Assert $page) => $page
+            ->where('reported.id', $cheat->id)
+            ->has('rules', count(config('fairplay.rules'))));
+
+        $this->actingAs($reporter->user)->post(route('play.bugs.store'), ['reported' => $cheat->id, 'title' => 'Two accounts', 'description' => 'Fights on both sides of every raid.'])
+            ->assertSessionHasErrors('rule');
+        $this->actingAs($reporter->user)->post(route('play.bugs.store'), ['reported' => $cheat->id, 'rule' => 'FP1', 'title' => 'Two accounts', 'description' => 'Fights on both sides of every raid.'])
+            ->assertRedirect();
+
+        $report = BugReport::sole();
+        $this->assertSame(['cheat', $cheat->id, 'FP1'], [$report->kind, $report->reported_player_id, $report->rule]);
+        $this->actingAs($admin)->get(route('admin.bugs', ['kind' => 'cheat']))->assertInertia(fn (Assert $page) => $page
+            ->where('reports.0.reported.id', $cheat->id)
+            ->where('reports.0.rule', 'FP1'));
+        $this->get(route('fair-play'))->assertOk()->assertSee('FP1')->assertSee('No cheating');
+        $this->get(route('wiki'))->assertOk()->assertSee('The Animal Farm wiki')->assertSee('Horseshoes');
     }
 }

@@ -164,7 +164,7 @@ final class Crimes
                 RaidRules::judgeCrime($locked, $kind, $onPlayer ? $target?->name : ($region?->name ?? $faction?->name));
             }
 
-            return Crime::create([
+            $crime = Crime::create([
                 'season_id' => $season->id,
                 'player_id' => $locked->id,
                 'kind' => $kind,
@@ -175,6 +175,13 @@ final class Crimes
                 'seed' => Dice::seed(),
                 'cloaked' => Powers::cloak($locked),
             ]);
+
+            // A robber's cudgel goes with it.
+            if ($kind === CrimeKind::Rob && Powers::cudgel($locked)) {
+                $crime->forceFill(['armed' => true])->save();
+            }
+
+            return $crime;
         });
     }
 
@@ -292,12 +299,14 @@ final class Crimes
             } elseif ($crime->kind === CrimeKind::Rob && $crime->target_player_id !== null) {
                 // The robber takes a share of what its victim carries: Corn, and each material.
                 $victim = Players::lock(Player::query()->findOrFail($crime->target_player_id));
-                $loot = min(self::ROB_MOST_CORN, (int) floor($victim->corn * self::ROB_SHARE));
+                // A cudgel takes twice as much.
+                $share = self::ROB_SHARE * ($crime->armed ? Powers::CUDGEL_LOOT : 1);
+                $loot = min(self::ROB_MOST_CORN * ($crime->armed ? Powers::CUDGEL_LOOT : 1), (int) floor($victim->corn * $share));
                 $kept = $victim->materials ?? [];
                 $carried = $criminal->materials ?? [];
 
                 foreach ($kept as $name => $amount) {
-                    $stolen = (int) floor((int) $amount * self::ROB_SHARE);
+                    $stolen = (int) floor((int) $amount * $share);
                     $kept[$name] = (int) $amount - $stolen;
                     $carried[$name] = (int) ($carried[$name] ?? 0) + $stolen;
                 }
@@ -417,6 +426,11 @@ final class Crimes
         // Whoever put the fire out saw who set it.
         $spotted = $crime->kind === CrimeKind::Burn && $crime->doused_by !== null ? self::DOUSE_SPOTTED : 0.0;
         $chance = min(0.9, 0.3 + 0.05 * min(4, $dogs) + $watch + Powers::bell($crime->target_faction_id) + $walls + $spotted);
+
+        // A robber's cudgel makes it quicker.
+        if ($crime->armed) {
+            $chance *= Powers::CUDGEL_CATCH;
+        }
 
         // A Night Cloak halves it.
         return $crime->cloaked ? $chance * Powers::CLOAK : $chance;

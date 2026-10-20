@@ -37,6 +37,11 @@ enum ItemTemplate: string
     case Ring = 'ring';
     case Pie = 'pie';
     case Stew = 'stew';
+    // Weapons: made by anyone, sold in the Market, used up in a fight.
+    case Pitchfork = 'pitchfork';
+    case Cudgel = 'cudgel';
+    case Sling = 'sling';
+    case Sword = 'sword';
 
     public function label(): string
     {
@@ -68,6 +73,10 @@ enum ItemTemplate: string
             self::Ring => 'Gold Ring',
             self::Pie => 'Fruit Pie',
             self::Stew => 'Veggie Stew',
+            self::Pitchfork => 'Pitchfork',
+            self::Cudgel => 'Cudgel',
+            self::Sling => 'Sling',
+            self::Sword => 'Iron Sword',
         };
     }
 
@@ -106,6 +115,11 @@ enum ItemTemplate: string
             self::Ring => ['gold' => 1, 'copper' => 2],
             self::Pie => ['pears' => 2, 'berries' => 2, 'eggs' => 1],
             self::Stew => ['carrots' => 3, 'pumpkins' => 2],
+            // Weapons.
+            self::Pitchfork => ['wood' => 3, 'iron' => 1],
+            self::Cudgel => ['wood' => 3, 'stone' => 2],
+            self::Sling => ['straw' => 2, 'wool' => 2, 'stone' => 1],
+            self::Sword => ['iron' => 3, 'copper' => 1, 'wood' => 1],
         };
     }
 
@@ -114,7 +128,8 @@ enum ItemTemplate: string
     {
         return match ($this) {
             self::Hat, self::Scarf, self::Sign, self::Skin, self::Crown, self::Ring => null,
-            self::Gloves, self::Shoes, self::Cloak, self::Tonic, self::Ribbon, self::Cake, self::Pickaxe, self::Lock, self::Speedo, self::Mortar, self::Pie, self::Stew => 'you',
+            self::Gloves, self::Shoes, self::Cloak, self::Tonic, self::Ribbon, self::Cake, self::Pickaxe, self::Lock, self::Speedo, self::Mortar, self::Pie, self::Stew,
+            self::Pitchfork, self::Cudgel, self::Sling, self::Sword => 'you',
             default => 'faction',
         };
     }
@@ -150,6 +165,10 @@ enum ItemTemplate: string
             self::Pie => 'Your next 5 gathers bring in twice as much.',
             self::Stew => 'You get 3 horseshoes straight away.',
             self::Mortar => "Your home goes up a level at once: you pay that level's materials, not its Corn, and don't wait.",
+            self::Pitchfork => 'Your horseshoes count half as much again in your next 3 raids.',
+            self::Cudgel => 'Your next robbery takes twice as much and is a quarter less likely to be caught.',
+            self::Sling => "Your horseshoes count double in your next fight against Irongate's plunderers.",
+            self::Sword => "Your horseshoes count double in your next 3 raids, defences or fights against Irongate's plunderers.",
         };
     }
 
@@ -157,7 +176,7 @@ enum ItemTemplate: string
     public function creativity(): int
     {
         return match ($this) {
-            self::Cloak, self::Tonic, self::Basket, self::Banner, self::Cake, self::Pickaxe, self::Lock, self::Kit, self::Gate, self::Plough, self::Mortar, self::Pie, self::Stew, self::Ring => 2,
+            self::Cloak, self::Tonic, self::Basket, self::Banner, self::Cake, self::Pickaxe, self::Lock, self::Kit, self::Gate, self::Plough, self::Mortar, self::Pie, self::Stew, self::Ring, self::Sword => 2,
             self::Crown => 3,
             self::Ribbon, self::Trowel, self::Sheaf => 3,
             default => 1,

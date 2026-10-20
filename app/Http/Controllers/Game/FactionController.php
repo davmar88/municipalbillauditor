@@ -7,6 +7,7 @@ use App\Enums\CrimeKind;
 use App\Enums\EntryMode;
 use App\Enums\FactionRole;
 use App\Enums\Species;
+use App\Game\Banners;
 use App\Game\Bases;
 use App\Game\Clock;
 use App\Game\Factions;
@@ -259,6 +260,7 @@ class FactionController extends Controller
             'name' => $faction->name,
             'colour' => $faction->colour,
             'motto' => $faction->motto,
+            'banner' => Banners::of($faction),
             'isHouse' => $faction->id === $houseId,
             'rules' => [
                 'entryMode' => $faction->entry_mode->value,

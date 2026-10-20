@@ -15,7 +15,7 @@ use Illuminate\Support\Carbon;
  * @property string $title
  * @property string $body
  */
-#[Fillable(['published_on', 'kind', 'title', 'body'])]
+#[Fillable(['published_on', 'kind', 'title', 'body', 'commit'])]
 class GameUpdate extends Model
 {
     public const KINDS = ['new', 'fix'];

@@ -37,6 +37,8 @@ main() {
     deploy/artisan migrate --force
     # Lays out Hollowmere on the first deploy; adds only what is missing after.
     deploy/artisan game:setup
+    # The public updates page, from the commits just deployed.
+    deploy/artisan game:changelog
 
     echo "==> Caches, worker and PHP"
     deploy/artisan config:cache

@@ -556,6 +556,74 @@ export function dress(
                 );
                 headPiece.position.set(h * 0.27, h * 0.25, 0);
                 thing.add(handle, headPiece);
+            } else if (item.template === 'sword') {
+                const steel = solid(item.colours[0] ?? METAL, {
+                    metalness: 0.6,
+                    roughness: 0.35,
+                });
+                const blade = new THREE.Mesh(
+                    new THREE.BoxGeometry(h * 0.05, h * 0.62, h * 0.015),
+                    steel,
+                );
+                blade.position.y = h * 0.48;
+                const guard = new THREE.Mesh(
+                    new THREE.BoxGeometry(h * 0.2, h * 0.03, h * 0.04),
+                    solid(trimOf(item)),
+                );
+                guard.position.y = h * 0.16;
+                const grip = new THREE.Mesh(
+                    new THREE.CylinderGeometry(h * 0.02, h * 0.02, h * 0.14, 6),
+                    solid(WOOD),
+                );
+                grip.position.y = h * 0.08;
+                thing.add(blade, guard, grip);
+            } else if (item.template === 'pitchfork') {
+                const pole = new THREE.Mesh(
+                    new THREE.CylinderGeometry(h * 0.015, h * 0.015, h, 6),
+                    solid(WOOD),
+                );
+                pole.position.y = h / 2;
+                thing.add(pole);
+                for (const x of [-0.07, 0, 0.07]) {
+                    const prong = new THREE.Mesh(
+                        new THREE.CylinderGeometry(
+                            h * 0.008,
+                            h * 0.008,
+                            h * 0.22,
+                            5,
+                        ),
+                        solid(item.colours[0] ?? METAL, { metalness: 0.5 }),
+                    );
+                    prong.position.set(h * x, h * 1.08, 0);
+                    thing.add(prong);
+                }
+                const bar = new THREE.Mesh(
+                    new THREE.BoxGeometry(h * 0.16, h * 0.02, h * 0.02),
+                    solid(item.colours[0] ?? METAL, { metalness: 0.5 }),
+                );
+                bar.position.y = h * 0.97;
+                thing.add(bar);
+            } else if (item.template === 'cudgel') {
+                const club = new THREE.Mesh(
+                    new THREE.CylinderGeometry(h * 0.06, h * 0.025, h * 0.5, 8),
+                    solid(item.colours[0] ?? WOOD),
+                );
+                club.position.y = h * 0.25;
+                club.rotation.z = 0.3;
+                thing.add(club);
+            } else if (item.template === 'sling') {
+                const strap = new THREE.Mesh(
+                    new THREE.TorusGeometry(h * 0.1, h * 0.012, 6, 16, Math.PI),
+                    fabric(item, [2, 1]),
+                );
+                strap.position.y = h * 0.15;
+                strap.rotation.z = Math.PI;
+                const pouch = new THREE.Mesh(
+                    new THREE.SphereGeometry(h * 0.035, 8, 6),
+                    solid(trimOf(item)),
+                );
+                pouch.position.y = h * 0.05;
+                thing.add(strap, pouch);
             } else {
                 // A basket.
                 const basket = new THREE.Mesh(
