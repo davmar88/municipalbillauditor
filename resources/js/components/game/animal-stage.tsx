@@ -117,7 +117,7 @@ export default function AnimalStage({
         };
 
         new GLTFLoader().load(
-            `/models/animals/${species}.glb?v=2`,
+            `/models/animals/${species}.glb?v=3`,
             (gltf) => {
                 if (disposed) {
                     return;
