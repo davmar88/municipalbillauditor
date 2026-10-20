@@ -184,6 +184,42 @@ final class Missions
             'level' => 3,
             'reward' => ['corn' => 60, 'rosettes' => 20],
         ],
+        'year.eat' => [
+            'chapter' => 'The turning year',
+            'title' => 'An empty belly',
+            'story' => 'Every animal gets hungry. You eat the Corn you carry when you need to, but a full belly mends you faster.',
+            'goal' => 'Eat: press the 🌽 bar at the top of the map.',
+            'events' => ['eat'],
+            'target' => 1,
+            'reward' => ['corn' => 20, 'rosettes' => 5, 'materials' => ['water' => 5]],
+        ],
+        'year.drink' => [
+            'chapter' => 'The turning year',
+            'title' => 'A long drink',
+            'story' => 'Water keeps you alive. Drink your fill at the Paddock trough or a spring, or from the water you carry.',
+            'goal' => 'Drink: press the 💧 bar at the top of the map.',
+            'events' => ['drink'],
+            'target' => 1,
+            'reward' => ['corn' => 20, 'rosettes' => 5],
+        ],
+        'year.barrel' => [
+            'chapter' => 'The turning year',
+            'title' => 'Before the fall',
+            'story' => 'In fall the ponds and the trough dry up. Animals who stored water live through it; the rest go thirsty.',
+            'goal' => 'Get a bigger water bag, or give water to your faction\'s store.',
+            'events' => ['barrel', 'give_water'],
+            'target' => 1,
+            'reward' => ['corn' => 40, 'rosettes' => 10],
+        ],
+        'year.scavenge' => [
+            'chapter' => 'The turning year',
+            'title' => 'What the dead left',
+            'story' => 'Animals who starve drop everything they carried. It lies on the map until someone picks it up.',
+            'goal' => 'Pick up a pile of loot (💰 on the map).',
+            'events' => ['loot'],
+            'target' => 1,
+            'reward' => ['corn' => 30, 'rosettes' => 10],
+        ],
     ];
 
     /**
@@ -193,6 +229,8 @@ final class Missions
      * @var array<string, array{title: string, goal: string, events: list<string>, target: int, for: string, reward: array{corn?: int, rosettes?: int, horseshoes?: int, materials?: array<string, int>}}>
      */
     private const DAILY = [
+        'daily.drink' => ['title' => 'Stay watered', 'goal' => 'Drink 2 times.', 'events' => ['drink'], 'target' => 2, 'for' => 'all', 'reward' => ['corn' => 20, 'rosettes' => 5, 'materials' => ['water' => 5]]],
+        'daily.loot' => ['title' => 'Scavenger', 'goal' => 'Pick up a pile of loot from the map.', 'events' => ['loot'], 'target' => 1, 'for' => 'all', 'reward' => ['corn' => 25, 'rosettes' => 5]],
         'daily.gather' => ['title' => 'Bring it in', 'goal' => 'Gather 5 times.', 'events' => ['gather'], 'target' => 5, 'for' => 'all', 'reward' => ['corn' => 30, 'rosettes' => 5]],
         'daily.walk' => ['title' => 'Beat the bounds', 'goal' => 'Walk 4 regions.', 'events' => ['walk'], 'target' => 4, 'for' => 'all', 'reward' => ['corn' => 20, 'rosettes' => 5, 'horseshoes' => 1]],
         'daily.chat' => ['title' => 'Word in the square', 'goal' => 'Write 2 messages in chat.', 'events' => ['chat'], 'target' => 2, 'for' => 'all', 'reward' => ['corn' => 20, 'rosettes' => 5]],

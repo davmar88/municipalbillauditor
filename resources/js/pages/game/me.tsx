@@ -10,7 +10,10 @@ import { apples } from '@/routes/play';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { language as languageRoute, name as nameRoute } from '@/routes/play/me';
+import {
+    language as languageRoute,
+    rename as nameRoute,
+} from '@/routes/play/me';
 import type { Worn } from '@/lib/animal-dress';
 import type { DesignCard } from '@/types';
 import type { Species } from '@/types/game';

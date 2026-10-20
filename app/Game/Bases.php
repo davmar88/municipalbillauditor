@@ -75,6 +75,10 @@ final class Bases
             $player->save();
             $faction->save();
             Missions::record($player, 'give', $amount);
+
+            if ($what === 'water') {
+                Missions::record($player, 'give_water');
+            }
         });
     }
 

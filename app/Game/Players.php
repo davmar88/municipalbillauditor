@@ -59,10 +59,12 @@ final class Players
             'name' => $name,
             'species' => $species,
             'language' => $language,
-            'materials' => array_fill_keys(Player::MATERIALS, 0),
+            // A skin of water to start with: animals drink to stay alive.
+            'materials' => [...array_fill_keys(Player::MATERIALS, 0), 'water' => 20],
             'corn' => (int) config('game.starting_corn'),
             'horseshoes' => Horseshoes::max(),
             'horseshoes_at' => CarbonImmutable::now(),
+            'vitals_at' => CarbonImmutable::now(),
             'shield_until' => CarbonImmutable::now()->addDays((int) config('game.newcomer_shield_days')),
             'adult_confirmed_at' => CarbonImmutable::now(),
         ]));

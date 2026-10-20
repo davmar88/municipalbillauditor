@@ -19,6 +19,13 @@ use Illuminate\Support\Carbon;
  * @property int $user_id
  * @property int $valley_id
  * @property int|null $region_id Where the animal stands; null means the Paddock.
+ * @property float $food How fed it is, 0 to 100
+ * @property float $drink How watered it is, 0 to 100
+ * @property float $health 0 is dead
+ * @property Carbon|null $vitals_at When food, drink and health were last worked out
+ * @property int $water_barrel Which water bag it carries (Survival::BARRELS)
+ * @property Carbon|null $died_at
+ * @property int $deaths
  * @property float|null $pos_x Where it stands on the map, when not walking
  * @property float|null $pos_y
  * @property float|null $walk_from_x The walk it is on, from where to where
@@ -98,6 +105,11 @@ class Player extends Model
             'walk_to_y' => 'float',
             'walk_started_at' => 'datetime',
             'walk_arrives_at' => 'datetime',
+            'food' => 'float',
+            'drink' => 'float',
+            'health' => 'float',
+            'vitals_at' => 'datetime',
+            'died_at' => 'datetime',
         ];
     }
 

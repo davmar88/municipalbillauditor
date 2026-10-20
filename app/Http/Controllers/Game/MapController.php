@@ -21,9 +21,11 @@ use App\Game\Plunderers;
 use App\Game\Powers;
 use App\Game\RaidRules;
 use App\Game\Stock;
+use App\Game\Survival;
 use App\Game\ValleyBuilder;
 use App\Game\Wall;
 use App\Game\Wardrobe;
+use App\Game\Weather;
 use App\Http\Controllers\Controller;
 use App\Models\Attack;
 use App\Models\BattleCommitment;
@@ -32,8 +34,11 @@ use App\Models\GateDefence;
 use App\Models\Home;
 use App\Models\HomeHelp;
 use App\Models\Law;
+use App\Models\LootDrop;
 use App\Models\Player;
+use App\Models\PlunderBand;
 use App\Models\Region;
+use App\Models\Season;
 use App\Models\Warrant;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -78,6 +83,11 @@ class MapController extends Controller
         $wanted = $season ? Warrant::query()->where('season_id', $season->id)->where('status', 'open')->pluck('player_id')->all() : [];
         // Read plainly, not as models: a busy valley has thousands of animals.
         $colours = Faction::query()->where('valley_id', $valley->id)->pluck('colour', 'id');
+        // Each faction's stored water, which its members drink from: for the health bars over them.
+        $stores = Faction::query()->where('valley_id', $valley->id)->pluck('materials', 'id')
+            ->map(fn ($materials) => (int) ((is_string($materials) ? json_decode($materials, true) : $materials)['water'] ?? 0));
+        // Land on fire from a plunder or a raid, and the ashes after.
+        $scorched = $season ? $this->scorched($season) : [];
         // Every animal stays on the map, online or not: offline ones can still be robbed, their homes burned.
         // Animals hiding in their homes don't show at all, except to themselves.
         $visible = fn ($query) => $query->where('valley_id', $valley->id)
@@ -93,7 +103,7 @@ class MapController extends Controller
         $animals = DB::query()
             ->fromSub(
                 Player::query()->toBase()->tap($visible)
-                    ->select(['id', 'name', 'species', 'faction_id', 'region_id', 'inside_home_at'])
+                    ->select(['id', 'name', 'species', 'faction_id', 'region_id', 'inside_home_at', 'food', 'drink', 'health', 'vitals_at', 'corn', 'materials'])
                     ->selectRaw("ROW_NUMBER() OVER (PARTITION BY COALESCE(region_id, ?) ORDER BY id = ? DESC, id IN ({$first}) DESC, last_seen_at DESC, id) AS place", [$paddockId, $player->id]),
                 'ranked',
             )
@@ -206,10 +216,27 @@ class MapController extends Controller
                         'colour' => $animal->faction_id !== null ? ($colours[$animal->faction_id] ?? null) : null,
                         'me' => $animal->id === $player->id,
                         'wearing' => $wearing[$animal->id] ?? [],
+                        // Out of 100, for the bar over every animal.
+                        'health' => Survival::healthOf($animal, $season, $animal->faction_id !== null ? ($stores[$animal->faction_id] ?? 0) : 0),
                     ])->values(),
                 ],
+                // Burning from a plunder or a raid, then ashes.
+                'fire' => $scorched[$region->id] ?? null,
             ]),
             'here' => $player->region_id ?? $paddock?->id,
+            // Spring, summer, fall or winter, and how far through the season we are.
+            'weather' => Weather::forMap($season),
+            // What dead animals left lying about, for anyone to pick up.
+            'loot' => LootDrop::query()->lying()->where('valley_id', $valley->id)->with('player:id,name')->limit(200)->get()
+                ->map(fn (LootDrop $drop) => [
+                    'id' => $drop->id,
+                    'x' => $drop->x,
+                    'y' => $drop->y,
+                    'corn' => $drop->corn,
+                    'materials' => (object) ($drop->materials ?? []),
+                    'from' => $drop->player?->name,
+                    'expiresAt' => $drop->expires_at->toIso8601String(),
+                ]),
             // The raid rules your faction holds you to, to warn before a raid breaks one; none when rogue or excused.
             'raidRules' => $player->faction && ! $player->faction->rogue && ! $player->rules_exempt
                 ? [...RaidRules::of($player->faction), 'labels' => RaidRules::RULES]
@@ -398,6 +425,37 @@ class MapController extends Controller
         $player = $movement->stop($request->user()->player);
 
         return $this->told("You stopped in {$player->location()->name}.");
+    }
+
+    /**
+     * Land on fire: while a plunder is under way, and for a while after a
+     * plunder, a raid or Irongate's riders took it; ashes for hours after.
+     *
+     * @return array<int, string> region id => burning or ash
+     */
+    private function scorched(Season $season): array
+    {
+        $now = now();
+        $burnFor = $now->copy()->subMinutes(20);
+        $ashFor = $now->copy()->subHours(6);
+        $fires = [];
+        $mark = function (int $regionId, $at) use (&$fires, $burnFor) {
+            $state = $at === null || $at->gt($burnFor) ? 'burning' : 'ash';
+            $fires[$regionId] = ($fires[$regionId] ?? null) === 'burning' ? 'burning' : $state;
+        };
+
+        $season->crimes()->where('kind', CrimeKind::Plunder)->whereNotNull('region_id')
+            ->where(fn ($query) => $query->whereNull('resolved_at')->orWhere(fn ($query) => $query->where('resolved_at', '>', $ashFor)->where('caught', false)))
+            ->get(['region_id', 'resolved_at'])
+            ->each(fn ($crime) => $mark($crime->region_id, $crime->resolved_at));
+        $season->attacks()->where('winner', 'attack')->where('resolved_at', '>', $ashFor)
+            ->get(['region_id', 'resolved_at'])
+            ->each(fn (Attack $attack) => $mark($attack->region_id, $attack->resolved_at));
+        PlunderBand::query()->where('season_id', $season->id)->where('won', false)->where('resolved_at', '>', $ashFor)
+            ->get(['region_id', 'resolved_at'])
+            ->each(fn (PlunderBand $band) => $mark($band->region_id, $band->resolved_at));
+
+        return $fires;
     }
 
     private function toldWalk(Player $player): RedirectResponse

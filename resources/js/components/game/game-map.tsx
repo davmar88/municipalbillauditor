@@ -4,7 +4,8 @@ import { toast } from 'sonner';
 import type { WorldMapProps } from '@/components/game/world-map';
 import { MapButton, WorldMap } from '@/components/game/world-map';
 import { useMapView } from '@/hooks/use-map-view';
-import type { Worn } from '@/types/game';
+import { WeatherOverlay } from '@/components/game/weather-overlay';
+import type { WeatherKey, Worn } from '@/types/game';
 
 // three.js and the animal models only load for the 3D map.
 const WorldMap3D = lazy(() => import('@/components/game/map3d/world-map-3d'));
@@ -35,6 +36,22 @@ class Fallback extends Component<
  * switch that this device remembers.
  */
 export function GameMap({
+    weather,
+    ...props
+}: Omit<WorldMapProps, 'switcher'> & {
+    wearing: Worn[];
+    /** The time of year, drawn over the map. */
+    weather?: WeatherKey;
+}) {
+    return (
+        <div className="relative">
+            <GameMapInner {...props} />
+            {weather && <WeatherOverlay now={weather} />}
+        </div>
+    );
+}
+
+function GameMapInner({
     wearing,
     ...props
 }: Omit<WorldMapProps, 'switcher'> & { wearing: Worn[] }) {

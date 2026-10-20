@@ -31,6 +31,7 @@ use App\Http\Controllers\Game\PlunderController;
 use App\Http\Controllers\Game\ProfileController;
 use App\Http\Controllers\Game\RankingsController;
 use App\Http\Controllers\Game\StartController;
+use App\Http\Controllers\Game\SurvivalController;
 use App\Http\Controllers\Game\TodayController;
 use App\Http\Controllers\Game\TreeController;
 use App\Http\Controllers\Game\WallController;
@@ -143,6 +144,11 @@ Route::middleware(['auth', 'verified', 'player', 'throttle:120,1'])->prefix('pla
     Route::post('missions/{mission}/claim', [TodayController::class, 'claim'])->name('play.mission.claim');
     Route::get('rankings', [RankingsController::class, 'index'])->name('play.rankings');
     Route::get('online', [OnlineController::class, 'index'])->name('play.online');
+    // Staying alive: eat, drink, a bigger water bag, and picking up what the dead left.
+    Route::post('eat', [SurvivalController::class, 'eat'])->name('play.eat');
+    Route::post('drink', [SurvivalController::class, 'drink'])->name('play.drink');
+    Route::post('water-barrel', [SurvivalController::class, 'barrel'])->name('play.water-barrel');
+    Route::post('loot/{drop}', [SurvivalController::class, 'pickUp'])->name('play.loot');
     // The corner buttons on every screen: who's online, and your recent chats.
     Route::get('dock', [OnlineController::class, 'dock'])->name('play.dock');
     Route::get('exchange', [ExchangeController::class, 'index'])->name('play.exchange');
@@ -174,7 +180,7 @@ Route::middleware(['auth', 'verified', 'player', 'throttle:120,1'])->prefix('pla
 
     Route::get('me', [ProfileController::class, 'show'])->name('play.me');
     Route::put('me/language', [ProfileController::class, 'language'])->name('play.me.language');
-    Route::put('me/name', [ProfileController::class, 'rename'])->name('play.me.name');
+    Route::put('me/name', [ProfileController::class, 'rename'])->name('play.me.rename');
     Route::get('animals/{player}', [ProfileController::class, 'animal'])->name('play.animal');
 
     // Giving another animal an item from your bag.

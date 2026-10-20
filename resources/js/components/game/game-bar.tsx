@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { LiveBell, liveEnabled } from '@/components/game/live';
 import { NextStep } from '@/components/game/next-step';
+import { VitalsBar } from '@/components/game/vitals-bar';
 import { Button } from '@/components/ui/button';
 import { act, fromNow } from '@/lib/game';
 import { cn } from '@/lib/utils';
@@ -145,6 +146,7 @@ export function GameBar({ showNextStep = true }: { showNextStep?: boolean }) {
                         </span>
                     ))}
                 </div>
+                {player.vitals && <VitalsBar vitals={player.vitals} />}
                 {player.faction && <FactionStrip faction={player.faction} />}
                 {(player.inPoundUntil || player.homeClosedUntil) && (
                     <p

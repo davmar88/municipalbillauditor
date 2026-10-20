@@ -46,6 +46,7 @@ import type {
     MapRegion,
     Species,
     Worn,
+    LootPile,
 } from '@/types/game';
 import { bannerFlag, bannerTexture } from '@/lib/banner';
 import { animateAshes, animateFire, ashes, flames } from './fire';
@@ -82,6 +83,10 @@ export type WorldData = {
     folk: Folk[];
     /** Every animal's home. */
     homes: MapHome[];
+    /** What dead animals left lying about. */
+    loot: LootPile[];
+    /** Your own health, for the bar over you. */
+    myHealth: number | null;
 };
 
 // ---- the look of the land -------------------------------------------------------------
@@ -263,6 +268,34 @@ function outline(polygon: Point[], height: number): number[] {
     return out;
 }
 
+/** A little health bar for over an animal or a home: out of 100, green to red. */
+function healthBar(value: number, width: number): HTMLDivElement {
+    const outer = div('', {
+        width: `${width}px`,
+        height: '6px',
+        background: '#14121a',
+        border: '1px solid rgba(255,255,255,0.55)',
+        boxShadow: '0 1px 2px rgba(0,0,0,0.6)',
+        borderRadius: '3px',
+        overflow: 'hidden',
+        pointerEvents: 'none',
+    });
+    outer.appendChild(div('', { height: '100%', borderRadius: '2px' }));
+    setHealth(outer, value);
+    return outer;
+}
+
+function setHealth(bar: HTMLElement, value: number) {
+    const v = Math.max(0, Math.min(100, value));
+    const fill = bar.firstElementChild as HTMLElement | null;
+    if (fill) {
+        fill.style.width = `${v}%`;
+        fill.style.background =
+            v > 60 ? '#22c55e' : v > 30 ? '#f59e0b' : '#ef4444';
+    }
+    bar.title = `Health ${Math.round(v)}/100`;
+}
+
 function div(
     className: string,
     style: Record<string, string> = {},
@@ -318,6 +351,8 @@ type CrowdEntry = {
     disc: CSS2DObject;
     ring: THREE.Mesh;
     badge: CSS2DObject | null;
+    /** Its health, over its head. */
+    bar: CSS2DObject;
     /** Whether it is near enough the middle of the view for a real 3D model. */
     cast: boolean;
     /** The hub it stands round, and its spot there in screen pixels. */
@@ -1007,6 +1042,12 @@ export class World {
         if (!was || was.homes !== data.homes) {
             this.buildHomes();
         }
+        if (land) {
+            this.buildLandFires();
+        }
+        if (!was || was.loot !== data.loot) {
+            this.buildLoot();
+        }
         this.syncMe();
         this.changed = true;
     }
@@ -1614,8 +1655,13 @@ export class World {
                         this.ringMaterial('#8a8399'),
                     );
                     ring.rotation.x = -Math.PI / 2;
-                    this.people.add(disc, ring);
+                    const bar = new CSS2DObject(
+                        healthBar(animal.health ?? 100, 28),
+                    );
+                    bar.renderOrder = 4;
+                    this.people.add(disc, ring, bar);
                     entry = {
+                        bar,
                         id: animal.id,
                         species: animal.species,
                         wearing,
@@ -1634,6 +1680,7 @@ export class World {
                 }
                 entry.centre = centre;
                 entry.spot = SPOTS[i] ?? [0, 0];
+                setHealth(entry.bar.element, animal.health ?? 100);
                 const isWanted = wanted.has(animal.id);
                 const ringColour = isWanted
                     ? FLAG
@@ -1776,7 +1823,7 @@ export class World {
             entry.actor.dispose();
             entry.actor = null;
         }
-        for (const o of [entry.disc, entry.badge]) {
+        for (const o of [entry.disc, entry.badge, entry.bar]) {
             if (o) {
                 this.people.remove(o);
             }
@@ -1814,6 +1861,7 @@ export class World {
                 entry.actor.root.scale.setScalar(h);
             }
             entry.badge?.position.set(x + 10 * spread, h * 1.1, y);
+            entry.bar.position.set(x, h * 1.2, y);
         }
         for (const pill of this.extras) {
             const [cx, cy] = pill.userData.centre as Point;
@@ -1878,6 +1926,72 @@ export class World {
     }
 
     /** Every animal's home, in its skin's colours; yours ringed in violet. Built from the village kit once it has loaded. */
+    /** Land on fire after a plunder or a raid, then ashes, round its middle. */
+    private readonly landFires = new THREE.Group();
+
+    private landFlames: { group: THREE.Group; ash: boolean }[] = [];
+
+    private buildLandFires() {
+        const data = this.data as WorldData;
+        if (!this.landFires.parent) {
+            this.scene.add(this.landFires);
+        }
+        this.clearGroup(this.landFires);
+        this.landFlames = [];
+        const spots: Point[] = [
+            [-34, 18],
+            [26, 30],
+            [6, -26],
+            [-12, 44],
+        ];
+        for (const region of data.regions) {
+            if (!region.fire) {
+                continue;
+            }
+            const [hx, hy] = hub(region.key);
+            spots.forEach(([dx, dy], i) => {
+                const ash = region.fire === 'ash';
+                const group = ash
+                    ? ashes(region.id * 7 + i)
+                    : flames(region.id * 7 + i, 1);
+                const holder = new THREE.Group();
+                holder.add(group);
+                holder.position.set(hx + dx, 0, hy + dy);
+                holder.scale.setScalar(ash ? 34 : 26 + (i % 2) * 8);
+                this.landFires.add(holder);
+                this.landFlames.push({ group, ash });
+            });
+        }
+    }
+
+    /** What dead animals left behind: sacks where they fell. */
+    private readonly lootSacks = new THREE.Group();
+
+    private buildLoot() {
+        const data = this.data as WorldData;
+        if (!this.lootSacks.parent) {
+            this.scene.add(this.lootSacks);
+        }
+        this.clearGroup(this.lootSacks);
+        for (const pile of data.loot) {
+            const sack = new CSS2DObject(
+                div(
+                    '',
+                    {
+                        fontSize: '20px',
+                        lineHeight: '1',
+                        pointerEvents: 'none',
+                        filter: `drop-shadow(0 1px 2px ${HALO}) drop-shadow(0 0 6px rgba(245,197,66,0.8))`,
+                    },
+                    '💰',
+                ),
+            );
+            sack.position.set(pile.x, 6, pile.y);
+            sack.renderOrder = 3;
+            this.lootSacks.add(sack);
+        }
+    }
+
     private buildHomes() {
         const data = this.data as WorldData;
         this.clearGroup(this.dwellings);
@@ -1889,6 +2003,9 @@ export class World {
                 heap.add(ashes(home.id));
                 heap.userData.ash = true;
                 heap.position.set(home.x, 0, home.y);
+                const ashBar = new CSS2DObject(healthBar(0, 34));
+                ashBar.position.set(0, 0.5, 0);
+                heap.add(ashBar);
                 this.dwellings.add(heap);
                 this.fires.push({ group: heap, ash: true });
                 return { group: heap, level: home.level };
@@ -1930,6 +2047,12 @@ export class World {
                 group.add(fire);
                 this.fires.push({ group: fire, ash: false });
             }
+            // Its health, over the roof, for anyone to see.
+            group.updateMatrixWorld(true);
+            const top = new THREE.Box3().setFromObject(group).max.y;
+            const bar = new CSS2DObject(healthBar(home.health ?? 100, 34));
+            bar.position.set(0, Math.max(0.6, top) + 0.25, 0);
+            group.add(bar);
             group.position.set(home.x, 0, home.y);
             this.dwellings.add(group);
             return { group, level: home.level };
@@ -2064,7 +2187,17 @@ export class World {
         return found;
     }
 
+    /** Your health, over your head. */
+    private readonly myBar = (() => {
+        const bar = new CSS2DObject(healthBar(100, 40));
+        bar.renderOrder = 5;
+        return bar;
+    })();
+
     private syncMe() {
+        if (!this.myBar.parent) {
+            this.people.add(this.myBar);
+        }
         const data = this.data as WorldData;
         const me = this.me;
         const show = data.me !== null && data.species !== null;
@@ -2248,8 +2381,8 @@ export class World {
 
         let moving = zoomed || this.changed;
         this.changed = false;
-        if (!reduce && this.fires.length > 0) {
-            for (const { group, ash } of this.fires) {
+        if (!reduce && this.fires.length + this.landFlames.length > 0) {
+            for (const { group, ash } of [...this.fires, ...this.landFlames]) {
                 if (ash) {
                     animateAshes(group, now);
                 } else {
@@ -2301,6 +2434,11 @@ export class World {
                     0.6 * (1 - phase);
             }
             me.tag.position.set(x, 0, y);
+            this.myBar.position.set(x, h * 1.25, y);
+            this.myBar.visible = data.myHealth !== null;
+            if (data.myHealth !== null) {
+                setHealth(this.myBar.element, data.myHealth);
+            }
             me.disc.position.set(x, h * 0.5, y);
             me.disc.visible = !me.actor;
             if (me.actor) {

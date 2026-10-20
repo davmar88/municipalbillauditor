@@ -54,6 +54,8 @@ final class Tick
         $bands = PlunderBand::query()->where('season_id', $season->id)->count();
 
         Movement::settleArrived($valley->id);
+        // Everyone gets hungry and thirsty, away or not: a slice of the valley each minute.
+        Survival::settleValley($valley->id);
         app(Homes::class)->buildArrivedCamps($valley->id);
 
         // Studies finish first, so what was learned counts this half hour.

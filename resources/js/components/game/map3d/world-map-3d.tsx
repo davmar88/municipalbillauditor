@@ -16,7 +16,14 @@ import { FARM, LANDS, hub, inside, reachable } from '@/lib/hollowmere';
 import { cn } from '@/lib/utils';
 import { AnimalMenu } from '@/components/game/animal-menu';
 import { FolkCard } from '@/components/game/irongate-folk';
-import type { Folk, MapAnimal, MapHome, MapRegion, Worn } from '@/types/game';
+import type {
+    Folk,
+    MapAnimal,
+    MapHome,
+    MapRegion,
+    Worn,
+    LootPile,
+} from '@/types/game';
 import { Rig } from './rig';
 import { World } from './world';
 
@@ -76,6 +83,27 @@ function regionAt(regions: MapRegion[], point: Point | null): number | null {
  * the same way: a quick tap walks there, a long press or right click shows
  * what's there, drag, pinch, scroll and keys move about.
  */
+const NO_LOOT: LootPile[] = [];
+
+/** The pile of loot nearest a point on the land, within a tap's reach. */
+function lootNear(
+    loot: LootPile[] | undefined,
+    [x, y]: Point,
+    k: number,
+): LootPile | null {
+    const reach = 26 / Math.min(Math.max(k, 0.05), 1.2);
+    let best: LootPile | null = null;
+    let nearest = reach;
+    for (const pile of loot ?? []) {
+        const d = Math.hypot(pile.x - x, pile.y - y);
+        if (d < nearest) {
+            nearest = d;
+            best = pile;
+        }
+    }
+    return best;
+}
+
 export default function WorldMap3D({
     valley,
     regions,
@@ -97,6 +125,9 @@ export default function WorldMap3D({
     irongate,
     warrants,
     homes,
+    loot,
+    onLoot,
+    myHealth,
     children,
 }: Props) {
     const containerRef = useRef<HTMLDivElement>(null);
@@ -144,6 +175,8 @@ export default function WorldMap3D({
         onHome,
         homes,
         herePoint,
+        loot,
+        onLoot,
     });
     useEffect(() => {
         latest.current = {
@@ -154,6 +187,8 @@ export default function WorldMap3D({
             onHome,
             homes,
             herePoint,
+            loot,
+            onLoot,
         };
     });
 
@@ -340,6 +375,8 @@ export default function WorldMap3D({
             wearing,
             folk: irongate?.folk ?? NO_FOLK,
             homes: homes ?? NO_HOMES,
+            loot: loot ?? NO_LOOT,
+            myHealth: myHealth ?? null,
         });
         dirty.current = true;
         // Only rebuild when what's shown changes, not on every render of the page.
@@ -356,6 +393,8 @@ export default function WorldMap3D({
         wearingKey,
         irongate,
         homes,
+        loot,
+        myHealth,
     ]);
 
     // ---- moving about ---------------------------------------------------------------------------------------------
@@ -678,6 +717,14 @@ export default function WorldMap3D({
             }
             // A quick tap on land sets off straight for that spot, the open scrub between the regions included; on your home, its card.
             const ground = rig.pick(point);
+            // On a pile of loot: its card.
+            const pile = ground
+                ? lootNear(latest.current.loot, ground, rig.k)
+                : null;
+            if (pile && latest.current.onLoot) {
+                latest.current.onLoot(pile);
+                return;
+            }
             const home = ground
                 ? myHomeAt(latest.current.homes, ground, rig.k)
                 : null;

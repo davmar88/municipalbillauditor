@@ -38,6 +38,28 @@ return [
 
     'season_days' => (int) env('GAME_SEASON_DAYS', 14),
 
+    // Staying alive (App\Game\Survival): points of 100 lost each hour, what a Corn or a water fills, and the harm of going without.
+    'survival' => [
+        // Off only in tests that aren't about staying alive.
+        'enabled' => (bool) env('GAME_SURVIVAL', true),
+        'food_per_hour' => 2.0,
+        'drink_per_hour' => 2.5,
+        // An animal eats and drinks what it carries when it falls below this, up to eat_to.
+        'eat_below' => 40,
+        'eat_to' => 90,
+        'food_per_corn' => 1.0,
+        'drink_per_water' => 5.0,
+        'starving_per_hour' => 6.0,
+        'thirst_per_hour' => 8.0,
+        // Fed and watered past this, it mends.
+        'heal_above' => 30,
+        'heal_per_hour' => 4.0,
+        // A robbery's victim is roughed up.
+        'robbed' => 10,
+        // Where a newcomer, or an animal back from the dead, starts.
+        'start' => ['food' => 60, 'drink' => 60],
+    ],
+
     'horseshoes' => [
         // Every animal holds up to 50 (her call, 2026-10-20).
         'max' => 50,

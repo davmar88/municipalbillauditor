@@ -11,6 +11,7 @@ use App\Game\Notices;
 use App\Game\Orchard;
 use App\Game\Powers;
 use App\Game\Stores;
+use App\Game\Survival;
 use App\Http\Controllers\Admin\ImpersonateController;
 use App\Models\Cashout;
 use Illuminate\Http\Request;
@@ -57,11 +58,14 @@ class HandleInertiaRequests extends Middleware
             'impersonating' => $request->hasSession() && $request->session()->has(ImpersonateController::SESSION_KEY),
             // The bar along the top of every game screen.
             'player' => function () use ($request) {
-                $player = $request->user()?->player?->fresh(['faction']);
+                $player = $request->user()?->player;
 
                 if ($player === null) {
                     return null;
                 }
+
+                // Eat, drink, mend or starve up to now before showing it.
+                $player = Survival::refresh($player)->fresh(['faction']);
 
                 $level = $player->level();
 
@@ -99,6 +103,19 @@ class HandleInertiaRequests extends Middleware
                     'homeClosedUntil' => $player->homeIsClosed() ? $player->home_closed_until->toIso8601String() : null,
                     'shieldUntil' => $player->isShielded() ? $player->shield_until->toIso8601String() : null,
                     'powers' => Powers::summary($player),
+                    // Staying alive, out of 100 each, and what it carries its water in.
+                    'vitals' => [
+                        'food' => (int) round($player->food),
+                        'drink' => (int) round($player->drink),
+                        'health' => (int) round($player->health),
+                        'water' => $player->material('water'),
+                        'waterCap' => Survival::waterCap($player),
+                        'barrel' => Survival::BARRELS[(int) $player->water_barrel]['name'],
+                        'nextBarrel' => Survival::BARRELS[(int) $player->water_barrel + 1] ?? null,
+                        'store' => $player->faction?->material('water') ?? 0,
+                        'freeWater' => Survival::waterHere($player),
+                        'diedAt' => $player->died_at?->gt(now()->subHours(2)) ? $player->died_at->toIso8601String() : null,
+                    ],
                 ];
             },
             // The badge on Messages. Sent with every reload, so pages that

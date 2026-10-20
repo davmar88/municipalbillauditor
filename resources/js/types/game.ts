@@ -55,6 +55,58 @@ export type PlayerSummary = {
     shieldUntil: string | null;
     /** Powers from used items working right now. */
     powers: { kind: string; label: string; left: string }[];
+    /** Staying alive (App\Game\Survival). */
+    vitals: Vitals;
+};
+
+/** An animal's needs, out of 100 each, and what it carries its water in. */
+export type Vitals = {
+    food: number;
+    drink: number;
+    health: number;
+    /** Water carried, and how much its bag holds. */
+    water: number;
+    waterCap: number;
+    barrel: string;
+    nextBarrel: { name: string; holds: number; corn: number } | null;
+    /** Water in its faction's store, which it drinks from too. */
+    store: number;
+    /** Where it can drink for free as it stands, if anywhere. */
+    freeWater: string | null;
+    /** When it last died, within the last couple of hours. */
+    diedAt: string | null;
+};
+
+export type WeatherKey = 'spring' | 'summer' | 'fall' | 'winter';
+
+/** The time of year within the season (App\Game\Weather). */
+export type Weather = {
+    now: WeatherKey;
+    label: string;
+    emoji: string;
+    note: string;
+    /** How far through the season, 0 to 1. */
+    progress: number;
+    startsAt: string | null;
+    endsAt: string | null;
+    times: {
+        key: WeatherKey;
+        label: string;
+        emoji: string;
+        note: string;
+        startsAt: string | null;
+    }[];
+};
+
+/** What a dead animal left lying on the map. */
+export type LootPile = {
+    id: number;
+    x: number;
+    y: number;
+    corn: number;
+    materials: Record<string, number>;
+    from: string | null;
+    expiresAt: string;
 };
 
 export type ItemShape =
@@ -160,6 +212,8 @@ export type MapAnimal = {
     me: boolean;
     /** The shop items it wears (App\Game\Wardrobe), for the 3D map. */
     wearing: Worn[];
+    /** Out of 100, for the bar over it. */
+    health: number;
 };
 
 export type BuildingKindValue =
@@ -358,6 +412,8 @@ export type MapRegion = {
     }[];
     building: MapBuilding | null;
     animals: { count: number; sample: MapAnimal[] };
+    /** Burning after a plunder or a raid, then ashes for a while. */
+    fire: 'burning' | 'ash' | null;
 };
 
 export type MapBattle = {
@@ -474,6 +530,8 @@ export type MapHome = {
     mine: boolean;
     /** On fire while a burner's fire takes hold, then ash until it's rebuilt. */
     fire: 'burning' | 'ash' | null;
+    /** Out of 100, for the bar over it. */
+    health: number;
     /** The owner's faction, if any. */
     factionName: string | null;
     /** A faction mate's home going up that you could lend a hand on. */

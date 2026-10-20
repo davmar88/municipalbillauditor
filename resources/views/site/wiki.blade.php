@@ -30,6 +30,19 @@
             'Switch between the flat map and the 3D map with the button on the map. The map updates by itself when anything happens.',
             'A valley holds up to '.number_format(config('game.valleys.full_at')).' active animals. When it\'s full, newcomers start in the next valley, with its own map and season.',
         ]],
+        'year' => ['The turning year', [
+            'Every season turns through spring, summer, fall and winter, a quarter each. The bar above the map shows where we are.',
+            'Spring is mild. Summer brings plenty: everything gathered comes in half as much again, but the heat makes animals thirstier.',
+            'Fall dries the water up: ponds and springs give little, and the Paddock trough runs dry. Store water before it comes.',
+            'Winter makes food scarce: Corn and crops come in at half, and the cold makes animals hungrier.',
+        ]],
+        'survival' => ['Staying alive', [
+            'Every animal has health, food and water, out of 100, shown at the top of every page. Everyone can see the health bar over every animal and every home.',
+            'You eat the Corn you carry when you are peckish, and drink the water you carry when you are dry; faction members drink from the faction\'s store too. Tap the Food or Water bar to eat or drink your fill now.',
+            'Drink for free at the Paddock trough (except in fall) or at any spring or mere. Carry water in a Water skin (20), or buy a Water bucket (60), a Water barrel (150) or a Water butt (300) with Corn.',
+            'With nothing to eat or drink you lose health; fed and watered you mend. A robbery roughs you up too. At no health you die: everything you carried is scattered over the valley in piles, and you wake up in the Paddock. Apples, Pineapples and items are never lost.',
+            'Piles of loot (💰) lie on the map for two days. Walk over and pick one up for 1 horseshoe: finders keepers.',
+        ]],
         'gathering' => ['Gathering, farms and water', [
             'Gather Corn and materials (wood, straw, stone, clay, wool, dye, eggs) where they grow. Farms beyond the fences grow rarer crops: honey, herbs, iron, gold, copper, fruit and vegetables.',
             'A faction can buy an unclaimed farm or raid one, clear its wild patches into new fields, and grow it.',
@@ -60,6 +73,8 @@
             'Tap any animal\'s home on the map to set it alight. It burns with real flames for half an hour.',
             'Anyone can run to the door and put the fire out for 1 horseshoe. That saves the home, and the burner was seen, so they\'re likelier to be caught.',
             'A home that burns down drops a level, and ash and charred beams stand where it was until its owner rebuilds.',
+            'Every home shows its health: it falls while it burns and mends 10 an hour once the fire is out.',
+            'Land plundered, raided or sacked by Irongate\'s riders burns for a while, then lies in ashes for hours.',
         ]],
         'bounties' => ['Bounties and the pound', [
             'Any faction\'s leader and council can put a bounty in Apples on an animal the informants have seen breaking the law. Anyone can add Apples to a bounty.',

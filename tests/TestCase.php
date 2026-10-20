@@ -13,6 +13,8 @@ abstract class TestCase extends BaseTestCase
 
         // The tests were written round a ten-horseshoe purse; the game itself gives 50. The sums work the same either way.
         config(['game.horseshoes.max' => 10, 'game.horseshoes.saddlebag' => 40]);
+        // Hunger and thirst would eat into the Corn other tests count: SurvivalTest turns them on.
+        config(['game.survival.enabled' => false]);
     }
 
     protected function skipUnlessFortifyHas(string $feature, ?string $message = null): void

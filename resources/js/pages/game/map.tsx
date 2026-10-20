@@ -11,6 +11,7 @@ import { GateStrength } from '@/components/game/gate-strength';
 import { HorseshoePicker } from '@/components/game/horseshoe-picker';
 import { MapHud } from '@/components/game/map-hud';
 import { RegionPanel } from '@/components/game/region-panel';
+import { SeasonBar } from '@/components/game/season-bar';
 import type { Plunder, Warrant } from '@/components/game/region-panel';
 import { Button } from '@/components/ui/button';
 import { WhyNot, needHorseshoes } from '@/components/game/why-not';
@@ -19,6 +20,7 @@ import {
     commit,
     gate,
     gather,
+    loot as lootRoute,
     walkStop,
     walkTo as walkToRoute,
 } from '@/routes/play';
@@ -37,6 +39,8 @@ import type {
     MapLaw,
     MapRegion,
     PlunderBandInfo,
+    LootPile,
+    Weather,
     Worn,
 } from '@/types/game';
 
@@ -75,6 +79,10 @@ type Props = {
         spare: number[];
         labels: Record<string, string>;
     } | null;
+    /** Spring, summer, fall or winter, and how far through the season. */
+    weather: Weather;
+    /** What dead animals left lying about. */
+    loot: LootPile[];
     /** Out in the open scrub: what there is to gather where you stand. */
     scrub: {
         id: number;
@@ -99,6 +107,8 @@ const LIVE_MAP = [
     'season',
     'house',
     'player',
+    'weather',
+    'loot',
 ];
 
 export default function MapPage({
@@ -126,11 +136,14 @@ export default function MapPage({
     home,
     scrub,
     raidRules,
+    weather,
+    loot,
 }: Props) {
     const { player } = usePage().props;
     const [selectedId, setSelectedId] = useState<number | null>(null);
     // The open scrub right-clicked, to walk or set up camp there.
     const [ground, setGround] = useState<[number, number] | null>(null);
+    const [pile, setPile] = useState<LootPile | null>(null);
     // Your own home, tapped on the map, to manage it there.
     const [homeOpen, setHomeOpen] = useState(false);
     const [otherHome, setOtherHome] = useState<number | null>(null);
@@ -219,6 +232,7 @@ export default function MapPage({
             )}
             <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 p-3 md:p-5">
                 <GameBar />
+                {weather && <SeasonBar weather={weather} />}
 
                 {me.walk && (
                     <p className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-primary/40 bg-primary/10 px-4 py-2.5 text-sm">
@@ -455,6 +469,13 @@ export default function MapPage({
                     irongate={irongate}
                     warrants={warrants}
                     homes={homes}
+                    loot={loot}
+                    onLoot={(pile) => {
+                        setSelectedId(null);
+                        setPile(pile);
+                    }}
+                    myHealth={player?.vitals?.health ?? null}
+                    weather={weather?.now}
                 >
                     <MapHud
                         valley={valley}
@@ -498,6 +519,13 @@ export default function MapPage({
                                 onWalk={walkTo}
                             />
                         </div>
+                    )}
+                    {pile && !selected && (
+                        <LootCard
+                            pile={pile}
+                            onWalk={walkTo}
+                            onClose={() => setPile(null)}
+                        />
                     )}
                     {ground && !selected && (
                         <GroundCard
@@ -625,6 +653,65 @@ function ScrubCard({ scrub }: { scrub: NonNullable<Props['scrub']> }) {
 }
 
 /** The open scrub you right-clicked: walk there, or set up your own camp there. */
+/** A pile of loot a dead animal left: what's in it, and walking over to pick it up. */
+function LootCard({
+    pile,
+    onWalk,
+    onClose,
+}: {
+    pile: LootPile;
+    onWalk: (point: [number, number]) => void;
+    onClose: () => void;
+}) {
+    const things = [
+        pile.corn > 0 ? `${pile.corn} Corn` : null,
+        ...Object.entries(pile.materials).map(
+            ([name, amount]) => `${amount} ${name}`,
+        ),
+    ].filter(Boolean);
+
+    return (
+        <div className="absolute bottom-3 left-3 z-20 flex w-72 max-w-[calc(100%-1.5rem)] flex-col gap-2 rounded-xl border bg-card/95 p-3 text-sm shadow-lg backdrop-blur">
+            <div className="flex items-center justify-between">
+                <p className="font-semibold">💰 Lying on the ground</p>
+                <button
+                    type="button"
+                    className="text-muted-foreground hover:text-foreground"
+                    aria-label="Close"
+                    onClick={onClose}
+                >
+                    ✕
+                </button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+                What {pile.from ?? 'an animal'} carried when it died:{' '}
+                {things.join(', ')}. Anyone can pick it up, for 1 horseshoe,
+                once they stand by it. The crows have it{' '}
+                {fromNow(pile.expiresAt)}.
+            </p>
+            <div className="flex flex-wrap gap-2">
+                <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => onWalk([pile.x, pile.y])}
+                >
+                    <Footprints className="size-4" />
+                    Walk there
+                </Button>
+                <Button
+                    size="sm"
+                    onClick={() => {
+                        act(lootRoute.url(pile.id));
+                        onClose();
+                    }}
+                >
+                    Pick it up
+                </Button>
+            </div>
+        </div>
+    );
+}
+
 function GroundCard({
     point,
     hasHome,

@@ -38,6 +38,7 @@ import type {
     MapRegion,
     Species,
     MapMe,
+    LootPile,
 } from '@/types/game';
 
 type View = { x: number; y: number; k: number };
@@ -401,7 +402,7 @@ function useCamera(
     const onPointerDown = (event: React.PointerEvent<SVGSVGElement>) => {
         // Another animal or one of Irongate's people: a tap opens their card.
         const animal = (event.target as Element).closest(
-            '[data-animal], [data-folk]',
+            '[data-animal], [data-folk], [data-loot]',
         );
 
         // A right click asks what is there: an animal's menu, or the region's card.
@@ -1400,6 +1401,11 @@ const Crowd = memo(function Crowd({
                                     >
                                         {speciesEmoji(animal.species)}
                                     </text>
+                                    <HealthBar
+                                        value={animal.health ?? 100}
+                                        y={-17}
+                                        width={22}
+                                    />
                                     {wanted.includes(animal.id) && (
                                         <g transform="translate(10 -10)">
                                             <circle
@@ -1475,6 +1481,7 @@ const Homes = memo(function Homes({
                         >
                             <title>{`The ashes of ${home.owner.name}'s ${home.name}`}</title>
                             <Ashes w={w} />
+                            <HealthBar value={0} y={-w * 0.55} width={w} />
                         </g>
                     );
                 }
@@ -1538,9 +1545,128 @@ const Homes = memo(function Homes({
                             </>
                         )}
                         {home.fire === 'burning' && <Flames w={w} />}
+                        <HealthBar
+                            value={home.health ?? 100}
+                            y={-w * (home.level === 0 ? 0.75 : 1.05)}
+                            width={Math.max(18, w)}
+                        />
                     </g>
                 );
             })}
+        </g>
+    );
+});
+
+/** A little bar over an animal or a home: its health, out of 100, for anyone to see. */
+export function HealthBar({
+    value,
+    y,
+    width,
+}: {
+    value: number;
+    y: number;
+    width: number;
+}) {
+    const fill = value > 60 ? '#22c55e' : value > 30 ? '#f59e0b' : '#ef4444';
+    const v = Math.max(0, Math.min(100, value));
+
+    return (
+        <g transform={`translate(${(-width / 2).toFixed(1)} ${y.toFixed(1)})`}>
+            <title>{`Health ${Math.round(v)}/100`}</title>
+            <rect
+                width={width}
+                height={4}
+                rx={2}
+                fill="#14121a"
+                stroke={HALO}
+                strokeWidth={0.8}
+            />
+            <rect width={(width * v) / 100} height={4} rx={2} fill={fill} />
+        </g>
+    );
+}
+
+/** Land a plunder, a raid or Irongate's riders set alight: flames, then ashes for hours. */
+const LandFires = memo(function LandFires({
+    regions,
+}: {
+    regions: MapRegion[];
+}) {
+    return (
+        <g pointerEvents="none">
+            {regions
+                .filter((region) => region.fire)
+                .map((region) => {
+                    const [hx, hy] = hub(region.key);
+
+                    return (
+                        <g key={region.id}>
+                            <title>
+                                {region.fire === 'burning'
+                                    ? `${region.name} is burning`
+                                    : `Ashes where ${region.name} burned`}
+                            </title>
+                            {[
+                                [-34, 18],
+                                [26, 30],
+                                [6, -26],
+                                [-12, 44],
+                            ].map(([dx, dy], i) => (
+                                <g
+                                    key={i}
+                                    transform={`translate(${hx + dx} ${hy + dy})`}
+                                >
+                                    {region.fire === 'burning' ? (
+                                        <Flames w={26 + (i % 2) * 8} />
+                                    ) : (
+                                        <Ashes w={24 + (i % 2) * 6} />
+                                    )}
+                                </g>
+                            ))}
+                        </g>
+                    );
+                })}
+        </g>
+    );
+});
+
+/** What dead animals left behind: sacks lying where they fell, for anyone to pick up. */
+const LootPiles = memo(function LootPiles({
+    loot,
+    k,
+}: {
+    loot: LootPile[];
+    k: number;
+}) {
+    return (
+        <g>
+            {loot.map((pile) => (
+                <g
+                    key={pile.id}
+                    data-loot={pile.id}
+                    className="cursor-pointer"
+                    pointerEvents="all"
+                    transform={`translate(${pile.x.toFixed(1)} ${pile.y.toFixed(1)}) scale(${grows(k)})`}
+                >
+                    <title>{`What ${pile.from ?? 'an animal'} left behind: tap to pick it up`}</title>
+                    <circle r={13} fill="#f5c542" opacity={0.25}>
+                        <animate
+                            attributeName="r"
+                            values="11;16;11"
+                            dur="2s"
+                            repeatCount="indefinite"
+                        />
+                    </circle>
+                    <text
+                        textAnchor="middle"
+                        dominantBaseline="central"
+                        fontSize={18}
+                        y={0.5}
+                    >
+                        💰
+                    </text>
+                </g>
+            ))}
         </g>
     );
 });
@@ -1914,11 +2040,13 @@ function Me({
     species,
     k,
     walking,
+    health,
 }: {
     at: Point;
     species: Species;
     k: number;
     walking: boolean;
+    health: number | null;
 }) {
     return (
         <g
@@ -1944,6 +2072,9 @@ function Me({
                 >
                     {speciesEmoji(species)}
                 </text>
+                {health !== null && (
+                    <HealthBar value={health} y={-27} width={34} />
+                )}
                 <g transform="translate(0 31)">
                     <rect
                         x={-18}
@@ -2054,6 +2185,12 @@ export type WorldMapProps = {
     warrants?: Warrant[];
     /** Every animal's home. */
     homes?: MapHome[];
+    /** What dead animals left lying about. */
+    loot?: LootPile[];
+    /** A tap on a pile of loot. */
+    onLoot?: (pile: LootPile) => void;
+    /** Your own health, for the bar over you. */
+    myHealth?: number | null;
     children?: ReactNode;
 };
 
@@ -2080,6 +2217,9 @@ export function WorldMap({
     irongate,
     warrants,
     homes,
+    loot,
+    onLoot,
+    myHealth,
     children,
 }: WorldMapProps) {
     const containerRef = useRef<HTMLDivElement>(null);
@@ -2150,6 +2290,19 @@ export function WorldMap({
     } | null>(null);
     const onAnimal = useCallback(
         (element: Element, at: Point) => {
+            const lootId = element.getAttribute('data-loot');
+
+            if (lootId) {
+                const pile = loot?.find((p) => p.id === Number(lootId));
+                setMenu(null);
+                setPerson(null);
+                if (pile) {
+                    onLoot?.(pile);
+                }
+
+                return;
+            }
+
             const folkKey = element.getAttribute('data-folk');
 
             if (folkKey) {
@@ -2167,7 +2320,7 @@ export function WorldMap({
                 .find((a) => a.id === id);
             setMenu(animal ? { animal, at } : null);
         },
-        [regions, irongate],
+        [regions, irongate, loot, onLoot],
     );
 
     const camera = useCamera(
@@ -2298,7 +2451,11 @@ export function WorldMap({
                             gateResult={gateResult}
                         />
                         <Bases regions={regions} k={k} />
+                        <LandFires regions={regions} />
                         {homes && <Homes homes={homes} k={k} />}
+                        {loot && loot.length > 0 && (
+                            <LootPiles loot={loot} k={k} />
+                        )}
                         {irongate && <Folk folk={irongate.folk} k={k} />}
                         <Crowd regions={regions} k={k} wanted={wanted} />
                         {me?.walk && herePoint && (
@@ -2310,6 +2467,7 @@ export function WorldMap({
                                 species={species}
                                 k={k}
                                 walking={me?.walk != null}
+                                health={myHealth ?? null}
                             />
                         )}
                     </g>

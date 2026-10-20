@@ -75,7 +75,20 @@ final class Gathering
             [$x, $y] = Movement::position($player);
             $rich = Geography::richness($x, $y);
             // Gathering Gloves, a Feast Basket and the faction's Farming bring in more.
-            $amount = min($left, max(1, (int) floor($base * $rich * $player->species->gathering() * ($own ? 1.5 : 1.0) * $workshop * Powers::gathering($player, $region->produces) * Research::gathering($player))));
+            // Summer brings plenty, winter little, and fall dries the water up.
+            $weather = Weather::gathering($player->valley->currentSeason(), $region->produces);
+            $amount = min($left, max(1, (int) floor($base * $rich * $player->species->gathering() * ($own ? 1.5 : 1.0) * $workshop * Powers::gathering($player, $region->produces) * Research::gathering($player) * $weather)));
+
+            // Water needs something to carry it in.
+            if ($region->produces === 'water' && config('game.survival.enabled')) {
+                $room = Survival::waterCap($player) - $player->material('water');
+
+                if ($room < 1) {
+                    throw new GameException('Your '.Survival::BARRELS[(int) $player->water_barrel]['name']." is full. Drink, give water to your faction's store, or buy a bigger one.");
+                }
+
+                $amount = min($amount, $room);
+            }
             if (! $region->isScrub()) {
                 Stock::take($region, $amount);
             }

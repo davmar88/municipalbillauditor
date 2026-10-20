@@ -29,7 +29,7 @@ class Home extends Model
 {
     protected function casts(): array
     {
-        return ['ready_at' => 'datetime', 'x' => 'float', 'y' => 'float'];
+        return ['ready_at' => 'datetime', 'x' => 'float', 'y' => 'float', 'health_at' => 'datetime'];
     }
 
     /** @return BelongsTo<Player, $this> */

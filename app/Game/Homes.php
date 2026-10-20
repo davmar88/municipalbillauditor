@@ -423,6 +423,9 @@ final class Homes
             $home->forceFill(['level' => $home->level - 1, 'ready_at' => null])->save();
         }
 
+        // Burned to nothing: it mends from when it's standing again.
+        $home?->forceFill(['health' => 0, 'health_at' => Player::query()->whereKey($playerId)->value('home_closed_until') ?? now()])->save();
+
         Player::query()->whereKey($playerId)->update(['inside_home_at' => null]);
     }
 
@@ -486,8 +489,8 @@ final class Homes
                 ->where('season_id', $season->id)
                 ->where('kind', CrimeKind::Burn)
                 ->whereNull('resolved_at')
-                ->pluck('target_player_id')
-                ->flip()
+                ->get(['target_player_id', 'created_at', 'settles_at', 'doused_by'])
+                ->keyBy('target_player_id')
                 ->all();
             // Home-made skins are few: read just those homes the full way.
             $skins = Home::query()
@@ -502,7 +505,7 @@ final class Homes
                 ->join('players', 'players.id', '=', 'homes.player_id')
                 ->leftJoin('factions', 'factions.id', '=', 'players.faction_id')
                 ->where('players.valley_id', $valley->id)
-                ->get(['factions.name as faction_name', 'homes.id', 'homes.x', 'homes.y', 'homes.level', 'homes.ready_at', 'homes.style', 'homes.skin_level', 'homes.skin_item_id',
+                ->get(['factions.name as faction_name', 'homes.id', 'homes.x', 'homes.y', 'homes.level', 'homes.ready_at', 'homes.style', 'homes.skin_level', 'homes.skin_item_id', 'homes.health', 'homes.health_at',
                     'players.id as owner_id', 'players.name as owner_name', 'players.species', 'players.faction_id', 'players.home_closed_until', 'players.home_burned_at'])
                 ->map(function (object $row) use ($now, $burning, $skins) {
                     $building = $row->ready_at !== null && CarbonImmutable::parse($row->ready_at)->gt($now);
@@ -521,12 +524,47 @@ final class Homes
                         'style' => $row->style,
                         // Alight while a burner's fire takes hold, then ash until it's rebuilt.
                         'fire' => isset($burning[$row->owner_id]) ? 'burning' : ($closed && $row->home_burned_at !== null ? 'ash' : null),
+                        // Out of 100, for the bar over every home.
+                        'health' => self::health(
+                            $row->health === null ? null : (float) $row->health,
+                            $row->health_at === null ? null : CarbonImmutable::parse($row->health_at),
+                            $burning[$row->owner_id] ?? null,
+                            $closed && $row->home_burned_at !== null,
+                        ),
                         'factionId' => $row->faction_id === null ? null : (int) $row->faction_id,
                         'factionName' => $row->faction_name,
                     ];
                 })
                 ->all();
         });
+    }
+
+    /** How much a home mends each hour after a fire. */
+    public const MEND_PER_HOUR = 10;
+
+    /**
+     * A home's health out of 100: falling while it burns, nothing while it
+     * lies in ashes, and mending after a fire is put out or it's rebuilt.
+     */
+    public static function health(?float $health, ?CarbonImmutable $at, ?Crime $fire, bool $ash): int
+    {
+        if ($ash) {
+            return 0;
+        }
+
+        if ($fire !== null && $fire->doused_by === null) {
+            $length = max(1, $fire->created_at->diffInSeconds($fire->settles_at));
+
+            return max(5, (int) round(100 * (1 - $fire->created_at->diffInSeconds(now()) / $length)));
+        }
+
+        if ($health === null) {
+            return 100;
+        }
+
+        $hours = $at === null || $at->isFuture() ? 0 : $at->diffInSeconds(now()) / 3600;
+
+        return (int) min(100, round($health + $hours * self::MEND_PER_HOUR));
     }
 
     /** Where the valley's homes for the map are kept; anything that changes the map clears it. */
@@ -581,6 +619,8 @@ final class Homes
 
             $this->ensureAtDoor($helper, $home, $home->player_id === $helper->id ? 'your home' : "{$owner->name}'s home");
             Horseshoes::spend($helper, self::DOUSE_HORSESHOES);
+            // It mends from what the fire left.
+            $home->forceFill(['health' => self::health(null, null, $crime, false), 'health_at' => now()])->save();
             $crime->forceFill(['doused_by' => $helper->id])->save();
             Missions::record($helper, 'douse');
             Rosettes::award($helper, 5, "Put out the fire at {$owner->name}'s home", "douse:{$crime->id}", $helper->valley->currentSeason());

@@ -246,7 +246,7 @@ class MissionsAndSkillsTest extends TestCase
             ->component('game/today')
             ->where('missions.story.key', 'arrival.first_steps')
             ->has('missions.daily', Missions::DAILY_JOBS)
-            ->has('missions.chapters', 5)
+            ->has('missions.chapters', 6)
             ->has('skills', 2)
             ->where('shop.shelves', 0)
             ->where('missionsWaiting', 0));

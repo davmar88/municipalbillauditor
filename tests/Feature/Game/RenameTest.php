@@ -22,18 +22,18 @@ class RenameTest extends TestCase
         $player = $this->player();
         $taken = $this->player();
 
-        $this->actingAs($player->user)->put(route('play.me.name'), ['name' => $taken->name])->assertRedirect();
+        $this->actingAs($player->user)->put(route('play.me.rename'), ['name' => $taken->name])->assertRedirect();
         $this->assertNotSame($taken->name, $player->fresh()->name, 'Not a name already in the valley.');
 
-        $this->actingAs($player->user)->put(route('play.me.name'), ['name' => 'Moonbeam'])->assertRedirect();
+        $this->actingAs($player->user)->put(route('play.me.rename'), ['name' => 'Moonbeam'])->assertRedirect();
         $this->assertSame('Moonbeam', $player->fresh()->name);
 
         $this->actingAs($player->user)->get(route('play.me'))->assertInertia(fn (Assert $page) => $page->whereNot('renameFrom', null));
-        $this->actingAs($player->user)->put(route('play.me.name'), ['name' => 'Starlight']);
+        $this->actingAs($player->user)->put(route('play.me.rename'), ['name' => 'Starlight']);
         $this->assertSame('Moonbeam', $player->fresh()->name, 'Not again so soon.');
 
         $this->travel(8)->days();
-        $this->actingAs($player->user)->put(route('play.me.name'), ['name' => 'Starlight']);
+        $this->actingAs($player->user)->put(route('play.me.rename'), ['name' => 'Starlight']);
         $this->assertSame('Starlight', $player->fresh()->name);
     }
 
