@@ -144,6 +144,14 @@ export default function WorldMap3D({
     const [size, setSize] = useState<Size | null>(null);
     const [k, setK] = useState(0);
     const [dragging, setDragging] = useState(false);
+    // On a phone the labels, bars and discs step aside while you drag, so the map slides smoothly.
+    const labelsRef = useRef<HTMLElement | null>(null);
+    useEffect(() => {
+        const el = labelsRef.current;
+        if (el && (window.matchMedia?.('(pointer: coarse)').matches ?? false)) {
+            el.style.visibility = dragging ? 'hidden' : 'visible';
+        }
+    }, [dragging]);
     const [overLand, setOverLand] = useState(false);
     const [lost, setLost] = useState(false);
     // A tap, hold or right click on another animal opens its menu; on one of Irongate's people, their card.
@@ -224,6 +232,7 @@ export default function WorldMap3D({
         renderer.domElement.className = 'absolute inset-0 size-full';
         surface.prepend(renderer.domElement);
         const labels = new CSS2DRenderer();
+        labelsRef.current = labels.domElement;
         Object.assign(labels.domElement.style, {
             position: 'absolute',
             inset: '0',

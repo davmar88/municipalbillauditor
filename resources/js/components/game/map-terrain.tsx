@@ -858,8 +858,10 @@ function Surroundings() {
                 stroke="#1b1f25"
                 strokeWidth={1.4}
             />
-            <Scrub />
-            <Trees list={edge} />
+            <g className="map-detail">
+                <Scrub />
+                <Trees list={edge} />
+            </g>
             {/* Hollow Brook. */}
             <path
                 d={smoothPath(BROOK)}
@@ -1902,7 +1904,9 @@ export const MapGround = memo(function MapGround() {
                 strokeLinejoin="round"
                 opacity={0.85}
             />
-            <Trees list={hedgeTrees()} />
+            <g className="map-detail">
+                <Trees list={hedgeTrees()} />
+            </g>
             <path
                 d={outlines}
                 fill="none"

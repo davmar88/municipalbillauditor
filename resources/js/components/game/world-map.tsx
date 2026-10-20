@@ -214,10 +214,22 @@ function useCamera(
         }
     };
 
+    // While the map moves (a drag, a pinch, a glide, a fly), and a moment after.
+    const [moving, setMoving] = useState(false);
+    const movingRef = useRef<number | null>(null);
     const apply = useCallback((next: View) => {
         const clamped = clampView(next, sizeRef.current);
         viewRef.current = clamped;
         setView(clamped);
+        if (movingRef.current === null) {
+            setMoving(true);
+        } else {
+            window.clearTimeout(movingRef.current);
+        }
+        movingRef.current = window.setTimeout(() => {
+            movingRef.current = null;
+            setMoving(false);
+        }, 220);
     }, []);
 
     const stop = useCallback(() => {
@@ -665,6 +677,7 @@ function useCamera(
         view,
         size,
         dragging,
+        moving,
         current,
         lookAt,
         zoomAt,
@@ -2709,6 +2722,8 @@ export function WorldMap({
                     'absolute inset-0 size-full touch-none outline-none select-none [-webkit-touch-callout:none]',
                     camera.dragging ? 'cursor-grabbing' : 'cursor-grab',
                 )}
+                // On a phone, the details step aside while the map moves, so it slides smoothly.
+                data-moving={PHONE && camera.moving ? '' : undefined}
                 role="group"
                 aria-label={`Map of ${valley}. Drag to look around, scroll or pinch to zoom, tap a spot to walk there, and press and hold or right-click to see what's there.`}
                 tabIndex={0}
@@ -2744,34 +2759,36 @@ export function WorldMap({
                             selectedId={selectedId}
                             onPick={pick}
                         />
-                        <Trenches regions={regions} />
-                        <Marches
-                            regions={regions}
-                            k={k}
-                            gateNight={gateNight}
-                        />
-                        <Labels
-                            regions={regions}
-                            k={k}
-                            houseId={house?.id ?? null}
-                            gateNight={gateNight}
-                            gateResult={gateResult}
-                        />
-                        <Bases regions={regions} k={k} />
-                        <IronfieldTown regions={regions} />
-                        <LandFires regions={regions} />
-                        {homes && <Homes homes={homes} k={k} />}
-                        {loot && loot.length > 0 && (
-                            <LootPiles loot={loot} k={k} />
-                        )}
-                        {irongate && <Folk folk={irongate.folk} k={k} />}
-                        <Crowd regions={regions} k={k} wanted={wanted} />
-                        {walkers && walkers.length > 0 && (
-                            <OtherWalks walkers={walkers} k={k} />
-                        )}
-                        {strikes && strikes.length > 0 && (
-                            <Strikes strikes={strikes} k={k} />
-                        )}
+                        <g className="map-detail">
+                            <Trenches regions={regions} />
+                            <Marches
+                                regions={regions}
+                                k={k}
+                                gateNight={gateNight}
+                            />
+                            <Labels
+                                regions={regions}
+                                k={k}
+                                houseId={house?.id ?? null}
+                                gateNight={gateNight}
+                                gateResult={gateResult}
+                            />
+                            <Bases regions={regions} k={k} />
+                            <IronfieldTown regions={regions} />
+                            <LandFires regions={regions} />
+                            {homes && <Homes homes={homes} k={k} />}
+                            {loot && loot.length > 0 && (
+                                <LootPiles loot={loot} k={k} />
+                            )}
+                            {irongate && <Folk folk={irongate.folk} k={k} />}
+                            <Crowd regions={regions} k={k} wanted={wanted} />
+                            {walkers && walkers.length > 0 && (
+                                <OtherWalks walkers={walkers} k={k} />
+                            )}
+                            {strikes && strikes.length > 0 && (
+                                <Strikes strikes={strikes} k={k} />
+                            )}
+                        </g>
                         {me?.walk && herePoint && (
                             <WalkLine from={herePoint} to={me.walk.to} k={k} />
                         )}
