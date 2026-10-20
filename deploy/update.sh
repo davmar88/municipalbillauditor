@@ -43,6 +43,10 @@ main() {
     deploy/artisan route:cache
     deploy/artisan view:cache
     sudo systemctl restart revenueguard-queue    # or it keeps running old code
+    # Live updates: Reverb runs the code it started with, so it restarts too.
+    if systemctl list-unit-files revenueguard-reverb.service >/dev/null 2>&1; then
+        sudo systemctl restart revenueguard-reverb
+    fi
     sudo systemctl reload "php${v}-fpm"          # clears opcache
 
     echo "==> Smoke check"
