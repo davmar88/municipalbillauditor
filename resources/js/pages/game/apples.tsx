@@ -1,13 +1,14 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { Banknote, Clock3, RefreshCw, Wheat } from 'lucide-react';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { GameBar } from '@/components/game/game-bar';
 import { Button } from '@/components/ui/button';
 import { WhyNot } from '@/components/game/why-not';
 import { Input } from '@/components/ui/input';
 import { act, dayMonth, dollars, shortWhen } from '@/lib/game';
 import { cashout } from '@/routes/play';
-import { buy, check, exchange, swap } from '@/routes/play/apples';
+import { PayPalButtons } from '@/components/game/paypal-buttons';
+import { check, exchange, swap } from '@/routes/play/apples';
 import { harvest, plant } from '@/routes/play/trees';
 import { join, refill } from '@/routes/play/orchard';
 
@@ -57,6 +58,8 @@ type Props = {
     onSale: boolean;
     /** Whether paying with PayPal is open. */
     open: boolean;
+    /** For PayPal's buttons on the page, when paying is open. */
+    paypal: { clientId: string; currency: string } | null;
     cornPerApple: number;
     pending: {
         id: number;
@@ -95,28 +98,19 @@ export default function ApplesPage({
     trees,
     onSale,
     open,
+    paypal,
     cornPerApple,
     pending,
     history,
     orchard,
     contact,
 }: Props) {
+    // The pack whose PayPal buttons are showing.
     const [buying, setBuying] = useState<string | null>(null);
+    const done = useCallback(() => setBuying(null), []);
 
     const { player } = usePage().props;
     const pineapples = player?.pineapples ?? 0;
-
-    function pay(pack: PineapplePack) {
-        setBuying(pack.id);
-        router.post(
-            buy.url(),
-            { pack: pack.id },
-            {
-                preserveScroll: true,
-                onFinish: () => setBuying(null),
-            },
-        );
-    }
 
     return (
         <>
@@ -171,16 +165,32 @@ export default function ApplesPage({
                                     </span>
                                 )}
                             </p>
-                            {open && (
-                                <Button
-                                    className="mt-auto"
-                                    disabled={buying !== null}
-                                    onClick={() => pay(pack)}
-                                >
-                                    {buying === pack.id
-                                        ? 'Opening PayPal…'
-                                        : `Pay ${dollars(pack.usd)} with PayPal`}
-                                </Button>
+                            {open && paypal && buying === pack.id ? (
+                                <div className="mt-auto flex flex-col gap-2">
+                                    <PayPalButtons
+                                        pack={pack.id}
+                                        clientId={paypal.clientId}
+                                        currency={paypal.currency}
+                                        onDone={done}
+                                    />
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={done}
+                                    >
+                                        Not now
+                                    </Button>
+                                </div>
+                            ) : (
+                                open &&
+                                paypal && (
+                                    <Button
+                                        className="mt-auto"
+                                        onClick={() => setBuying(pack.id)}
+                                    >
+                                        Pay {dollars(pack.usd)} with PayPal
+                                    </Button>
+                                )
                             )}
                         </li>
                     ))}

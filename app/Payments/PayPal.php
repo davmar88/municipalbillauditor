@@ -26,6 +26,12 @@ final class PayPal
         return $this->settings->get('paypal_client_id') !== null && $this->settings->get('paypal_client_secret') !== null;
     }
 
+    /** The public half of the keys, for PayPal's buttons on the page. */
+    public function clientId(): ?string
+    {
+        return $this->settings->get('paypal_client_id');
+    }
+
     public function live(): bool
     {
         return $this->settings->get('paypal_mode') === 'live';
@@ -38,8 +44,17 @@ final class PayPal
      *
      * @throws PaymentException
      */
-    public function start(ApplePurchase $purchase, string $returnUrl, string $cancelUrl): array
+    public function start(ApplePurchase $purchase, ?string $returnUrl = null, ?string $cancelUrl = null): array
     {
+        // On the page, PayPal's own buttons open and close the payment: no pages to come back to.
+        $context = array_filter([
+            'brand_name' => config('app.name'),
+            'shipping_preference' => 'NO_SHIPPING',
+            'user_action' => 'PAY_NOW',
+            'return_url' => $returnUrl,
+            'cancel_url' => $cancelUrl,
+        ]);
+
         $response = $this->call(fn (PendingRequest $http) => $http
             ->withHeaders(['PayPal-Request-Id' => $purchase->reference])
             ->post($this->base().'/v2/checkout/orders', [
@@ -51,21 +66,15 @@ final class PayPal
                     'description' => number_format($purchase->pineapples).' Pineapples',
                     'amount' => ['currency_code' => $purchase->currency, 'value' => self::money($purchase->amount)],
                 ]],
-                'payment_source' => ['paypal' => ['experience_context' => [
-                    'brand_name' => config('app.name'),
-                    'shipping_preference' => 'NO_SHIPPING',
-                    'user_action' => 'PAY_NOW',
-                    'return_url' => $returnUrl,
-                    'cancel_url' => $cancelUrl,
-                ]]],
+                'payment_source' => ['paypal' => ['experience_context' => $context]],
             ]));
 
         $id = $response->json('id');
         $url = collect($response->json('links', []))->firstWhere('rel', 'payer-action')['href']
             ?? collect($response->json('links', []))->firstWhere('rel', 'approve')['href']
-            ?? null;
+            ?? '';
 
-        if (! $response->successful() || ! is_string($id) || ! is_string($url)) {
+        if (! $response->successful() || ! is_string($id) || ($returnUrl !== null && $url === '')) {
             Log::warning('PayPal refused an order', ['purchase' => $purchase->id, 'status' => $response->status(), 'issue' => $response->json('details.0.issue') ?? $response->json('name')]);
 
             throw new PaymentException("PayPal couldn't start the payment. Try again in a moment.");

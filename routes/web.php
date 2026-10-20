@@ -132,6 +132,9 @@ Route::middleware(['auth', 'verified', 'player', 'throttle:120,1'])->prefix('pla
     Route::get('apples', [AppleController::class, 'index'])->name('play.apples');
     Route::post('apples/buy', [AppleController::class, 'buy'])->middleware('throttle:10,1,apple-buy')->name('play.apples.buy');
     Route::get('apples/paypal', [AppleController::class, 'paypal'])->name('play.apples.paypal');
+    Route::post('apples/paypal/order', [AppleController::class, 'order'])->middleware('throttle:10,1,apple-buy')->name('play.apples.order');
+    Route::post('apples/paypal/orders/{order}/capture', [AppleController::class, 'capture'])->middleware('throttle:20,1,apple-check')->name('play.apples.capture');
+    Route::post('apples/paypal/orders/{order}/cancel', [AppleController::class, 'cancel'])->middleware('throttle:20,1,apple-check')->name('play.apples.cancel');
     Route::get('apples/paypal/cancel', [AppleController::class, 'paypalCancel'])->name('play.apples.paypal-cancel');
     Route::post('apples/purchases/{purchase}/check', [AppleController::class, 'check'])->middleware('throttle:10,1,apple-check')->name('play.apples.check');
     Route::post('apples/swap', [AppleController::class, 'swap'])->name('play.apples.swap');

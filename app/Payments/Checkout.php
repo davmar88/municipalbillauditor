@@ -44,6 +44,19 @@ final class Checkout
      */
     public function start(Player $player, string $packId): string
     {
+        return $this->order($player, $packId, route('play.apples.paypal'), route('play.apples.paypal-cancel'))['url'];
+    }
+
+    /**
+     * Open a PayPal order for a pack: for PayPal's buttons on the page when
+     * no pages are given, or for PayPal's own page.
+     *
+     * @return array{id: string, url: string}
+     *
+     * @throws GameException
+     */
+    public function order(Player $player, string $packId, ?string $returnUrl = null, ?string $cancelUrl = null): array
+    {
         if (! $this->open()) {
             throw new GameException($this->onSale() ? "Paying with PayPal isn't open yet." : "Pineapples aren't on sale yet.");
         }
@@ -62,10 +75,10 @@ final class Checkout
         ]);
 
         try {
-            $order = $this->paypal->start($purchase, route('play.apples.paypal'), route('play.apples.paypal-cancel'));
+            $order = $this->paypal->start($purchase, $returnUrl, $cancelUrl);
             $purchase->forceFill(['provider_id' => $order['id']])->save();
 
-            return $order['url'];
+            return $order;
         } catch (PaymentException $e) {
             $purchase->forceFill(['status' => 'failed'])->save();
 

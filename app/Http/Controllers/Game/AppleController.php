@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Game;
 
 use App\Game\Apples;
+use App\Game\GameException;
 use App\Game\Market;
 use App\Game\Orchard;
 use App\Game\Pineapples;
@@ -14,6 +15,8 @@ use App\Models\Player;
 use App\Payments\Checkout;
 use App\Payments\Packs;
 use App\Payments\PaymentException;
+use App\Payments\PayPal;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -28,7 +31,7 @@ use Symfony\Component\HttpFoundation\Response as HttpResponse;
  */
 class AppleController extends Controller
 {
-    public function index(Request $request, Checkout $checkout): Response
+    public function index(Request $request, Checkout $checkout, PayPal $paypal): Response
     {
         /** @var Player $player */
         $player = $request->user()->player;
@@ -38,6 +41,8 @@ class AppleController extends Controller
             'applePacks' => Packs::apples(),
             'trees' => Trees::page($player),
             'onSale' => $checkout->onSale(),
+            // PayPal's buttons pay right here on the page.
+            'paypal' => $checkout->open() ? ['clientId' => $paypal->clientId(), 'currency' => 'USD'] : null,
             'open' => $checkout->open(),
             'cornPerApple' => Apples::cornPerApple(),
             'pending' => ApplePurchase::query()
@@ -82,6 +87,48 @@ class AppleController extends Controller
         $pack = (string) $request->validate(['pack' => ['required', 'string', 'max:32']])['pack'];
 
         return Inertia::location($checkout->start($request->user()->player, $pack));
+    }
+
+    /** PayPal's buttons on the page ask for an order for a pack. */
+    public function order(Request $request, Checkout $checkout): JsonResponse
+    {
+        $pack = (string) $request->validate(['pack' => ['required', 'string', 'max:32']])['pack'];
+
+        try {
+            return response()->json(['id' => $checkout->order($request->user()->player, $pack)['id']]);
+        } catch (GameException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+    }
+
+    /** The player approved the payment in PayPal's window on the page: take the money. */
+    public function capture(Request $request, Checkout $checkout, string $order): JsonResponse
+    {
+        $purchase = $this->purchase($request, $order);
+
+        if ($purchase === null) {
+            return response()->json(['status' => 'failed', 'message' => "We couldn't find that payment."], 404);
+        }
+
+        try {
+            $purchase = $checkout->settlePayPal($purchase);
+        } catch (PaymentException $e) {
+            return response()->json(['status' => 'failed', 'message' => $e->getMessage()], 422);
+        }
+
+        return response()->json(['status' => $purchase->status, 'message' => $this->said($purchase)]);
+    }
+
+    /** The player closed PayPal's window without paying. */
+    public function cancel(Request $request, string $order): JsonResponse
+    {
+        $purchase = $this->purchase($request, $order);
+
+        if ($purchase?->status === 'pending') {
+            $purchase->forceFill(['status' => 'failed'])->save();
+        }
+
+        return response()->json(['message' => 'You closed PayPal without paying. Nothing was charged.']);
     }
 
     /** Back from PayPal, having approved the order: take the money. */
@@ -160,11 +207,17 @@ class AppleController extends Controller
 
     private function settled(ApplePurchase $purchase): RedirectResponse
     {
+        return $this->toApples($this->said($purchase), in_array($purchase->status, ['failed', 'review'], true) ? 'error' : 'success');
+    }
+
+    /** How a payment stands, in a sentence. */
+    private function said(ApplePurchase $purchase): string
+    {
         return match ($purchase->status) {
-            'paid' => $this->toApples('Your '.number_format($purchase->pineapples).' Pineapples arrived. Swap them for Apples below.'),
-            'failed' => $this->toApples("The payment didn't go through, so nothing was charged.", 'error'),
-            'review' => $this->toApples("The payment didn't match the pack, so we're checking it by hand. Your Pineapples arrive once we have.", 'error'),
-            default => $this->toApples('PayPal is still confirming the payment. Your Pineapples arrive as soon as it does.'),
+            'paid' => 'Your '.number_format($purchase->pineapples).' Pineapples arrived. Swap them for Apples below.',
+            'failed' => "The payment didn't go through, so nothing was charged.",
+            'review' => "The payment didn't match the pack, so we're checking it by hand. Your Pineapples arrive once we have.",
+            default => 'PayPal is still confirming the payment. Your Pineapples arrive as soon as it does.',
         };
     }
 

@@ -161,6 +161,49 @@ class ApplesTest extends TestCase
         $this->assertStringContainsString('Your 900 Pineapples arrived', Notice::query()->where('player_id', $player->id)->value('text'));
     }
 
+    public function test_a_player_pays_with_paypals_buttons_without_leaving_the_page(): void
+    {
+        $this->openPayPal();
+        $this->fakePayPal();
+        $player = $this->player();
+
+        $this->actingAs($player->user)->get(route('play.apples'))
+            ->assertInertia(fn ($page) => $page->where('paypal.clientId', 'client-id')->where('paypal.currency', 'USD'));
+
+        $this->actingAs($player->user)
+            ->postJson(route('play.apples.order'), ['pack' => 'pineapples-900'])
+            ->assertOk()
+            ->assertExactJson(['id' => 'ORDER-1']);
+
+        // No pages to come back to: PayPal's window closes over the game.
+        Http::assertSent(fn (Request $request) => $request->url() === 'https://api-m.sandbox.paypal.com/v2/checkout/orders'
+            && ! isset($request['payment_source']['paypal']['experience_context']['return_url']));
+
+        $this->actingAs($player->user)
+            ->postJson(route('play.apples.capture', 'ORDER-1'))
+            ->assertOk()
+            ->assertJson(['status' => 'paid', 'message' => 'Your 900 Pineapples arrived. Swap them for Apples below.']);
+
+        $this->assertSame(900, $player->fresh()->pineapples);
+
+        // Someone else's order is nobody's business.
+        $this->actingAs($this->player()->user)->postJson(route('play.apples.capture', 'ORDER-1'))->assertNotFound();
+    }
+
+    public function test_closing_paypals_window_charges_nothing(): void
+    {
+        $this->openPayPal();
+        $this->fakePayPal();
+        $player = $this->player();
+
+        $this->actingAs($player->user)->postJson(route('play.apples.order'), ['pack' => 'pineapples-900']);
+        $this->actingAs($player->user)->postJson(route('play.apples.cancel', 'ORDER-1'))->assertOk();
+
+        $this->assertSame('failed', ApplePurchase::sole()->status);
+        $this->assertSame(0, $player->fresh()->pineapples);
+        $this->actingAs($player->user)->postJson(route('play.apples.order'), ['pack' => 'nonsense'])->assertStatus(422)->assertJson(['message' => 'Pick one of the packs.']);
+    }
+
     public function test_a_pending_paypal_capture_waits_and_a_cancel_charges_nothing(): void
     {
         $this->openPayPal();
