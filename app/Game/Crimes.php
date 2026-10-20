@@ -42,6 +42,9 @@ final class Crimes
     /** A robber takes this share of what its victim carries: Corn and each material. */
     public const ROB_SHARE = 0.15;
 
+    /** @var list<string> The materials taken in the robbery being settled. */
+    private array $haul = [];
+
     /** At most this much Corn in one robbery. */
     public const ROB_MOST_CORN = 250;
 
@@ -305,6 +308,10 @@ final class Crimes
                     $stolen = (int) floor((int) $amount * $share);
                     $kept[$name] = (int) $amount - $stolen;
                     $carried[$name] = (int) ($carried[$name] ?? 0) + $stolen;
+
+                    if ($stolen > 0) {
+                        $this->haul[] = "{$stolen} {$name}";
+                    }
                 }
 
                 $victim->forceFill(['corn' => $victim->corn - $loot, 'materials' => $kept])->save();
@@ -325,6 +332,9 @@ final class Crimes
     /** Tell the criminal, and the victims, how a crime went. */
     private function announce(Crime $crime, Player $criminal, bool $caught, int $loot): void
     {
+        // What a robber made off with besides Corn, as "12 wood, 3 honey".
+        $haul = $this->haul;
+        $this->haul = [];
         $underworld = route('play.faction', [], false);
         $victims = in_array($crime->kind, [CrimeKind::Burn, CrimeKind::Rob], true) ? collect([$crime->target_player_id]) : Notices::members($crime->target_faction_id);
         $section = $crime->region?->name;
@@ -351,8 +361,9 @@ final class Crimes
 
         if ($crime->kind === CrimeKind::Rob) {
             $victimName = Player::query()->whereKey($crime->target_player_id)->value('name');
-            Notices::send($criminal->id, 'crime', "💰 You robbed {$victimName} of {$loot} Corn and a share of what they carried.", route('play', [], false));
-            Notices::send($victims, 'crime', "🦹 Someone robbed you of {$loot} Corn and a share of what you carried. The informants will name them to anyone putting up a bounty.", route('play.wanted', [], false));
+            $took = $haul === [] ? "{$loot} Corn" : "{$loot} Corn, ".implode(', ', $haul);
+            Notices::send($criminal->id, 'crime', "💰 You robbed {$victimName} of {$took}.", route('play', [], false));
+            Notices::send($victims, 'crime', "🦹 Someone robbed you of {$took}. The informants will name them to anyone putting up a bounty.", route('play.wanted', [], false));
 
             return;
         }

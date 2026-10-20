@@ -152,7 +152,14 @@ export function AnimalMenu({
                             title="Take a share of the Corn and materials it carries. Stand close; you may be caught."
                             className="flex items-center gap-2 rounded-lg px-2 py-2 text-left text-destructive hover:bg-accent"
                         >
-                            <HandCoins className="size-4" /> Rob (2 horseshoes)
+                            <HandCoins className="size-4" />
+                            <span className="flex flex-col">
+                                <span>Rob (2 horseshoes)</span>
+                                <span className="text-xs text-muted-foreground">
+                                    Takes 15% of its Corn and of every material
+                                    it carries
+                                </span>
+                            </span>
                         </button>
                     )}
                     {!animal.me && (

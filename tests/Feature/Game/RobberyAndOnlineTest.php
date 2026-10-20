@@ -70,7 +70,7 @@ class RobberyAndOnlineTest extends TestCase
         $this->assertSame(60, $robber->fresh()->corn, 'A share of what the victim carried.');
         $this->assertSame(340, $victim->fresh()->corn);
         $this->assertSame(6, $robber->fresh()->material('wood'));
-        $this->assertStringContainsString('Someone robbed you of 60 Corn', Notice::query()->where('player_id', $victim->id)->latest('id')->value('text'));
+        $this->assertStringContainsString('Someone robbed you of 60 Corn, 6 wood', Notice::query()->where('player_id', $victim->id)->latest('id')->value('text'));
 
         // Not again so soon, by anyone, and not from afar.
         $this->expectExceptionMessage('robbed someone not long ago');
