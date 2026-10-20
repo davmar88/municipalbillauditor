@@ -5,6 +5,7 @@ namespace Tests\Feature\Game;
 use App\Enums\CrimeKind;
 use App\Enums\ItemTemplate;
 use App\Enums\Species;
+use App\Game\Apples;
 use App\Game\Crimes;
 use App\Game\GameException;
 use App\Game\Geography;
@@ -230,5 +231,55 @@ class HomesTest extends TestCase
         // Given away, it no longer shows on the home.
         $skin->forceFill(['player_id' => $this->player(Species::Dog)->id])->save();
         $this->assertNull(Homes::skin(Home::sole()->fresh()));
+    }
+
+    public function test_the_skin_shop_sells_corn_skins_then_apple_skins_in_order(): void
+    {
+        $player = $this->builder(attributes: ['corn' => 2000]);
+        $this->homes->build($player);
+
+        foreach ([1, 2, 3, 4] as $level) {
+            $this->homes->buySkin($player->fresh());
+        }
+
+        $home = Home::sole();
+        $this->assertSame(4, $home->skin_level);
+        $spent = array_sum(array_map(fn (int $level) => Homes::SKIN_SHOP[$level]['corn'], [1, 2, 3, 4]));
+        $this->assertSame(2000 - Homes::LEVELS[1]['corn'] - $spent, $player->fresh()->corn);
+        $this->assertSame('Fieldstone', Homes::skin($home)['name']);
+
+        // Past Fieldstone the shop wants Apples.
+        try {
+            $this->homes->buySkin($player->fresh());
+            $this->fail('Red Brick costs Apples.');
+        } catch (GameException $e) {
+            $this->assertStringContainsString('Apples', $e->getMessage());
+        }
+
+        Apples::award($player->fresh(), 10, 'Test Apples', 'test:skin');
+        $this->homes->buySkin($player->fresh());
+        $this->assertSame(5, $home->fresh()->skin_level);
+        $this->assertSame(0, $player->fresh()->apples);
+    }
+
+    public function test_a_shop_skin_guards_against_burners_and_hunters(): void
+    {
+        $outlaw = $this->builder();
+        $home = $this->homes->build($outlaw);
+        $home->forceFill(['level' => 1, 'ready_at' => null, 'skin_level' => 8])->save();
+
+        $burner = $this->player(level: 3);
+        $crime = Crime::create(['season_id' => $this->season()->id, 'player_id' => $burner->id, 'kind' => CrimeKind::Burn, 'target_player_id' => $outlaw->id, 'settles_at' => now(), 'seed' => 1]);
+        $this->assertEqualsWithDelta(0.3 + Homes::BURN_GUARD + Homes::SKIN_SHOP[8]['defence'], app(Crimes::class)->catchChance($this->season(), $crime), 0.001);
+
+        // Only inside does it guard against a bounty hunter.
+        $this->assertSame(0.0, Homes::armour($outlaw->fresh()));
+        $this->homes->enter($outlaw->fresh());
+        $this->assertSame(Homes::SKIN_SHOP[8]['defence'], Homes::armour($outlaw->fresh()));
+
+        $this->actingAs($outlaw->user)->get(route('play'))->assertInertia(fn (Assert $page) => $page
+            ->where('home.skinLevel', 8)
+            ->has('home.skinShop', count(Homes::SKIN_SHOP))
+            ->where('homes.0.skin.name', 'Gilded Keep'));
     }
 }

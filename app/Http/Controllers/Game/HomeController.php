@@ -81,6 +81,14 @@ class HomeController extends Controller
         return $this->told('Your home is now a '.($home->style ? Homes::STYLES[$home->style] : 'village house').' on the 3D map.');
     }
 
+    public function buySkin(Request $request, Homes $homes): RedirectResponse
+    {
+        $home = $homes->buySkin($request->user()->player);
+        $skin = Homes::SKIN_SHOP[$home->skin_level];
+
+        return $this->told("Your home wears {$skin['name']} now: ".(int) round($skin['defence'] * 100).' points harder to burn down or to arrest anyone inside.');
+    }
+
     public function skin(Request $request, Homes $homes): RedirectResponse
     {
         $data = $request->validate(['item' => ['nullable', 'integer']]);

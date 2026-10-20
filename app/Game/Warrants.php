@@ -214,6 +214,8 @@ final class Warrants
             // Hiding in a home makes it harder: each level of it guards the door.
             $chance = self::ARREST_CHANCE + ($hunter->species === Species::Dog ? self::DOG_BONUS : 0.0);
             $chance -= Homes::arrestCut(Homes::guard($wanted), $chance);
+            // A skin from the shop guards the door too, down to the same floor.
+            $chance -= min(Homes::armour($wanted), max(0.0, $chance - Homes::ARREST_FLOOR));
             $roll ??= Dice::roll(Dice::seed(), 'arrest');
             $wantedPage = route('play.wanted', [], false);
 

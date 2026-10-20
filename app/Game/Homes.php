@@ -61,6 +61,23 @@ final class Homes
         'corner_shop' => 'Corner shop',
     ];
 
+    /**
+     * The skin shop, level by level: each skin dresses the home in its
+     * colours (roof, then walls) and guards it, making it harder to burn and
+     * harder to arrest anyone hiding inside. The first levels cost Corn; the
+     * finest cost Apples.
+     */
+    public const SKIN_SHOP = [
+        1 => ['name' => 'Whitewash', 'colours' => ['#8a6a4a', '#efe9dc'], 'corn' => 80, 'apples' => 0, 'defence' => 0.03],
+        2 => ['name' => 'Thatch and Clay', 'colours' => ['#c9a24a', '#c98a5a'], 'corn' => 200, 'apples' => 0, 'defence' => 0.06],
+        3 => ['name' => 'Timber Frame', 'colours' => ['#5a3a2a', '#e8d9b5'], 'corn' => 400, 'apples' => 0, 'defence' => 0.09],
+        4 => ['name' => 'Fieldstone', 'colours' => ['#4f5560', '#a8a39a'], 'corn' => 700, 'apples' => 0, 'defence' => 0.12],
+        5 => ['name' => 'Red Brick', 'colours' => ['#3d3a44', '#a8452f'], 'corn' => 0, 'apples' => 10, 'defence' => 0.16],
+        6 => ['name' => 'Slate and Oak', 'colours' => ['#2f3640', '#7a5534'], 'corn' => 0, 'apples' => 25, 'defence' => 0.2],
+        7 => ['name' => 'Iron-bound', 'colours' => ['#23262b', '#6b6f78'], 'corn' => 0, 'apples' => 50, 'defence' => 0.25],
+        8 => ['name' => 'Gilded Keep', 'colours' => ['#d4a52a', '#f3ead2'], 'corn' => 0, 'apples' => 100, 'defence' => 0.3],
+    ];
+
     /** What putting out a fire costs. */
     public const DOUSE_HORSESHOES = 1;
 
@@ -405,13 +422,58 @@ final class Homes
         Player::query()->whereKey($playerId)->update(['inside_home_at' => null]);
     }
 
-    /** The skin a home shows: one still in its owner's bag and off the shelf. */
+    /** How much a home's skin from the shop guards it: 0.1 is ten points harder to burn or to arrest inside. */
+    public static function skinDefence(?Home $home): float
+    {
+        return (float) (self::SKIN_SHOP[$home?->skin_level ?? 0]['defence'] ?? 0.0);
+    }
+
+    /** How much a shop skin guards an animal hiding in its home. */
+    public static function armour(Player $player): float
+    {
+        return self::hiding($player) ? self::skinDefence(self::of($player)) : 0.0;
+    }
+
+    /**
+     * Buy the next skin in the shop: Corn for the first levels, Apples for
+     * the finest. It replaces the one before and guards the home harder.
+     *
+     * @throws GameException
+     */
+    public function buySkin(Player $player): Home
+    {
+        return DB::transaction(function () use ($player) {
+            $player = Players::lock($player);
+            $home = $this->mine($player);
+            $next = $home->skin_level + 1;
+            $skin = self::SKIN_SHOP[$next] ?? throw new GameException('Your home already wears the finest skin in the shop.');
+
+            if ($skin['apples'] > 0) {
+                Apples::spend($player, $skin['apples'], "Home skin: {$skin['name']}", "skin:{$home->id}:{$next}");
+            } else {
+                if ($player->corn < $skin['corn']) {
+                    throw new GameException("The {$skin['name']} skin costs {$skin['corn']} Corn. You have {$player->corn}.");
+                }
+
+                $player->decrement('corn', $skin['corn']);
+            }
+
+            // A skin from the shop shows instead of a home-made one.
+            $home->forceFill(['skin_level' => $next, 'skin_item_id' => null])->save();
+
+            return $home;
+        });
+    }
+
+    /** The skin a home shows: one still in its owner's bag and off the shelf, else the shop skin it wears. */
     public static function skin(Home $home): ?array
     {
         $item = $home->skin;
 
         if ($item === null || $item->player_id !== $home->player_id || $item->used_at !== null || $item->openListing()->exists()) {
-            return null;
+            $bought = self::SKIN_SHOP[$home->skin_level] ?? null;
+
+            return $bought === null ? null : ['name' => $bought['name'], 'colours' => $bought['colours'], 'pattern' => 'plain'];
         }
 
         return ['name' => $item->design->name, 'colours' => $item->design->colours, 'pattern' => $item->design->pattern];

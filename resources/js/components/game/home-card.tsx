@@ -13,6 +13,7 @@ import {
     help,
     leave,
     skin,
+    skinShop,
     style,
     upgrade,
 } from '@/routes/play/home';
@@ -239,7 +240,11 @@ export function HomeCard({
                             }
                             className="rounded-md border bg-background px-2 py-1"
                         >
-                            <option value="">Plain boards</option>
+                            <option value="">
+                                {info.skinLevel > 0
+                                    ? `${info.skinShop.find((s) => s.level === info.skinLevel)?.name ?? 'Shop skin'} (from the skin shop)`
+                                    : 'Plain boards'}
+                            </option>
                             {info.skins.map((s) => (
                                 <option key={s.id} value={s.id}>
                                     {capitalise(s.name)}
@@ -252,6 +257,7 @@ export function HomeCard({
                             </span>
                         )}
                     </label>
+                    <SkinShop info={info} />
                     <BreakDown
                         atDoor={atDoor && !info.inside}
                         name={home.name}
@@ -449,5 +455,77 @@ function BreakDown({
         >
             Break it down
         </Button>
+    );
+}
+
+/** The skin shop: each skin dresses your home and guards it; Corn buys the first, Apples the finest. */
+function SkinShop({ info }: { info: HomeInfo }) {
+    const { player } = usePage().props;
+    const worn = info.skinShop.find((s) => s.level === info.skinLevel);
+    const next = info.skinShop.find((s) => s.level === info.skinLevel + 1);
+    const corn = player?.corn ?? 0;
+    const apples = player?.apples ?? 0;
+    const short = next
+        ? next.apples > 0
+            ? apples < next.apples
+                ? `${next.name} costs ${next.apples} Apples and you have ${apples}. Apples come from the Apples page.`
+                : null
+            : corn < next.corn
+              ? `${next.name} costs ${next.corn} Corn and you have ${corn}. Gather or trade for the rest.`
+              : null
+        : null;
+
+    return (
+        <div className="flex flex-col gap-2 rounded-lg border p-2">
+            <p className="text-xs font-semibold">Skin shop</p>
+            <p className="text-xs text-muted-foreground">
+                A skin dresses your home and guards it: each one makes it harder
+                to burn down and harder to arrest anyone hiding inside. The
+                first four cost Corn, the finest cost Apples. Each replaces the
+                one before.{' '}
+                {worn
+                    ? `Yours wears ${worn.name}: ${worn.defence} points harder.`
+                    : 'Yours wears none yet.'}
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+                {info.skinShop.map((s) => (
+                    <span
+                        key={s.level}
+                        title={`${s.name}: ${s.defence} points harder to burn or to arrest inside`}
+                        className={`flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[11px] ${s.level <= info.skinLevel ? 'border-primary/60 bg-primary/10' : 'opacity-70'}`}
+                    >
+                        <span
+                            className="inline-block size-3 rounded-sm border"
+                            style={{
+                                background: `linear-gradient(135deg, ${s.colours[0]} 50%, ${s.colours[1]} 50%)`,
+                            }}
+                            aria-hidden
+                        />
+                        {s.name} ·{' '}
+                        {s.apples > 0 ? `${s.apples} 🍎` : `${s.corn} 🌽`} · +
+                        {s.defence}
+                    </span>
+                ))}
+            </div>
+            {next ? (
+                <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                        size="sm"
+                        disabled={short !== null}
+                        onClick={() => act(skinShop.url())}
+                    >
+                        Buy {next.name} for{' '}
+                        {next.apples > 0
+                            ? `${next.apples} Apples`
+                            : `${next.corn} Corn`}
+                    </Button>
+                    <WhyNot reason={short} />
+                </div>
+            ) : (
+                <p className="text-xs font-semibold text-primary">
+                    Your home wears the finest skin in the shop.
+                </p>
+            )}
+        </div>
     );
 }

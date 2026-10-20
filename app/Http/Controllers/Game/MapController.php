@@ -310,6 +310,16 @@ class MapController extends Controller
                 'levels' => collect(range(0, max(3, (int) (Homes::of($player)?->level ?? 0) + 1)))->map(fn (int $n) => ['level' => $n, ...Homes::level($n)])->values(),
                 'door' => Homes::DOOR,
                 'styles' => Homes::STYLES,
+                // The skin shop and how far up it your home is.
+                'skinLevel' => (int) (Homes::of($player)?->skin_level ?? 0),
+                'skinShop' => collect(Homes::SKIN_SHOP)->map(fn (array $skin, int $level) => [
+                    'level' => $level,
+                    'name' => $skin['name'],
+                    'colours' => $skin['colours'],
+                    'corn' => $skin['corn'],
+                    'apples' => $skin['apples'],
+                    'defence' => (int) round($skin['defence'] * 100),
+                ])->values(),
                 'skins' => $player->items()->with('design')->whereDoesntHave('openListing')->get()
                     ->filter(fn ($item) => $item->design->template === ItemTemplate::Skin)
                     ->map(fn ($item) => ['id' => $item->id, 'name' => $item->design->name, 'colours' => $item->design->colours, 'pattern' => $item->design->pattern])

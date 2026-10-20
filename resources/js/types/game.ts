@@ -472,4 +472,16 @@ export type HomeInfo = {
     /** The farm-building looks a home can take on the 3D map, by name. */
     styles: Record<string, string>;
     skins: { id: number; name: string; colours: string[]; pattern: string }[];
+    /** The skin shop level your home wears, 0 for none. */
+    skinLevel: number;
+    skinShop: {
+        level: number;
+        name: string;
+        /** Roof, then walls. */
+        colours: string[];
+        corn: number;
+        apples: number;
+        /** Points harder to burn or to arrest anyone inside. */
+        defence: number;
+    }[];
 };

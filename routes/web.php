@@ -159,6 +159,7 @@ Route::middleware(['auth', 'verified', 'player', 'throttle:120,1'])->prefix('pla
     Route::post('home/enter', [HomeController::class, 'enter'])->middleware('throttle:20,1,home')->name('play.home.enter');
     Route::post('home/leave', [HomeController::class, 'leave'])->middleware('throttle:20,1,home')->name('play.home.leave');
     Route::post('home/skin', [HomeController::class, 'skin'])->middleware('throttle:20,1,home')->name('play.home.skin');
+    Route::post('home/skin-shop', [HomeController::class, 'buySkin'])->middleware('throttle:20,1,home')->name('play.home.skin-shop');
     Route::post('home/style', [HomeController::class, 'style'])->middleware('throttle:20,1,home')->name('play.home.style');
     Route::post('home/demolish', [HomeController::class, 'demolish'])->middleware('throttle:20,1,home')->name('play.home.demolish');
     Route::post('homes/{home}/help', [HomeController::class, 'help'])->middleware('throttle:20,1,home')->name('play.home.help');

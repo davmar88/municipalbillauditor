@@ -311,9 +311,9 @@ final class Crimes
 
         $watch = Wall::law($season, LawTemplate::NightWatch) !== null ? 0.25 : 0.0;
         // A home built up into a Cottage or a Fort is harder to set alight unseen.
-        $walls = $crime->kind === CrimeKind::Burn && $crime->target_player_id !== null
-            ? (Home::query()->where('player_id', $crime->target_player_id)->value('level') ?? 0) * Homes::BURN_GUARD
-            : 0.0;
+        // And its skin from the shop guards it too.
+        $target = $crime->kind === CrimeKind::Burn && $crime->target_player_id !== null ? Home::query()->where('player_id', $crime->target_player_id)->first() : null;
+        $walls = $target !== null ? $target->level * Homes::BURN_GUARD + Homes::skinDefence($target) : 0.0;
         // Whoever put the fire out saw who set it.
         $spotted = $crime->kind === CrimeKind::Burn && $crime->doused_by !== null ? self::DOUSE_SPOTTED : 0.0;
         $chance = min(0.9, 0.3 + 0.05 * min(4, $dogs) + $watch + Powers::bell($crime->target_faction_id) + $walls + $spotted);
