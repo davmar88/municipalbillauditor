@@ -36,6 +36,7 @@ use App\Models\Region;
 use App\Models\Warrant;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -76,28 +77,43 @@ class MapController extends Controller
         $wanted = $season ? Warrant::query()->where('season_id', $season->id)->where('status', 'open')->pluck('player_id')->all() : [];
         // Read plainly, not as models: a busy valley has thousands of animals.
         $colours = Faction::query()->where('valley_id', $valley->id)->pluck('colour', 'id');
-        $animals = Player::query()
-            ->toBase()
-            ->where('valley_id', $valley->id)
-            // Every animal stays on the map, online or not: offline ones can still be robbed, their homes burned.
-            ->get(['id', 'name', 'species', 'faction_id', 'region_id', 'inside_home_at'])
-            ->sortBy(fn (object $animal) => match (true) {
-                $animal->id === $player->id => 0,
-                in_array($animal->id, $wanted, true) => 1,
-                default => 2,
-            })
+        // Every animal stays on the map, online or not: offline ones can still be robbed, their homes burned.
+        // Animals hiding in their homes don't show at all, except to themselves.
+        $visible = fn ($query) => $query->where('valley_id', $valley->id)
+            ->where(fn ($query) => $query->whereNull('inside_home_at')->orWhere('id', $player->id));
+        $paddockId = (int) ($paddock?->id ?? 0);
+        // How many stand in each region, counted by the database.
+        $counts = Player::query()->toBase()->tap($visible)
+            ->selectRaw('COALESCE(region_id, ?) AS region, COUNT(*) AS total', [$paddockId])
+            ->groupBy('region')
+            ->pluck('total', 'region');
+        // A few from each region to draw: you first, then the wanted, then whoever was about last.
+        $first = implode(',', array_map('intval', $wanted ?: [0]));
+        $animals = DB::query()
+            ->fromSub(
+                Player::query()->toBase()->tap($visible)
+                    ->select(['id', 'name', 'species', 'faction_id', 'region_id', 'inside_home_at'])
+                    ->selectRaw("ROW_NUMBER() OVER (PARTITION BY COALESCE(region_id, ?) ORDER BY id = ? DESC, id IN ({$first}) DESC, last_seen_at DESC, id) AS place", [$paddockId, $player->id]),
+                'ranked',
+            )
+            ->where('place', '<=', 30)
+            ->orderBy('place')
+            ->get()
             ->groupBy(fn (object $animal) => $animal->region_id ?? $paddock?->id);
         // Outlaws lying low in Irongate show only to animals in the same district, or a Dog in the town.
         $hereRegion = $regions->firstWhere('id', $player->region_id ?? $paddock?->id) ?? $paddock;
-        $animals = $animals->map(function ($group, $regionId) use ($regions, $player, $hereRegion, $wanted) {
+        $animals = $animals->map(function ($group, $regionId) use ($regions, $player, $hereRegion, $wanted, &$counts) {
             $where = $regions->firstWhere('id', $regionId);
 
-            // Animals hiding in their homes don't show at all, except to themselves.
-            $group = $group->reject(fn (object $animal) => $animal->inside_home_at !== null && $animal->id !== $player->id);
+            if ($where === null || $hereRegion === null) {
+                return $group->values();
+            }
 
-            return $where === null || $hereRegion === null
-                ? $group->values()
-                : $group->reject(fn (object $animal) => Irongate::hidden($animal->id, $where, $player, $hereRegion, $wanted))->values();
+            $shown = $group->reject(fn (object $animal) => Irongate::hidden($animal->id, $where, $player, $hereRegion, $wanted))->values();
+            // Hidden outlaws don't count either: the wanted come early in each region's few, so they're all here.
+            $counts[$regionId] = max(0, (int) ($counts[$regionId] ?? 0) - ($group->count() - $shown->count()));
+
+            return $shown;
         });
         // What the animals the map shows are wearing, in one query.
         $wearing = Wardrobe::wornBy([$player->id, ...$animals->flatMap(fn ($group) => $group->take(24)->pluck('id'))]);
@@ -181,7 +197,7 @@ class MapController extends Controller
                     ? $region->building->summary($player)
                     : null,
                 'animals' => [
-                    'count' => ($animals->get($region->id) ?? collect())->count(),
+                    'count' => (int) ($counts[$region->id] ?? 0),
                     'sample' => ($animals->get($region->id) ?? collect())->take(24)->map(fn (object $animal) => [
                         'id' => $animal->id,
                         'name' => $animal->name,
@@ -235,7 +251,15 @@ class MapController extends Controller
                 'horseshoes' => CrimeKind::Burn->horseshoes(),
                 'usedToday' => Crimes::triedToday($player),
             ],
-            'plunder' => ['crop' => Crimes::PLUNDER_CROP, 'corn' => Crimes::PLUNDER_CORN, 'level' => (int) config('game.levels.crime'), 'horseshoes' => CrimeKind::Plunder->horseshoes()],
+            'plunder' => [
+                'crop' => Crimes::PLUNDER_CROP,
+                'corn' => Crimes::PLUNDER_CORN,
+                'level' => (int) config('game.levels.crime'),
+                'horseshoes' => CrimeKind::Plunder->horseshoes(),
+                // Looting a faction's treasury, from any of its land.
+                'lootHorseshoes' => CrimeKind::Loot->horseshoes(),
+                'lootShare' => (int) round(Crimes::LOOT_SHARE * 100),
+            ],
             'buildingKinds' => array_map(fn (BuildingKind $kind) => $kind->card(), BuildingKind::cases()),
             'laws' => $season ? Wall::laws($season)->map(fn (Law $law) => [
                 'label' => $law->template->label(),

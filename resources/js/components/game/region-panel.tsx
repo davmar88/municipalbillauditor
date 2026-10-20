@@ -74,6 +74,9 @@ export type Plunder = {
     corn: number;
     level: number;
     horseshoes: number;
+    /** Looting a faction's treasury. */
+    lootHorseshoes: number;
+    lootShare: number;
 };
 
 const RINGS: Record<MapRegion['ring'], string> = {
@@ -926,12 +929,89 @@ export function RegionPanel({
                     </div>
                 )}
 
+                {region.faction !== null && (
+                    <div className="flex flex-col gap-2 rounded-lg border border-red-500/40 p-3">
+                        <p className="flex items-center gap-2 font-semibold">
+                            <Swords
+                                className="size-4 text-red-400"
+                                aria-hidden
+                            />{' '}
+                            Attack {region.faction.name}
+                        </p>
+                        {holds(region) ? (
+                            <p className="text-muted-foreground">
+                                It's your own faction. You can't raid land you
+                                already hold, but you can still loot its
+                                treasury, plunder its farms, burn its homes and
+                                rob its animals. If your faction's rules forbid
+                                turning on your own, you get a strike.
+                            </p>
+                        ) : (
+                            <p className="text-muted-foreground">
+                                {myFaction
+                                    ? 'Raid this land above, or turn outlaw:'
+                                    : 'Lone wolves turn outlaw: no faction needed.'}
+                            </p>
+                        )}
+                        <ul className="flex flex-col gap-1.5 text-xs text-muted-foreground">
+                            <li className="flex flex-wrap items-center gap-2">
+                                <Button
+                                    size="sm"
+                                    variant="destructive"
+                                    disabled={
+                                        (player?.level ?? 1) < plunder.level ||
+                                        horseshoesLeft < plunder.lootHorseshoes
+                                    }
+                                    onClick={() =>
+                                        act(crime.url(), {
+                                            kind: 'loot',
+                                            faction_id: region.faction?.id,
+                                        })
+                                    }
+                                >
+                                    Loot their treasury (
+                                    {plunder.lootHorseshoes} horseshoes)
+                                </Button>
+                                <WhyNot
+                                    reason={
+                                        (player?.level ?? 1) < plunder.level
+                                            ? `Crime opens up at level ${plunder.level}.`
+                                            : needHorseshoes(
+                                                  horseshoesLeft,
+                                                  plunder.lootHorseshoes,
+                                              )
+                                    }
+                                />
+                                <span>
+                                    Take about {plunder.lootShare}% of their
+                                    Corn and materials, once a day, from
+                                    anywhere.
+                                </span>
+                            </li>
+                            {region.ring === 'farm' && (
+                                <li>
+                                    Plunder this farm: stand on it and use the
+                                    Plunder box above.
+                                </li>
+                            )}
+                            <li>
+                                Burn one of their homes: tap the home on the
+                                map.
+                            </li>
+                            <li>
+                                Rob one of their animals: walk up to it and tap
+                                it on the map.
+                            </li>
+                        </ul>
+                    </div>
+                )}
+
                 {!myFaction &&
                     region.ring !== 'safe' &&
                     region.ring !== 'city' && (
                         <p className="text-muted-foreground">
-                            Join a faction to raid. Lone wolves loot and burn
-                            instead, from the{' '}
+                            Join a faction to raid land. Lone wolves loot, burn,
+                            plunder and rob instead; see the{' '}
                             <Link
                                 href={factionPage()}
                                 className="font-semibold text-primary"
