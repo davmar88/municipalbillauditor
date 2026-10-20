@@ -102,6 +102,20 @@ export type Weather = {
     }[];
 };
 
+/** A robbery or a burning on its way, to you or from you: a red arrow on the map. */
+export type Strike = {
+    id: number;
+    kind: 'rob' | 'burn';
+    /** Yours, or coming at you. */
+    mine: boolean;
+    /** The other animal. */
+    who: string | null;
+    from: [number, number];
+    to: [number, number];
+    startedAt: string;
+    landsAt: string;
+};
+
 /** Another animal out walking, for its trail on the map. */
 export type Walker = {
     id: number;

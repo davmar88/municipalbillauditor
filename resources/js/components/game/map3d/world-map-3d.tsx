@@ -23,6 +23,7 @@ import type {
     MapRegion,
     Worn,
     LootPile,
+    Strike,
     Walker,
 } from '@/types/game';
 import { Rig } from './rig';
@@ -86,6 +87,7 @@ function regionAt(regions: MapRegion[], point: Point | null): number | null {
  */
 const NO_LOOT: LootPile[] = [];
 const NO_WALKERS: Walker[] = [];
+const NO_STRIKES: Strike[] = [];
 
 /** The pile of loot nearest a point on the land, within a tap's reach. */
 function lootNear(
@@ -131,6 +133,7 @@ export default function WorldMap3D({
     onLoot,
     myHealth,
     walkers,
+    strikes,
     children,
 }: Props) {
     const containerRef = useRef<HTMLDivElement>(null);
@@ -381,6 +384,7 @@ export default function WorldMap3D({
             loot: loot ?? NO_LOOT,
             myHealth: myHealth ?? null,
             walkers: walkers ?? NO_WALKERS,
+            strikes: strikes ?? NO_STRIKES,
         });
         dirty.current = true;
         // Only rebuild when what's shown changes, not on every render of the page.
@@ -400,6 +404,7 @@ export default function WorldMap3D({
         loot,
         myHealth,
         walkers,
+        strikes,
     ]);
 
     // ---- moving about ---------------------------------------------------------------------------------------------

@@ -175,6 +175,10 @@ final class Crimes
                 RaidRules::judgeCrime($locked, $kind, $onPlayer ? $target?->name : ($region?->name ?? $faction?->name));
             }
 
+            // A robbery or a burning is struck from wherever you stand: you make your way there, and it lands when you arrive.
+            $path = $onPlayer && $target !== null ? self::path($locked, $kind, $target) : null;
+            $base = $kind === CrimeKind::Rob ? self::ROB_MINUTES : 30;
+
             $crime = Crime::create([
                 'season_id' => $season->id,
                 'player_id' => $locked->id,
@@ -182,10 +186,20 @@ final class Crimes
                 'target_faction_id' => $onPlayer ? $target?->faction_id : $faction?->id,
                 'target_player_id' => $target?->id,
                 'region_id' => $region?->id,
-                'settles_at' => CarbonImmutable::now()->addMinutes($kind === CrimeKind::Rob ? self::ROB_MINUTES : 30),
+                'settles_at' => $path !== null && $path['lands_at']->gt(CarbonImmutable::now()->addMinutes($base))
+                    ? $path['lands_at']
+                    : CarbonImmutable::now()->addMinutes($base),
                 'seed' => Dice::seed(),
                 'cloaked' => Powers::cloak($locked),
             ]);
+
+            if ($path !== null) {
+                $crime->forceFill($path)->save();
+                // The one it's aimed at sees it coming.
+                $what = $kind === CrimeKind::Rob ? 'to rob you' : 'to set your home alight';
+                Notices::send($target->id, 'crime', "🎯 {$locked->name} is on the way {$what}. They get there at ".Clock::local($path['lands_at'])->format('H:i').'. Hide in your home, or be ready.', route('play', [], false));
+                Live::touch($locked->valley_id);
+            }
 
             // A robber's cudgel goes with it.
             if ($kind === CrimeKind::Rob && Powers::cudgel($locked)) {
@@ -194,6 +208,28 @@ final class Crimes
 
             return $crime;
         });
+    }
+
+    /**
+     * Where a robbery or a burning goes, from where the criminal stands, and
+     * when it lands: the further, and the slower its pace, the later.
+     *
+     * @return array{from_x: float, from_y: float, to_x: float, to_y: float, lands_at: CarbonImmutable}
+     */
+    private static function path(Player $player, CrimeKind $kind, Player $target): array
+    {
+        [$x, $y] = Movement::position($player);
+        $home = $kind === CrimeKind::Burn ? Homes::of($target) : null;
+        [$tx, $ty] = $home !== null ? [$home->x, $home->y] : Movement::position($target);
+        $minutes = hypot($tx - $x, $ty - $y) / max(1, Movement::pace($player));
+
+        return [
+            'from_x' => round($x, 1),
+            'from_y' => round($y, 1),
+            'to_x' => round($tx, 1),
+            'to_y' => round($ty, 1),
+            'lands_at' => CarbonImmutable::now()->addSeconds((int) ceil($minutes * 60)),
+        ];
     }
 
     /**
@@ -220,17 +256,6 @@ final class Crimes
 
         if ($last !== null && $last->created_at->gt(CarbonImmutable::now()->subMinutes(self::ROB_REST_MINUTES))) {
             throw new GameException('You robbed someone not long ago. Lie low until '.Clock::local($last->created_at->addMinutes(self::ROB_REST_MINUTES))->format('H:i').'.');
-        }
-
-        [$x, $y] = Movement::position($player);
-        [$tx, $ty] = Movement::position($target);
-        // The map draws the others in a region round its centre, not where each stopped: anyone standing in the same region is close enough.
-        // The scrub lies everywhere between the regions, so out there it's how far apart you really are.
-        $sameRegion = $player->walk_arrives_at === null && $target->walk_arrives_at === null
-            && $player->location()->is($target->location()) && $player->location()->key !== 'scrubland';
-
-        if (! $sameRegion && hypot($tx - $x, $ty - $y) > self::ROB_REACH) {
-            throw new GameException("Get closer to {$target->name} first: you rob an animal where it stands.");
         }
 
         $robbed = Crime::query()->where('target_player_id', $target->id)->where('kind', CrimeKind::Rob)->latest('id')->first();

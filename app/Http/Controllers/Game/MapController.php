@@ -29,6 +29,7 @@ use App\Game\Weather;
 use App\Http\Controllers\Controller;
 use App\Models\Attack;
 use App\Models\BattleCommitment;
+use App\Models\Crime;
 use App\Models\Faction;
 use App\Models\GateDefence;
 use App\Models\Home;
@@ -225,6 +226,23 @@ class MapController extends Controller
                 'fire' => $scorched[$region->id] ?? null,
             ]),
             'here' => $player->region_id ?? $paddock?->id,
+            // Robberies and burnings on their way, to you or from you: the red arrows.
+            'strikes' => $season ? $season->crimes()
+                ->with(['player:id,name', 'targetPlayer:id,name'])
+                ->whereNull('resolved_at')
+                ->whereNotNull('lands_at')
+                ->where(fn ($query) => $query->where('player_id', $player->id)->orWhere('target_player_id', $player->id))
+                ->get()
+                ->map(fn (Crime $crime) => [
+                    'id' => $crime->id,
+                    'kind' => $crime->kind->value,
+                    'mine' => $crime->player_id === $player->id,
+                    'who' => $crime->player_id === $player->id ? $crime->targetPlayer?->name : $crime->player?->name,
+                    'from' => [$crime->from_x, $crime->from_y],
+                    'to' => [$crime->to_x, $crime->to_y],
+                    'startedAt' => $crime->created_at->toIso8601String(),
+                    'landsAt' => $crime->lands_at->toIso8601String(),
+                ]) : [],
             // Everyone else out walking: where from, where to and when, so the map draws their trail as it does yours.
             'walkers' => Player::query()->toBase()
                 ->where('valley_id', $valley->id)

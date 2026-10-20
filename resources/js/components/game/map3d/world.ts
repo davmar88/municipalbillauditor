@@ -48,6 +48,7 @@ import type {
     Species,
     Worn,
     LootPile,
+    Strike,
     Walker,
 } from '@/types/game';
 import { bannerFlag, bannerTexture } from '@/lib/banner';
@@ -93,6 +94,8 @@ export type WorldData = {
     myHealth: number | null;
     /** Everyone else out walking. */
     walkers: Walker[];
+    /** Robberies and burnings on their way, to you or from you. */
+    strikes: Strike[];
 };
 
 // ---- the look of the land -------------------------------------------------------------
@@ -1178,6 +1181,9 @@ export class World {
         if (!was || was.walkers !== data.walkers) {
             this.buildWalks();
         }
+        if (!was || was.strikes !== data.strikes) {
+            this.buildStrikes();
+        }
         this.syncMe();
         this.changed = true;
     }
@@ -2166,6 +2172,95 @@ export class World {
 
     private walksAt = 0;
 
+    /** Red arrows: robberies and burnings on their way, to you or from you. */
+    private readonly strikeLines = new THREE.Group();
+
+    private striking: { strike: Strike; head: CSS2DObject }[] = [];
+
+    private buildStrikes() {
+        const data = this.data as WorldData;
+        if (!this.strikeLines.parent) {
+            this.scene.add(this.strikeLines);
+        }
+        this.clearGroup(this.strikeLines);
+        this.striking = data.strikes.map((strike) => {
+            const colour = '#ef4444';
+            const line = new THREE.Line(
+                new THREE.BufferGeometry().setFromPoints([
+                    new THREE.Vector3(strike.from[0], 3, strike.from[1]),
+                    new THREE.Vector3(strike.to[0], 3, strike.to[1]),
+                ]),
+                strike.mine
+                    ? new THREE.LineDashedMaterial({
+                          color: colour,
+                          dashSize: 10,
+                          gapSize: 6,
+                      })
+                    : new THREE.LineBasicMaterial({ color: colour }),
+            );
+            line.computeLineDistances();
+            this.strikeLines.add(line);
+            const angle = Math.atan2(
+                strike.to[1] - strike.from[1],
+                strike.to[0] - strike.from[0],
+            );
+            const label = strike.mine
+                ? `${strike.kind === 'rob' ? 'Robbing' : 'Burning'} ${strike.who ?? ''}`
+                : `${strike.who ?? 'Someone'} is coming ${strike.kind === 'rob' ? 'to rob you' : 'to burn your home'}`;
+            const box = div('', {
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                pointerEvents: 'none',
+            });
+            box.appendChild(
+                div(
+                    '',
+                    {
+                        font: '800 11px system-ui, sans-serif',
+                        color: colour,
+                        textShadow: `0 0 3px ${HALO}, 0 0 3px ${HALO}`,
+                        whiteSpace: 'nowrap',
+                        marginBottom: '2px',
+                    },
+                    label,
+                ),
+            );
+            const arrow = div('', {
+                width: '0',
+                height: '0',
+                borderTop: '9px solid transparent',
+                borderBottom: '9px solid transparent',
+                borderLeft: `20px solid ${colour}`,
+                filter: `drop-shadow(0 0 2px ${HALO})`,
+                // The screen's x is the map's x; the map's y runs down the screen as the camera looks north.
+                transform: `rotate(${angle}rad)`,
+            });
+            box.appendChild(arrow);
+            const head = new CSS2DObject(box);
+            head.renderOrder = 6;
+            this.strikeLines.add(head);
+            return { strike, head };
+        });
+        this.placeStrikes(Date.now());
+    }
+
+    private placeStrikes(now: number) {
+        for (const { strike, head } of this.striking) {
+            const start = Date.parse(strike.startedAt);
+            const end = Date.parse(strike.landsAt);
+            const done = Math.min(
+                1,
+                Math.max(0, (now - start) / Math.max(1, end - start)),
+            );
+            head.position.set(
+                strike.from[0] + (strike.to[0] - strike.from[0]) * done,
+                6,
+                strike.from[1] + (strike.to[1] - strike.from[1]) * done,
+            );
+        }
+    }
+
     /** What dead animals left behind: sacks where they fell. */
     private readonly lootSacks = new THREE.Group();
 
@@ -2584,9 +2679,13 @@ export class World {
         let moving = zoomed || this.changed;
         this.changed = false;
         // Others out walking move along their trails, a few times a second.
-        if (this.walking.length > 0 && now - this.walksAt > 200) {
+        if (
+            this.walking.length + this.striking.length > 0 &&
+            now - this.walksAt > 200
+        ) {
             this.walksAt = now;
             this.placeWalks(Date.now());
+            this.placeStrikes(Date.now());
             moving = true;
         }
         // The sea rolls in and the surf washes up and back, a few times a second.

@@ -40,6 +40,7 @@ import type {
     Species,
     MapMe,
     LootPile,
+    Strike,
     Walker,
 } from '@/types/game';
 
@@ -2162,6 +2163,141 @@ const OtherWalks = memo(function OtherWalks({
     );
 });
 
+/** Where a moving thing is now, by the clock, between when it set off and when it lands. */
+function along(
+    from: Point,
+    to: Point,
+    start: string,
+    end: string,
+    now: number,
+): Point {
+    const s = Date.parse(start);
+    const e = Date.parse(end);
+    const done = Math.min(1, Math.max(0, (now - s) / Math.max(1, e - s)));
+
+    return [
+        from[0] + (to[0] - from[0]) * done,
+        from[1] + (to[1] - from[1]) * done,
+    ];
+}
+
+/**
+ * Red arrows: a robbery or a burning coming at you, or one of yours on its
+ * way. The head moves along by the clock, faster the faster its maker walks.
+ */
+const Strikes = memo(function Strikes({
+    strikes,
+    k,
+}: {
+    strikes: Strike[];
+    k: number;
+}) {
+    const [now, setNow] = useState(() => Date.now());
+    useEffect(() => {
+        const timer = window.setInterval(() => setNow(Date.now()), 500);
+
+        return () => window.clearInterval(timer);
+    }, []);
+
+    return (
+        <g pointerEvents="none">
+            {strikes.map((strike) => {
+                const [x, y] = along(
+                    strike.from,
+                    strike.to,
+                    strike.startedAt,
+                    strike.landsAt,
+                    now,
+                );
+                const angle =
+                    (Math.atan2(
+                        strike.to[1] - strike.from[1],
+                        strike.to[0] - strike.from[0],
+                    ) *
+                        180) /
+                    Math.PI;
+                const colour = '#ef4444';
+                const label = strike.mine
+                    ? `${strike.kind === 'rob' ? 'Robbing' : 'Burning'} ${strike.who ?? ''}`
+                    : `${strike.who ?? 'Someone'} is coming ${strike.kind === 'rob' ? 'to rob you' : 'to burn your home'}`;
+
+                return (
+                    <g key={strike.id}>
+                        <title>{label}</title>
+                        <line
+                            x1={strike.from[0]}
+                            y1={strike.from[1]}
+                            x2={strike.to[0]}
+                            y2={strike.to[1]}
+                            stroke={colour}
+                            strokeWidth={(strike.mine ? 3 : 4) / k}
+                            strokeDasharray={
+                                strike.mine ? `${10 / k} ${6 / k}` : undefined
+                            }
+                            strokeLinecap="round"
+                            opacity={0.85}
+                        >
+                            {!strike.mine && (
+                                <animate
+                                    attributeName="opacity"
+                                    values="0.45;1;0.45"
+                                    dur="1.2s"
+                                    repeatCount="indefinite"
+                                />
+                            )}
+                        </line>
+                        <g
+                            transform={`translate(${strike.to[0]} ${strike.to[1]}) scale(${grows(k)})`}
+                        >
+                            <circle
+                                r={14}
+                                fill="none"
+                                stroke={colour}
+                                strokeWidth={2.5}
+                            >
+                                <animate
+                                    attributeName="r"
+                                    values="8;18;8"
+                                    dur="1.4s"
+                                    repeatCount="indefinite"
+                                />
+                            </circle>
+                        </g>
+                        <g
+                            style={{
+                                transform: `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`,
+                                transition: 'transform 0.5s linear',
+                            }}
+                        >
+                            <g transform={`scale(${grows(k)})`}>
+                                <path
+                                    d="M14 0L-8 -10L-3 0L-8 10z"
+                                    fill={colour}
+                                    stroke={HALO}
+                                    strokeWidth={1.5}
+                                    transform={`rotate(${angle.toFixed(1)})`}
+                                />
+                                <text
+                                    y={-16}
+                                    textAnchor="middle"
+                                    fontSize={10.5}
+                                    fontWeight={800}
+                                    fill={colour}
+                                    stroke={HALO}
+                                    strokeWidth={3}
+                                    paintOrder="stroke"
+                                >
+                                    {label}
+                                </text>
+                            </g>
+                        </g>
+                    </g>
+                );
+            })}
+        </g>
+    );
+});
+
 function WalkLine({ from, to, k }: { from: Point; to: Point; k: number }) {
     return (
         <g pointerEvents="none">
@@ -2342,6 +2478,8 @@ export type WorldMapProps = {
     myHealth?: number | null;
     /** Everyone else out walking, with their trails. */
     walkers?: Walker[];
+    /** Robberies and burnings on their way, to you or from you. */
+    strikes?: Strike[];
     children?: ReactNode;
 };
 
@@ -2372,6 +2510,7 @@ export function WorldMap({
     onLoot,
     myHealth,
     walkers,
+    strikes,
     children,
 }: WorldMapProps) {
     const containerRef = useRef<HTMLDivElement>(null);
@@ -2613,6 +2752,9 @@ export function WorldMap({
                         <Crowd regions={regions} k={k} wanted={wanted} />
                         {walkers && walkers.length > 0 && (
                             <OtherWalks walkers={walkers} k={k} />
+                        )}
+                        {strikes && strikes.length > 0 && (
+                            <Strikes strikes={strikes} k={k} />
                         )}
                         {me?.walk && herePoint && (
                             <WalkLine from={herePoint} to={me.walk.to} k={k} />

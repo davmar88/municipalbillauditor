@@ -149,7 +149,7 @@ export function AnimalMenu({
                                 });
                                 onClose();
                             }}
-                            title="Take a share of the Corn and materials it carries. Stand close; you may be caught."
+                            title="Take a share of the Corn and materials it carries. From anywhere: you make your way there, and it sees you coming."
                             className="flex items-center gap-2 rounded-lg px-2 py-2 text-left text-destructive hover:bg-accent"
                         >
                             <HandCoins className="size-4" />

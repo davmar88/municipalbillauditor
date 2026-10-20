@@ -46,6 +46,11 @@ class Crime extends Model
             'repaid_at' => 'datetime',
             'armed' => 'boolean',
             'escaped_until' => 'datetime',
+            'lands_at' => 'datetime',
+            'from_x' => 'float',
+            'from_y' => 'float',
+            'to_x' => 'float',
+            'to_y' => 'float',
         ];
     }
 

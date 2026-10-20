@@ -8,7 +8,6 @@ use App\Game\Clock;
 use App\Game\Crimes;
 use App\Game\Dice;
 use App\Game\GameException;
-use App\Game\Geography;
 use App\Game\Horseshoes;
 use App\Game\Messages;
 use App\Game\Movement;
@@ -78,32 +77,33 @@ class RobberyAndOnlineTest extends TestCase
         app(Crimes::class)->commit($robber->fresh(), CrimeKind::Rob, target: $this->player());
     }
 
-    public function test_a_robber_must_stand_close_and_leave_newcomers_alone(): void
+    public function test_a_robber_strikes_from_anywhere_and_its_victim_sees_it_coming(): void
     {
         [$robber, $victim] = $this->pair();
-        $this->stand($victim, 'quarry');
+        // Far away: the robbery is on its way, and lands when the robber gets there.
+        $this->stand($victim, 'thornbury');
+        $this->actingAs($robber->user)->post(route('play.crime'), ['kind' => 'rob', 'player_id' => $victim->id])->assertRedirect();
+        $crime = Crime::sole();
+        [$fx, $fy] = Movement::position($robber->fresh());
+        [$tx, $ty] = Movement::position($victim->fresh());
+        $seconds = hypot($tx - $fx, $ty - $fy) / Movement::pace($robber->fresh()) * 60;
+        $this->assertEqualsWithDelta($seconds, $crime->created_at->diffInSeconds($crime->lands_at), 2);
+        $this->assertStringContainsString("{$robber->name} is on the way to rob you", Notice::query()->where('player_id', $victim->id)->latest('id')->value('text'));
 
-        try {
-            app(Crimes::class)->commit($robber, CrimeKind::Rob, target: $victim->fresh());
-            $this->fail('Too far.');
-        } catch (GameException $e) {
-            $this->assertStringContainsString('Get closer', $e->getMessage());
-        }
-
-        // Anywhere in the same region is close enough, however far apart they stopped.
-        $this->stand($victim, 'granary');
-        $robber->fresh()->forceFill(['pos_x' => null, 'pos_y' => null])->save();
-        $victim->fresh()->forceFill(['pos_x' => null, 'pos_y' => null])->save();
-        [$hx, $hy] = Movement::position($victim->fresh());
-        $victim->fresh()->forceFill(['pos_x' => $hx + 80, 'pos_y' => $hy])->save();
-        $this->assertSame('granary', Geography::regionAt($hx + 80, $hy));
-        $this->assertSame(CrimeKind::Rob, app(Crimes::class)->commit($robber->fresh(), CrimeKind::Rob, target: $victim->fresh())->kind);
+        // A red arrow for both: coming at the victim, and the robber's own on its way.
+        $this->actingAs($victim->user)->get(route('play'))->assertInertia(fn (Assert $page) => $page
+            ->where('strikes.0.mine', false)
+            ->where('strikes.0.who', $robber->name)
+            ->where('strikes.0.to', [round($tx, 1), round($ty, 1)]));
+        $this->actingAs($robber->user)->get(route('play'))->assertInertia(fn (Assert $page) => $page
+            ->where('strikes.0.mine', true)
+            ->where('strikes.0.who', $victim->name));
         Crime::query()->delete();
 
         // Newcomers can be robbed from their first day.
         $newcomer = $this->player(attributes: ['shield_until' => now()->addDay(), 'corn' => 100]);
         $this->stand($newcomer, 'granary');
-        $this->assertSame(CrimeKind::Rob, app(Crimes::class)->commit($robber, CrimeKind::Rob, target: $newcomer->fresh())->kind);
+        $this->assertSame(CrimeKind::Rob, app(Crimes::class)->commit($robber->fresh(), CrimeKind::Rob, target: $newcomer->fresh())->kind);
     }
 
     public function test_horseshoes_bought_with_apples_stack_past_the_usual_ten(): void
