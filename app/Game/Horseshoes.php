@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 /**
- * Every action costs horseshoes. A player holds up to ten, and one comes
+ * Every action costs horseshoes. A player holds up to 50, and one comes
  * back every 45 minutes. Extra ones handed out on top are kept until spent. They are worked out when read, so nothing has to
  * run on a timer.
  */

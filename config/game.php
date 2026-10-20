@@ -39,12 +39,13 @@ return [
     'season_days' => (int) env('GAME_SEASON_DAYS', 14),
 
     'horseshoes' => [
-        'max' => 10,
+        // Every animal holds up to 50 (her call, 2026-10-20).
+        'max' => 50,
         'refill_minutes' => 45,
-        // Bought with Apples, for animals who don't want to wait: horseshoes => Apples. They stack past the usual ten.
+        // Bought with Apples, for animals who don't want to wait: horseshoes => Apples. They stack past the usual 50.
         'packs' => [5 => 3, 10 => 5, 25 => 11],
         // The most an animal can hold, bought ones included.
-        'saddlebag' => 40,
+        'saddlebag' => 100,
     ],
 
     'levels' => [
