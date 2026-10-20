@@ -6,7 +6,7 @@
     $faction = config('game.faction');
     $sections = [
         'getting-started' => ['Getting started', [
-            'Make an account, pick an animal and give it a name. You start in the Paddock, the safe ground by the gate, with '.config('game.starting_corn').' Corn. Watch out: there's no newcomer protection, so other animals can rob you and burn your home from day one.',
+            'Make an account, pick an animal and give it a name. You start in the Paddock, the safe ground by the gate, with '.config('game.starting_corn').' Corn. Watch out: there is no newcomer protection, so other animals can rob you and burn your home from day one.',
             'Tap anywhere on the map to walk there. Press and hold (or right-click) a region to open its card and see what you can do there. The Today page shows your story missions and daily jobs.',
             'Everything you do costs horseshoes. Spend them well; they come back with time.',
         ]],

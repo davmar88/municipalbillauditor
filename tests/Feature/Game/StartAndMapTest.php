@@ -61,7 +61,8 @@ class StartAndMapTest extends TestCase
         $this->assertSame(Species::Goat, $player->species);
         $this->assertSame(10, Horseshoes::current($player));
         $this->assertSame(100, $player->corn);
-        $this->assertTrue($player->isShielded());
+        // No newcomer protection: crime can find you from day one.
+        $this->assertFalse($player->isShielded());
     }
 
     public function test_names_are_unique_in_the_valley(): void
