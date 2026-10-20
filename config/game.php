@@ -2,6 +2,9 @@
 
 return [
 
+    // How long the valley's homes are kept for the map, in seconds: busy valleys don't rebuild them for every look.
+    'map_cache_seconds' => (int) env('MAP_CACHE_SECONDS', 3),
+
     /*
     |--------------------------------------------------------------------------
     | The game's rules

@@ -10,7 +10,10 @@ use App\Models\HomeHelp;
 use App\Models\Item;
 use App\Models\Player;
 use App\Models\Region;
+use App\Models\Season;
+use App\Models\Valley;
 use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -463,6 +466,69 @@ final class Homes
 
             return $home;
         });
+    }
+
+    /**
+     * Every home in the valley for the map, the same for every animal: read
+     * in one plain query and kept for a few seconds, so a busy valley's maps
+     * don't each rebuild thousands of homes. Each animal's map adds whether a
+     * home is its own and whether it can lend a hand.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public static function onMap(Valley $valley, ?Season $season): array
+    {
+        return Cache::remember(self::mapKey($valley->id), (int) config('game.map_cache_seconds'), function () use ($valley, $season) {
+            $now = CarbonImmutable::now();
+            $burning = $season === null ? [] : Crime::query()
+                ->where('season_id', $season->id)
+                ->where('kind', CrimeKind::Burn)
+                ->whereNull('resolved_at')
+                ->pluck('target_player_id')
+                ->flip()
+                ->all();
+            // Home-made skins are few: read just those homes the full way.
+            $skins = Home::query()
+                ->with(['skin.design', 'skin.openListing'])
+                ->whereNotNull('skin_item_id')
+                ->whereHas('owner', fn ($query) => $query->where('valley_id', $valley->id))
+                ->get()
+                ->mapWithKeys(fn (Home $home) => [$home->id => self::skin($home)])
+                ->all();
+
+            return DB::table('homes')
+                ->join('players', 'players.id', '=', 'homes.player_id')
+                ->where('players.valley_id', $valley->id)
+                ->get(['homes.id', 'homes.x', 'homes.y', 'homes.level', 'homes.ready_at', 'homes.style', 'homes.skin_level', 'homes.skin_item_id',
+                    'players.id as owner_id', 'players.name as owner_name', 'players.species', 'players.faction_id', 'players.home_closed_until', 'players.home_burned_at'])
+                ->map(function (object $row) use ($now, $burning, $skins) {
+                    $building = $row->ready_at !== null && CarbonImmutable::parse($row->ready_at)->gt($now);
+                    $closed = $row->home_closed_until !== null && CarbonImmutable::parse($row->home_closed_until)->gt($now);
+                    $bought = self::SKIN_SHOP[(int) $row->skin_level] ?? null;
+
+                    return [
+                        'id' => (int) $row->id,
+                        'owner' => ['id' => (int) $row->owner_id, 'name' => $row->owner_name, 'species' => $row->species],
+                        'x' => (float) $row->x,
+                        'y' => (float) $row->y,
+                        'level' => (int) $row->level,
+                        'name' => self::name((int) $row->level),
+                        'readyAt' => $building ? CarbonImmutable::parse($row->ready_at)->toIso8601String() : null,
+                        'skin' => $skins[$row->id] ?? ($bought === null ? null : ['name' => $bought['name'], 'colours' => $bought['colours'], 'pattern' => 'plain']),
+                        'style' => $row->style,
+                        // Alight while a burner's fire takes hold, then ash until it's rebuilt.
+                        'fire' => isset($burning[$row->owner_id]) ? 'burning' : ($closed && $row->home_burned_at !== null ? 'ash' : null),
+                        'factionId' => $row->faction_id === null ? null : (int) $row->faction_id,
+                    ];
+                })
+                ->all();
+        });
+    }
+
+    /** Where the valley's homes for the map are kept; anything that changes the map clears it. */
+    public static function mapKey(int $valleyId): string
+    {
+        return "map:homes:{$valleyId}";
     }
 
     /** The skin a home shows: one still in its owner's bag and off the shelf, else the shop skin it wears. */

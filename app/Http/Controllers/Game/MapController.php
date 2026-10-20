@@ -26,7 +26,7 @@ use App\Game\Wardrobe;
 use App\Http\Controllers\Controller;
 use App\Models\Attack;
 use App\Models\BattleCommitment;
-use App\Models\Crime;
+use App\Models\Faction;
 use App\Models\GateDefence;
 use App\Models\Home;
 use App\Models\HomeHelp;
@@ -74,28 +74,30 @@ class MapController extends Controller
         // first, so the crowd count never counts you, then outlaws, so the map
         // can always show who is wanted.
         $wanted = $season ? Warrant::query()->where('season_id', $season->id)->where('status', 'open')->pluck('player_id')->all() : [];
+        // Read plainly, not as models: a busy valley has thousands of animals.
+        $colours = Faction::query()->where('valley_id', $valley->id)->pluck('colour', 'id');
         $animals = Player::query()
-            ->with('faction:id,colour')
+            ->toBase()
             ->where('valley_id', $valley->id)
             ->where('last_visit_on', '>=', Clock::now()->subDays(7)->toDateString())
             ->get(['id', 'name', 'species', 'faction_id', 'region_id', 'inside_home_at'])
-            ->sortBy(fn (Player $animal) => match (true) {
+            ->sortBy(fn (object $animal) => match (true) {
                 $animal->id === $player->id => 0,
                 in_array($animal->id, $wanted, true) => 1,
                 default => 2,
             })
-            ->groupBy(fn (Player $animal) => $animal->region_id ?? $paddock?->id);
+            ->groupBy(fn (object $animal) => $animal->region_id ?? $paddock?->id);
         // Outlaws lying low in Irongate show only to animals in the same district, or a Dog in the town.
         $hereRegion = $regions->firstWhere('id', $player->region_id ?? $paddock?->id) ?? $paddock;
         $animals = $animals->map(function ($group, $regionId) use ($regions, $player, $hereRegion, $wanted) {
             $where = $regions->firstWhere('id', $regionId);
 
             // Animals hiding in their homes don't show at all, except to themselves.
-            $group = $group->reject(fn (Player $animal) => $animal->inside_home_at !== null && $animal->id !== $player->id);
+            $group = $group->reject(fn (object $animal) => $animal->inside_home_at !== null && $animal->id !== $player->id);
 
             return $where === null || $hereRegion === null
                 ? $group->values()
-                : $group->reject(fn (Player $animal) => Irongate::hidden($animal->id, $where, $player, $hereRegion, $wanted))->values();
+                : $group->reject(fn (object $animal) => Irongate::hidden($animal->id, $where, $player, $hereRegion, $wanted))->values();
         });
         // What the animals the map shows are wearing, in one query.
         $wearing = Wardrobe::wornBy([$player->id, ...$animals->flatMap(fn ($group) => $group->take(24)->pluck('id'))]);
@@ -180,11 +182,11 @@ class MapController extends Controller
                     : null,
                 'animals' => [
                     'count' => ($animals->get($region->id) ?? collect())->count(),
-                    'sample' => ($animals->get($region->id) ?? collect())->take(24)->map(fn (Player $animal) => [
+                    'sample' => ($animals->get($region->id) ?? collect())->take(24)->map(fn (object $animal) => [
                         'id' => $animal->id,
                         'name' => $animal->name,
-                        'species' => $animal->species->value,
-                        'colour' => $animal->faction?->colour,
+                        'species' => $animal->species,
+                        'colour' => $animal->faction_id !== null ? ($colours[$animal->faction_id] ?? null) : null,
                         'me' => $animal->id === $player->id,
                         'wearing' => $wearing[$animal->id] ?? [],
                     ])->values(),
@@ -279,31 +281,27 @@ class MapController extends Controller
                 'canFight' => $player->faction_id !== null,
                 'corn' => Plunderers::CORN_PER_MAN * $band->men,
             ],
-            'homes' => (fn ($burning) => Home::query()
-                ->with(['owner:id,name,species,faction_id,home_closed_until,home_burned_at', 'skin.design', 'skin.openListing'])
-                ->whereHas('owner', fn ($query) => $query->where('valley_id', $valley->id))
-                ->get()
-                ->map(fn (Home $home) => [
-                    'id' => $home->id,
-                    'owner' => ['id' => $home->owner->id, 'name' => $home->owner->name, 'species' => $home->owner->species->value],
-                    'x' => $home->x,
-                    'y' => $home->y,
-                    'level' => $home->level,
-                    'name' => Homes::name($home->level),
-                    'readyAt' => $home->building() ? $home->ready_at->toIso8601String() : null,
-                    'skin' => Homes::skin($home),
-                    'style' => $home->style,
-                    'mine' => $home->player_id === $player->id,
-                    // Alight while a burner's fire takes hold, then ash until it's rebuilt.
-                    'fire' => $burning->contains($home->player_id) ? 'burning' : ($home->owner->homeIsClosed() && $home->owner->home_burned_at !== null ? 'ash' : null),
-                    // A faction mate's home going up that you could lend a hand on.
-                    'helpable' => $home->player_id !== $player->id && $player->faction_id !== null && $home->owner->faction_id === $player->faction_id && $home->building()
-                        && ! HomeHelp::query()->where('home_id', $home->id)->where('level', $home->level)->where('player_id', $player->id)->exists(),
-                ])->values())($season === null ? collect() : Crime::query()
-                ->where('season_id', $season->id)
-                ->where('kind', CrimeKind::Burn)
-                ->whereNull('resolved_at')
-                ->pluck('target_player_id')),
+            'homes' => (function () use ($valley, $season, $player) {
+                $homes = Homes::onMap($valley, $season);
+                // Faction mates' homes going up that you've already helped with this level.
+                $helped = $player->faction_id === null ? [] : HomeHelp::query()
+                    ->where('player_id', $player->id)
+                    ->whereIn('home_id', collect($homes)->filter(fn (array $home) => $home['readyAt'] !== null && $home['factionId'] === $player->faction_id)->pluck('id'))
+                    ->get(['home_id', 'level'])
+                    ->map(fn (HomeHelp $help) => "{$help->home_id}:{$help->level}")
+                    ->flip()
+                    ->all();
+
+                return array_map(function (array $home) use ($player, $helped) {
+                    $mine = $home['owner']['id'] === $player->id;
+                    $home['mine'] = $mine;
+                    $home['helpable'] = ! $mine && $player->faction_id !== null && $home['factionId'] === $player->faction_id
+                        && $home['readyAt'] !== null && ! isset($helped["{$home['id']}:{$home['level']}"]);
+                    unset($home['factionId']);
+
+                    return $home;
+                }, $homes);
+            })(),
             'home' => [
                 'inside' => $player->inside_home_at !== null,
                 // The levels so far and the next one: homes grow without end.

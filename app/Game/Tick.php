@@ -90,6 +90,8 @@ final class Tick
             Live::touch($valley->id);
             Live::flush();
         }
+
+        Live::owed($valley->id);
     }
 
     /** Whether this half hour hasn't been run yet. */
