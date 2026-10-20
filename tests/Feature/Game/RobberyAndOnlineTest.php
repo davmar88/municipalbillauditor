@@ -8,7 +8,9 @@ use App\Game\Clock;
 use App\Game\Crimes;
 use App\Game\Dice;
 use App\Game\GameException;
+use App\Game\Geography;
 use App\Game\Horseshoes;
+use App\Game\Movement;
 use App\Models\Crime;
 use App\Models\Notice;
 use App\Models\Player;
@@ -86,6 +88,16 @@ class RobberyAndOnlineTest extends TestCase
         } catch (GameException $e) {
             $this->assertStringContainsString('Get closer', $e->getMessage());
         }
+
+        // Anywhere in the same region is close enough, however far apart they stopped.
+        $this->stand($victim, 'granary');
+        $robber->fresh()->forceFill(['pos_x' => null, 'pos_y' => null])->save();
+        $victim->fresh()->forceFill(['pos_x' => null, 'pos_y' => null])->save();
+        [$hx, $hy] = Movement::position($victim->fresh());
+        $victim->fresh()->forceFill(['pos_x' => $hx + 80, 'pos_y' => $hy])->save();
+        $this->assertSame('granary', Geography::regionAt($hx + 80, $hy));
+        $this->assertSame(CrimeKind::Rob, app(Crimes::class)->commit($robber->fresh(), CrimeKind::Rob, target: $victim->fresh())->kind);
+        Crime::query()->delete();
 
         // Newcomers can be robbed from their first day.
         $newcomer = $this->player(attributes: ['shield_until' => now()->addDay(), 'corn' => 100]);

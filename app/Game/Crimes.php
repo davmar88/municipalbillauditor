@@ -209,8 +209,12 @@ final class Crimes
 
         [$x, $y] = Movement::position($player);
         [$tx, $ty] = Movement::position($target);
+        // The map draws the others in a region round its centre, not where each stopped: anyone standing in the same region is close enough.
+        // The scrub lies everywhere between the regions, so out there it's how far apart you really are.
+        $sameRegion = $player->walk_arrives_at === null && $target->walk_arrives_at === null
+            && $player->location()->is($target->location()) && $player->location()->key !== 'scrubland';
 
-        if (hypot($tx - $x, $ty - $y) > self::ROB_REACH) {
+        if (! $sameRegion && hypot($tx - $x, $ty - $y) > self::ROB_REACH) {
             throw new GameException("Get closer to {$target->name} first: you rob an animal where it stands.");
         }
 
