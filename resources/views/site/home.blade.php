@@ -106,6 +106,94 @@
         </div>
     </section>
 
+    {{-- The valleys right now: animals, who's online, factions and what they hold --}}
+    @if (! empty($valleys))
+        <section id="valleys" class="mx-auto max-w-[1200px] px-[clamp(16px,4vw,40px)] py-[clamp(48px,7vw,88px)]">
+            <h2 class="text-[clamp(28px,3.6vw,44px)] leading-[1.1] font-extrabold tracking-tight">The valleys right now</h2>
+            <p class="mt-3 max-w-[760px] text-ink-2">Every valley takes up to {{ number_format(config('game.valleys.full_at')) }} active animals. When one is full, newcomers start in the next. Online means seen in the last {{ \App\Game\Census::ONLINE_MINUTES }} minutes.</p>
+
+            <div class="mt-8 overflow-x-auto rounded-xl border border-rule-soft bg-paper">
+                <table class="w-full min-w-[640px] text-left text-[15px]">
+                    <thead class="border-b border-rule-soft font-mono text-[12px] tracking-[0.1em] text-muted">
+                        <tr>
+                            <th scope="col" class="px-4 py-3">VALLEY</th>
+                            <th scope="col" class="px-4 py-3 text-right">ANIMALS</th>
+                            <th scope="col" class="px-4 py-3 text-right">ONLINE NOW</th>
+                            <th scope="col" class="px-4 py-3 text-right">FACTIONS</th>
+                            <th scope="col" class="px-4 py-3">RULED BY</th>
+                            <th scope="col" class="px-4 py-3 text-right">CORN</th>
+                            <th scope="col" class="px-4 py-3 text-right">APPLES</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($valleys as $valley)
+                            <tr class="border-b border-rule-soft last:border-0">
+                                <th scope="row" class="px-4 py-3 font-bold">{{ $valley['name'] }}</th>
+                                <td class="figures px-4 py-3 text-right">{{ number_format($valley['animals']) }}</td>
+                                <td class="figures px-4 py-3 text-right"><span class="mr-1.5 inline-block size-2 rounded-full bg-emerald-500 align-middle" aria-hidden="true"></span>{{ number_format($valley['online']) }}</td>
+                                <td class="figures px-4 py-3 text-right">{{ number_format(count($valley['factions'])) }}</td>
+                                <td class="px-4 py-3 text-ink-2">{{ $valley['house'] ?? 'Nobody yet' }}</td>
+                                <td class="figures px-4 py-3 text-right">{{ number_format($valley['corn']) }}</td>
+                                <td class="figures px-4 py-3 text-right">{{ number_format($valley['apples']) }}</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+
+            @foreach ($valleys as $valley)
+                <div class="mt-10 grid gap-6 lg:grid-cols-2">
+                    <div>
+                        <h3 class="text-[22px] font-bold">Factions of {{ $valley['name'] }}</h3>
+                        @if (empty($valley['factions']))
+                            <p class="mt-3 text-ink-2">No factions yet. Found the first one.</p>
+                        @else
+                            <div class="mt-3 overflow-x-auto rounded-xl border border-rule-soft bg-paper">
+                                <table class="w-full text-left text-[15px]">
+                                    <thead class="border-b border-rule-soft font-mono text-[12px] tracking-[0.1em] text-muted">
+                                        <tr>
+                                            <th scope="col" class="px-4 py-3">FACTION</th>
+                                            <th scope="col" class="px-4 py-3 text-right">MEMBERS</th>
+                                            <th scope="col" class="px-4 py-3 text-right">LAND HELD</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (array_slice($valley['factions'], 0, 15) as $faction)
+                                            <tr class="border-b border-rule-soft last:border-0">
+                                                <th scope="row" class="px-4 py-2.5 font-semibold"><span class="mr-2 inline-block size-2.5 rounded-full align-middle" style="background: {{ $faction['colour'] }}" aria-hidden="true"></span>{{ $faction['name'] }}</th>
+                                                <td class="figures px-4 py-2.5 text-right">{{ number_format($faction['members']) }}</td>
+                                                <td class="figures px-4 py-2.5 text-right">{{ number_format($faction['land']) }}</td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                            @if (count($valley['factions']) > 15)
+                                <p class="mt-2 text-sm text-ink-2">And {{ count($valley['factions']) - 15 }} more.</p>
+                            @endif
+                        @endif
+                    </div>
+                    <div>
+                        <h3 class="text-[22px] font-bold">What {{ $valley['name'] }} holds</h3>
+                        <p class="mt-1 text-sm text-ink-2">Carried by animals and kept in faction stores.</p>
+                        @if (empty($valley['materials']))
+                            <p class="mt-3 text-ink-2">Nothing gathered yet.</p>
+                        @else
+                            <ul class="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                                @foreach ($valley['materials'] as $material => $amount)
+                                    <li class="rounded-lg border border-rule-soft bg-paper px-4 py-2.5">
+                                        <span class="figures block text-[20px] font-bold">{{ number_format($amount) }}</span>
+                                        <span class="text-sm text-ink-2">{{ ucfirst($material) }}</span>
+                                    </li>
+                                @endforeach
+                            </ul>
+                        @endif
+                    </div>
+                </div>
+            @endforeach
+        </section>
+    @endif
+
     {{-- Closing --}}
     <section class="mx-auto flex max-w-[860px] flex-col items-center gap-6 px-[clamp(16px,4vw,40px)] py-[clamp(56px,8vw,104px)] text-center">
         <h2 class="text-[clamp(30px,4vw,48px)] leading-[1.08] font-extrabold tracking-tight">The first season of <span class="text-gradient">Hollowmere</span> is open</h2>

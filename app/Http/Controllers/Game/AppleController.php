@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Game;
 
 use App\Game\Apples;
 use App\Game\GameException;
+use App\Game\Horseshoes;
 use App\Game\Market;
 use App\Game\Orchard;
 use App\Game\Pineapples;
@@ -44,6 +45,10 @@ class AppleController extends Controller
             // PayPal's buttons pay right here on the page.
             'paypal' => $checkout->open() ? ['clientId' => $paypal->clientId(), 'currency' => 'USD'] : null,
             'termsUrl' => route('terms'),
+            'horseshoes' => [
+                'packs' => collect(Horseshoes::packs())->map(fn (int $apples, int $count) => ['count' => $count, 'apples' => $apples])->values(),
+                'saddlebag' => Horseshoes::saddlebag(),
+            ],
             'open' => $checkout->open(),
             'cornPerApple' => Apples::cornPerApple(),
             'pending' => ApplePurchase::query()
@@ -97,7 +102,7 @@ class AppleController extends Controller
             'pack' => ['required', 'string', 'max:32'],
             'terms' => ['accepted'],
         ], [
-            'terms.accepted' => 'Tick the box to agree to the Terms and Conditions: purchases are final, with no refunds.',
+            'terms.accepted' => 'Tick the box to accept the terms and conditions first.',
         ]);
         $pack = (string) $data['pack'];
 
@@ -180,6 +185,15 @@ class AppleController extends Controller
         }
 
         return $this->settled($purchase);
+    }
+
+    /** Horseshoes for Apples, to skip the wait. */
+    public function horseshoes(Request $request): RedirectResponse
+    {
+        $count = (int) $request->validate(['count' => ['required', 'integer']])['count'];
+        $now = Horseshoes::buy($request->user()->player, $count);
+
+        return $this->told("You bought {$count} horseshoes. You have {$now} now.");
     }
 
     /** Pineapples for a pack of Apples. */

@@ -82,6 +82,7 @@ final class Warrants
             CrimeKind::Loot => 'looted '.($crime->targetFaction?->name ?? 'a faction'),
             CrimeKind::Burn => 'burned down '.($crime->targetPlayer?->name ?? 'someone')."'s home",
             CrimeKind::Plunder => 'plundered '.($crime->region?->name ?? 'a farm'),
+            CrimeKind::Rob => 'robbed '.($crime->targetPlayer?->name ?? 'someone'),
         };
     }
 
@@ -305,9 +306,9 @@ final class Warrants
             $owed = min($owed, $outlaw->corn);
 
             if ($owed > 0) {
-                if ($crime->kind === CrimeKind::Burn && $crime->target_player_id !== null) {
+                if (in_array($crime->kind, [CrimeKind::Burn, CrimeKind::Rob], true) && $crime->target_player_id !== null) {
                     Player::query()->whereKey($crime->target_player_id)->increment('corn', $owed);
-                    Notices::send($crime->target_player_id, 'warrant', "🌽 {$outlaw->name} was caught and paid you {$owed} Corn for burning down your home.", route('play.wanted', [], false));
+                    Notices::send($crime->target_player_id, 'warrant', "🌽 {$outlaw->name} was caught and paid you {$owed} Corn for ".($crime->kind === CrimeKind::Rob ? 'robbing you.' : 'burning down your home.'), route('play.wanted', [], false));
                 } elseif ($crime->target_faction_id !== null) {
                     Faction::query()->whereKey($crime->target_faction_id)->increment('treasury', $owed);
                     Notices::send(Notices::deciders($crime->target_faction_id), 'warrant', "🌽 {$outlaw->name} was caught and paid back {$owed} Corn to your treasury.", route('play.wanted', [], false));

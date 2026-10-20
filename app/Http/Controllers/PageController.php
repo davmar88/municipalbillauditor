@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Game\Census;
 use Illuminate\Http\Response;
 use Illuminate\View\View;
 
@@ -10,7 +11,7 @@ class PageController extends Controller
 {
     public function home(): View
     {
-        return view('site.home');
+        return view('site.home', ['valleys' => Census::valleys()]);
     }
 
     public function privacy(): View

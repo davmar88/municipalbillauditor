@@ -9,7 +9,12 @@ import { Input } from '@/components/ui/input';
 import { act, dayMonth, dollars, shortWhen } from '@/lib/game';
 import { cashout } from '@/routes/play';
 import { PayPalButtons } from '@/components/game/paypal-buttons';
-import { check, exchange, swap } from '@/routes/play/apples';
+import {
+    check,
+    exchange,
+    horseshoes as buyHorseshoes,
+    swap,
+} from '@/routes/play/apples';
 import { harvest, plant } from '@/routes/play/trees';
 import { join, refill } from '@/routes/play/orchard';
 
@@ -62,6 +67,10 @@ type Props = {
     /** For PayPal's buttons on the page, when paying is open. */
     paypal: { clientId: string; currency: string } | null;
     termsUrl: string;
+    horseshoes: {
+        packs: { count: number; apples: number }[];
+        saddlebag: number;
+    };
     cornPerApple: number;
     pending: {
         id: number;
@@ -102,6 +111,7 @@ export default function ApplesPage({
     open,
     paypal,
     termsUrl,
+    horseshoes,
     cornPerApple,
     pending,
     history,
@@ -162,22 +172,15 @@ export default function ApplesPage({
                             }}
                         />
                         <span>
-                            I agree to the{' '}
+                            I accept the{' '}
                             <a
                                 href={termsUrl}
                                 target="_blank"
                                 rel="noreferrer"
                                 className="font-semibold underline underline-offset-2"
                             >
-                                Terms and Conditions
+                                terms and conditions
                             </a>
-                            . I understand that Pineapples are game content with
-                            no value outside the game, that they arrive straight
-                            away, and that{' '}
-                            <strong>
-                                purchases are final, with no refunds
-                            </strong>
-                            .
                         </span>
                     </label>
                 )}
@@ -232,7 +235,7 @@ export default function ApplesPage({
                                             reason={
                                                 agreed
                                                     ? null
-                                                    : 'Tick the box above first: you agree to the Terms, and that purchases are final.'
+                                                    : 'Tick the box above first to accept the terms and conditions.'
                                             }
                                         />
                                     </div>
@@ -243,6 +246,55 @@ export default function ApplesPage({
                 </ul>
 
                 <ApplePacks packs={applePacks} pineapples={pineapples} />
+
+                <section
+                    id="horseshoes"
+                    className="flex scroll-mt-4 flex-col gap-2"
+                >
+                    <h2 className="text-lg font-bold">Horseshoes</h2>
+                    <p className="text-sm text-muted-foreground">
+                        Don't want to wait for them to come back? Buy horseshoes
+                        with Apples. They stack past your usual{' '}
+                        {player?.maxHorseshoes ?? 10}, up to{' '}
+                        {horseshoes.saddlebag}, and keep until you spend them.
+                    </p>
+                    <ul className="grid gap-3 sm:grid-cols-3">
+                        {horseshoes.packs.map((pack) => {
+                            const reason =
+                                (player?.apples ?? 0) < pack.apples
+                                    ? `That's ${pack.apples} Apples and you have ${player?.apples ?? 0}. Swap Pineapples for Apples above.`
+                                    : (player?.horseshoes ?? 0) + pack.count >
+                                        horseshoes.saddlebag
+                                      ? `Your saddlebag holds ${horseshoes.saddlebag}. Spend some first.`
+                                      : null;
+
+                            return (
+                                <li
+                                    key={pack.count}
+                                    className="flex flex-col gap-2 rounded-xl border bg-card p-4"
+                                >
+                                    <p className="text-2xl font-extrabold">
+                                        +{pack.count}{' '}
+                                        <span className="text-sm font-semibold text-muted-foreground">
+                                            horseshoes
+                                        </span>
+                                    </p>
+                                    <Button
+                                        disabled={reason !== null}
+                                        onClick={() =>
+                                            act(buyHorseshoes.url(), {
+                                                count: pack.count,
+                                            })
+                                        }
+                                    >
+                                        Buy for {pack.apples} Apples
+                                    </Button>
+                                    <WhyNot reason={reason} />
+                                </li>
+                            );
+                        })}
+                    </ul>
+                </section>
 
                 <AppleTrees trees={trees} pineapples={pineapples} />
 

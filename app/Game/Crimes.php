@@ -39,6 +39,23 @@ final class Crimes
 
     public const PLUNDER_WATCH_MINUTES = 120;
 
+    /** A robber takes this share of what its victim carries: Corn and each material. */
+    public const ROB_SHARE = 0.15;
+
+    /** At most this much Corn in one robbery. */
+    public const ROB_MOST_CORN = 250;
+
+    /** How near a robber must stand to its victim, in paces. */
+    public const ROB_REACH = 60;
+
+    /** A robber lies low this long between robberies, and a victim is left alone this long after being robbed. */
+    public const ROB_REST_MINUTES = 120;
+
+    public const ROB_GUARD_HOURS = 6;
+
+    /** A robbery is over quickly: it settles after this long. */
+    public const ROB_MINUTES = 10;
+
     /** How long an animal that left a faction waits before its first crime. */
     public const LONE_WOLF_HOURS = 24;
 
@@ -63,8 +80,8 @@ final class Crimes
             throw new GameException('You only just left your faction. Lie low as a lone wolf until '.Clock::local($player->left_faction_at->copy()->addHours(self::LONE_WOLF_HOURS))->format('j M \a\t H:i').' before your first crime.');
         }
 
-        // Plunder runs on its own clock; looting and burning are once a day.
-        if ($kind !== CrimeKind::Plunder && self::triedToday($player)) {
+        // Plunder and robbery run on their own clocks; looting and burning are once a day.
+        if (in_array($kind, [CrimeKind::Loot, CrimeKind::Burn], true) && self::triedToday($player)) {
             throw new GameException('You have already tried a crime today. Lie low until tomorrow.');
         }
 
@@ -92,6 +109,8 @@ final class Crimes
             }
 
             $faction = Faction::query()->find($region->faction_id);
+        } elseif ($kind === CrimeKind::Rob) {
+            $this->ensureCanRob($player, $target);
         } elseif ($kind === CrimeKind::Loot) {
             if ($faction === null || $faction->valley_id !== $player->valley_id) {
                 throw new GameException('Pick a faction to loot.');
@@ -139,23 +158,68 @@ final class Crimes
             Missions::record($locked, 'crime');
 
             // A crime against your own faction may break its rules.
-            $victim = $kind === CrimeKind::Burn ? $target?->faction_id : $faction?->id;
+            $onPlayer = in_array($kind, [CrimeKind::Burn, CrimeKind::Rob], true);
+            $victim = $onPlayer ? $target?->faction_id : $faction?->id;
             if ($locked->faction_id !== null && $victim === $locked->faction_id) {
-                RaidRules::judgeCrime($locked, $kind, $kind === CrimeKind::Burn ? $target?->name : ($region?->name ?? $faction?->name));
+                RaidRules::judgeCrime($locked, $kind, $onPlayer ? $target?->name : ($region?->name ?? $faction?->name));
             }
 
             return Crime::create([
                 'season_id' => $season->id,
                 'player_id' => $locked->id,
                 'kind' => $kind,
-                'target_faction_id' => $kind === CrimeKind::Burn ? $target?->faction_id : $faction?->id,
+                'target_faction_id' => $onPlayer ? $target?->faction_id : $faction?->id,
                 'target_player_id' => $target?->id,
                 'region_id' => $region?->id,
-                'settles_at' => CarbonImmutable::now()->addMinutes(30),
+                'settles_at' => CarbonImmutable::now()->addMinutes($kind === CrimeKind::Rob ? self::ROB_MINUTES : 30),
                 'seed' => Dice::seed(),
                 'cloaked' => Powers::cloak($locked),
             ]);
         });
+    }
+
+    /**
+     * A robbery needs a victim close by, not a newcomer, not robbed lately,
+     * and a robber who hasn't robbed lately.
+     *
+     * @throws GameException
+     */
+    private function ensureCanRob(Player $player, ?Player $target): void
+    {
+        if ($target === null || $target->valley_id !== $player->valley_id) {
+            throw new GameException('Pick an animal to rob.');
+        }
+
+        if ($target->is($player)) {
+            throw new GameException("You can't rob yourself.");
+        }
+
+        if ($target->isShielded()) {
+            throw new GameException("{$target->name} is new to the valley and protected for now.");
+        }
+
+        if ($target->inPound()) {
+            throw new GameException("{$target->name} is in the pound with nothing on them.");
+        }
+
+        $last = Crime::query()->where('player_id', $player->id)->where('kind', CrimeKind::Rob)->latest('id')->first();
+
+        if ($last !== null && $last->created_at->gt(CarbonImmutable::now()->subMinutes(self::ROB_REST_MINUTES))) {
+            throw new GameException('You robbed someone not long ago. Lie low until '.Clock::local($last->created_at->addMinutes(self::ROB_REST_MINUTES))->format('H:i').'.');
+        }
+
+        [$x, $y] = Movement::position($player);
+        [$tx, $ty] = Movement::position($target);
+
+        if (hypot($tx - $x, $ty - $y) > self::ROB_REACH) {
+            throw new GameException("Get closer to {$target->name} first: you rob an animal where it stands.");
+        }
+
+        $robbed = Crime::query()->where('target_player_id', $target->id)->where('kind', CrimeKind::Rob)->latest('id')->first();
+
+        if ($robbed !== null && $robbed->created_at->gt(CarbonImmutable::now()->subHours(self::ROB_GUARD_HOURS))) {
+            throw new GameException("{$target->name} was robbed not long ago and is on guard. Try again after ".Clock::local($robbed->created_at->addHours(self::ROB_GUARD_HOURS))->format('H:i').'.');
+        }
     }
 
     /** Whether the animal has already tried a loot or a burn today. */
@@ -225,6 +289,21 @@ final class Crimes
                     $faction->decrement('treasury', $loot);
                     $criminal->increment('corn', $loot);
                 }
+            } elseif ($crime->kind === CrimeKind::Rob && $crime->target_player_id !== null) {
+                // The robber takes a share of what its victim carries: Corn, and each material.
+                $victim = Players::lock(Player::query()->findOrFail($crime->target_player_id));
+                $loot = min(self::ROB_MOST_CORN, (int) floor($victim->corn * self::ROB_SHARE));
+                $kept = $victim->materials ?? [];
+                $carried = $criminal->materials ?? [];
+
+                foreach ($kept as $name => $amount) {
+                    $stolen = (int) floor((int) $amount * self::ROB_SHARE);
+                    $kept[$name] = (int) $amount - $stolen;
+                    $carried[$name] = (int) ($carried[$name] ?? 0) + $stolen;
+                }
+
+                $victim->forceFill(['corn' => $victim->corn - $loot, 'materials' => $kept])->save();
+                $criminal->forceFill(['corn' => $criminal->corn + $loot, 'materials' => $carried])->save();
             } elseif ($crime->kind === CrimeKind::Burn && $crime->target_player_id !== null && $crime->doused_by === null) {
                 Player::query()->whereKey($crime->target_player_id)->update([
                     'home_closed_until' => CarbonImmutable::now()->addDay(),
@@ -242,7 +321,7 @@ final class Crimes
     private function announce(Crime $crime, Player $criminal, bool $caught, int $loot): void
     {
         $underworld = route('play.faction', [], false);
-        $victims = $crime->kind === CrimeKind::Burn ? collect([$crime->target_player_id]) : Notices::members($crime->target_faction_id);
+        $victims = in_array($crime->kind, [CrimeKind::Burn, CrimeKind::Rob], true) ? collect([$crime->target_player_id]) : Notices::members($crime->target_faction_id);
         $section = $crime->region?->name;
 
         if ($caught) {
@@ -251,6 +330,7 @@ final class Crimes
                 CrimeKind::Loot => "🚨 {$criminal->name} tried to loot your faction's treasury and was caught.",
                 CrimeKind::Plunder => "🚨 {$criminal->name} tried to plunder {$section} and was caught.",
                 CrimeKind::Burn => "🚨 {$criminal->name} tried to burn down your home and was caught.",
+                CrimeKind::Rob => "🚨 {$criminal->name} tried to rob you and was caught.",
             }, $underworld);
 
             return;
@@ -260,6 +340,14 @@ final class Crimes
             $crop = $crime->region?->produces;
             Notices::send($criminal->id, 'crime', '🌾 You plundered '.self::PLUNDER_CROP." {$crop} and {$loot} Corn from {$section}.", route('play', [], false));
             Notices::send($victims, 'crime', "🔥 Someone plundered {$section}, taking {$loot} Corn from your treasury. Your leader can put a bounty on whoever the informants name.", route('play.wanted', [], false));
+
+            return;
+        }
+
+        if ($crime->kind === CrimeKind::Rob) {
+            $victimName = Player::query()->whereKey($crime->target_player_id)->value('name');
+            Notices::send($criminal->id, 'crime', "💰 You robbed {$victimName} of {$loot} Corn and a share of what they carried.", route('play', [], false));
+            Notices::send($victims, 'crime', "🦹 Someone robbed you of {$loot} Corn and a share of what you carried. The informants will name them to anyone putting up a bounty.", route('play.wanted', [], false));
 
             return;
         }
@@ -320,6 +408,12 @@ final class Crimes
         // And its skin from the shop guards it too.
         $target = $crime->kind === CrimeKind::Burn && $crime->target_player_id !== null ? Home::query()->where('player_id', $crime->target_player_id)->first() : null;
         $walls = $target !== null ? $target->level * Homes::BURN_GUARD + Homes::skinDefence($target) : 0.0;
+        // Robbing an animal hiding in its home means breaking in past its walls and skin.
+        if ($crime->kind === CrimeKind::Rob && $crime->target_player_id !== null) {
+            $victim = Player::query()->find($crime->target_player_id);
+            $walls = $victim !== null && Homes::hiding($victim) ? Homes::guard($victim) * Homes::BURN_GUARD + Homes::armour($victim) : 0.0;
+        }
+
         // Whoever put the fire out saw who set it.
         $spotted = $crime->kind === CrimeKind::Burn && $crime->doused_by !== null ? self::DOUSE_SPOTTED : 0.0;
         $chance = min(0.9, 0.3 + 0.05 * min(4, $dogs) + $watch + Powers::bell($crime->target_faction_id) + $walls + $spotted);

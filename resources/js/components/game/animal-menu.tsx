@@ -1,12 +1,12 @@
 import { Link } from '@inertiajs/react';
-import { Gift, MessageCircle, UserRound, X } from 'lucide-react';
+import { Gift, HandCoins, MessageCircle, UserRound, X } from 'lucide-react';
 import type { CSSProperties } from 'react';
 import { useEffect, useState } from 'react';
 import { GiftPicker } from '@/components/game/gift-picker';
-import { speciesEmoji } from '@/lib/game';
+import { act, speciesEmoji } from '@/lib/game';
 import type { Point } from '@/lib/hollowmere';
 import { openChat } from '@/lib/pulse';
-import { animal as profile } from '@/routes/play';
+import { crime, animal as profile } from '@/routes/play';
 import type { MapAnimal } from '@/types/game';
 
 const WIDTH = 236;
@@ -130,6 +130,23 @@ export function AnimalMenu({
                     >
                         <Gift className="size-4" /> Send an item
                     </button>
+                    {!animal.me && (
+                        <button
+                            type="button"
+                            onClick={() => {
+                                // The server says why not, if it can't be done: too far, too soon, a newcomer.
+                                act(crime.url(), {
+                                    kind: 'rob',
+                                    player_id: animal.id,
+                                });
+                                onClose();
+                            }}
+                            title="Take a share of the Corn and materials it carries. Stand close; you may be caught."
+                            className="flex items-center gap-2 rounded-lg px-2 py-2 text-left text-destructive hover:bg-accent"
+                        >
+                            <HandCoins className="size-4" /> Rob (2 horseshoes)
+                        </button>
+                    )}
                 </div>
             ) : (
                 <div className="flex min-h-0 flex-col p-2">

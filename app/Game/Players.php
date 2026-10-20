@@ -71,6 +71,7 @@ final class Players
     /** Five Rosettes for the first visit of each day. */
     public function visit(Player $player): void
     {
+        Census::seen($player);
         $today = Clock::today();
 
         if ($player->last_visit_on?->toDateString() === $today) {

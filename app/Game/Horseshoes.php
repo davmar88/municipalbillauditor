@@ -4,6 +4,8 @@ namespace App\Game;
 
 use App\Models\Player;
 use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 /**
  * Every action costs horseshoes. A player holds up to ten, and one comes
@@ -84,6 +86,43 @@ final class Horseshoes
         $player->horseshoes = max($current, min(self::max(), $current + max(0, $count)));
         $player->horseshoes_at = $player->horseshoes >= self::max() ? CarbonImmutable::now() : $clock;
         $player->save();
+    }
+
+    /** @return array<int, int> Horseshoes on sale for Apples, by how many: count => Apples. */
+    public static function packs(): array
+    {
+        return array_map('intval', (array) config('game.horseshoes.packs'));
+    }
+
+    /** The most an animal can hold, bought ones included. */
+    public static function saddlebag(): int
+    {
+        return (int) config('game.horseshoes.saddlebag');
+    }
+
+    /**
+     * Buy horseshoes with Apples, for an animal who doesn't want to wait.
+     * They stack past the usual most, up to what a saddlebag holds.
+     *
+     * @throws GameException
+     */
+    public static function buy(Player $player, int $count): int
+    {
+        $apples = self::packs()[$count] ?? throw new GameException('Pick one of the horseshoe packs.');
+
+        return DB::transaction(function () use ($player, $count, $apples) {
+            $player = Players::lock($player);
+            $current = self::current($player);
+
+            if ($current + $count > self::saddlebag()) {
+                throw new GameException('Your saddlebag holds '.self::saddlebag()." horseshoes and you have {$current}. Spend some first.");
+            }
+
+            Apples::spend($player, $apples, "Bought {$count} horseshoes", "horseshoes:{$player->id}:".Str::uuid());
+            self::bonus($player->fresh(), $count);
+
+            return self::current($player->fresh());
+        });
     }
 
     /** Hand every player extra horseshoes on top of what they have, past the usual most. */

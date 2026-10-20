@@ -50,6 +50,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $home_closed_until
  * @property Carbon|null $home_burned_at
  * @property Carbon|null $pound_until
+ * @property Carbon|null $last_seen_at When it was last seen, for who is online
  * @property Carbon|null $inside_home_at When it went inside its home to hide.
  * @property Carbon|null $left_faction_at When it last left or was thrown out of a faction.
  * @property int $wanted
@@ -79,6 +80,7 @@ class Player extends Model
             'home_closed_until' => 'datetime',
             'home_burned_at' => 'datetime',
             'pound_until' => 'datetime',
+            'last_seen_at' => 'datetime',
             'muted_until' => 'datetime',
             'left_faction_at' => 'datetime',
             'inside_home_at' => 'datetime',

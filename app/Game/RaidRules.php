@@ -136,6 +136,7 @@ final class RaidRules
             CrimeKind::Burn => "Set fire to {$what}'s home",
             CrimeKind::Loot => 'Looted the treasury',
             CrimeKind::Plunder => "Plundered {$what}",
+            CrimeKind::Rob => "Robbed {$what}",
         };
     }
 

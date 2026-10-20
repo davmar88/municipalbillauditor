@@ -18,6 +18,7 @@ use App\Http\Controllers\Game\MapController;
 use App\Http\Controllers\Game\MarketController;
 use App\Http\Controllers\Game\MessageController;
 use App\Http\Controllers\Game\NoticeController;
+use App\Http\Controllers\Game\OnlineController;
 use App\Http\Controllers\Game\OrchardController;
 use App\Http\Controllers\Game\PlunderController;
 use App\Http\Controllers\Game\ProfileController;
@@ -129,6 +130,7 @@ Route::middleware(['auth', 'verified', 'player', 'throttle:120,1'])->prefix('pla
     Route::get('today', [TodayController::class, 'index'])->name('play.today');
     Route::post('missions/{mission}/claim', [TodayController::class, 'claim'])->name('play.mission.claim');
     Route::get('rankings', [RankingsController::class, 'index'])->name('play.rankings');
+    Route::get('online', [OnlineController::class, 'index'])->name('play.online');
 
     // Apples: buying packs, coming back from paying, swapping for Corn and cashing out.
     Route::get('apples', [AppleController::class, 'index'])->name('play.apples');
@@ -140,6 +142,7 @@ Route::middleware(['auth', 'verified', 'player', 'throttle:120,1'])->prefix('pla
     Route::get('apples/paypal/cancel', [AppleController::class, 'paypalCancel'])->name('play.apples.paypal-cancel');
     Route::post('apples/purchases/{purchase}/check', [AppleController::class, 'check'])->middleware('throttle:10,1,apple-check')->name('play.apples.check');
     Route::post('apples/swap', [AppleController::class, 'swap'])->name('play.apples.swap');
+    Route::post('apples/horseshoes', [AppleController::class, 'horseshoes'])->middleware('throttle:30,1,apple-horseshoes')->name('play.apples.horseshoes');
     Route::post('apples/exchange', [AppleController::class, 'exchange'])->middleware('throttle:30,1,apple-exchange')->name('play.apples.exchange');
     Route::post('trees', [TreeController::class, 'plant'])->middleware('throttle:10,1,trees')->name('play.trees.plant');
     Route::post('trees/harvest', [TreeController::class, 'harvest'])->middleware('throttle:30,1,trees-harvest')->name('play.trees.harvest');

@@ -43,9 +43,10 @@ export function GameBar({ showNextStep = true }: { showNextStep?: boolean }) {
 
             <div className="flex flex-col gap-2">
                 <div className="flex flex-wrap items-center gap-2 text-sm">
-                    <span
-                        className="flex items-center gap-1.5 rounded-full border bg-card px-3 py-1.5 font-semibold"
-                        title="Horseshoes: every action costs one or more"
+                    <Link
+                        href={`${apples.url()}#horseshoes`}
+                        className="flex items-center gap-1.5 rounded-full border bg-card px-3 py-1.5 font-semibold hover:border-primary/60"
+                        title="Horseshoes: every action costs one or more. Tap to buy more with Apples."
                     >
                         <Horseshoe className="size-4 text-primary" />
                         {player.horseshoes > player.maxHorseshoes
@@ -56,7 +57,10 @@ export function GameBar({ showNextStep = true }: { showNextStep?: boolean }) {
                                 · next {fromNow(nextAt)}
                             </span>
                         )}
-                    </span>
+                        <span className="text-primary" aria-hidden>
+                            +
+                        </span>
+                    </Link>
                     {player.freeRefill &&
                         player.horseshoes < player.maxHorseshoes && (
                             <button

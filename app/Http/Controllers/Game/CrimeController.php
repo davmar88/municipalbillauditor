@@ -32,7 +32,9 @@ class CrimeController extends Controller
             isset($data['player_id']) ? Player::query()->where('valley_id', $player->valley_id)->find($data['player_id']) : null,
         );
 
-        return $this->told('It is done. Find out in half an hour whether you got away with it.');
+        return $this->told($kind === CrimeKind::Rob
+            ? 'You made your move. Find out in '.Crimes::ROB_MINUTES.' minutes whether you got away with it.'
+            : 'It is done. Find out in half an hour whether you got away with it.');
     }
 
     public function rebuild(Request $request, Crimes $crimes): RedirectResponse

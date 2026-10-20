@@ -199,7 +199,7 @@ class ApplesTest extends TestCase
         $this->actingAs($player->user)
             ->postJson(route('play.apples.order'), ['pack' => 'pineapples-900'])
             ->assertStatus(422)
-            ->assertJsonPath('message', 'Tick the box to agree to the Terms and Conditions: purchases are final, with no refunds.');
+            ->assertJsonPath('message', 'Tick the box to accept the terms and conditions first.');
         $this->assertSame(0, ApplePurchase::query()->count());
 
         $this->actingAs($player->user)->postJson(route('play.apples.order'), ['pack' => 'pineapples-900', 'terms' => true])->assertOk();

@@ -11,6 +11,7 @@ import {
     ShieldAlert,
     Trophy,
     Mountain,
+    Users,
 } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavMain } from '@/components/nav-main';
@@ -33,6 +34,7 @@ import {
     cashout,
     chat,
     messages,
+    online,
     rankings,
     wanted,
 } from '@/routes/play';
@@ -43,6 +45,7 @@ const moreNavItems: NavItem[] = [
     { title: 'Chat', href: chat(), icon: MessagesSquare },
     { title: 'Spot the Edit', href: puzzle(), icon: Puzzle },
     { title: 'Rankings', href: rankings(), icon: Trophy },
+    { title: "Who's online", href: online(), icon: Users },
     { title: 'Wanted', href: wanted(), icon: Crosshair },
     { title: 'Apples', href: apples(), icon: Apple },
     { title: 'Cash out', href: cashout(), icon: Banknote },

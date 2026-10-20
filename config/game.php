@@ -41,6 +41,10 @@ return [
     'horseshoes' => [
         'max' => 10,
         'refill_minutes' => 45,
+        // Bought with Apples, for animals who don't want to wait: horseshoes => Apples. They stack past the usual ten.
+        'packs' => [5 => 3, 10 => 5, 25 => 11],
+        // The most an animal can hold, bought ones included.
+        'saddlebag' => 40,
     ],
 
     'levels' => [

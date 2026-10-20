@@ -2,12 +2,13 @@
 
 namespace App\Enums;
 
-/** What lone wolves can do to factions. */
+/** The crimes: against factions, their farms, homes, and other animals. */
 enum CrimeKind: string
 {
     case Loot = 'loot';
     case Burn = 'burn';
     case Plunder = 'plunder';
+    case Rob = 'rob';
 
     public function label(): string
     {
@@ -15,6 +16,7 @@ enum CrimeKind: string
             self::Loot => 'Loot a faction',
             self::Burn => 'Burn down a home',
             self::Plunder => 'Plunder a farm',
+            self::Rob => 'Rob an animal',
         };
     }
 
@@ -24,6 +26,7 @@ enum CrimeKind: string
             self::Loot => 2,
             self::Burn => 3,
             self::Plunder => 2,
+            self::Rob => 2,
         };
     }
 }
