@@ -201,6 +201,24 @@ class MarketTest extends TestCase
         $this->assertSame(20, $this->market->list($maker->fresh(), $item, 20)->price);
     }
 
+    public function test_recipes_belong_to_faction_members_but_anyone_designs_looks(): void
+    {
+        config(['game.market.recipes_faction_only' => true]);
+        $maker = $this->maker();
+        $maker->forceFill(['creativity_skill' => 10000])->save();
+
+        try {
+            $this->market->design($maker->fresh(), ItemTemplate::Gloves, 'Work Gloves', ['#ffffff', '#16171d'], 'plain', null);
+            $this->fail('A lone animal designed a recipe.');
+        } catch (GameException $e) {
+            $this->assertStringContainsString('Recipes belong to faction members', $e->getMessage());
+        }
+        $this->assertSame('Plain Hat', $this->market->design($maker->fresh(), ItemTemplate::Hat, 'Plain Hat', ['#ffffff', '#16171d'], 'plain', null)->name);
+
+        $this->faction('Makers', $maker);
+        $this->assertSame('Work Gloves', $this->market->design($maker->fresh(), ItemTemplate::Gloves, 'Work Gloves', ['#ffffff', '#16171d'], 'plain', null)->name);
+    }
+
     public function test_items_sell_for_apples_only(): void
     {
         config(['game.market.apples_only' => true]);

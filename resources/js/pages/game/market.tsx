@@ -604,6 +604,13 @@ function Workshop({ designs, workshop }: Props) {
         <div className="flex flex-col gap-5">
             <section className="flex flex-col gap-3 rounded-xl border bg-card p-4">
                 <h2 className="text-lg font-bold">Design an item</h2>
+                {player?.faction == null && (
+                    <p className="text-sm text-amber-200">
+                        Recipes, the items with a power, belong to faction
+                        members. Join a faction to design or make them; anyone
+                        can design looks like hats and scarves.
+                    </p>
+                )}
                 <div className="flex flex-wrap items-start gap-4">
                     <ItemPreview
                         design={{

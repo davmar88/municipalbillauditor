@@ -19,6 +19,8 @@ abstract class TestCase extends BaseTestCase
         config(['game.market.faction_only' => false]);
         // And price in Corn as well as Apples: MarketTest turns Apples-only on to check it.
         config(['game.market.apples_only' => false]);
+        // And make recipes outside a faction: MarketTest turns the recipe rule on to check it.
+        config(['game.market.recipes_faction_only' => false]);
     }
 
     protected function skipUnlessFortifyHas(string $feature, ?string $message = null): void

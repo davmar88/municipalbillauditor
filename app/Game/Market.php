@@ -95,6 +95,10 @@ final class Market
             throw new GameException('Make 10, 50 or 250 copies, or an open edition.');
         }
 
+        if ($template->power() !== null && $player->faction_id === null && config('game.market.recipes_faction_only')) {
+            throw new GameException('Recipes belong to faction members. Join a faction to design '.$template->label().'s; anyone can design looks like hats and scarves.');
+        }
+
         // Recipes with stronger powers open up as a maker's Creativity grows.
         if (Skills::level((int) $player->creativity_skill) < $template->creativity()) {
             throw new GameException("You can design {$template->label()} from Creativity level {$template->creativity()}. Design, make and sell to grow it.");
@@ -131,6 +135,10 @@ final class Market
     {
         if ($design->player_id !== $player->id) {
             throw new GameException('You can only make copies of your own designs.');
+        }
+
+        if ($design->template->power() !== null && $player->faction_id === null && config('game.market.recipes_faction_only')) {
+            throw new GameException('Recipes belong to faction members. Join a faction to make copies of '.$design->name.'.');
         }
 
         if ($design->status !== 'approved') {

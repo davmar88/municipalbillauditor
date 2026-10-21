@@ -65,6 +65,8 @@ return [
         'faction_only' => true,
         // Items sell for Apples only, never Corn (her rule, 2026-10-21).
         'apples_only' => true,
+        // Recipes, the items with a power, belong to faction members only (her rule, 2026-10-21).
+        'recipes_faction_only' => true,
     ],
 
     'horseshoes' => [
