@@ -38,7 +38,7 @@
                 '@id' => $site.'/#game',
                 'name' => config('app.name'),
                 'url' => $site.'/',
-                'image' => url('/images/poster.jpg'),
+                'image' => url('/images/poster.jpg?v=2'),
                 'description' => 'A free online multiplayer strategy game inspired by George Orwell\'s Animal Farm. Pick an animal, join a faction, raid rivals, rule the Farmhouse and rewrite the laws.',
                 'genre' => ['Strategy', 'Role-playing', 'Massively multiplayer online'],
                 'gamePlatform' => ['Web browser', 'Android', 'iOS', 'Windows', 'macOS'],
@@ -67,8 +67,8 @@
     {{-- The poster, melting into the page on every side --}}
     <section class="relative overflow-hidden">
         <picture>
-            <source media="(max-width: 700px)" srcset="/images/poster-640.jpg">
-            <img src="/images/poster.jpg" width="1248" height="832" fetchpriority="high"
+            <source media="(max-width: 700px)" srcset="/images/poster-640.jpg?v=2">
+            <img src="/images/poster.jpg?v=2" width="1248" height="832" fetchpriority="high"
                 alt="Pigs in coats stand on a platform under party flags, above a muddy yard of horses, cows, sheep and a dog, beside a crumbling barn painted with the Seven Commandments, under a stormy orange sky."
                 class="poster-melt mx-auto block h-auto w-full max-w-[1280px]">
         </picture>

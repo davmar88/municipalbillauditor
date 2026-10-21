@@ -24,12 +24,12 @@
         <meta property="og:description" content="@yield('description')">
         <meta property="og:url" content="@yield('canonical', url()->current())">
         {{-- The poster is the picture a shared link shows. --}}
-        <meta property="og:image" content="{{ url('/images/poster.jpg') }}">
+        <meta property="og:image" content="{{ url('/images/poster.jpg?v=2') }}">
         <meta property="og:image:width" content="1248">
         <meta property="og:image:height" content="832">
         <meta property="og:image:alt" content="The animals of Animal Farm">
         <meta name="twitter:card" content="summary_large_image">
-        <meta name="twitter:image" content="{{ url('/images/poster.jpg') }}">
+        <meta name="twitter:image" content="{{ url('/images/poster.jpg?v=2') }}">
         <meta name="theme-color" content="#16171D">
 
         <link rel="icon" href="/favicon.ico" sizes="any">

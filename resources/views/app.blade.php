@@ -10,11 +10,11 @@
         <meta property="og:title" content="{{ config('app.name') }}">
         <meta property="og:description" content="A farm of rival factions. Gather, raid, rob and rule the valley.">
         <meta property="og:url" content="{{ url()->current() }}">
-        <meta property="og:image" content="{{ url('/images/poster.jpg') }}">
+        <meta property="og:image" content="{{ url('/images/poster.jpg?v=2') }}">
         <meta property="og:image:width" content="1248">
         <meta property="og:image:height" content="832">
         <meta name="twitter:card" content="summary_large_image">
-        <meta name="twitter:image" content="{{ url('/images/poster.jpg') }}">
+        <meta name="twitter:image" content="{{ url('/images/poster.jpg?v=2') }}">
 
         {{-- Inline script to detect system dark mode preference and apply it immediately --}}
         <script>
