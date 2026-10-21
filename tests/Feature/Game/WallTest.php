@@ -56,17 +56,22 @@ class WallTest extends TestCase
         $this->assertSame(1, LawVersion::query()->where('secret', false)->count());
     }
 
+    public function test_the_market_levy_is_gone_from_the_wall(): void
+    {
+        $this->assertRefusedWith(fn () => $this->wall->setLaw($this->leader, 1, LawTemplate::MarketLevy, 2), 'gone from the Barn Wall');
+    }
+
     public function test_laws_stay_inside_their_limits(): void
     {
         $this->expectException(GameException::class);
 
-        $this->wall->setLaw($this->leader, 1, LawTemplate::MarketLevy, 9);
+        $this->wall->setLaw($this->leader, 1, LawTemplate::Curfew, 9);
     }
 
     public function test_the_house_gets_three_changes_a_day(): void
     {
         $this->wall->setLaw($this->leader, 1, LawTemplate::GrainTax, 5);
-        $this->wall->setLaw($this->leader, 2, LawTemplate::MarketLevy, 2);
+        $this->wall->setLaw($this->leader, 2, LawTemplate::Rations, 50);
         $this->wall->setLaw($this->leader, 3, LawTemplate::Curfew, 4);
 
         try {
@@ -95,7 +100,7 @@ class WallTest extends TestCase
 
     public function test_the_secret_edit_only_works_for_the_leader_between_midnight_and_four_once_a_week(): void
     {
-        $this->wall->setLaw($this->leader, 1, LawTemplate::MarketLevy, 2);
+        $this->wall->setLaw($this->leader, 1, LawTemplate::GrainTax, 2);
         $council = $this->player();
         $council->forceFill(['faction_id' => $this->house->id, 'faction_role' => FactionRole::Council])->save();
 
@@ -116,7 +121,7 @@ class WallTest extends TestCase
 
     public function test_a_player_with_an_older_copy_can_expose_the_edit(): void
     {
-        $this->wall->setLaw($this->leader, 2, LawTemplate::MarketLevy, 2);
+        $this->wall->setLaw($this->leader, 2, LawTemplate::GrainTax, 2);
         $donkey = $this->player(Species::Goat);
         $late = $this->player();
 

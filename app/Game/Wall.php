@@ -167,6 +167,10 @@ final class Wall
                 return null;
             }
 
+            if ($template->retired()) {
+                throw new GameException("The {$template->label()} is gone from the Barn Wall for good.");
+            }
+
             if ($season->laws()->where('template', $template)->where('slot', '!=', $slot)->exists()) {
                 throw new GameException("{$template->label()} is already on the Wall. Change that law instead.");
             }

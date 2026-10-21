@@ -22,7 +22,7 @@ final class Puzzle
     public function forDate(string $date): array
     {
         $seed = crc32('spot-the-edit:'.$date);
-        $templates = [LawTemplate::GrainTax, LawTemplate::MarketLevy, LawTemplate::Rations, LawTemplate::Curfew, LawTemplate::TradeBan];
+        $templates = [LawTemplate::GrainTax, LawTemplate::HomeTax, LawTemplate::Rations, LawTemplate::Curfew, LawTemplate::TradeBan];
         $values = [];
 
         foreach ($templates as $index => $template) {

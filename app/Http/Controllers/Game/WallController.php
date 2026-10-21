@@ -50,7 +50,7 @@ class WallController extends Controller
                 'unit' => $template->unit(),
                 'target' => $template->target(),
                 'default' => $template->defaultValue(),
-            ], LawTemplate::cases()),
+            ], array_values(array_filter(LawTemplate::cases(), fn (LawTemplate $template) => ! $template->retired()))),
             'unrest' => $unrest,
             'unrestEvents' => $season->unrestEvents()->where('expires_at', '>', CarbonImmutable::now())->where('reason', 'not like', 'chant:%')->latest('id')->limit(5)->get()
                 ->map(fn ($event) => ['reason' => $event->reason, 'amount' => $event->amount, 'until' => $event->expires_at->toIso8601String()]),

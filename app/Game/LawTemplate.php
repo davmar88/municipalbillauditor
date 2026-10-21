@@ -52,6 +52,12 @@ enum LawTemplate: string
         return $this === self::IrongatePact;
     }
 
+    /** Laws taken off the Wall for good: they can't be painted any more (the Market Levy, her call 2026-10-21). */
+    public function retired(): bool
+    {
+        return $this === self::MarketLevy;
+    }
+
     public function explains(): string
     {
         return match ($this) {

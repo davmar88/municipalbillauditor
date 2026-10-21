@@ -109,12 +109,12 @@
                 </figcaption>
                 <ol class="flex flex-col gap-3 text-[16px]">
                     <li class="flex gap-3"><span class="figures text-action">1</span><span>Every animal gives 8% of the Corn it gathers to the Farmhouse.</span></li>
-                    <li class="flex gap-3"><span class="figures text-action">2</span><span>Every sale in the market pays <span class="rounded bg-flag-soft px-1 font-semibold text-flag-ink">4%</span> in Corn to the Farmhouse.</span></li>
+                    <li class="flex gap-3"><span class="figures text-action">2</span><span>Every animal with a home pays <span class="rounded bg-flag-soft px-1 font-semibold text-flag-ink">15</span> Corn to the Farmhouse each morning.</span></li>
                     <li class="flex gap-3"><span class="figures text-action">3</span><span>The Farmhouse hands back 50% of its grain tax as rations every morning.</span></li>
                     <li class="flex gap-3"><span class="figures text-action">4</span><span>No raids on House land for 4 hours after 22:00.</span></li>
                     <li class="flex gap-3"><span class="figures text-action">5</span><span>The Night Watch patrols the valley after dark.</span></li>
                 </ol>
-                <p class="mt-5 border-t border-rule-soft pt-4 text-sm text-ink-2">Yesterday the levy was 2%. A donkey with a saved copy of the Wall noticed at breakfast.</p>
+                <p class="mt-5 border-t border-rule-soft pt-4 text-sm text-ink-2">Yesterday the home tax was 5 Corn. A goat with a saved copy of the Wall noticed at breakfast.</p>
             </figure>
         </div>
     </section>
