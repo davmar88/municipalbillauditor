@@ -47,6 +47,7 @@ class Crime extends Model
             'armed' => 'boolean',
             'escaped_until' => 'datetime',
             'lands_at' => 'datetime',
+            'path_started_at' => 'datetime',
             'from_x' => 'float',
             'from_y' => 'float',
             'to_x' => 'float',

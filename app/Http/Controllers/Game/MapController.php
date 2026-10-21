@@ -259,7 +259,7 @@ class MapController extends Controller
                     'who' => $crime->player_id === $player->id ? $crime->targetPlayer?->name : $crime->player?->name,
                     'from' => [$crime->from_x, $crime->from_y],
                     'to' => [$crime->to_x, $crime->to_y],
-                    'startedAt' => $crime->created_at->toIso8601String(),
+                    'startedAt' => ($crime->path_started_at ?? $crime->created_at)->toIso8601String(),
                     'landsAt' => $crime->lands_at->toIso8601String(),
                 ]) : [],
             // Everyone else out walking: where from, where to and when, so the map draws their trail as it does yours.

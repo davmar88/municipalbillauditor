@@ -2,6 +2,8 @@
 
 namespace App\Game;
 
+use App\Enums\CrimeKind;
+use App\Models\Crime;
 use App\Models\Player;
 use App\Models\Region;
 use Carbon\CarbonImmutable;
@@ -154,7 +156,29 @@ final class Movement
     public function rethink(Player $player): void
     {
         if ($player->walk_arrives_at !== null && $player->walk_arrives_at->isFuture()) {
-            $this->head($player, self::position($player), [$player->walk_to_x, $player->walk_to_y]);
+            $from = self::position($player);
+            $this->head($player, $from, [$player->walk_to_x, $player->walk_to_y]);
+
+            // On the way to rob or burn: the red line speeds up with the animal, and lands when it arrives.
+            $strike = Crime::query()
+                ->where('player_id', $player->id)
+                ->whereNull('resolved_at')
+                ->whereNotNull('lands_at')
+                ->where('lands_at', '>', CarbonImmutable::now())
+                ->latest('id')
+                ->first();
+
+            if ($strike !== null && $player->walk_arrives_at !== null) {
+                $arrives = CarbonImmutable::instance($player->walk_arrives_at);
+                $strike->forceFill([
+                    'from_x' => round($from[0], 1),
+                    'from_y' => round($from[1], 1),
+                    'path_started_at' => CarbonImmutable::now(),
+                    'lands_at' => $arrives,
+                    // A robbery happens as the robber arrives; a fire keeps its burning time.
+                    'settles_at' => $strike->kind === CrimeKind::Rob ? $arrives : $strike->settles_at,
+                ])->save();
+            }
         }
     }
 

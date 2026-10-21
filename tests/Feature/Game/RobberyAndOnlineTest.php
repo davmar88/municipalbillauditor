@@ -12,6 +12,7 @@ use App\Game\Horseshoes;
 use App\Game\Messages;
 use App\Game\Movement;
 use App\Models\Crime;
+use App\Models\Effect;
 use App\Models\Notice;
 use App\Models\Player;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -118,6 +119,24 @@ class RobberyAndOnlineTest extends TestCase
         $newcomer = $this->player(attributes: ['shield_until' => now()->addDay(), 'corn' => 100]);
         $this->stand($newcomer, 'granary');
         $this->assertSame(CrimeKind::Rob, app(Crimes::class)->commit($robber->fresh(), CrimeKind::Rob, target: $newcomer->fresh())->kind);
+    }
+
+    public function test_a_speedo_on_the_way_speeds_up_the_robbery(): void
+    {
+        [$robber, $victim] = $this->pair();
+        $this->stand($victim, 'thornbury');
+        $this->actingAs($robber->user)->post(route('play.crime'), ['kind' => 'rob', 'player_id' => $victim->id])->assertRedirect();
+        $crime = Crime::sole();
+        $before = $crime->lands_at;
+
+        Effect::query()->create(['player_id' => $robber->id, 'kind' => 'speedo', 'expires_at' => now()->addHour()]);
+        app(Movement::class)->rethink($robber->fresh());
+
+        $crime->refresh();
+        $this->assertTrue($crime->lands_at->lt($before), 'It lands sooner.');
+        $this->assertTrue($crime->settles_at->equalTo($crime->lands_at));
+        $this->assertTrue($robber->fresh()->walk_arrives_at->equalTo($crime->lands_at));
+        $this->assertNotNull($crime->path_started_at);
     }
 
     public function test_horseshoes_fill_back_up_to_the_usual_most_every_24_hours_and_never_past_it(): void
