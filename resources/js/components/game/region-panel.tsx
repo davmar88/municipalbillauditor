@@ -11,6 +11,7 @@ import {
     Store,
     Sprout,
     Swords,
+    Undo2,
     Wheat,
     X,
 } from 'lucide-react';
@@ -42,6 +43,7 @@ import {
     waterFarm,
     digTrench,
     fillTrench,
+    callOff,
     commit,
     crime,
     faction as factionPage,
@@ -311,9 +313,24 @@ export function RegionPanel({
                             </p>
                             {battle &&
                                 (battle.joined ? (
-                                    <p className="font-semibold text-primary">
-                                        You're in this battle.
-                                    </p>
+                                    <div className="flex flex-col gap-2">
+                                        <p className="font-semibold text-primary">
+                                            You're in this battle.
+                                        </p>
+                                        {battle.leading && (
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
+                                                className="self-start"
+                                                onClick={() =>
+                                                    act(callOff.url(battle.id))
+                                                }
+                                            >
+                                                <Undo2 className="size-4" />{' '}
+                                                Call off the raid
+                                            </Button>
+                                        )}
+                                    </div>
                                 ) : (
                                     <div className="flex items-center gap-2">
                                         <HorseshoePicker

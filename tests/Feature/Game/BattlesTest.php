@@ -115,6 +115,33 @@ class BattlesTest extends TestCase
         $this->assertSame('attack', $attack->fresh()->winner);
     }
 
+    public function test_the_leader_can_call_off_a_raid_on_the_way(): void
+    {
+        config(['game.raids.on_arrival' => true]);
+        $attack = $this->battles->launch($this->red[0], $this->region('henhouse'), 3);
+        $this->battles->commit($this->red[1], $attack, 2);
+        $before = [$this->red[0]->fresh()->horseshoes, $this->red[1]->fresh()->horseshoes];
+
+        // Only the leader can turn it back.
+        $this->actingAs($this->red[1]->user)->post(route('play.call-off', $attack));
+        $this->assertNull($attack->fresh()->resolved_at);
+
+        $this->travel(10)->seconds();
+        $this->actingAs($this->red[0]->user)->post(route('play.call-off', $attack));
+
+        $this->assertSame('called_off', $attack->fresh()->winner);
+        $this->assertNull($this->red[0]->fresh()->walk_arrives_at);
+        $this->assertSame($before[0] + 3, $this->red[0]->fresh()->horseshoes);
+        $this->assertSame($before[1] + 2, $this->red[1]->fresh()->horseshoes);
+        $this->actingAs($this->red[0]->user)->get(route('play'))->assertInertia(fn ($page) => $page->where('strikes', []));
+
+        // Nothing lands later.
+        $this->travel(2)->hours();
+        $this->battles->resolveDue($this->season());
+        $this->assertSame('called_off', $attack->fresh()->winner);
+        $this->assertNotSame($this->red[0]->faction_id, $this->region('henhouse')->faction_id);
+    }
+
     public function test_defenders_who_turn_up_hold_their_land(): void
     {
         $blue = [$this->player(Species::Dog), $this->player(Species::Dog), $this->player(Species::Dog)];

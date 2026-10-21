@@ -390,14 +390,18 @@ class MapController extends Controller
                 // Each side sees only its own strength.
                 'ourHorseshoes' => (int) $attack->commitments()->where('side', $attack->faction_id === $player->faction_id ? 'attack' : 'defence')->sum('horseshoes'),
                 'joined' => in_array($attack->id, $committed, true),
+                // The leader can turn back while on the way.
+                'leading' => $attack->player_id === $player->id,
             ]),
             'recent' => $season?->attacks()->with(['faction:id,name', 'region:id,name', 'defender:id,name'])
                 ->whereNotNull('resolved_at')->latest('resolved_at')->limit(8)->get()
                 ->map(fn (Attack $attack) => [
                     'id' => $attack->id,
-                    'text' => $attack->winner === 'attack'
-                        ? "{$attack->faction->name} took {$attack->region->name}".($attack->defender ? " from {$attack->defender->name}" : '').'.'
-                        : ($attack->defender?->name ?? 'The defenders')." held {$attack->region->name} against {$attack->faction->name}.",
+                    'text' => match ($attack->winner) {
+                        'attack' => "{$attack->faction->name} took {$attack->region->name}".($attack->defender ? " from {$attack->defender->name}" : '').'.',
+                        'called_off' => "{$attack->faction->name} called off its raid on {$attack->region->name}.",
+                        default => ($attack->defender?->name ?? 'The defenders')." held {$attack->region->name} against {$attack->faction->name}.",
+                    },
                     'at' => $attack->resolved_at->toIso8601String(),
                 ]) ?? [],
             'me' => Movement::map($player),

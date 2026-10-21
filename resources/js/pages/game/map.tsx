@@ -1,5 +1,5 @@
 import { Head, router, usePage } from '@inertiajs/react';
-import { Flame, Footprints, Shield, Swords } from 'lucide-react';
+import { Flame, Footprints, Shield, Swords, Undo2 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { GameBar } from '@/components/game/game-bar';
 import { GameMap } from '@/components/game/game-map';
@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/button';
 import { WhyNot, needHorseshoes } from '@/components/game/why-not';
 import { act, clockTime, fromNow } from '@/lib/game';
 import {
+    callOff,
     commit,
     gate,
     gather,
@@ -436,9 +437,28 @@ export default function MapPage({
                                             minute.
                                         </span>
                                     ) : battle.joined ? (
-                                        <span className="font-semibold text-primary">
-                                            You're in this battle.
-                                        </span>
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            <span className="font-semibold text-primary">
+                                                You're in this battle.
+                                            </span>
+                                            {battle.leading && (
+                                                <Button
+                                                    size="sm"
+                                                    variant="outline"
+                                                    className="self-start"
+                                                    onClick={() =>
+                                                        act(
+                                                            callOff.url(
+                                                                battle.id,
+                                                            ),
+                                                        )
+                                                    }
+                                                >
+                                                    <Undo2 className="size-4" />{' '}
+                                                    Call off the raid
+                                                </Button>
+                                            )}
+                                        </div>
                                     ) : (
                                         <div className="flex items-center gap-2">
                                             <HorseshoePicker

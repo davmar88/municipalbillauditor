@@ -472,6 +472,8 @@ export type MapBattle = {
     landsAt: string;
     ourHorseshoes: number;
     joined: boolean;
+    /** You lead it, so you can call it off on the way. */
+    leading: boolean;
 };
 
 export type MapLaw = { label: string; wording: string };

@@ -147,6 +147,39 @@ final class Battles
         });
     }
 
+    /**
+     * The leader turns back before the raid lands: it's off, the leader stops
+     * where it is, and everyone gets their horseshoes back.
+     *
+     * @throws GameException
+     */
+    public function callOff(Player $player, Attack $attack): void
+    {
+        if ($attack->player_id !== $player->id) {
+            throw new GameException('Only the animal leading the raid can call it off.');
+        }
+
+        DB::transaction(function () use ($player, $attack) {
+            $attack = Attack::query()->lockForUpdate()->findOrFail($attack->id);
+
+            if ($attack->resolved_at !== null || $attack->lands_at->isPast()) {
+                throw new GameException('That raid has already landed.');
+            }
+
+            $attack->forceFill(['resolved_at' => CarbonImmutable::now(), 'winner' => 'called_off'])->save();
+            app(Movement::class)->stop($player);
+
+            foreach ($attack->commitments()->get() as $commitment) {
+                Horseshoes::give(Players::lock($commitment->player), $commitment->horseshoes);
+            }
+
+            $region = $attack->region;
+            $map = route('play', [], false);
+            Notices::send(Notices::members($attack->defender_faction_id), 'raid', "🏳 {$attack->faction->name} called off its raid on {$region->name}. Any horseshoes you put in are back.", $map);
+            Notices::send(Notices::members($attack->faction_id), 'raid', "🏳 {$player->name} called off the raid on {$region->name}. Everyone has their horseshoes back.", $map);
+        });
+    }
+
     /** Settle every attack that has landed. */
     public function resolveDue(Season $season): void
     {

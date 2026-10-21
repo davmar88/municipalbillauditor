@@ -88,6 +88,7 @@ Route::middleware(['auth', 'verified', 'player', 'throttle:120,1'])->prefix('pla
     Route::post('regions/{region}/ironfield', [MapController::class, 'ironfield'])->middleware('throttle:20,1,ironfield')->name('play.ironfield');
     Route::post('regions/{region}/attack', [BattleController::class, 'launch'])->name('play.attack');
     Route::post('attacks/{attack}/commit', [BattleController::class, 'commit'])->name('play.commit');
+    Route::post('attacks/{attack}/call-off', [BattleController::class, 'callOff'])->name('play.call-off');
     Route::post('gate', [BattleController::class, 'gate'])->name('play.gate');
     Route::post('plunderers/{band}/fight', [PlunderController::class, 'fight'])->middleware('throttle:20,1,plunder')->name('play.plunderers.fight');
 

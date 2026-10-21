@@ -38,6 +38,13 @@ class BattleController extends Controller
             : "You joined the defence of {$attack->region->name}.");
     }
 
+    public function callOff(Request $request, Attack $attack, Battles $battles): RedirectResponse
+    {
+        $battles->callOff($request->user()->player, $attack);
+
+        return $this->told("You called off the raid on {$attack->region->name} and stopped where you are. Everyone has their horseshoes back.");
+    }
+
     public function gate(Request $request, GateNight $gateNight): RedirectResponse
     {
         $horseshoes = (int) $request->validate(['horseshoes' => ['required', 'integer', 'between:1,3']])['horseshoes'];
