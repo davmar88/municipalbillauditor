@@ -2258,28 +2258,7 @@ const OtherWalks = memo(function OtherWalks({
                 return (
                     <g key={`${walker.id}:${walker.arrivesAt}`}>
                         <title>{`${walker.name} is walking`}</title>
-                        <line
-                            x1={walker.from[0]}
-                            y1={walker.from[1]}
-                            x2={walker.to[0]}
-                            y2={walker.to[1]}
-                            stroke={colour}
-                            strokeWidth={2.4 / k}
-                            strokeDasharray={`${7 / k} ${6 / k}`}
-                            strokeLinecap="round"
-                            opacity={0.75}
-                        />
-                        <g
-                            transform={`translate(${walker.to[0]} ${walker.to[1]}) scale(${grows(k)})`}
-                        >
-                            <circle
-                                r={5}
-                                fill={colour}
-                                stroke={HALO}
-                                strokeWidth={1.5}
-                                opacity={0.85}
-                            />
-                        </g>
+                        {/* No trail behind them: only red lines for robberies and raids (her call, 2026-10-21). */}
                         <g
                             style={{
                                 transform: `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`,
@@ -2389,8 +2368,8 @@ const Strikes = memo(function Strikes({
                     Math.PI;
                 const colour = '#ef4444';
                 const label = strike.mine
-                    ? `${strike.kind === 'rob' ? 'Robbing' : 'Burning'} ${strike.who ?? ''}`
-                    : `${strike.who ?? 'Someone'} is coming ${strike.kind === 'rob' ? 'to rob you' : 'to burn your home'}`;
+                    ? `${strike.kind === 'rob' ? 'Robbing' : strike.kind === 'raid' ? 'Raiding' : 'Burning'} ${strike.who ?? ''}`
+                    : `${strike.who ?? 'Someone'} is coming ${strike.kind === 'rob' ? 'to rob you' : strike.kind === 'raid' ? 'to raid your land' : 'to burn your home'}`;
 
                 return (
                     <g key={strike.id}>

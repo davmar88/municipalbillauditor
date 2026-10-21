@@ -119,7 +119,7 @@ export type Weather = {
 /** A robbery or a burning on its way, to you or from you: a red arrow on the map. */
 export type Strike = {
     id: number;
-    kind: 'rob' | 'burn';
+    kind: 'rob' | 'burn' | 'raid';
     /** Yours, or coming at you. */
     mine: boolean;
     /** The other animal. */

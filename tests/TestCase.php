@@ -25,6 +25,8 @@ abstract class TestCase extends BaseTestCase
         config(['game.streak.enabled' => false]);
         // The crime tests were written with waits between crimes: they still check them.
         config(['game.crime.cooldowns' => true]);
+        // The raid tests count an hour's march: BattlesTest turns landing on arrival on to check it.
+        config(['game.raids.on_arrival' => false]);
     }
 
     protected function skipUnlessFortifyHas(string $feature, ?string $message = null): void

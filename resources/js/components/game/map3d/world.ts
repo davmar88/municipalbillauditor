@@ -2122,21 +2122,7 @@ export class World {
         this.clearGroup(this.walks);
         this.walking = data.walkers.map((walker) => {
             const colour = walker.colour ?? '#c9c2d8';
-            const line = new THREE.Line(
-                new THREE.BufferGeometry().setFromPoints([
-                    new THREE.Vector3(walker.from[0], 1.5, walker.from[1]),
-                    new THREE.Vector3(walker.to[0], 1.5, walker.to[1]),
-                ]),
-                new THREE.LineDashedMaterial({
-                    color: colour,
-                    dashSize: 8,
-                    gapSize: 6,
-                    transparent: true,
-                    opacity: 0.8,
-                }),
-            );
-            line.computeLineDistances();
-            this.walks.add(line);
+            // No trail behind them: only red lines for robberies and raids (her call, 2026-10-21).
             const disc = new CSS2DObject(
                 div(
                     '',
@@ -2218,8 +2204,8 @@ export class World {
                 strike.to[0] - strike.from[0],
             );
             const label = strike.mine
-                ? `${strike.kind === 'rob' ? 'Robbing' : 'Burning'} ${strike.who ?? ''}`
-                : `${strike.who ?? 'Someone'} is coming ${strike.kind === 'rob' ? 'to rob you' : 'to burn your home'}`;
+                ? `${strike.kind === 'rob' ? 'Robbing' : strike.kind === 'raid' ? 'Raiding' : 'Burning'} ${strike.who ?? ''}`
+                : `${strike.who ?? 'Someone'} is coming ${strike.kind === 'rob' ? 'to rob you' : strike.kind === 'raid' ? 'to raid your land' : 'to burn your home'}`;
             const box = div('', {
                 display: 'flex',
                 flexDirection: 'column',

@@ -94,6 +94,27 @@ class BattlesTest extends TestCase
         $this->assertSame(0, Stock::state($this->region('henhouse'))['left']);
     }
 
+    public function test_a_raid_lands_when_its_leader_walks_onto_the_land(): void
+    {
+        config(['game.raids.on_arrival' => true]);
+        $attack = $this->battles->launch($this->red[0], $this->region('henhouse'), 1);
+        $leader = $this->red[0]->fresh();
+
+        // The leader walks there, and the raid lands as they arrive.
+        $this->assertNotNull($leader->walk_arrives_at);
+        $this->assertTrue($attack->lands_at->equalTo($leader->walk_arrives_at));
+        $this->assertTrue($attack->lands_at->lt(now()->addMinutes(Battles::MARCH_MINUTES)));
+
+        // A red line on the leader's map.
+        $this->actingAs($leader->user)->get(route('play'))->assertInertia(fn ($page) => $page
+            ->where('strikes.0.kind', 'raid')
+            ->where('strikes.0.mine', true));
+
+        $this->travelTo($attack->lands_at->addSecond());
+        $this->battles->resolveDue($this->season());
+        $this->assertSame('attack', $attack->fresh()->winner);
+    }
+
     public function test_defenders_who_turn_up_hold_their_land(): void
     {
         $blue = [$this->player(Species::Dog), $this->player(Species::Dog), $this->player(Species::Dog)];

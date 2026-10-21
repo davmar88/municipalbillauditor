@@ -81,13 +81,18 @@ final class Battles
             Players::ensureFree($locked);
             Horseshoes::spend($locked, $horseshoes);
 
+            // The raid lands the moment its leader walks onto the land (her rule, 2026-10-21).
+            $lands = config('game.raids.on_arrival')
+                ? app(Movement::class)->strikeOut($locked, Geography::hub($target->key))
+                : $this->landing($target, $faction->id);
+
             $attack = Attack::create([
                 'season_id' => $season->id,
                 'faction_id' => $faction->id,
                 'region_id' => $target->id,
                 'defender_faction_id' => $target->faction_id,
                 'player_id' => $locked->id,
-                'lands_at' => $this->landing($target, $faction->id),
+                'lands_at' => $lands,
                 'seed' => Dice::seed(),
             ]);
 

@@ -57,7 +57,7 @@
             'Each faction can set its own raid rules (raid only from the front line, only next to its land, only the leader calls raids, spare named factions, never turn on our own). A member who breaks one gets a strike; three in a season flags them. The leader can excuse a member, or run the faction rogue.',
         ]],
         'raids' => ['Raids and the House', [
-            'A faction with at least '.$faction['members_to_raid'].' members can raid any region from anywhere. Raids land after a march; both sides add horseshoes until then. Win, and the one who led the raid strips the field bare into their bag, as a plunder does.',
+            'A faction with at least '.$faction['members_to_raid'].' members can raid any region from anywhere. The leader walks to the land and the raid lands the moment they arrive; until then both sides can add horseshoes. Win, and the one who led the raid strips the field bare into their bag, as a plunder does.',
             'The faction that holds the Farmhouse and builds a Head Office there becomes the House. The House rules the valley and writes the laws on the Barn Wall.',
             'To raid the Farmhouse, a faction must hold 2 of the 4 regions around it.',
         ]],

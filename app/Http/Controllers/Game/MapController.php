@@ -7,6 +7,7 @@ use App\Enums\CrimeKind;
 use App\Enums\ItemTemplate;
 use App\Game\Banners;
 use App\Game\Bases;
+use App\Game\Battles;
 use App\Game\Clock;
 use App\Game\Crimes;
 use App\Game\Farms;
@@ -65,6 +66,9 @@ class MapController extends Controller
 
         // A robbery or a burning you made, or one aimed at you, happens the moment the robber arrives.
         if ($season !== null) {
+            // And so does a raid: the moment its leader reaches the land.
+            app(Battles::class)->resolveDue($season);
+
             $season->crimes()
                 ->whereNull('resolved_at')
                 ->whereNotNull('lands_at')
@@ -264,7 +268,27 @@ class MapController extends Controller
                     'to' => [$crime->to_x, $crime->to_y],
                     'startedAt' => ($crime->path_started_at ?? $crime->created_at)->toIso8601String(),
                     'landsAt' => $crime->lands_at->toIso8601String(),
-                ]) : [],
+                ])->concat(
+                    // Raids on the march: yours, or coming at your faction's land. The leader walks the red line.
+                    $season->attacks()
+                        ->with(['launcher', 'region:id,key,name', 'faction:id,name'])
+                        ->whereNull('resolved_at')
+                        ->where('lands_at', '>', now())
+                        ->where(fn ($query) => $query->where('player_id', $player->id)
+                            ->when($player->faction_id !== null, fn ($q) => $q->orWhere('defender_faction_id', $player->faction_id)))
+                        ->get()
+                        ->filter(fn (Attack $attack) => $attack->launcher?->walk_arrives_at !== null && $attack->launcher->walk_from_x !== null)
+                        ->map(fn (Attack $attack) => [
+                            'id' => -$attack->id,
+                            'kind' => 'raid',
+                            'mine' => $attack->player_id === $player->id,
+                            'who' => $attack->player_id === $player->id ? $attack->region->name : $attack->faction->name,
+                            'from' => [$attack->launcher->walk_from_x, $attack->launcher->walk_from_y],
+                            'to' => Geography::hub($attack->region->key),
+                            'startedAt' => $attack->launcher->walk_started_at->toIso8601String(),
+                            'landsAt' => $attack->lands_at->toIso8601String(),
+                        ])
+                )->values() : [],
             // Everyone else out walking: where from, where to and when, so the map draws their trail as it does yours.
             'walkers' => Player::query()->toBase()
                 ->where('valley_id', $valley->id)
