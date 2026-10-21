@@ -121,6 +121,27 @@ class RobberyAndOnlineTest extends TestCase
         $this->assertSame(CrimeKind::Rob, app(Crimes::class)->commit($robber->fresh(), CrimeKind::Rob, target: $newcomer->fresh())->kind);
     }
 
+    public function test_an_attack_walks_up_and_takes_the_victims_health(): void
+    {
+        config(['game.crime.cooldowns' => false]);
+        [$attacker, $victim] = $this->pair();
+        $victim->forceFill(['health' => 100])->save();
+        // Far enough off that the attacker has a walk to make.
+        $this->stand($victim, 'thornbury');
+
+        $this->actingAs($attacker->user)->post(route('play.crime'), ['kind' => 'attack', 'player_id' => $victim->id])->assertSessionHasNoErrors();
+        $crime = Crime::sole();
+        $this->assertSame(CrimeKind::Attack, $crime->kind);
+        $this->assertNotNull($attacker->fresh()->walk_arrives_at);
+
+        $this->travelTo($crime->lands_at->addSecond());
+        app(Crimes::class)->resolveDue($this->season());
+
+        $lost = 100 - (float) $victim->fresh()->health;
+        $this->assertGreaterThan(0, $lost);
+        $this->assertTrue(Notice::query()->where('player_id', $victim->id)->where('text', 'like', '%attacked you: you lost%')->exists());
+    }
+
     public function test_there_is_no_waiting_between_crimes(): void
     {
         config(['game.crime.cooldowns' => false]);

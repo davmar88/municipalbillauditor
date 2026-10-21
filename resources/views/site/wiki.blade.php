@@ -70,6 +70,7 @@
             'From level '.$levels['crime'].', anyone can commit crimes, faction members too, against their own faction if they dare.',
             'There is no waiting between crimes: loot, burn, plunder and rob as often as your horseshoes allow. A home that burned still cannot burn again for a week.',
             'Rob an animal or set a home alight from anywhere on the map: you make your way there, faster the faster you walk (a Speedo doubles it), and it lands when you arrive. A red arrow shows it on the way, to you and to the one it\'s aimed at, who is warned and can hide in their home.',
+            'Attack an animal to take its health: you walk up to it and fight as you arrive. A strong animal or a drawn weapon hits harder, and an animal at no health dies and drops what it carried.',
             'Crimes settle after a while: robbery after 10 minutes, the rest after half an hour. Nobody goes to the pound by chance: the victim is told who did it.',
             'The victim (or any member of the faction robbed) has a day to walk to where the criminal stands and catch them, for 2 horseshoes. It usually works, less often if they hide in a strong home. A catch sends them to the pound and they pay back what they took.',
             'Or the victim puts a bounty on them from their own Apples, and the bounty hunters do it.',

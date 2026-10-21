@@ -72,6 +72,9 @@ final class Crimes
     /** A robbery is over quickly: it settles after this long. */
     public const ROB_MINUTES = 10;
 
+    /** Health an attack takes, before the attacker's strength and weapon. */
+    public const ATTACK_DAMAGE = 30;
+
     /** How far short of its target a robber or a firebug stops, in paces. */
     public const BESIDE = 30;
 
@@ -128,7 +131,7 @@ final class Crimes
             }
 
             $faction = Faction::query()->find($region->faction_id);
-        } elseif ($kind === CrimeKind::Rob) {
+        } elseif ($kind === CrimeKind::Rob || $kind === CrimeKind::Attack) {
             $this->ensureCanRob($player, $target);
         } elseif ($kind === CrimeKind::Loot) {
             if ($faction === null || $faction->valley_id !== $player->valley_id) {
@@ -173,7 +176,7 @@ final class Crimes
             Missions::record($locked, 'crime');
 
             // A crime against your own faction may break its rules.
-            $onPlayer = in_array($kind, [CrimeKind::Burn, CrimeKind::Rob], true);
+            $onPlayer = in_array($kind, [CrimeKind::Burn, CrimeKind::Rob, CrimeKind::Attack], true);
             $victim = $onPlayer ? $target?->faction_id : $faction?->id;
             if ($locked->faction_id !== null && $victim === $locked->faction_id) {
                 RaidRules::judgeCrime($locked, $kind, $onPlayer ? $target?->name : ($region?->name ?? $faction?->name));
@@ -197,7 +200,7 @@ final class Crimes
                 // A robbery happens as the robber arrives; a fire burns a while first, so someone can put it out.
                 'settles_at' => match (true) {
                     $path === null => CarbonImmutable::now()->addMinutes($base),
-                    $kind === CrimeKind::Rob => $path['lands_at'],
+                    $kind === CrimeKind::Rob, $kind === CrimeKind::Attack => $path['lands_at'],
                     default => $path['lands_at']->max(CarbonImmutable::now()->addMinutes($base)),
                 },
                 'seed' => Dice::seed(),
@@ -207,7 +210,11 @@ final class Crimes
             if ($path !== null) {
                 $crime->forceFill($path)->save();
                 // The one it's aimed at sees it coming.
-                $what = $kind === CrimeKind::Rob ? 'to rob you' : 'to set your home alight';
+                $what = match ($kind) {
+                    CrimeKind::Rob => 'to rob you',
+                    CrimeKind::Attack => 'to attack you',
+                    default => 'to set your home alight',
+                };
                 Notices::send($target->id, 'crime', "🎯 {$locked->name} is on the way {$what}. They get there at ".Clock::local($path['lands_at'])->format('H:i').'. Hide in your home, or be ready.', route('play', [], false));
                 Live::touch($locked->valley_id);
             }
@@ -468,6 +475,12 @@ final class Crimes
                     $faction->decrement('treasury', $loot);
                     $criminal->increment('corn', $loot);
                 }
+            } elseif ($crime->kind === CrimeKind::Attack && $crime->target_player_id !== null) {
+                // A fight: the victim loses health, more to a strong attacker or a drawn weapon. It can die of it.
+                $victim = Player::query()->findOrFail($crime->target_player_id);
+                $damage = (int) round(self::ATTACK_DAMAGE * $criminal->species->attack() * Powers::weapon($criminal, 'attack'));
+                $this->haul[] = (string) $damage;
+                Survival::hurt($victim, $damage, "{$criminal->name} attacked you");
             } elseif ($crime->kind === CrimeKind::Rob && $crime->target_player_id !== null) {
                 // The robber takes a share of what its victim carries: Corn, and each material.
                 $victim = Players::lock(Player::query()->findOrFail($crime->target_player_id));
@@ -520,7 +533,7 @@ final class Crimes
         $haul = $this->haul;
         $this->haul = [];
         $underworld = route('play.faction', [], false);
-        $victims = in_array($crime->kind, [CrimeKind::Burn, CrimeKind::Rob], true) ? collect([$crime->target_player_id]) : Notices::members($crime->target_faction_id);
+        $victims = in_array($crime->kind, [CrimeKind::Burn, CrimeKind::Rob, CrimeKind::Attack], true) ? collect([$crime->target_player_id]) : Notices::members($crime->target_faction_id);
         $section = $crime->region?->name;
 
         if ($caught) {
@@ -530,6 +543,7 @@ final class Crimes
                 CrimeKind::Plunder => "🚨 {$criminal->name} tried to plunder {$section} and was caught.",
                 CrimeKind::Burn => "🚨 {$criminal->name} tried to burn down your home and was caught.",
                 CrimeKind::Rob => "🚨 {$criminal->name} tried to rob you and was caught.",
+                CrimeKind::Attack => "🚨 {$criminal->name} tried to attack you and was caught.",
             }, $underworld);
 
             return;
@@ -539,6 +553,15 @@ final class Crimes
             $crop = $haul[0] ?? '0 '.$crime->region?->produces;
             Notices::send($criminal->id, 'crime', "🌾 You stripped {$section} bare: {$crop} and {$loot} Corn into your bag.", route('play', [], false));
             Notices::send($victims, 'crime', "🔥 {$criminal->name} plundered {$section}, taking {$loot} Corn from your treasury.".self::CATCH_IT, route('play.wanted', [], false));
+
+            return;
+        }
+
+        if ($crime->kind === CrimeKind::Attack) {
+            $victimName = Player::query()->whereKey($crime->target_player_id)->value('name');
+            $damage = $haul[0] ?? '0';
+            Notices::send($criminal->id, 'crime', "⚔️ You attacked {$victimName}: they lost {$damage} health.", route('play', [], false));
+            Notices::send($victims, 'crime', "🩸 {$criminal->name} attacked you: you lost {$damage} health.".self::CATCH_IT, route('play.wanted', [], false));
 
             return;
         }

@@ -2373,8 +2373,8 @@ const Strikes = memo(function Strikes({
                     Math.PI;
                 const colour = '#ef4444';
                 const label = strike.mine
-                    ? `${strike.kind === 'rob' ? 'Robbing' : strike.kind === 'raid' ? 'Raiding' : 'Burning'} ${strike.who ?? ''}`
-                    : `${strike.who ?? 'Someone'} is coming ${strike.kind === 'rob' ? 'to rob you' : strike.kind === 'raid' ? 'to raid your land' : 'to burn your home'}`;
+                    ? `${strike.kind === 'rob' ? 'Robbing' : strike.kind === 'raid' ? 'Raiding' : strike.kind === 'attack' ? 'Attacking' : 'Burning'} ${strike.who ?? ''}`
+                    : `${strike.who ?? 'Someone'} is coming ${strike.kind === 'rob' ? 'to rob you' : strike.kind === 'raid' ? 'to raid your land' : strike.kind === 'attack' ? 'to attack you' : 'to burn your home'}`;
 
                 return (
                     <g key={strike.id}>

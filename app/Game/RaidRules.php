@@ -137,6 +137,7 @@ final class RaidRules
             CrimeKind::Loot => 'Looted the treasury',
             CrimeKind::Plunder => "Plundered {$what}",
             CrimeKind::Rob => "Robbed {$what}",
+            CrimeKind::Attack => "Attacked {$what}",
         };
     }
 

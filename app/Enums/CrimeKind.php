@@ -9,6 +9,7 @@ enum CrimeKind: string
     case Burn = 'burn';
     case Plunder = 'plunder';
     case Rob = 'rob';
+    case Attack = 'attack';
 
     public function label(): string
     {
@@ -17,6 +18,7 @@ enum CrimeKind: string
             self::Burn => 'Burn down a home',
             self::Plunder => 'Plunder a farm',
             self::Rob => 'Rob an animal',
+            self::Attack => 'Attack an animal',
         };
     }
 
@@ -27,6 +29,7 @@ enum CrimeKind: string
             self::Burn => 3,
             self::Plunder => 2,
             self::Rob => 2,
+            self::Attack => 2,
         };
     }
 }

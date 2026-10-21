@@ -83,6 +83,7 @@ final class Warrants
             CrimeKind::Burn => 'burned down '.($crime->targetPlayer?->name ?? 'someone')."'s home",
             CrimeKind::Plunder => 'plundered '.($crime->region?->name ?? 'a farm'),
             CrimeKind::Rob => 'robbed '.($crime->targetPlayer?->name ?? 'someone'),
+            CrimeKind::Attack => 'attacked '.($crime->targetPlayer?->name ?? 'someone'),
         };
     }
 

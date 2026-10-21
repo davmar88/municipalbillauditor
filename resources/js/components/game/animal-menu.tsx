@@ -4,6 +4,7 @@ import {
     Gift,
     HandCoins,
     MessageCircle,
+    Swords,
     UserRound,
     X,
 } from 'lucide-react';
@@ -163,6 +164,28 @@ export function AnimalMenu({
                                 <span className="text-xs text-muted-foreground">
                                     Takes 15% of its Corn and of every material
                                     it carries
+                                </span>
+                            </span>
+                        </button>
+                    )}
+                    {!animal.me && (
+                        <button
+                            type="button"
+                            onClick={() => {
+                                act(crime.url(), {
+                                    kind: 'attack',
+                                    player_id: animal.id,
+                                });
+                                onClose();
+                            }}
+                            title="Walk up and fight it: it loses health, more if you're strong or carry a weapon. At no health it dies and drops what it carries."
+                            className="flex items-center gap-2 rounded-lg px-2 py-2 text-left text-destructive hover:bg-accent"
+                        >
+                            <Swords className="size-4" />
+                            <span className="flex flex-col">
+                                <span>Attack (2 horseshoes)</span>
+                                <span className="text-xs text-muted-foreground">
+                                    Takes about 30 of its health
                                 </span>
                             </span>
                         </button>

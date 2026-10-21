@@ -154,7 +154,7 @@ class FactionController extends Controller
                         'target' => match ($crime->kind) {
                             CrimeKind::Loot => $crime->targetFaction?->name,
                             CrimeKind::Plunder => $crime->region?->name,
-                            CrimeKind::Burn, CrimeKind::Rob => $crime->targetPlayer?->name,
+                            CrimeKind::Burn, CrimeKind::Rob, CrimeKind::Attack => $crime->targetPlayer?->name,
                         },
                         'outcome' => match (true) {
                             $crime->resolved_at === null => 'pending',
