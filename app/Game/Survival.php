@@ -201,6 +201,8 @@ final class Survival
         // The longest-waiting few hundred each minute, so a big valley never stalls the tick.
         $players = Player::query()
             ->where('valley_id', $valleyId)
+            // Valley animals the game runs itself are kept fed and watered.
+            ->where('npc', false)
             ->where(fn ($query) => $query->whereNull('vitals_at')->orWhere('vitals_at', '<', now()->subMinutes(30)))
             ->orderBy('vitals_at')
             ->limit(400)

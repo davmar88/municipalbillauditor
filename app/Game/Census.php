@@ -90,6 +90,8 @@ final class Census
                 'faction' => $animal->faction ? ['name' => $animal->faction->name, 'colour' => $animal->faction->colour] : null,
                 'where' => $animal->inside_home_at !== null || $animal->region?->isCity() ? null : $animal->region?->name,
                 'online' => $animal->last_seen_at !== null && $animal->last_seen_at->gte($since),
+                // Run by the game itself, not a person.
+                'npc' => (bool) $animal->npc,
                 'lastSeen' => $animal->last_seen_at?->toIso8601String(),
             ]);
     }
@@ -105,6 +107,7 @@ final class Census
         return Cache::remember('census:valleys', 60, function () {
             $since = self::since();
             $players = DB::table('players')
+                ->where('npc', false)
                 ->groupBy('valley_id')
                 ->selectRaw('valley_id, COUNT(*) AS animals, SUM(CASE WHEN last_seen_at >= ? THEN 1 ELSE 0 END) AS online, SUM(corn) AS corn, SUM(apples) AS apples', [$since])
                 ->get()

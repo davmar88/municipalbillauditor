@@ -71,13 +71,15 @@ class RankingsController extends Controller
      */
     private function points(int $valleyId, string $board, ?int $seasonId): Collection
     {
-        $inValley = Player::query()->select('id')->where('valley_id', $valleyId);
+        // Valley animals the game runs itself aren't ranked.
+        $inValley = Player::query()->select('id')->where('valley_id', $valleyId)->where('npc', false);
 
         if ($seasonId === null) {
             $column = $board === 'rosettes' ? 'rosettes' : "{$board}_skill";
 
             return Player::query()
                 ->where('valley_id', $valleyId)
+                ->where('npc', false)
                 ->where($column, '>', 0)
                 ->orderByDesc($column)
                 ->orderBy('id')

@@ -94,6 +94,7 @@ class Player extends Model
             'news_emails' => 'boolean',
             'news_sent_at' => 'datetime',
             'streak_on' => 'date',
+            'npc' => 'boolean',
             'muted_until' => 'datetime',
             'left_faction_at' => 'datetime',
             'inside_home_at' => 'datetime',

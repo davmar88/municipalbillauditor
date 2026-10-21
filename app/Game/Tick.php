@@ -60,6 +60,8 @@ final class Tick
         app(Homes::class)->buildArrivedCamps($valley->id);
         // Homes on another faction's land: three days to join, then moved off.
         app(Homes::class)->checkLand($valley->id);
+        // The animals the game runs itself go about their day.
+        app(ValleyAnimals::class)->live($valley->id);
 
         // Studies finish first, so what was learned counts this half hour.
         $this->research->finishDue($valley->id);

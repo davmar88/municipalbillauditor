@@ -97,6 +97,11 @@ export function AnimalMenu({
                     <span className="block truncate font-bold">
                         {animal.name}
                     </span>
+                    {animal.npc && (
+                        <span className="block text-xs text-muted-foreground">
+                            🌾 Valley animal, run by the game
+                        </span>
+                    )}
                     {wanted && (
                         <span className="text-xs font-semibold text-[#f5a27a]">
                             🎯 Wanted

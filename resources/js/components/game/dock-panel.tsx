@@ -47,6 +47,8 @@ type Dock = {
         where: string | null;
         online: boolean;
         lastSeen: string | null;
+        /** A valley animal the game runs itself. */
+        npc?: boolean;
     })[];
     conversations: {
         animal: MessageAnimal;
@@ -212,6 +214,8 @@ export function DockPanel({
                                                     {animal.name}
                                                     <span className="ml-1.5 text-xs font-normal text-muted-foreground">
                                                         level {animal.level}
+                                                        {animal.npc &&
+                                                            ' · 🌾 valley animal'}
                                                     </span>
                                                 </span>
                                                 <span className="block truncate text-xs text-muted-foreground">

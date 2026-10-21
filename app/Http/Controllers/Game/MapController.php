@@ -116,7 +116,7 @@ class MapController extends Controller
         $animals = DB::query()
             ->fromSub(
                 Player::query()->toBase()->tap($visible)
-                    ->select(['id', 'name', 'species', 'faction_id', 'region_id', 'inside_home_at', 'food', 'drink', 'health', 'vitals_at', 'corn', 'materials', 'pos_x', 'pos_y', 'walk_to_x', 'walk_to_y', 'walk_arrives_at'])
+                    ->select(['id', 'name', 'species', 'faction_id', 'region_id', 'inside_home_at', 'food', 'drink', 'health', 'vitals_at', 'corn', 'materials', 'pos_x', 'pos_y', 'walk_to_x', 'walk_to_y', 'walk_arrives_at', 'npc'])
                     ->selectRaw("ROW_NUMBER() OVER (PARTITION BY COALESCE(region_id, ?) ORDER BY id = ? DESC, id IN ({$first}) DESC, last_seen_at DESC, id) AS place", [$paddockId, $player->id]),
                 'ranked',
             )
@@ -224,6 +224,8 @@ class MapController extends Controller
                     'count' => (int) ($counts[$region->id] ?? 0),
                     'sample' => ($animals->get($region->id) ?? collect())->take(24)->map(fn (object $animal) => [
                         'id' => $animal->id,
+                        // Run by the game itself, not a person.
+                        'npc' => (bool) $animal->npc,
                         // Where it stands; one out walking is drawn on its trail.
                         'at' => match (true) {
                             $animal->walk_arrives_at === null => Movement::standing((int) $animal->id, $region->key, $animal->pos_x === null ? null : (float) $animal->pos_x, $animal->pos_y === null ? null : (float) $animal->pos_y),

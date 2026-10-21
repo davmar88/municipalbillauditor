@@ -47,6 +47,7 @@ class OnlineController extends Controller
                     'level' => $animal['level'],
                     'where' => $animal['where'],
                     'online' => $animal['online'],
+                    'npc' => $animal['npc'],
                     'lastSeen' => $animal['lastSeen'],
                 ])
                 ->values(),
