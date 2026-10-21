@@ -116,7 +116,8 @@ return [
 
     'from' => [
         'address' => env('MAIL_FROM_ADDRESS', 'hello@example.com'),
-        'name' => env('MAIL_FROM_NAME', env('APP_NAME', 'Laravel')),
+        // Always the game's own name: the server's .env still carries the old one.
+        'name' => 'Animal Farm',
     ],
 
 ];
