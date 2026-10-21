@@ -315,8 +315,7 @@ function MyShop({ items, shop }: Props) {
                     ? `${shop.used} of ${shop.shelves} shelves in use.`
                     : `You get a shop at level ${shop.level}.`}{' '}
                 Every sale earns you 3 Rosettes. Price in Corn, or in Apples,
-                which are bought with real money; the game takes a share of an
-                Apple sale.
+                which are bought with real money.
                 {canSell && !shop.orchard && (
                     <>
                         {' '}
