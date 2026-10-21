@@ -102,7 +102,7 @@ class RobberyAndOnlineTest extends TestCase
         $this->actingAs($victim->user)->get(route('play'))->assertInertia(fn (Assert $page) => $page
             ->where('strikes.0.mine', false)
             ->where('strikes.0.who', $robber->name)
-            ->where('strikes.0.to', [$crime->to_x, $crime->to_y]));
+            ->where('strikes.0.to', fn ($to) => collect($to)->map(fn ($v) => (float) $v)->all() === [(float) $crime->to_x, (float) $crime->to_y]));
         $this->actingAs($robber->user)->get(route('play'))->assertInertia(fn (Assert $page) => $page
             ->where('strikes.0.mine', true)
             ->where('strikes.0.who', $victim->name)
