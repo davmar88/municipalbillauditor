@@ -133,7 +133,7 @@ class HandleInertiaRequests extends Middleware
 
                 return $player !== null ? Notices::unread($player) : 0;
             }),
-            'isStaff' => fn () => (bool) $request->user()?->is_staff,
+            'isStaff' => fn () => (bool) $request->user()?->is_staff || (bool) $request->user()?->is_admin,
             'isAdmin' => fn () => (bool) $request->user()?->is_admin,
             // The badge on the owner's Cash-outs page.
             'cashoutsWaiting' => fn () => $request->user()?->is_admin ? Cashout::query()->where('status', 'pending')->count() : 0,

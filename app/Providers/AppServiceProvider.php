@@ -74,7 +74,8 @@ class AppServiceProvider extends ServiceProvider
             ]);
         });
 
-        Gate::define('staff', fn (User $user): bool => (bool) $user->is_staff);
+        // The owner can do anything the team can, such as checking designs.
+        Gate::define('staff', fn (User $user): bool => (bool) $user->is_staff || (bool) $user->is_admin);
         Gate::define('admin', fn (User $user): bool => (bool) $user->is_admin);
     }
 
