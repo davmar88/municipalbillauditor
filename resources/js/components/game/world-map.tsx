@@ -2260,6 +2260,10 @@ const OtherWalks = memo(function OtherWalks({
                         <title>{`${walker.name} is walking`}</title>
                         {/* No trail behind them: only red lines for robberies and raids (her call, 2026-10-21). */}
                         <g
+                            // Still there to tap while it walks: rob it, chat, see who it is.
+                            data-animal={walker.id}
+                            pointerEvents="all"
+                            className="cursor-pointer"
                             style={{
                                 transform: `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`,
                                 transition: 'transform 1s linear',
@@ -2766,12 +2770,26 @@ export function WorldMap({
 
             setPerson(null);
             const id = Number(element.getAttribute('data-animal'));
-            const animal = regions
-                .flatMap((region) => region.animals.sample)
-                .find((a) => a.id === id);
+            const walker = walkers?.find((w) => w.id === id);
+            const animal =
+                regions
+                    .flatMap((region) => region.animals.sample)
+                    .find((a) => a.id === id) ??
+                (walker
+                    ? {
+                          id: walker.id,
+                          name: walker.name,
+                          species: walker.species,
+                          colour: walker.colour,
+                          me: false,
+                          at: null,
+                          wearing: [],
+                          health: 100,
+                      }
+                    : undefined);
             setMenu(animal ? { animal, at } : null);
         },
-        [regions, irongate, loot, onLoot],
+        [regions, walkers, irongate, loot, onLoot],
     );
 
     const camera = useCamera(

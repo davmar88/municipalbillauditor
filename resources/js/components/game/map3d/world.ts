@@ -2568,6 +2568,35 @@ export class World {
                 found = entry;
             }
         }
+        // Animals out walking can be tapped too: rob them, chat, see who they are.
+        let walking: Walker | null = null;
+        for (const { walker, disc } of this.walking) {
+            const [sx, sy] = project(
+                [disc.position.x, disc.position.z],
+                disc.position.y,
+            );
+            const d = Math.hypot(sx - screen[0], sy - screen[1]);
+            if (d < nearest) {
+                nearest = d;
+                walking = walker;
+            }
+        }
+        if (walking) {
+            return (
+                this.data?.regions
+                    .flatMap((r) => r.animals.sample)
+                    .find((a) => a.id === walking.id) ?? {
+                    id: walking.id,
+                    name: walking.name,
+                    species: walking.species,
+                    colour: walking.colour,
+                    me: false,
+                    at: null,
+                    wearing: [],
+                    health: 100,
+                }
+            );
+        }
         if (!found) {
             return null;
         }
