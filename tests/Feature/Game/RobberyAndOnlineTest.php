@@ -84,20 +84,34 @@ class RobberyAndOnlineTest extends TestCase
         $this->stand($victim, 'thornbury');
         $this->actingAs($robber->user)->post(route('play.crime'), ['kind' => 'rob', 'player_id' => $victim->id])->assertRedirect();
         $crime = Crime::sole();
-        [$fx, $fy] = Movement::position($robber->fresh());
-        [$tx, $ty] = Movement::position($victim->fresh());
-        $seconds = hypot($tx - $fx, $ty - $fy) / Movement::pace($robber->fresh()) * 60;
+        // The robber walks up beside the victim, where the map draws it, and the robbery lands as it arrives.
+        [$fx, $fy] = [$crime->from_x, $crime->from_y];
+        [$sx, $sy] = Movement::spot($victim->fresh());
+        $gap = hypot($sx - $fx, $sy - $fy);
+        $this->assertEqualsWithDelta(Crimes::BESIDE, hypot($sx - $crime->to_x, $sy - $crime->to_y), 0.2);
+        $this->assertEqualsWithDelta($gap - Crimes::BESIDE, hypot($crime->to_x - $fx, $crime->to_y - $fy), 0.2);
+        $seconds = ($gap - Crimes::BESIDE) / Movement::pace($robber->fresh()) * 60;
         $this->assertEqualsWithDelta($seconds, $crime->created_at->diffInSeconds($crime->lands_at), 2);
+        $this->assertTrue($crime->settles_at->equalTo($crime->lands_at));
+        $walker = $robber->fresh();
+        $this->assertTrue($walker->walk_arrives_at->equalTo($crime->lands_at));
+        $this->assertEqualsWithDelta($crime->to_x, $walker->walk_to_x, 0.1);
         $this->assertStringContainsString("{$robber->name} is on the way to rob you", Notice::query()->where('player_id', $victim->id)->latest('id')->value('text'));
 
-        // A red arrow for both: coming at the victim, and the robber's own on its way.
+        // A red line for both: coming at the victim, and the robber's own on its way; the robber sees the victim where it heads.
         $this->actingAs($victim->user)->get(route('play'))->assertInertia(fn (Assert $page) => $page
             ->where('strikes.0.mine', false)
             ->where('strikes.0.who', $robber->name)
-            ->where('strikes.0.to', [round($tx, 1), round($ty, 1)]));
+            ->where('strikes.0.to', [$crime->to_x, $crime->to_y]));
         $this->actingAs($robber->user)->get(route('play'))->assertInertia(fn (Assert $page) => $page
             ->where('strikes.0.mine', true)
-            ->where('strikes.0.who', $victim->name));
+            ->where('strikes.0.who', $victim->name)
+            ->where('regions', fn ($regions) => collect($regions)->flatMap(fn ($region) => $region['animals']['sample'])->firstWhere('id', $victim->id)['at'] == [$sx, $sy]));
+
+        // Once there, it's done: the robbery happens.
+        $this->travelTo($crime->lands_at->addSecond());
+        app(Crimes::class)->resolveDue($this->season());
+        $this->assertNotNull($crime->fresh()->resolved_at);
         Crime::query()->delete();
 
         // Newcomers can be robbed from their first day.

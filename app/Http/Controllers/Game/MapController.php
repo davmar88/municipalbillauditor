@@ -61,6 +61,17 @@ class MapController extends Controller
         app(Homes::class)->buildArrivedCamps($valley->id);
         Movement::settle($player);
         $season = $valley->currentSeason();
+
+        // A robbery or a burning you made, or one aimed at you, happens the moment the robber arrives.
+        if ($season !== null) {
+            $season->crimes()
+                ->whereNull('resolved_at')
+                ->whereNotNull('lands_at')
+                ->where('settles_at', '<=', now())
+                ->where(fn ($query) => $query->where('player_id', $player->id)->orWhere('target_player_id', $player->id))
+                ->get()
+                ->each(fn (Crime $crime) => app(Crimes::class)->resolve($season, $crime));
+        }
         $house = $valley->house();
 
         // Wild land round the farms isn't a region yet: it stays off the map and its paths.
@@ -105,7 +116,7 @@ class MapController extends Controller
         $animals = DB::query()
             ->fromSub(
                 Player::query()->toBase()->tap($visible)
-                    ->select(['id', 'name', 'species', 'faction_id', 'region_id', 'inside_home_at', 'food', 'drink', 'health', 'vitals_at', 'corn', 'materials'])
+                    ->select(['id', 'name', 'species', 'faction_id', 'region_id', 'inside_home_at', 'food', 'drink', 'health', 'vitals_at', 'corn', 'materials', 'pos_x', 'pos_y', 'walk_to_x', 'walk_to_y', 'walk_arrives_at'])
                     ->selectRaw("ROW_NUMBER() OVER (PARTITION BY COALESCE(region_id, ?) ORDER BY id = ? DESC, id IN ({$first}) DESC, last_seen_at DESC, id) AS place", [$paddockId, $player->id]),
                 'ranked',
             )
@@ -213,6 +224,12 @@ class MapController extends Controller
                     'count' => (int) ($counts[$region->id] ?? 0),
                     'sample' => ($animals->get($region->id) ?? collect())->take(24)->map(fn (object $animal) => [
                         'id' => $animal->id,
+                        // Where it stands; one out walking is drawn on its trail.
+                        'at' => match (true) {
+                            $animal->walk_arrives_at === null => Movement::standing((int) $animal->id, $region->key, $animal->pos_x === null ? null : (float) $animal->pos_x, $animal->pos_y === null ? null : (float) $animal->pos_y),
+                            CarbonImmutable::parse($animal->walk_arrives_at)->isPast() => [(float) $animal->walk_to_x, (float) $animal->walk_to_y],
+                            default => null,
+                        },
                         'name' => $animal->name,
                         'species' => $animal->species,
                         'colour' => $animal->faction_id !== null ? ($colours[$animal->faction_id] ?? null) : null,

@@ -71,6 +71,9 @@ final class Crimes
     /** A robbery is over quickly: it settles after this long. */
     public const ROB_MINUTES = 10;
 
+    /** How far short of its target a robber or a firebug stops, in paces. */
+    public const BESIDE = 30;
+
     /** How long an animal that left a faction waits before its first crime. */
     public const LONE_WOLF_HOURS = 24;
 
@@ -175,8 +178,12 @@ final class Crimes
                 RaidRules::judgeCrime($locked, $kind, $onPlayer ? $target?->name : ($region?->name ?? $faction?->name));
             }
 
-            // A robbery or a burning is struck from wherever you stand: you make your way there, and it lands when you arrive.
+            // A robbery or a burning is struck from wherever you stand: you walk up beside them, and it lands as you arrive.
             $path = $onPlayer && $target !== null ? self::path($locked, $kind, $target) : null;
+
+            if ($path !== null) {
+                $path['lands_at'] = app(Movement::class)->strikeOut($locked, [$path['to_x'], $path['to_y']]);
+            }
             $base = $kind === CrimeKind::Rob ? self::ROB_MINUTES : 30;
 
             $crime = Crime::create([
@@ -186,9 +193,12 @@ final class Crimes
                 'target_faction_id' => $onPlayer ? $target?->faction_id : $faction?->id,
                 'target_player_id' => $target?->id,
                 'region_id' => $region?->id,
-                'settles_at' => $path !== null && $path['lands_at']->gt(CarbonImmutable::now()->addMinutes($base))
-                    ? $path['lands_at']
-                    : CarbonImmutable::now()->addMinutes($base),
+                // A robbery happens as the robber arrives; a fire burns a while first, so someone can put it out.
+                'settles_at' => match (true) {
+                    $path === null => CarbonImmutable::now()->addMinutes($base),
+                    $kind === CrimeKind::Rob => $path['lands_at'],
+                    default => $path['lands_at']->max(CarbonImmutable::now()->addMinutes($base)),
+                },
                 'seed' => Dice::seed(),
                 'cloaked' => Powers::cloak($locked),
             ]);
@@ -220,7 +230,14 @@ final class Crimes
     {
         [$x, $y] = Movement::position($player);
         $home = $kind === CrimeKind::Burn ? Homes::of($target) : null;
-        [$tx, $ty] = $home !== null ? [$home->x, $home->y] : Movement::position($target);
+        [$tx, $ty] = $home !== null ? [$home->x, $home->y] : Movement::spot($target);
+        // Stop right beside them, not on top of them.
+        $gap = hypot($tx - $x, $ty - $y);
+        $beside = min($gap, self::BESIDE);
+        if ($gap > 0) {
+            $tx -= ($tx - $x) / $gap * $beside;
+            $ty -= ($ty - $y) / $gap * $beside;
+        }
         $minutes = hypot($tx - $x, $ty - $y) / max(1, Movement::pace($player));
 
         return [

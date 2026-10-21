@@ -1821,8 +1821,9 @@ export class World {
                     };
                     this.crowd.set(animal.id, entry);
                 }
-                entry.centre = centre;
-                entry.spot = SPOTS[i] ?? [0, 0];
+                // Where it really stands, so a robber's line ends on it.
+                entry.centre = animal.at ?? centre;
+                entry.spot = animal.at ? [0, 0] : (SPOTS[i] ?? [0, 0]);
                 setHealth(entry.bar.element, animal.health ?? 100);
                 const isWanted = wanted.has(animal.id);
                 const ringColour = isWanted
@@ -2183,7 +2184,11 @@ export class World {
     /** Red arrows: robberies and burnings on their way, to you or from you. */
     private readonly strikeLines = new THREE.Group();
 
-    private striking: { strike: Strike; head: CSS2DObject }[] = [];
+    private striking: {
+        strike: Strike;
+        head: CSS2DObject;
+        line: THREE.Line;
+    }[] = [];
 
     private buildStrikes() {
         const data = this.data as WorldData;
@@ -2244,23 +2249,29 @@ export class World {
                 // The screen's x is the map's x; the map's y runs down the screen as the camera looks north.
                 transform: `rotate(${angle}rad)`,
             });
-            box.appendChild(arrow);
+            // Your own animal walks the line itself; one coming for you gets an arrow.
+            if (!strike.mine) {
+                box.appendChild(arrow);
+            }
             const head = new CSS2DObject(box);
             head.renderOrder = 6;
             this.strikeLines.add(head);
-            return { strike, head };
+            return { strike, head, line };
         });
         this.placeStrikes(Date.now());
     }
 
     private placeStrikes(now: number) {
-        for (const { strike, head } of this.striking) {
+        for (const { strike, head, line } of this.striking) {
             const start = Date.parse(strike.startedAt);
             const end = Date.parse(strike.landsAt);
             const done = Math.min(
                 1,
                 Math.max(0, (now - start) / Math.max(1, end - start)),
             );
+            // Once there, the line is done: the robbery or the burning happens.
+            head.visible = now < end;
+            line.visible = now < end;
             head.position.set(
                 strike.from[0] + (strike.to[0] - strike.from[0]) * done,
                 6,

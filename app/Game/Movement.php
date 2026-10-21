@@ -51,6 +51,48 @@ final class Movement
     }
 
     /**
+     * Where an animal is drawn on the map: where it walks or stopped, or a spot
+     * of its own round its region's hub, so a robber heads to where it is seen.
+     *
+     * @return array{0: float, 1: float}
+     */
+    public static function spot(Player $player): array
+    {
+        if ($player->walk_arrives_at !== null) {
+            return self::position($player);
+        }
+
+        return self::standing($player->id, $player->location()->key, $player->pos_x, $player->pos_y);
+    }
+
+    /** @return array{0: float, 1: float} */
+    public static function standing(int $id, string $key, ?float $x, ?float $y): array
+    {
+        if ($x !== null && $y !== null && (Geography::regionAt($x, $y) === $key || ($key === 'scrubland' && Geography::reachable($x, $y)))) {
+            return [$x, $y];
+        }
+
+        [$hx, $hy] = Geography::hub($key);
+        $angle = $id * 2.39996;
+        $reach = 22 + ($id % 4) * 9;
+
+        return [round($hx + cos($angle) * $reach, 1), round($hy + sin($angle) * $reach, 1)];
+    }
+
+    /**
+     * Set off on a robbery or a burning: walk to the spot beside the target.
+     * The player must be locked. Returns when it gets there.
+     *
+     * @param  array{0: float, 1: float}  $to
+     */
+    public function strikeOut(Player $player, array $to): CarbonImmutable
+    {
+        $this->head($player, self::position($player), $to);
+
+        return $player->walk_arrives_at ?? CarbonImmutable::now();
+    }
+
+    /**
      * Start walking to a point, from wherever the animal is now.
      *
      * @throws GameException

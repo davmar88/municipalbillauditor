@@ -252,6 +252,8 @@ export type MapAnimal = {
     species: Species;
     colour: string | null;
     me: boolean;
+    /** Where it stands on the map; null while out walking. */
+    at: [number, number] | null;
     /** The shop items it wears (App\Game\Wardrobe), for the 3D map. */
     wearing: Worn[];
     /** Out of 100, for the bar over it. */

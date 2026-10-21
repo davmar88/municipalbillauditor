@@ -1,3 +1,4 @@
+import { router } from '@inertiajs/react';
 import { LocateFixed, Minus, Plus, Scan } from 'lucide-react';
 import type { ReactNode } from 'react';
 import {
@@ -1428,6 +1429,11 @@ const Crowd = memo(function Crowd({
                     <g key={region.id}>
                         {shown.map((animal, i) => {
                             const [sx, sy] = SPOTS[i];
+                            // Where it really stands, so a robber's line ends on it.
+                            const [ax, ay] = animal.at ?? [
+                                hx + sx * grows(k),
+                                hy + sy * grows(k),
+                            ];
 
                             return (
                                 <g
@@ -1435,7 +1441,7 @@ const Crowd = memo(function Crowd({
                                     data-animal={animal.id}
                                     pointerEvents="all"
                                     className="cursor-pointer"
-                                    transform={`translate(${(hx + sx * grows(k)).toFixed(1)} ${(hy + sy * grows(k)).toFixed(1)}) scale(${grows(k)})`}
+                                    transform={`translate(${ax.toFixed(1)} ${ay.toFixed(1)}) scale(${grows(k)})`}
                                 >
                                     <circle
                                         r={11.5}
@@ -2340,9 +2346,33 @@ const Strikes = memo(function Strikes({
         return () => window.clearInterval(timer);
     }, []);
 
+    // On arrival the robbery or the burning happens: fetch how it went.
+    const next = Math.min(
+        ...strikes
+            .map((strike) => Date.parse(strike.landsAt))
+            .filter((at) => at > Date.now()),
+    );
+    useEffect(() => {
+        if (!Number.isFinite(next)) {
+            return;
+        }
+
+        const timer = window.setTimeout(
+            () => router.reload(),
+            next - Date.now() + 800,
+        );
+
+        return () => window.clearTimeout(timer);
+    }, [next]);
+
     return (
         <g pointerEvents="none">
             {strikes.map((strike) => {
+                // Once there, the line is done: the robbery or the burning happens.
+                if (Date.parse(strike.landsAt) <= now) {
+                    return null;
+                }
+
                 const [x, y] = along(
                     strike.from,
                     strike.to,
@@ -2411,15 +2441,18 @@ const Strikes = memo(function Strikes({
                             }}
                         >
                             <g transform={`scale(${grows(k)})`}>
-                                <path
-                                    d="M14 0L-8 -10L-3 0L-8 10z"
-                                    fill={colour}
-                                    stroke={HALO}
-                                    strokeWidth={1.5}
-                                    transform={`rotate(${angle.toFixed(1)})`}
-                                />
+                                {/* Your own animal walks the line itself; one coming for you gets an arrow. */}
+                                {!strike.mine && (
+                                    <path
+                                        d="M14 0L-8 -10L-3 0L-8 10z"
+                                        fill={colour}
+                                        stroke={HALO}
+                                        strokeWidth={1.5}
+                                        transform={`rotate(${angle.toFixed(1)})`}
+                                    />
+                                )}
                                 <text
-                                    y={-16}
+                                    y={strike.mine ? -40 : -16}
                                     textAnchor="middle"
                                     fontSize={10.5}
                                     fontWeight={800}
@@ -2823,6 +2856,10 @@ export function WorldMap({
     }, [here, me?.walk?.arrivesAt]);
 
     const pick = useCallback((id: number) => onSelect(id), [onSelect]);
+    // Out to rob or burn: the red line is your path, so the violet one steps aside.
+    const striking = (strikes ?? []).some(
+        (strike) => strike.mine && Date.parse(strike.landsAt) > Date.now(),
+    );
     const k = view.k || 1;
     const GRID = 300;
     const near =
@@ -2952,7 +2989,7 @@ export function WorldMap({
                                     <Strikes strikes={strikes} k={k} />
                                 )}
                             </g>
-                            {me?.walk && herePoint && (
+                            {me?.walk && herePoint && !striking && (
                                 <WalkLine
                                     from={herePoint}
                                     to={me.walk.to}
