@@ -15,8 +15,18 @@ enum Study: string
     case Science = 'science';
     case Farming = 'farming';
     case Marching = 'marching';
+    case Technology = 'technology';
 
     public const MAX_LEVEL = 5;
+
+    /** The weapons Technology unlocks, by level. */
+    public const WEAPONS = [1 => 'spyglass', 2 => 'crossbow', 3 => 'ram'];
+
+    /** How far this study goes: Technology stops once every weapon is unlocked. */
+    public function maxLevel(): int
+    {
+        return $this === self::Technology ? count(self::WEAPONS) : self::MAX_LEVEL;
+    }
 
     public function label(): string
     {
@@ -31,6 +41,7 @@ enum Study: string
         return match ($this) {
             self::Attack, self::Defence, self::Farming => 0.05 * $level,
             self::Science, self::Marching => 0.1 * $level,
+            self::Technology => 0.0,
         };
     }
 
@@ -45,6 +56,10 @@ enum Study: string
             self::Science => "Every study takes {$percent} less time.",
             self::Farming => "Members gather {$percent} more.",
             self::Marching => "Your raids land {$percent} sooner.",
+            self::Technology => 'Members can make '.implode(', ', array_map(
+                fn (string $weapon) => ItemTemplate::from($weapon)->label(),
+                array_slice(self::WEAPONS, 0, max(0, min($level, count(self::WEAPONS))), true),
+            )).'.',
         };
     }
 
@@ -59,6 +74,7 @@ enum Study: string
             self::Science => ['dye', 'herbs'],
             self::Farming => ['straw', 'honey'],
             self::Marching => ['eggs', 'honey'],
+            self::Technology => ['clay', 'iron'],
         };
 
         $materials = [$material => [20, 35, 50, 70, 90][$level - 1]];

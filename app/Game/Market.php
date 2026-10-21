@@ -4,6 +4,7 @@ namespace App\Game;
 
 use App\Enums\ItemTemplate;
 use App\Enums\Species;
+use App\Enums\Study;
 use App\Models\Item;
 use App\Models\ItemDesign;
 use App\Models\Listing;
@@ -99,6 +100,8 @@ final class Market
             throw new GameException('Recipes belong to faction members. Join a faction to design '.$template->label().'s; anyone can design looks like hats and scarves.');
         }
 
+        self::ensureTechnology($player, $template);
+
         // Recipes with stronger powers open up as a maker's Creativity grows.
         if (Skills::level((int) $player->creativity_skill) < $template->creativity()) {
             throw new GameException("You can design {$template->label()} from Creativity level {$template->creativity()}. Design, make and sell to grow it.");
@@ -131,6 +134,20 @@ final class Market
      *
      * @throws GameException
      */
+    /**
+     * Weapons a faction unlocks with its Technology study: only its members design and make them.
+     *
+     * @throws GameException
+     */
+    public static function ensureTechnology(Player $player, ItemTemplate $template): void
+    {
+        $needs = $template->technology();
+
+        if ($needs > 0 && Research::level($player->faction, Study::Technology) < $needs) {
+            throw new GameException("A {$template->label()} needs your faction to study Technology to level {$needs} first. Its leader or council start studies on the Faction page.");
+        }
+    }
+
     public function craft(Player $player, ItemDesign $design): Item
     {
         if ($design->player_id !== $player->id) {
@@ -140,6 +157,8 @@ final class Market
         if ($design->template->power() !== null && $player->faction_id === null && config('game.market.recipes_faction_only')) {
             throw new GameException('Recipes belong to faction members. Join a faction to make copies of '.$design->name.'.');
         }
+
+        self::ensureTechnology($player, $design->template);
 
         if ($design->status !== 'approved') {
             throw new GameException($design->status === 'pending'
@@ -224,6 +243,11 @@ final class Market
 
         if ($item->player_id !== $player->id || $item->used_at !== null) {
             throw new GameException("That item isn't yours to sell.");
+        }
+
+        // A Spyglass is for spying: it never goes on a shelf (her rule, 2026-10-22).
+        if (! $item->design->template->sellable()) {
+            throw new GameException("A {$item->design->template->label()} is for spying, not for selling. Use it on a faction's page.");
         }
 
         if ($player->level() < $level) {

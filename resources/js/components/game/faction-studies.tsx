@@ -4,6 +4,7 @@ import {
     Footprints,
     Shield,
     Swords,
+    Telescope,
     Wheat,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
@@ -26,6 +27,7 @@ const ICONS: Record<StudyValue, LucideIcon> = {
     science: FlaskConical,
     farming: Wheat,
     marching: Footprints,
+    technology: Telescope,
 };
 
 type Store = { treasury: number; materials: Record<string, number> };

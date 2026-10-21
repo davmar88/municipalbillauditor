@@ -184,7 +184,10 @@ export type ItemShape =
     | 'pitchfork'
     | 'cudgel'
     | 'sling'
-    | 'sword';
+    | 'sword'
+    | 'spyglass'
+    | 'crossbow'
+    | 'ram';
 
 export type DesignCard = {
     id: number;
@@ -316,7 +319,8 @@ export type StudyValue =
     | 'defence'
     | 'science'
     | 'farming'
-    | 'marching';
+    | 'marching'
+    | 'technology';
 
 /** A faction's studies, as the Faction page shows them. */
 export type FactionStudies = {

@@ -103,7 +103,7 @@ final class Research
 
             $level = self::level($faction, $study) + 1;
 
-            if ($level > Study::MAX_LEVEL) {
+            if ($level > $study->maxLevel()) {
                 throw new GameException("Your faction has learned all there is of {$study->label()}.");
             }
 
@@ -156,9 +156,9 @@ final class Research
                     'value' => $study->value,
                     'label' => $study->label(),
                     'level' => $level,
-                    'max' => Study::MAX_LEVEL,
+                    'max' => $study->maxLevel(),
                     'does' => $level > 0 ? $study->does($level) : null,
-                    'next' => $level >= Study::MAX_LEVEL ? null : [
+                    'next' => $level >= $study->maxLevel() ? null : [
                         'level' => $level + 1,
                         'does' => $study->does($level + 1),
                         ...$study->cost($level + 1),

@@ -485,6 +485,67 @@ function Shape({
                     />
                 </>
             );
+        case 'spyglass':
+            return (
+                <>
+                    <path
+                        d="M8 40l40-22 6 10-40 22z"
+                        fill={fill}
+                        stroke={METAL}
+                        strokeWidth="1.5"
+                    />
+                    <path d="M44 20l6-3 8 13-6 3z" fill={second} />
+                    <circle cx="11" cy="45" r="4" fill="#9ad1ff" />
+                    <path
+                        d="M30 40l-6 18M30 40l6 18"
+                        stroke={WOOD}
+                        strokeWidth="3"
+                        strokeLinecap="round"
+                    />
+                </>
+            );
+        case 'crossbow':
+            return (
+                <>
+                    <path
+                        d="M32 58V12"
+                        stroke={WOOD}
+                        strokeWidth="6"
+                        strokeLinecap="round"
+                    />
+                    <path
+                        d="M8 26c8-8 40-8 48 0"
+                        fill="none"
+                        stroke={fill}
+                        strokeWidth="5"
+                        strokeLinecap="round"
+                    />
+                    <path d="M8 26l24 8 24-8" fill="none" stroke={METAL} />
+                    <path d="M32 6l4 8h-8z" fill={second} />
+                </>
+            );
+        case 'ram':
+            return (
+                <>
+                    <rect
+                        x="6"
+                        y="24"
+                        width="44"
+                        height="14"
+                        rx="6"
+                        fill={WOOD}
+                    />
+                    <path d="M50 22h8v18h-8z" fill={fill} stroke={METAL} />
+                    <path
+                        d="M14 38v12M40 38v12"
+                        stroke={second}
+                        strokeWidth="4"
+                        strokeLinecap="round"
+                    />
+                    <circle cx="14" cy="52" r="5" fill={METAL} />
+                    <circle cx="40" cy="52" r="5" fill={METAL} />
+                </>
+            );
         case 'pitchfork':
             return (
                 <>

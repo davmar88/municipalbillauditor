@@ -1,9 +1,11 @@
 import { Head, Link } from '@inertiajs/react';
-import { Crown } from 'lucide-react';
+import { Crown, Telescope } from 'lucide-react';
 import { FactionBanner } from '@/components/game/faction-banner';
 import { GameBar } from '@/components/game/game-bar';
-import { capitalise, shortWhen, speciesEmoji } from '@/lib/game';
+import { Button } from '@/components/ui/button';
+import { act, capitalise, shortWhen, speciesEmoji } from '@/lib/game';
 import { animal as profile, faction as myFactionPage } from '@/routes/play';
+import { spy as spyOn } from '@/routes/play/factions';
 import type { BannerData, Species } from '@/types/game';
 
 type Props = {
@@ -33,9 +35,148 @@ type Props = {
         region: string;
         goingUp: boolean;
     }[];
-    studies: { label: string; level: number }[];
+    studies: { label: string; level: number; max: number }[];
     record: { raidsWon: number; raidsLost: number; held: number; lost: number };
+    /** Null on your own faction's page. */
+    spy: {
+        spyglasses: number;
+        report: SpyReport | null;
+    } | null;
 };
+
+type SpyReport = {
+    store: { corn: number; apples: number; materials: Record<string, number> };
+    strength: {
+        members: number;
+        horseshoes: number;
+        attack: number;
+        defence: number;
+        technology: number;
+    };
+    weapons: { label: string; count: number }[];
+    drawn: { label: string; uses: number }[];
+    powers: string[];
+    by: string | null;
+    at: string;
+};
+
+/** A Spyglass: what this faction keeps to itself, for your faction's eyes only. */
+function SpyPanel({
+    factionId,
+    spy,
+}: {
+    factionId: number;
+    spy: NonNullable<Props['spy']>;
+}) {
+    const report = spy.report;
+
+    return (
+        <section className="flex flex-col gap-3 rounded-xl border border-violet-400/40 bg-violet-500/5 p-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+                <h2 className="flex items-center gap-2 text-lg font-bold">
+                    <Telescope className="size-5" aria-hidden /> Spying
+                </h2>
+                {spy.spyglasses > 0 ? (
+                    <Button
+                        size="sm"
+                        onClick={() =>
+                            confirm(
+                                'Look through a Spyglass at this faction? It is used up, and they never know.',
+                            ) && act(spyOn.url(factionId))
+                        }
+                    >
+                        <Telescope className="size-4" /> Spy now (
+                        {spy.spyglasses} Spyglass
+                        {spy.spyglasses === 1 ? '' : 'es'})
+                    </Button>
+                ) : (
+                    <p className="text-xs text-muted-foreground">
+                        You need a Spyglass. Factions that study Technology make
+                        them in the Workshop.
+                    </p>
+                )}
+            </div>
+            {report === null ? (
+                <p className="text-sm text-muted-foreground">
+                    A Spyglass shows what this faction keeps to itself: its
+                    store, how strong it is and what weapons its members carry.
+                    Only your faction reads the report.
+                </p>
+            ) : (
+                <div className="flex flex-col gap-3 text-sm">
+                    <p className="text-xs text-muted-foreground">
+                        {report.by ?? 'Someone'} looked {shortWhen(report.at)}.
+                    </p>
+                    <div className="grid gap-3 sm:grid-cols-3">
+                        <div className="flex flex-col gap-1">
+                            <h3 className="font-semibold">Store</h3>
+                            <p>
+                                {report.store.corn.toLocaleString()} Corn ·{' '}
+                                {report.store.apples.toLocaleString()} Apples
+                            </p>
+                            <p className="text-muted-foreground">
+                                {Object.keys(report.store.materials).length ===
+                                0
+                                    ? 'No materials.'
+                                    : Object.entries(report.store.materials)
+                                          .map(
+                                              ([name, amount]) =>
+                                                  `${amount} ${name}`,
+                                          )
+                                          .join(', ')}
+                            </p>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                            <h3 className="font-semibold">Strength</h3>
+                            <p>
+                                {report.strength.members} members holding{' '}
+                                {report.strength.horseshoes} horseshoes
+                            </p>
+                            <p className="text-muted-foreground">
+                                All in, they would raid at about{' '}
+                                {report.strength.attack} and defend at about{' '}
+                                {report.strength.defence}. Technology{' '}
+                                {report.strength.technology}.
+                            </p>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                            <h3 className="font-semibold">Weapons</h3>
+                            {report.weapons.length === 0 &&
+                            report.drawn.length === 0 ? (
+                                <p className="text-muted-foreground">
+                                    No weapons.
+                                </p>
+                            ) : (
+                                <>
+                                    {report.weapons.map((weapon) => (
+                                        <p key={weapon.label}>
+                                            {weapon.count} × {weapon.label}
+                                        </p>
+                                    ))}
+                                    {report.drawn.map((weapon) => (
+                                        <p
+                                            key={weapon.label}
+                                            className="text-orange-300"
+                                        >
+                                            {weapon.label} drawn ({weapon.uses}{' '}
+                                            {weapon.uses === 1 ? 'use' : 'uses'}{' '}
+                                            left)
+                                        </p>
+                                    ))}
+                                </>
+                            )}
+                            {report.powers.map((power) => (
+                                <p key={power} className="text-orange-300">
+                                    {power}
+                                </p>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
+        </section>
+    );
+}
 
 /** Any faction's page: its banner, members, land, buildings, studies and record this season. */
 export default function FactionProfilePage({
@@ -45,6 +186,7 @@ export default function FactionProfilePage({
     buildings,
     studies,
     record,
+    spy,
 }: Props) {
     return (
         <>
@@ -119,6 +261,8 @@ export default function FactionProfilePage({
                         </div>
                     ))}
                 </dl>
+
+                {spy && <SpyPanel factionId={faction.id} spy={spy} />}
 
                 <div className="grid gap-4 md:grid-cols-2">
                     <section className="flex flex-col gap-2">
@@ -218,7 +362,7 @@ export default function FactionProfilePage({
                                     >
                                         <span>{capitalise(study.label)}</span>
                                         <span className="font-semibold">
-                                            {study.level}/5
+                                            {study.level}/{study.max}
                                         </span>
                                     </li>
                                 ))}

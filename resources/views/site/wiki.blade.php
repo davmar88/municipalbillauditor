@@ -53,7 +53,8 @@
         'factions' => ['Factions', [
             'Found a faction from level '.$levels['found_faction'].' for '.$faction['founding_corn'].' Corn, or join one. A faction holds up to '.$faction['max_members'].' members, more with a bigger Den.',
             'Factions hold land, keep a treasury and a store of materials, and raise buildings: a Den, Watchtowers, a Drill Yard, a Storehouse, a Workshop, a Mill, a Well, a Coop, a Silo and a Hospital. Each building has its own job, and each stores Corn and materials.',
-            'Factions study Attack, Defence, Science, Farming and Marching.',
+            'Factions study Attack, Defence, Science, Farming, Marching and Technology.',
+            'Technology unlocks new weapons for members to make in the Workshop: level 1 the Spyglass, level 2 the Crossbow, level 3 the Battering Ram.',
             'Each faction can set its own raid rules (raid only from the front line, only next to its land, only the leader calls raids, spare named factions, never turn on our own). A member who breaks one gets a strike; three in a season flags them. The leader can excuse a member, or run the faction rogue.',
         ]],
         'raids' => ['Raids and the House', [
@@ -101,6 +102,8 @@
             'Recipes, the items with a power, belong to faction members: only they can design and make them. Anyone can design looks like hats and scarves.',
             'Many items have a power that\'s used up when you use them: gloves for gathering, a Night Cloak for crime, a War Banner for raids, an Iron Lock for your home.',
             'Weapons: a Pitchfork makes your next 3 raids hit half as hard again; a Cudgel makes your next robbery take twice as much; a Sling doubles you against Irongate\'s plunderers; an Iron Sword doubles your next 3 raids, defences or plunderer fights.',
+            'Technology weapons: a Crossbow makes your next 2 raids or defences count two and a half times; a Battering Ram lets the next raid you lead break through the Den and Watchtower where it lands.',
+            'A Spyglass is for spying and never goes on sale. Use it on another faction page to see its store, how strong it is and what weapons its members carry. Only your faction reads the report, for a day, and the faction you spied on never knows.',
             'The Exchange page shows what sells most and least, how many of each item are about, and how prices moved this week.',
         ]],
         'money' => ['Pineapples, Apples and the Orchard', [

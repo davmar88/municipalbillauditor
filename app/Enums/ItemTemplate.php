@@ -42,6 +42,10 @@ enum ItemTemplate: string
     case Cudgel = 'cudgel';
     case Sling = 'sling';
     case Sword = 'sword';
+    // Weapons a faction unlocks with its Technology study.
+    case Spyglass = 'spyglass';
+    case Crossbow = 'crossbow';
+    case Ram = 'ram';
 
     public function label(): string
     {
@@ -77,6 +81,9 @@ enum ItemTemplate: string
             self::Cudgel => 'Cudgel',
             self::Sling => 'Sling',
             self::Sword => 'Iron Sword',
+            self::Spyglass => 'Spyglass',
+            self::Crossbow => 'Crossbow',
+            self::Ram => 'Battering Ram',
         };
     }
 
@@ -120,6 +127,9 @@ enum ItemTemplate: string
             self::Cudgel => ['wood' => 3, 'stone' => 2],
             self::Sling => ['straw' => 2, 'wool' => 2, 'stone' => 1],
             self::Sword => ['iron' => 3, 'copper' => 1, 'wood' => 1],
+            self::Spyglass => ['copper' => 2, 'clay' => 2, 'wood' => 1],
+            self::Crossbow => ['wood' => 3, 'iron' => 2, 'wool' => 1],
+            self::Ram => ['wood' => 6, 'iron' => 3, 'stone' => 2],
         };
     }
 
@@ -129,7 +139,7 @@ enum ItemTemplate: string
         return match ($this) {
             self::Hat, self::Scarf, self::Sign, self::Skin, self::Crown, self::Ring => null,
             self::Gloves, self::Shoes, self::Cloak, self::Tonic, self::Ribbon, self::Cake, self::Pickaxe, self::Lock, self::Speedo, self::Mortar, self::Pie, self::Stew,
-            self::Pitchfork, self::Cudgel, self::Sling, self::Sword => 'you',
+            self::Pitchfork, self::Cudgel, self::Sling, self::Sword, self::Spyglass, self::Crossbow, self::Ram => 'you',
             default => 'faction',
         };
     }
@@ -169,14 +179,34 @@ enum ItemTemplate: string
             self::Cudgel => 'Your next robbery takes twice as much and is a quarter less likely to be caught.',
             self::Sling => "Your horseshoes count double in your next fight against Irongate's plunderers.",
             self::Sword => "Your horseshoes count double in your next 3 raids, defences or fights against Irongate's plunderers.",
+            self::Spyglass => 'Spy on a faction from its page: see what its store holds, how strong it is and what weapons its members carry. Only your faction sees what you found.',
+            self::Crossbow => 'Your horseshoes count two and a half times in your next 2 raids or defences.',
+            self::Ram => "The next raid you lead breaks through the Den and Watchtower where it lands: their walls don't count.",
         };
+    }
+
+    /** The Technology level a maker's faction needs before it can design or make this, or 0. */
+    public function technology(): int
+    {
+        return (int) (array_search($this->value, Study::WEAPONS, true) ?: 0);
+    }
+
+    public function isWeapon(): bool
+    {
+        return in_array($this, [self::Pitchfork, self::Cudgel, self::Sling, self::Sword, self::Spyglass, self::Crossbow, self::Ram], true);
+    }
+
+    /** A Spyglass is for spying, never for sale. */
+    public function sellable(): bool
+    {
+        return $this !== self::Spyglass;
     }
 
     /** The Creativity level a maker needs before designing on this shape. */
     public function creativity(): int
     {
         return match ($this) {
-            self::Cloak, self::Tonic, self::Basket, self::Banner, self::Cake, self::Pickaxe, self::Lock, self::Kit, self::Gate, self::Plough, self::Mortar, self::Pie, self::Stew, self::Ring, self::Sword => 2,
+            self::Cloak, self::Tonic, self::Basket, self::Banner, self::Cake, self::Pickaxe, self::Lock, self::Kit, self::Gate, self::Plough, self::Mortar, self::Pie, self::Stew, self::Ring, self::Sword, self::Crossbow, self::Ram => 2,
             self::Crown => 3,
             self::Ribbon, self::Trowel, self::Sheaf => 3,
             default => 1,

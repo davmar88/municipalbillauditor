@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Game;
 
 use App\Enums\ItemTemplate;
+use App\Enums\Study;
 use App\Game\LawTemplate;
 use App\Game\Market;
 use App\Game\Powers;
+use App\Game\Research;
 use App\Game\Skills;
 use App\Game\Trader;
 use App\Game\Wall;
@@ -89,8 +91,12 @@ class MarketController extends Controller
                     'power' => $template->power(),
                     'for' => $template->for(),
                     'creativity' => $template->creativity(),
+                    // Weapons a faction unlocks by studying Technology, and whether copies may be sold.
+                    'technology' => $template->technology(),
+                    'sellable' => $template->sellable(),
                 ], ItemTemplate::cases()),
                 'creativity' => Skills::level((int) $player->creativity_skill),
+                'technology' => Research::level($player->faction, Study::Technology),
                 'palette' => ItemDesign::PALETTE,
                 'patterns' => ItemDesign::PATTERNS,
                 'editions' => ItemDesign::EDITIONS,

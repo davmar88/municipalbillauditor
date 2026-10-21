@@ -5,11 +5,13 @@ namespace App\Http\Controllers\Game;
 use App\Enums\Study;
 use App\Game\Banners;
 use App\Game\Research;
+use App\Game\Spying;
 use App\Http\Controllers\Controller;
 use App\Models\Attack;
 use App\Models\Building;
 use App\Models\Faction;
 use App\Models\Player;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -77,7 +79,16 @@ class FactionProfileController extends Controller
                     'goingUp' => $building->ready_at?->isFuture() ?? false,
                 ])
                 ->values(),
-            'studies' => array_map(fn (Study $study) => ['label' => $study->label(), 'level' => Research::level($faction, $study)], Study::cases()),
+            // A Spyglass shows what the faction keeps to itself, to the spy's faction.
+            'spy' => $faction->id === $player->faction_id ? null : [
+                'spyglasses' => Spying::spyglasses($player),
+                'report' => ($report = Spying::latest($player, $faction)) === null ? null : [
+                    ...$report->report,
+                    'by' => $report->player?->name,
+                    'at' => $report->created_at->toIso8601String(),
+                ],
+            ],
+            'studies' => array_map(fn (Study $study) => ['label' => $study->label(), 'level' => Research::level($faction, $study), 'max' => $study->maxLevel()], Study::cases()),
             'record' => [
                 'raidsWon' => $raids->where('faction_id', $faction->id)->where('winner', 'attack')->count(),
                 'raidsLost' => $raids->where('faction_id', $faction->id)->where('winner', 'defence')->count(),
@@ -85,5 +96,13 @@ class FactionProfileController extends Controller
                 'lost' => $raids->where('defender_faction_id', $faction->id)->where('winner', 'attack')->count(),
             ],
         ]);
+    }
+
+    /** Look through a Spyglass at a faction. */
+    public function spy(Request $request, Faction $faction, Spying $spying): RedirectResponse
+    {
+        $spying->spy($request->user()->player, $faction);
+
+        return $this->told("You looked through your Spyglass at {$faction->name}. What you saw is on its page, for your faction to read.");
     }
 }

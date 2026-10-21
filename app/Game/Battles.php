@@ -228,7 +228,10 @@ final class Battles
                 ->sum(fn (BattleCommitment $c) => $c->horseshoes * $c->boost * $c->player->species->defence()) * $region->ground() * 1.2;
 
             // A Den or Watchtower makes its region harder to take; a Drill Yard next door hits harder.
-            $defenceStrength *= Bases::defence($region);
+            // A Battering Ram brought by the raid's leader knocks those walls down.
+            if (! Powers::ram($attack->launcher)) {
+                $defenceStrength *= Bases::defence($region);
+            }
             $attackStrength *= Bases::attack($attack->faction_id, $region);
 
             // A War Banner and a Thorn Hedge, from the Workshop's recipes.

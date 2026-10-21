@@ -73,8 +73,11 @@ type Props = {
             power: string | null;
             for: DesignCard['for'];
             creativity: number;
+            technology: number;
+            sellable: boolean;
         }[];
         creativity: number;
+        technology: number;
         palette: string[];
         patterns: string[];
         editions: number[];
@@ -364,20 +367,30 @@ function MyShop({ items, shop }: Props) {
                                     {item.design.power && (
                                         <PowerLine design={item.design} />
                                     )}
-                                    {item.design.power && !item.listing && (
-                                        <Button
-                                            size="sm"
-                                            variant="secondary"
-                                            className="self-start"
-                                            onClick={() =>
-                                                confirm(
-                                                    `Use ${item.design.name}? ${item.design.power} It's used up.`,
-                                                ) && act(useItem.url(item.id))
-                                            }
-                                        >
-                                            <Sparkles className="size-4" /> Use
-                                            it
-                                        </Button>
+                                    {item.design.template === 'spyglass' ? (
+                                        <p className="text-xs text-muted-foreground">
+                                            Open another faction's page and spy
+                                            on it there. A Spyglass can't be
+                                            sold.
+                                        </p>
+                                    ) : (
+                                        item.design.power &&
+                                        !item.listing && (
+                                            <Button
+                                                size="sm"
+                                                variant="secondary"
+                                                className="self-start"
+                                                onClick={() =>
+                                                    confirm(
+                                                        `Use ${item.design.name}? ${item.design.power} It's used up.`,
+                                                    ) &&
+                                                    act(useItem.url(item.id))
+                                                }
+                                            >
+                                                <Sparkles className="size-4" />{' '}
+                                                Use it
+                                            </Button>
+                                        )
                                     )}
                                     {item.listing ? (
                                         <div className="flex flex-wrap items-center gap-2 text-sm">
@@ -431,7 +444,9 @@ function MyShop({ items, shop }: Props) {
                                                 </Button>
                                             )}
                                         </div>
-                                    ) : item.design.power && !inFaction ? (
+                                    ) : item.design.template ===
+                                      'spyglass' ? null : item.design.power &&
+                                      !inFaction ? (
                                         canSell && (
                                             <p className="text-xs text-muted-foreground">
                                                 Join a faction to sell this
@@ -600,7 +615,9 @@ function Workshop({ designs, workshop }: Props) {
     const [edition, setEdition] = useState<string>('50');
     const chosen = workshop.templates.find((t) => t.value === template)!;
     const needs = chosen.needs;
-    const locked = chosen.creativity > workshop.creativity;
+    const locked =
+        chosen.creativity > workshop.creativity ||
+        chosen.technology > workshop.technology;
     const groups = [
         { label: 'Looks', for: null },
         { label: 'Powers for you', for: 'you' },
@@ -656,6 +673,10 @@ function Workshop({ designs, workshop }: Props) {
                                                     {t.creativity >
                                                     workshop.creativity
                                                         ? ` (Creativity ${t.creativity})`
+                                                        : ''}
+                                                    {t.technology >
+                                                    workshop.technology
+                                                        ? ` (Technology ${t.technology})`
                                                         : ''}
                                                 </option>
                                             ))}
@@ -753,8 +774,12 @@ function Workshop({ designs, workshop }: Props) {
                             {chosen.power} Each copy is used up when its owner
                             uses it, so makers sell them, and you earn 5% each
                             time one of your copies is resold.
-                            {locked &&
+                            {chosen.creativity > workshop.creativity &&
                                 ` You can design this from Creativity level ${chosen.creativity}; you're at level ${workshop.creativity}. Designing, making and selling grow it.`}
+                            {chosen.technology > workshop.technology &&
+                                ` Your faction needs Technology level ${chosen.technology} first: its leader or council study it on the Faction page.`}
+                            {!chosen.sellable &&
+                                ' It is for spying, so it never goes on sale.'}
                         </span>
                     </p>
                 )}
