@@ -11,8 +11,8 @@
         <meta property="og:description" content="A farm of rival factions. Gather, raid, rob and rule the valley.">
         <meta property="og:url" content="{{ url()->current() }}">
         <meta property="og:image" content="{{ url('/images/poster.jpg') }}">
-        <meta property="og:image:width" content="1168">
-        <meta property="og:image:height" content="784">
+        <meta property="og:image:width" content="1248">
+        <meta property="og:image:height" content="832">
         <meta name="twitter:card" content="summary_large_image">
         <meta name="twitter:image" content="{{ url('/images/poster.jpg') }}">
 

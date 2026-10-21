@@ -68,8 +68,8 @@
     <section class="relative overflow-hidden">
         <picture>
             <source media="(max-width: 700px)" srcset="/images/poster-640.jpg">
-            <img src="/images/poster.jpg" width="1168" height="784" fetchpriority="high"
-                alt="A pig stands on a stack of hay bales under a tattered red flag, with horses, a cow, sheep and hens around it, as storm clouds break into a golden sunset over the farm."
+            <img src="/images/poster.jpg" width="1248" height="832" fetchpriority="high"
+                alt="Pigs in coats stand on a platform under party flags, above a muddy yard of horses, cows, sheep and a dog, beside a crumbling barn painted with the Seven Commandments, under a stormy orange sky."
                 class="poster-melt mx-auto block h-auto w-full max-w-[1280px]">
         </picture>
         <div class="relative mx-auto -mt-[7%] flex max-w-[1200px] flex-wrap items-center justify-center gap-3 px-[clamp(16px,4vw,40px)] pb-6">
