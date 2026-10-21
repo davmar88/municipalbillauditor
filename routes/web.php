@@ -244,7 +244,7 @@ Route::middleware(['auth', 'verified', 'can:admin'])->prefix('admin')->group(fun
     Route::get('/', [SettingsController::class, 'index'])->name('admin');
     Route::put('settings', [SettingsController::class, 'update'])->name('admin.settings.update');
     Route::delete('settings/{key}', [SettingsController::class, 'forget'])->whereIn('key', SettingsController::REMOVABLE)->name('admin.settings.forget');
-    Route::post('settings/test/{service}', [SettingsController::class, 'test'])->whereIn('service', ['paypal', 'google', 'claude'])->middleware('throttle:10,1,admin-test')->name('admin.settings.test');
+    Route::post('settings/test/{service}', [SettingsController::class, 'test'])->whereIn('service', ['paypal', 'google', 'claude', 'mail'])->middleware('throttle:10,1,admin-test')->name('admin.settings.test');
 
     Route::get('cashouts', [CashoutQueueController::class, 'index'])->name('admin.cashouts');
     Route::get('valleys', [AdminValleyController::class, 'index'])->name('admin.valleys');

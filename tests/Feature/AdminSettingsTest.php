@@ -208,6 +208,28 @@ class AdminSettingsTest extends TestCase
         $this->assertInstanceOf(ClaudeTranslator::class, app(Translator::class));
     }
 
+    public function test_the_mailbox_saved_here_is_encrypted_and_used_for_mail(): void
+    {
+        $admin = $this->admin();
+
+        $this->save($admin, ['mail_host' => 'mail.animalfarm.cc', 'mail_port' => '465', 'mail_username' => 'info@animalfarm.cc', 'mail_password' => 'not-a-real-one-9x2k'])->assertRedirect();
+
+        $this->assertStringNotContainsString('not-a-real-one', (string) DB::table('app_settings')->where('key', 'mail_password')->value('value'));
+        $this->actingAs($admin)->get(route('admin'))->assertInertia(fn (Assert $page) => $page
+            ->where('settings.mailHost', 'mail.animalfarm.cc')
+            ->where('settings.mailPassword', '••••9x2k'));
+
+        // The mail manager picks the mailbox up when it's first needed.
+        app()->forgetInstance('mail.manager');
+        app('mail.manager');
+        $this->assertSame('mail.animalfarm.cc', config('mail.mailers.smtp.host'));
+        $this->assertSame('smtps', config('mail.mailers.smtp.scheme'));
+        $this->assertSame('info@animalfarm.cc', config('mail.from.address'));
+
+        // A mail server must look like one.
+        $this->save($admin, ['mail_host' => 'not a host!'])->assertSessionHasErrors('mail_host');
+    }
+
     public function test_a_verified_user_becomes_admin_from_the_server_only(): void
     {
         $user = User::factory()->create(['email' => 'spicy@example.com']);

@@ -53,6 +53,27 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->configureDefaults();
 
+        // The mailbox the game sends from, when the owner saved one on the admin page.
+        $this->app->afterResolving('mail.manager', function () {
+            $settings = $this->app->make(Settings::class);
+            $host = $settings->get('mail_host');
+
+            if ($host === null) {
+                return;
+            }
+
+            $port = (int) $settings->get('mail_port', '465');
+            config([
+                'mail.default' => 'smtp',
+                'mail.mailers.smtp.host' => $host,
+                'mail.mailers.smtp.port' => $port,
+                'mail.mailers.smtp.scheme' => $port === 465 ? 'smtps' : 'smtp',
+                'mail.mailers.smtp.username' => $settings->get('mail_username'),
+                'mail.mailers.smtp.password' => $settings->get('mail_password'),
+                'mail.from.address' => $settings->get('mail_from_address', $settings->get('mail_username')),
+            ]);
+        });
+
         Gate::define('staff', fn (User $user): bool => (bool) $user->is_staff);
         Gate::define('admin', fn (User $user): bool => (bool) $user->is_admin);
     }

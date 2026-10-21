@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\Log;
 final class Settings
 {
     /** Keys whose values are secret: the page only ever shows their last four characters. */
-    public const SECRETS = ['paypal_client_secret', 'google_client_secret', 'anthropic_api_key'];
+    public const SECRETS = ['paypal_client_secret', 'google_client_secret', 'anthropic_api_key', 'mail_password'];
 
     public const KEYS = [
         'apples_on_sale',
@@ -26,6 +26,11 @@ final class Settings
         'google_client_id',
         'google_client_secret',
         'anthropic_api_key',
+        'mail_host',
+        'mail_port',
+        'mail_username',
+        'mail_password',
+        'mail_from_address',
     ];
 
     /** @var array<string, string>|null */

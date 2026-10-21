@@ -28,6 +28,14 @@ type Props = {
         anthropicApiKey: string | null;
         /** No key saved here, but the server's .env has one. */
         anthropicFromServer: boolean;
+        mailHost: string | null;
+        mailPort: string;
+        mailUsername: string | null;
+        /** "••••7a3f" when saved: the password itself never comes back. */
+        mailPassword: string | null;
+        mailFromAddress: string | null;
+        /** No mailbox saved here: the mail server in the server's .env. */
+        mailFromServer: string | null;
     };
     /** Whether the PayPal keys are in. */
     ready: boolean;
@@ -352,6 +360,90 @@ export default function AdminSettings({
                                 />
                             </Card>
 
+                            <Card
+                                title="Email, for sign-up and password resets"
+                                actions={
+                                    <KeyActions
+                                        service="mail"
+                                        removable={
+                                            settings.mailPassword
+                                                ? 'mail_password'
+                                                : null
+                                        }
+                                    />
+                                }
+                            >
+                                <div className="grid gap-2">
+                                    <Label htmlFor="mail_host">
+                                        Mail server
+                                    </Label>
+                                    <Input
+                                        id="mail_host"
+                                        name="mail_host"
+                                        defaultValue={settings.mailHost ?? ''}
+                                        placeholder="smtp.animalfarm.cc"
+                                        autoComplete="off"
+                                    />
+                                    <InputError message={errors.mail_host} />
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="mail_port">Port</Label>
+                                    <Input
+                                        id="mail_port"
+                                        name="mail_port"
+                                        defaultValue={settings.mailPort ?? ''}
+                                        placeholder="465"
+                                        autoComplete="off"
+                                    />
+                                    <InputError message={errors.mail_port} />
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="mail_username">
+                                        Mailbox (user name)
+                                    </Label>
+                                    <Input
+                                        id="mail_username"
+                                        name="mail_username"
+                                        defaultValue={
+                                            settings.mailUsername ?? ''
+                                        }
+                                        placeholder="info@animalfarm.cc"
+                                        autoComplete="off"
+                                    />
+                                    <InputError
+                                        message={errors.mail_username}
+                                    />
+                                </div>
+                                <SecretField
+                                    name="mail_password"
+                                    label="Mailbox password"
+                                    saved={settings.mailPassword}
+                                    error={errors.mail_password}
+                                    note={
+                                        settings.mailFromServer
+                                            ? `Until you save a mailbox here, mail goes through ${settings.mailFromServer} from the server's .env.`
+                                            : 'The password of the mailbox above, from your mail host. Test sends a mail to you.'
+                                    }
+                                />
+                                <div className="grid gap-2">
+                                    <Label htmlFor="mail_from_address">
+                                        Send as (optional)
+                                    </Label>
+                                    <Input
+                                        id="mail_from_address"
+                                        name="mail_from_address"
+                                        defaultValue={
+                                            settings.mailFromAddress ?? ''
+                                        }
+                                        placeholder="Same as the mailbox"
+                                        autoComplete="off"
+                                    />
+                                    <InputError
+                                        message={errors.mail_from_address}
+                                    />
+                                </div>
+                            </Card>
+
                             <div>
                                 <Button disabled={processing}>Save</Button>
                             </div>
@@ -468,7 +560,7 @@ function KeyActions({
     service,
     removable,
 }: {
-    service: 'paypal' | 'google' | 'claude';
+    service: 'paypal' | 'google' | 'claude' | 'mail';
     removable: string | null;
 }) {
     return (
