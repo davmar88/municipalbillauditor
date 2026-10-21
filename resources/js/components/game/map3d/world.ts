@@ -1757,8 +1757,9 @@ export class World {
         this.extras = [];
         for (const region of data.regions) {
             // Outlaws first, as on the 2D map; you aren't one of the crowd.
+            // One out walking shows only as its moving disc, not standing here as well.
             const others = region.animals.sample
-                .filter((a) => !a.me)
+                .filter((a) => !a.me && a.at !== null)
                 .sort(
                     (a, b) =>
                         Number(wanted.has(b.id)) - Number(wanted.has(a.id)),

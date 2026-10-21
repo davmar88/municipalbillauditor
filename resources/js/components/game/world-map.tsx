@@ -1411,8 +1411,9 @@ const Crowd = memo(function Crowd({
     return (
         <g pointerEvents="none">
             {regions.map((region) => {
+                // One out walking shows only as its moving disc, not standing here as well.
                 const others = region.animals.sample
-                    .filter((animal) => !animal.me)
+                    .filter((animal) => !animal.me && animal.at !== null)
                     .sort(
                         (a, b) =>
                             Number(wanted.includes(b.id)) -
