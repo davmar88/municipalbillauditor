@@ -8,8 +8,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 /**
- * Every action costs horseshoes. A player holds up to 100, and one comes
- * back every 45 minutes. Every 24 hours they're topped back up to 100, never
+ * Every action costs horseshoes. A player holds up to 500, and one comes
+ * back every 45 minutes. Every 24 hours they're topped back up to 500, never
  * past it. Extra ones bought or handed out on top are kept until spent. They
  * are worked out when read, so nothing has to run on a timer.
  */

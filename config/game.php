@@ -85,13 +85,13 @@ return [
     ],
 
     'horseshoes' => [
-        // Every animal holds up to 100 (her call, 2026-10-21; it was 50).
-        'max' => 100,
+        // Every animal holds up to 500, filled again every day (her call, 2026-10-21; it was 100).
+        'max' => 500,
         'refill_minutes' => 45,
-        // Bought with Apples, for animals who don't want to wait: horseshoes => Apples. They stack past the usual 100.
+        // Bought with Apples, for animals who don't want to wait: horseshoes => Apples. They stack past the usual 500.
         'packs' => [5 => 3, 10 => 5, 25 => 11],
         // The most an animal can hold, bought ones included.
-        'saddlebag' => 200,
+        'saddlebag' => 1000,
     ],
 
     'levels' => [

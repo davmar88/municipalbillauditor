@@ -30,7 +30,7 @@ export function needHorseshoes(have: number, need: number): string | null {
         return null;
     }
 
-    return `You need ${need} ${need === 1 ? 'horseshoe' : 'horseshoes'} and have ${have}. One comes back every 45 minutes and you're filled up to 100 every 24 hours, or buy some with Apples on the Apples page, or eat a hot meal at the Black Dog in Irongate.`;
+    return `You need ${need} ${need === 1 ? 'horseshoe' : 'horseshoes'} and have ${have}. One comes back every 45 minutes and you're filled up to 500 every 24 hours, or buy some with Apples on the Apples page, or eat a hot meal at the Black Dog in Irongate.`;
 }
 
 /** "You need 40 Corn and have 25": for buttons that cost the player's own Corn. */
