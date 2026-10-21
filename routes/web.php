@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\GameUpdateController;
 use App\Http\Controllers\Admin\ImpersonateController;
 use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\ValleyController as AdminValleyController;
+use App\Http\Controllers\Admin\VisitorController;
 use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\Game\AppleController;
 use App\Http\Controllers\Game\BannerController;
@@ -248,6 +249,7 @@ Route::middleware(['auth', 'verified', 'can:admin'])->prefix('admin')->group(fun
 
     Route::get('cashouts', [CashoutQueueController::class, 'index'])->name('admin.cashouts');
     Route::get('valleys', [AdminValleyController::class, 'index'])->name('admin.valleys');
+    Route::get('visitors', [VisitorController::class, 'index'])->name('admin.visitors');
     Route::get('bugs', [AdminBugReportController::class, 'index'])->name('admin.bugs');
     Route::delete('factions/{faction}/banner', [AdminBugReportController::class, 'takeDownBanner'])->name('admin.banner.take-down');
     Route::get('updates', [GameUpdateController::class, 'index'])->name('admin.updates');

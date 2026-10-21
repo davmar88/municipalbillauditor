@@ -10,6 +10,7 @@ import {
     Puzzle,
     ShieldAlert,
     Trophy,
+    Globe2,
     Mountain,
     Users,
     Bug,
@@ -31,7 +32,7 @@ import {
 import { useCurrentUrl } from '@/hooks/use-current-url';
 import { mainNavigation } from '@/lib/navigation';
 import { admin, play, puzzle } from '@/routes';
-import { bugs, cashouts, updates, valleys } from '@/routes/admin';
+import { bugs, cashouts, updates, valleys, visitors } from '@/routes/admin';
 import { create as reportBug } from '@/routes/play/bugs';
 import {
     apples,
@@ -129,6 +130,11 @@ export function AppSidebar() {
                                 href: cashouts(),
                                 icon: Banknote,
                                 badge: cashoutsWaiting,
+                            },
+                            {
+                                title: 'Visitors',
+                                href: visitors(),
+                                icon: Globe2,
                             },
                             {
                                 title: 'Valleys',

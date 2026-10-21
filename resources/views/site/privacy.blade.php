@@ -31,7 +31,8 @@
                     "Your animal and everything it does in the game: its name, faction, items, shop, chat messages, private messages and the game's records of battles, laws and crimes.",
                     'If you buy Pineapples, PayPal takes the payment in its own window or card form on our page. We see the amount and whether it went through, never your card. We also record that you accepted the Terms and Conditions, and which version, with each purchase.',
                     'If you cash Apples out, your full name, your ID or passport number, and the PayPal email address to send the money to. We keep these encrypted.',
-                    'We do not collect your location, your phone contacts or your phone number.',
+                    'Which pages you open and what you do on the site, with the country you visit from and the site that sent you here, kept for 90 days so we can see how the game is used. We work the country out from your internet address on our own server and then throw the address away: it is never stored or sent to anyone.',
+                    'We do not collect your precise location, your phone contacts or your phone number.',
                 ]],
                 ['Why we use it', [
                     'Only to run the game, keep it fair and safe, and answer you when you contact us. We do not sell your information or use it for advertising.',
