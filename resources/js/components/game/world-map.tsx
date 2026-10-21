@@ -27,7 +27,6 @@ import {
     LANDS,
     reachable,
     WORLD,
-    anchor,
     hub,
     plot,
     shapeOf,
@@ -1028,28 +1027,11 @@ const Marches = memo(function Marches({
     k: number;
     gateNight: boolean;
 }) {
-    const byId = new Map(regions.map((region) => [region.id, region]));
+    // Faction raids no longer get a marching arrow: the leader walks a red line instead (her call, 2026-10-21).
+    void regions;
 
     return (
         <g pointerEvents="none">
-            {regions.flatMap((target) =>
-                target.incoming.map((attack) => {
-                    const from =
-                        attack.from !== null
-                            ? byId.get(attack.from)
-                            : undefined;
-
-                    return from ? (
-                        <March
-                            key={attack.id}
-                            from={anchor(from.key, target.key)}
-                            to={anchor(target.key, from.key)}
-                            colour={attack.faction.colour}
-                            k={k}
-                        />
-                    ) : null;
-                }),
-            )}
             {gateNight && (
                 <March
                     from={hub('irongate_garrison')}

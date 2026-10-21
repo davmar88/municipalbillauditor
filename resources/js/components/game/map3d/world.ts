@@ -30,7 +30,6 @@ import {
     FIELDS,
     REACH,
     SHAPES,
-    anchor,
     hub,
     plot,
     scatter,
@@ -1646,7 +1645,6 @@ export class World {
         this.clearGroup(this.raids);
         this.marching = [];
         this.heads = [];
-        const byId = new Map(data.regions.map((r) => [r.id, r]));
         const draw = (from: Point, to: Point, colour: string) => {
             const len = Math.hypot(to[0] - from[0], to[1] - from[1]);
             const nx = -(to[1] - from[1]) / len;
@@ -1696,19 +1694,7 @@ export class World {
             this.raids.add(head);
             this.heads.push(head);
         };
-        for (const region of data.regions) {
-            for (const raid of region.incoming) {
-                const from =
-                    raid.from === null ? undefined : byId.get(raid.from);
-                if (from) {
-                    draw(
-                        anchor(from.key, region.key),
-                        anchor(region.key, from.key),
-                        raid.faction.colour,
-                    );
-                }
-            }
-        }
+        // Faction raids no longer get a marching arrow: the leader walks a red line instead (her call, 2026-10-21).
         if (data.gateNight) {
             // Ironfield's men march out of the Garrison.
             draw(hub('irongate_garrison'), hub('ironfield_gate'), FLAG);
