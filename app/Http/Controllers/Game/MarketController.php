@@ -104,6 +104,8 @@ class MarketController extends Controller
                     'corn' => Market::priceRange('corn'),
                     'apples' => Market::priceRange('apples'),
                 ],
+                // Items sell for Apples only.
+                'applesOnly' => (bool) config('game.market.apples_only'),
                 // Percentages: the game's share of an Apple sale, and a maker's royalty on a resale.
                 'cut' => Market::appleCut(),
                 'royalty' => (int) round(Market::ROYALTY * 100),
@@ -152,7 +154,7 @@ class MarketController extends Controller
             'count' => ['sometimes', 'integer', 'min:1', 'max:100'],
         ]);
         $player = $request->user()->player;
-        $currency = $data['currency'] ?? 'corn';
+        $currency = $data['currency'] ?? (config('game.market.apples_only') ? 'apples' : 'corn');
         $listing = $market->list($player, $item, (int) $data['price'], $currency);
         $listed = 1;
 

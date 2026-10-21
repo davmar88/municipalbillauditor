@@ -201,6 +201,24 @@ class MarketTest extends TestCase
         $this->assertSame(20, $this->market->list($maker->fresh(), $item, 20)->price);
     }
 
+    public function test_items_sell_for_apples_only(): void
+    {
+        config(['game.market.apples_only' => true]);
+        $maker = $this->maker();
+        $item = $this->market->craft($maker, $this->design($maker));
+
+        try {
+            $this->market->list($maker->fresh(), $item, 20, 'corn');
+            $this->fail('An item went on sale for Corn.');
+        } catch (GameException $e) {
+            $this->assertStringContainsString('Apples only', $e->getMessage());
+        }
+
+        // Priced without saying, it goes up in Apples.
+        $this->actingAs($maker->user)->post(route('play.list', $item), ['price' => 10])->assertRedirect();
+        $this->assertSame('apples', Listing::query()->where('item_id', $item->id)->value('currency'));
+    }
+
     public function test_copies_of_one_design_stack_on_one_shelf_and_come_down_together(): void
     {
         $maker = $this->maker();

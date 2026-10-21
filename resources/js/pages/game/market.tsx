@@ -90,6 +90,8 @@ type Props = {
         cut: number;
         /** A maker's royalty on a resale, in percent. */
         royalty: number;
+        /** Items sell for Apples only. */
+        applesOnly: boolean;
     };
 };
 
@@ -112,10 +114,17 @@ export default function MarketPage(props: Props) {
                         The market
                     </h1>
                     <p className="text-sm text-muted-foreground">
-                        Everything here is made by players. Prices are in Corn
-                        {props.levy > 0 &&
-                            `, plus the House's ${props.levy}% market levy`}
-                        , or in Apples.
+                        {props.shop.applesOnly ? (
+                            'Everything here is made by players and sold for Apples.'
+                        ) : (
+                            <>
+                                Everything here is made by players. Prices are
+                                in Corn
+                                {props.levy > 0 &&
+                                    `, plus the House's ${props.levy}% market levy`}
+                                , or in Apples.
+                            </>
+                        )}
                     </p>
                 </header>
                 <nav className="flex gap-2" aria-label="Market sections">
@@ -304,8 +313,10 @@ function MyShop({ items, shop }: Props) {
                     : !inFaction
                       ? 'Only faction members can sell in the market: join a faction to open your shop.'
                       : `You get a shop at level ${shop.level}.`}{' '}
-                Every sale earns you 3 Rosettes. Price in Corn, or in Apples,
-                which are bought with real money.
+                Every sale earns you 3 Rosettes.{' '}
+                {shop.applesOnly
+                    ? 'Items sell for Apples, which are bought with real money.'
+                    : 'Price in Corn, or in Apples, which are bought with real money.'}
                 {canSell && !shop.orchard && (
                     <>
                         {' '}
@@ -453,8 +464,11 @@ function MyShop({ items, shop }: Props) {
                                                     name={item.design.name}
                                                     price={prices[item.id]}
                                                     currency={
-                                                        currencies[item.id] ??
-                                                        'corn'
+                                                        shop.applesOnly
+                                                            ? 'apples'
+                                                            : (currencies[
+                                                                  item.id
+                                                              ] ?? 'corn')
                                                     }
                                                     onPrice={(price) =>
                                                         setPrices({
@@ -527,15 +541,21 @@ function PriceTag({
                     value={price ?? ''}
                     onChange={(e) => onPrice(Number(e.target.value))}
                 />
-                <NativeSelect
-                    value={currency}
-                    onChange={(e) => onCurrency(e.target.value as Currency)}
-                    aria-label={`Sell ${name} for`}
-                    className="w-28"
-                >
-                    <option value="corn">Corn</option>
-                    <option value="apples">Apples</option>
-                </NativeSelect>
+                {shop.applesOnly ? (
+                    <span className="text-sm text-muted-foreground">
+                        Apples
+                    </span>
+                ) : (
+                    <NativeSelect
+                        value={currency}
+                        onChange={(e) => onCurrency(e.target.value as Currency)}
+                        aria-label={`Sell ${name} for`}
+                        className="w-28"
+                    >
+                        <option value="corn">Corn</option>
+                        <option value="apples">Apples</option>
+                    </NativeSelect>
+                )}
                 <Button
                     size="sm"
                     disabled={asked < min || asked > max}

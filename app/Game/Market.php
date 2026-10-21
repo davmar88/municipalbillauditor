@@ -210,6 +210,10 @@ final class Market
             throw new GameException('Price items in Corn or Apples.');
         }
 
+        if ($currency !== 'apples' && config('game.market.apples_only')) {
+            throw new GameException('Items sell for Apples only. Price it in Apples.');
+        }
+
         if ($item->player_id !== $player->id || $item->used_at !== null) {
             throw new GameException("That item isn't yours to sell.");
         }

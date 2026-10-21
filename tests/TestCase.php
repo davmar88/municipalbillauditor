@@ -17,6 +17,8 @@ abstract class TestCase extends BaseTestCase
         config(['game.survival.enabled' => false]);
         // Most market tests sell as lone animals: MarketTest turns the faction rule on to check it.
         config(['game.market.faction_only' => false]);
+        // And price in Corn as well as Apples: MarketTest turns Apples-only on to check it.
+        config(['game.market.apples_only' => false]);
     }
 
     protected function skipUnlessFortifyHas(string $feature, ?string $message = null): void

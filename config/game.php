@@ -63,6 +63,8 @@ return [
     // Only faction members may sell in the market (her rule, 2026-10-21).
     'market' => [
         'faction_only' => true,
+        // Items sell for Apples only, never Corn (her rule, 2026-10-21).
+        'apples_only' => true,
     ],
 
     'horseshoes' => [
