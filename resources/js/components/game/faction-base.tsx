@@ -335,13 +335,13 @@ export function BuildOptions({
                             >
                                 <Hammer className="size-4" /> Build
                             </Button>
-                            <WhyNot reason={storeShort(short)} />
-                            <GiveShort cost={first} store={store} />
                         </div>
                         <p className="text-sm text-muted-foreground">
                             {first.does}
                         </p>
                         <CostList cost={first} store={store} />
+                        <WhyNot reason={storeShort(short)} />
+                        <GiveShort cost={first} store={store} />
                     </li>
                 );
             })}
