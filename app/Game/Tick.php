@@ -58,6 +58,8 @@ final class Tick
         // Everyone gets hungry and thirsty, away or not: a slice of the valley each minute.
         Survival::settleValley($valley->id);
         app(Homes::class)->buildArrivedCamps($valley->id);
+        // Homes on another faction's land: three days to join, then moved off.
+        app(Homes::class)->checkLand($valley->id);
 
         // Studies finish first, so what was learned counts this half hour.
         $this->research->finishDue($valley->id);

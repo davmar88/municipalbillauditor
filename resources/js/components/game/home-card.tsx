@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Home as HomeIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { WhyNot } from '@/components/game/why-not';
-import { act, capitalise, clockTime } from '@/lib/game';
+import { act, capitalise, clockTime, fromNow } from '@/lib/game';
 import type { Point } from '@/lib/hollowmere';
 import {
     build,
@@ -70,7 +70,9 @@ export function HomeCard({
                         and cheap, or build a Hut with walls burners have to get
                         past. Either hides you from bounty hunters, and a Tent
                         can be raised to a Hut later. Not in the Farmhouse, the
-                        Paddock, Irongate or Ironfield.
+                        Paddock, Irongate or Ironfield. On land a faction holds,
+                        you have 3 days to join that faction, or they move your
+                        home off their land.
                     </p>
                     <div className="flex flex-wrap gap-2">
                         {[0, 1].map((level) => {
@@ -148,6 +150,14 @@ export function HomeCard({
                             : atDoor
                               ? "You're at the door."
                               : ''}
+                        {info.eviction && (
+                            <span className="mt-1 block rounded-md border border-amber-500/40 bg-amber-500/10 px-2 py-1 text-amber-200">
+                                🏚 It stands on {info.eviction.faction}&rsquo;s
+                                land. Join {info.eviction.faction}{' '}
+                                {fromNow(info.eviction.at)}, or they move it off
+                                their land.
+                            </span>
+                        )}
                     </p>
                     <div className="flex flex-wrap gap-2">
                         {!atDoor && !info.inside && (

@@ -17,6 +17,7 @@ use App\Models\Crime;
 use App\Models\Home;
 use App\Models\Item;
 use App\Models\ItemDesign;
+use App\Models\Notice;
 use App\Models\Player;
 use App\Models\Warrant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -86,6 +87,48 @@ class HomesTest extends TestCase
         $this->assertSame(24 * 60, Homes::level(40)['minutes']);
         $player->fresh()->forceFill(['corn' => 5000, 'materials' => ['stone' => 100, 'wood' => 100, 'iron' => 10]])->save();
         $this->assertSame(4, $this->homes->upgrade($player->fresh())->level);
+    }
+
+    public function test_a_home_on_another_factions_land_has_three_days_before_it_is_moved_off(): void
+    {
+        $holders = $this->faction('Thornbury Lot', $this->player(Species::Dog), $this->player());
+        $this->hold($holders, 'thornbury');
+        $settler = $this->player();
+        $this->stand($settler, 'thornbury');
+        $home = $this->homeFor($settler->fresh());
+        $homes = app(Homes::class);
+
+        // The clock starts, and the settler hears of it.
+        $homes->checkLand($settler->valley_id);
+        $this->assertNotNull($home->fresh()->foreign_since);
+        $this->assertTrue(Notice::query()->where('player_id', $settler->id)->where('text', 'like', '%Join Thornbury Lot within 3 days%')->exists());
+
+        // With a day left, a warning; once the three days are up, the home moves to open ground.
+        $this->travel(2)->days();
+        $this->travel(1)->hours();
+        $homes->checkLand($settler->valley_id);
+        $this->assertTrue($home->fresh()->foreign_warned);
+        $this->travel(1)->days();
+        $homes->checkLand($settler->valley_id);
+
+        $moved = $home->fresh();
+        $this->assertNull($moved->foreign_since);
+        $this->assertNotSame($this->region('thornbury')->id, $moved->region_id);
+        $this->assertNull($moved->region->faction_id);
+        $this->assertTrue(Notice::query()->where('player_id', $settler->id)->where('text', 'like', '%moved your home off their land%')->exists());
+
+        // Joining in time stops the clock.
+        $joiner = $this->player();
+        $this->stand($joiner, 'thornbury');
+        $kept = $this->homeFor($joiner->fresh());
+        $homes->checkLand($joiner->valley_id);
+        $this->assertNotNull($kept->fresh()->foreign_since);
+        $joiner->fresh()->forceFill(['faction_id' => $holders->id])->save();
+        $homes->checkLand($joiner->valley_id);
+        $this->assertNull($kept->fresh()->foreign_since);
+        $this->travel(4)->days();
+        $homes->checkLand($joiner->valley_id);
+        $this->assertSame($this->region('thornbury')->id, $kept->fresh()->region_id);
     }
 
     public function test_however_high_a_home_a_hunter_keeps_a_chance(): void

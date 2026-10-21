@@ -18,6 +18,8 @@ use Illuminate\Support\Carbon;
  * @property int $level
  * @property string|null $style How it looks on the 3D map: null for a village house, or a farm building.
  * @property Carbon|null $ready_at While a level goes up.
+ * @property Carbon|null $foreign_since Since when it has stood on another faction's land.
+ * @property bool $foreign_warned Whether the owner had the last day's warning.
  * @property int|null $skin_item_id
  * @property int $skin_level Which skin from the shop it wears, 0 for none
  * @property Player $owner
@@ -29,7 +31,7 @@ class Home extends Model
 {
     protected function casts(): array
     {
-        return ['ready_at' => 'datetime', 'x' => 'float', 'y' => 'float', 'health_at' => 'datetime'];
+        return ['ready_at' => 'datetime', 'x' => 'float', 'y' => 'float', 'health_at' => 'datetime', 'foreign_since' => 'datetime', 'foreign_warned' => 'boolean'];
     }
 
     /** @return BelongsTo<Player, $this> */

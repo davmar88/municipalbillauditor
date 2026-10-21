@@ -417,6 +417,11 @@ class MapController extends Controller
             })(),
             'home' => [
                 'inside' => $player->inside_home_at !== null,
+                // On another faction's land: join them by then, or they move it.
+                'eviction' => ($own = Homes::of($player)) !== null && $own->foreign_since !== null && $own->region?->faction !== null ? [
+                    'faction' => $own->region->faction->name,
+                    'at' => CarbonImmutable::instance($own->foreign_since)->addDays(Homes::GRACE_DAYS)->toIso8601String(),
+                ] : null,
                 // The levels so far and the next one: homes grow without end.
                 'levels' => collect(range(0, max(3, (int) (Homes::of($player)?->level ?? 0) + 1)))->map(fn (int $n) => ['level' => $n, ...Homes::level($n)])->values(),
                 'door' => Homes::DOOR,

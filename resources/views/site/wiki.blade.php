@@ -88,6 +88,7 @@
         ]],
         'homes' => ['Homes and skins', [
             'Pitch a Tent or build a Hut almost anywhere: on a farm, in the scrub, on the frontier. Raise it to a Cottage, a Fort, a Keep and beyond.',
+            'Building on land a faction holds? You have '.\App\Game\Homes::GRACE_DAYS.' days to join that faction, or they move your home off their land to the nearest open ground. The same goes when the land under your home changes hands. You get a warning with a day left.',
             'Hide inside to keep away from bounty hunters. A higher home is harder to burn and harder to arrest anyone in.',
             'Choose your home\'s look, from barns and windmills to town houses and flats.',
             'The skin shop sells eight skins: the first four for Corn, the finest for Apples. Each makes your home harder to burn and to arrest anyone hiding inside.',

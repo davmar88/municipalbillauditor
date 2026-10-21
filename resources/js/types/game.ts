@@ -587,6 +587,8 @@ export type MapHome = {
 /** What building your own home takes, and whether you're hiding in it. */
 export type HomeInfo = {
     inside: boolean;
+    /** On another faction's land: join it by then, or it moves the home off. */
+    eviction?: { faction: string; at: string } | null;
     levels: {
         level: number;
         name: string;

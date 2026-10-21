@@ -90,6 +90,9 @@ final class Homes
     /** How far apart two homes must stand, in paces. */
     public const SPACING = 15;
 
+    /** Days a home may stand on another faction's land before they move it off (her rule, 2026-10-21). */
+    public const GRACE_DAYS = 3;
+
     /** How much each level cuts a bounty hunter's chance at the door. */
     public const ARREST_GUARD = 0.1;
 
@@ -252,6 +255,116 @@ final class Homes
         $player->fresh()->forceFill(['camp_level' => $level])->save();
 
         return false;
+    }
+
+    /**
+     * Homes on another faction's land: its owner has three days to join that
+     * faction, a warning comes with a day left, and then the faction moves the
+     * home off its land, to the nearest open ground. Join, or the land changes
+     * hands, and the clock stops.
+     */
+    public function checkLand(int $valleyId): void
+    {
+        $now = CarbonImmutable::now();
+
+        Home::query()
+            ->with(['owner', 'region.faction'])
+            ->whereHas('owner', fn ($query) => $query->where('valley_id', $valleyId))
+            ->get()
+            ->each(function (Home $home) use ($now) {
+                $holders = $home->region?->faction;
+                $foreign = $holders !== null && $home->owner->faction_id !== $holders->id;
+                $wall = route('play', [], false);
+
+                if (! $foreign) {
+                    if ($home->foreign_since !== null) {
+                        $home->forceFill(['foreign_since' => null, 'foreign_warned' => false])->save();
+                    }
+
+                    return;
+                }
+
+                if ($home->foreign_since === null) {
+                    $home->forceFill(['foreign_since' => $now, 'foreign_warned' => false])->save();
+                    Notices::send($home->player_id, 'home', "🏚 Your home stands on {$holders->name}'s land in {$home->region->name}. Join {$holders->name} within ".self::GRACE_DAYS.' days, or they move your home off their land.', $wall);
+
+                    return;
+                }
+
+                $due = CarbonImmutable::instance($home->foreign_since)->addDays(self::GRACE_DAYS);
+
+                if ($now->gte($due)) {
+                    $this->evict($home, $holders->name);
+                } elseif (! $home->foreign_warned && $now->gte($due->subDay())) {
+                    $home->forceFill(['foreign_warned' => true])->save();
+                    Notices::send($home->player_id, 'home', "⏳ One day left: join {$holders->name} by ".Clock::local($due)->format('D H:i').", or they move your home off their land in {$home->region->name}.", $wall);
+                }
+            });
+    }
+
+    /** A faction moves a home off its land, to the nearest open ground that has room. */
+    private function evict(Home $home, string $holders): void
+    {
+        $spot = $this->openGroundNear($home);
+
+        if ($spot === null) {
+            return;
+        }
+
+        [$x, $y, $region] = $spot;
+        $from = $home->region->name;
+        $home->forceFill([
+            'x' => round($x, 1),
+            'y' => round($y, 1),
+            'region_id' => $region->id,
+            'foreign_since' => null,
+            'foreign_warned' => false,
+        ])->save();
+        Player::query()->whereKey($home->player_id)->whereNotNull('inside_home_at')->update(['inside_home_at' => null]);
+        Notices::send($home->player_id, 'home', "🚚 {$holders} moved your home off their land in {$from}. It now stands in {$region->name}.", route('play', [], false));
+        Cache::forget(self::mapKey($home->owner->valley_id));
+    }
+
+    /**
+     * The nearest spot to a home where it may stand: open scrub, or land no
+     * faction holds that takes homes, with no other home right there.
+     *
+     * @return array{0: float, 1: float, 2: Region}|null
+     */
+    private function openGroundNear(Home $home): ?array
+    {
+        $valleyId = $home->owner->valley_id;
+        $regions = Region::query()->where('valley_id', $valleyId)->get()->keyBy('key');
+        $homes = Home::query()->whereHas('owner', fn ($query) => $query->where('valley_id', $valleyId))->whereKeyNot($home->id)->get(['x', 'y']);
+
+        for ($radius = 20; $radius <= 1200; $radius += 20) {
+            $steps = max(8, (int) round(2 * M_PI * $radius / 20));
+
+            for ($i = 0; $i < $steps; $i++) {
+                $angle = 2 * M_PI * $i / $steps;
+                $x = $home->x + cos($angle) * $radius;
+                $y = $home->y + sin($angle) * $radius;
+                $key = Geography::regionAt($x, $y);
+                $region = $key !== null ? $regions->get($key) : null;
+
+                // Wild land round a farm counts as open scrub.
+                if ($region !== null && $region->wild) {
+                    $region = $regions->get('scrubland');
+                }
+
+                if ($region === null || $region->faction_id !== null || $region->isFarmhouse() || $region->isSafe() || $region->isCity() || $region->isIronfield()) {
+                    continue;
+                }
+
+                if ($homes->contains(fn (Home $other) => hypot($other->x - $x, $other->y - $y) < self::SPACING)) {
+                    continue;
+                }
+
+                return [$x, $y, $region];
+            }
+        }
+
+        return null;
     }
 
     /** Put up the Huts of animals that walked off to set up camp and have arrived. */
