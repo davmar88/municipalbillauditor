@@ -42,7 +42,7 @@ check() {   # check <path> <expected status> [must-contain]
 }
 
 echo "Checking ${BASE}${IP:+ via ${IP}}"
-check /                 200 'lang="en-ZA"'
+check /                 200 'application/ld+json'
 check /privacy          200 "POPIA"
 check /sitemap.xml      200 "<loc>"
 check /robots.txt       200 "User-agent"
