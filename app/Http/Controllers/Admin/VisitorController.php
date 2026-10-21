@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Player;
+use App\Models\User;
 use App\Models\Visit;
 use App\Support\Geo;
 use Illuminate\Http\Request;
@@ -120,7 +121,8 @@ class VisitorController extends Controller
                 'actions' => (int) $visits()->where('method', '!=', 'GET')->count(),
                 'players' => (int) $visits()->whereNotNull('user_id')->distinct()->count('user_id'),
                 'countries' => (int) $visits()->whereNotNull('country')->distinct()->count('country'),
-                'signups' => (int) $visits()->where('route', 'register.store')->count(),
+                // From the accounts themselves: most sign up with Google, which never opens the sign-up form.
+                'signups' => (int) User::query()->where('created_at', '>=', $since)->count(),
             ],
             'perDay' => $perDay,
             'countries' => $countries,

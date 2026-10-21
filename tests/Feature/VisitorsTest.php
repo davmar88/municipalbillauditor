@@ -68,6 +68,8 @@ class VisitorsTest extends TestCase
             ->component('admin/visitors')
             ->where('totals.views', 2)
             ->where('totals.players', 1)
+            // Sign-ups come from the accounts made, Google ones included: the player and the admin.
+            ->where('totals.signups', 2)
             ->where('countries.0.code', 'ZA')
             ->where('countries.0.name', 'South Africa')
             ->where('recent.0.who', $player->name)
