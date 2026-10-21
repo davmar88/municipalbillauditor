@@ -20,6 +20,9 @@ class DesignController extends Controller
         return Inertia::render('staff/designs', [
             'designs' => ItemDesign::query()->with('player:id,name')->where('status', 'pending')->oldest('id')->limit(100)->get()
                 ->map(fn (ItemDesign $design) => [...$design->toCard(), 'maker' => $design->player->name, 'at' => $design->created_at->toIso8601String()]),
+            // What was checked lately, so a check can be seen to have worked.
+            'checked' => ItemDesign::query()->with('player:id,name')->whereNotNull('player_id')->whereIn('status', ['approved', 'rejected'])->latest('updated_at')->limit(20)->get()
+                ->map(fn (ItemDesign $design) => [...$design->toCard(), 'maker' => $design->player->name, 'at' => $design->updated_at->toIso8601String()]),
         ]);
     }
 

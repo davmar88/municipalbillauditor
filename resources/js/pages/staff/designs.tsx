@@ -1,16 +1,18 @@
 import { Head } from '@inertiajs/react';
 import { ItemPreview } from '@/components/game/item-preview';
 import { Button } from '@/components/ui/button';
-import { act } from '@/lib/game';
+import { act, shortWhen } from '@/lib/game';
 import { approve, reject } from '@/routes/staff/designs';
 import type { DesignCard } from '@/types';
 
 type Props = {
     designs: (DesignCard & { maker: string; at: string })[];
+    /** Checked lately, newest first. */
+    checked: (DesignCard & { maker: string; at: string })[];
 };
 
 /** A new maker's first three designs, checked by a person before sale. */
-export default function Designs({ designs }: Props) {
+export default function Designs({ designs, checked }: Props) {
     return (
         <>
             <Head title="Designs to check" />
@@ -56,6 +58,47 @@ export default function Designs({ designs }: Props) {
                             </li>
                         ))}
                     </ul>
+                )}
+
+                {checked.length > 0 && (
+                    <section className="mt-4 flex flex-col gap-3">
+                        <h2 className="text-lg font-bold">Checked lately</h2>
+                        <p className="text-sm text-muted-foreground">
+                            Approved designs can be made by their makers from
+                            the Market, under Your designs.
+                        </p>
+                        <ul className="flex flex-col gap-2">
+                            {checked.map((design) => (
+                                <li
+                                    key={design.id}
+                                    className="flex items-center gap-4 rounded-xl border bg-card p-3"
+                                >
+                                    <ItemPreview design={design} />
+                                    <div className="flex-1">
+                                        <p className="font-semibold">
+                                            {design.name}
+                                        </p>
+                                        <p className="text-sm text-muted-foreground">
+                                            {design.templateLabel} by{' '}
+                                            {design.maker} ·{' '}
+                                            {shortWhen(design.at)}
+                                        </p>
+                                    </div>
+                                    <span
+                                        className={
+                                            design.status === 'approved'
+                                                ? 'text-sm font-semibold text-emerald-400'
+                                                : 'text-sm font-semibold text-red-400'
+                                        }
+                                    >
+                                        {design.status === 'approved'
+                                            ? 'Approved'
+                                            : 'Rejected'}
+                                    </span>
+                                </li>
+                            ))}
+                        </ul>
+                    </section>
                 )}
             </div>
         </>
