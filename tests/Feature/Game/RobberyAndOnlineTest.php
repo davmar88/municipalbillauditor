@@ -182,14 +182,17 @@ class RobberyAndOnlineTest extends TestCase
             ->where('total', 2));
         $this->assertNotNull(Player::query()->find($here->id)->last_seen_at);
 
-        // The corner slide-out lists the others online, ready to chat, and your chats.
+        // The corner slide-out lists everyone else, online first, ready to chat, and your chats.
         $other = $this->player();
         $other->forceFill(['last_seen_at' => now()])->save();
         app(Messages::class)->send($other, $here, 'Hello there');
         $this->actingAs($here->user)->getJson(route('play.dock'))
             ->assertOk()
             ->assertJsonPath('online.0.id', $other->id)
-            ->assertJsonCount(1, 'online')
+            ->assertJsonPath('online.0.online', true)
+            ->assertJsonPath('online.1.id', $away->id)
+            ->assertJsonPath('online.1.online', false)
+            ->assertJsonCount(2, 'online')
             ->assertJsonPath('conversations.0.animal.id', $other->id)
             ->assertJsonPath('conversations.0.unread', 1);
 

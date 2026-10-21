@@ -27,14 +27,14 @@ class OnlineController extends Controller
         ]);
     }
 
-    /** The slide-outs behind the corner buttons: who's online to chat with, and your latest chats. */
+    /** The slide-outs behind the corner buttons: everyone to chat with, online first, and your latest chats. */
     public function dock(Request $request, Messages $messages): JsonResponse
     {
         /** @var Player $player */
         $player = $request->user()->player;
 
         return response()->json([
-            'online' => Census::onlineIn($player->valley)
+            'online' => Census::everyoneIn($player->valley)
                 ->reject(fn (array $animal) => $animal['id'] === $player->id)
                 ->take(200)
                 ->map(fn (array $animal) => [
@@ -46,6 +46,8 @@ class OnlineController extends Controller
                     'orchard' => false,
                     'level' => $animal['level'],
                     'where' => $animal['where'],
+                    'online' => $animal['online'],
+                    'lastSeen' => $animal['lastSeen'],
                 ])
                 ->values(),
             'conversations' => $messages->inbox($player, 20),

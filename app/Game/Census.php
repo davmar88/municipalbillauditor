@@ -66,6 +66,35 @@ final class Census
     }
 
     /**
+     * Everyone in a valley for the chat slide-out: those online first, then
+     * the rest by when they were last about.
+     *
+     * @return Collection<int, array<string, mixed>>
+     */
+    public static function everyoneIn(Valley $valley, int $limit = 300): Collection
+    {
+        $since = self::since();
+
+        return Player::query()
+            ->with(['faction:id,name,colour', 'region:id,name'])
+            ->where('valley_id', $valley->id)
+            ->orderByRaw('last_seen_at IS NULL')
+            ->orderByDesc('last_seen_at')
+            ->limit($limit)
+            ->get()
+            ->map(fn (Player $animal) => [
+                'id' => $animal->id,
+                'name' => $animal->name,
+                'species' => $animal->species->value,
+                'level' => $animal->level(),
+                'faction' => $animal->faction ? ['name' => $animal->faction->name, 'colour' => $animal->faction->colour] : null,
+                'where' => $animal->inside_home_at !== null || $animal->region?->isCity() ? null : $animal->region?->name,
+                'online' => $animal->last_seen_at !== null && $animal->last_seen_at->gte($since),
+                'lastSeen' => $animal->last_seen_at?->toIso8601String(),
+            ]);
+    }
+
+    /**
      * Every valley at a glance, for the landing page: animals, online,
      * factions and what they hold. Kept for a minute.
      *

@@ -18,8 +18,36 @@ import {
 } from '@/routes/play';
 import type { MessageAnimal } from '@/types/game';
 
+/** "5 min ago", "3 h ago", "2 days ago". */
+function ago(iso: string): string {
+    const minutes = Math.max(
+        1,
+        Math.round((Date.now() - new Date(iso).getTime()) / 60000),
+    );
+
+    if (minutes < 60) {
+        return `${minutes} min ago`;
+    }
+
+    const hours = Math.floor(minutes / 60);
+
+    if (hours < 24) {
+        return `${hours} h ago`;
+    }
+
+    const days = Math.floor(hours / 24);
+
+    return `${days} ${days === 1 ? 'day' : 'days'} ago`;
+}
+
 type Dock = {
-    online: (MessageAnimal & { level: number; where: string | null })[];
+    /** Everyone in the valley, those online first. */
+    online: (MessageAnimal & {
+        level: number;
+        where: string | null;
+        online: boolean;
+        lastSeen: string | null;
+    })[];
     conversations: {
         animal: MessageAnimal;
         last: { body: string | null; mine: boolean; at: string };
@@ -97,7 +125,7 @@ export function DockPanel({
             >
                 <SheetHeader className="border-b pb-0">
                     <SheetTitle>
-                        {tab === 'messages' ? 'Your chats' : "Who's online"}
+                        {tab === 'messages' ? 'Your chats' : 'Players'}
                     </SheetTitle>
                     <SheetDescription className="sr-only">
                         Tap an animal to chat with it.
@@ -107,9 +135,9 @@ export function DockPanel({
                             [
                                 [
                                     'online',
-                                    'Online',
+                                    'Players',
                                     Users,
-                                    data?.online.length,
+                                    data?.online.filter((a) => a.online).length,
                                 ],
                                 [
                                     'messages',
@@ -152,7 +180,7 @@ export function DockPanel({
                     ) : tab === 'online' ? (
                         data.online.length === 0 ? (
                             <p className="p-4 text-sm text-muted-foreground">
-                                Nobody else is about just now.
+                                Nobody else is in the valley yet.
                             </p>
                         ) : (
                             <ul className="divide-y">
@@ -165,7 +193,19 @@ export function DockPanel({
                                         >
                                             <span className="relative">
                                                 <Face animal={animal} />
-                                                <span className="absolute -right-0.5 -bottom-0.5 size-3 rounded-full border-2 border-background bg-emerald-500" />
+                                                <span
+                                                    className={cn(
+                                                        'absolute -right-0.5 -bottom-0.5 size-3 rounded-full border-2 border-background',
+                                                        animal.online
+                                                            ? 'bg-emerald-500'
+                                                            : 'bg-muted-foreground/40',
+                                                    )}
+                                                    title={
+                                                        animal.online
+                                                            ? 'Online'
+                                                            : 'Offline'
+                                                    }
+                                                />
                                             </span>
                                             <span className="min-w-0 flex-1">
                                                 <span className="block truncate text-sm font-semibold">
@@ -188,9 +228,13 @@ export function DockPanel({
                                                     ) : (
                                                         'Lone wolf'
                                                     )}
-                                                    {animal.where
-                                                        ? ` · ${animal.where}`
-                                                        : ''}
+                                                    {animal.online
+                                                        ? animal.where
+                                                            ? ` · ${animal.where}`
+                                                            : ''
+                                                        : animal.lastSeen
+                                                          ? ` · seen ${ago(animal.lastSeen)}`
+                                                          : ' · not seen yet'}
                                                 </span>
                                             </span>
                                             <MessageCircle className="size-4 text-muted-foreground" />
