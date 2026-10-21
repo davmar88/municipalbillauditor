@@ -218,6 +218,11 @@ final class Market
             throw new GameException("You get a shop at level {$level}.");
         }
 
+        // Only faction members trade in the market (her rule, 2026-10-21).
+        if ($player->faction_id === null && config('game.market.faction_only')) {
+            throw new GameException('Only faction members can sell in the market. Join a faction first.');
+        }
+
         if ($player->homeIsClosed()) {
             throw new GameException('Your home burned down, so your shop is closed. Rebuild it or wait until it reopens.');
         }

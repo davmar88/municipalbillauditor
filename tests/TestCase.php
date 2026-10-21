@@ -15,6 +15,8 @@ abstract class TestCase extends BaseTestCase
         config(['game.horseshoes.max' => 10, 'game.horseshoes.saddlebag' => 40]);
         // Hunger and thirst would eat into the Corn other tests count: SurvivalTest turns them on.
         config(['game.survival.enabled' => false]);
+        // Most market tests sell as lone animals: MarketTest turns the faction rule on to check it.
+        config(['game.market.faction_only' => false]);
     }
 
     protected function skipUnlessFortifyHas(string $feature, ?string $message = null): void

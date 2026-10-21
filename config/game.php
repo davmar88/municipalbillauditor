@@ -60,6 +60,11 @@ return [
         'start' => ['food' => 60, 'drink' => 60],
     ],
 
+    // Only faction members may sell in the market (her rule, 2026-10-21).
+    'market' => [
+        'faction_only' => true,
+    ],
+
     'horseshoes' => [
         // Every animal holds up to 100 (her call, 2026-10-21; it was 50).
         'max' => 100,

@@ -292,14 +292,18 @@ function MyShop({ items, shop }: Props) {
     const [prices, setPrices] = useState<Record<number, number>>({});
     const [currencies, setCurrencies] = useState<Record<number, Currency>>({});
     const [counts, setCounts] = useState<Record<number, number>>({});
-    const canSell = (player?.level ?? 1) >= shop.level;
+    // Only faction members sell in the market.
+    const inFaction = player?.faction != null;
+    const canSell = (player?.level ?? 1) >= shop.level && inFaction;
 
     return (
         <section className="flex flex-col gap-3">
             <p className="text-sm text-muted-foreground">
                 {canSell
                     ? `${shop.used} of ${shop.shelves} shelves in use.`
-                    : `You get a shop at level ${shop.level}.`}{' '}
+                    : !inFaction
+                      ? 'Only faction members can sell in the market: join a faction to open your shop.'
+                      : `You get a shop at level ${shop.level}.`}{' '}
                 Every sale earns you 3 Rosettes. Price in Corn, or in Apples,
                 which are bought with real money.
                 {canSell && !shop.orchard && (

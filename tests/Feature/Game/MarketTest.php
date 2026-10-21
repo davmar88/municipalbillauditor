@@ -184,6 +184,23 @@ class MarketTest extends TestCase
         $this->market->list($maker->fresh(), $this->market->craft($maker->fresh(), $design->fresh()), 30);
     }
 
+    public function test_only_faction_members_can_put_things_on_the_market(): void
+    {
+        config(['game.market.faction_only' => true]);
+        $maker = $this->maker();
+        $item = $this->market->craft($maker, $this->design($maker));
+
+        try {
+            $this->market->list($maker->fresh(), $item, 20);
+            $this->fail('A lone animal put something on the market.');
+        } catch (GameException $e) {
+            $this->assertStringContainsString('Only faction members can sell', $e->getMessage());
+        }
+
+        $this->faction('Sellers', $maker);
+        $this->assertSame(20, $this->market->list($maker->fresh(), $item, 20)->price);
+    }
+
     public function test_copies_of_one_design_stack_on_one_shelf_and_come_down_together(): void
     {
         $maker = $this->maker();
