@@ -43,6 +43,8 @@ const M = {
     sheepHead: mat('#2b2622'),
     duck: mat('#e8e2cf'),
     beak: mat('#e0a03a'),
+    hen: mat('#b8692f'),
+    comb: mat('#c8302a'),
     lamp: new THREE.MeshBasicMaterial({ color: '#ffb35c' }),
     hill: mat('#28402f'),
     hillMid: mat('#2d4835'),
@@ -182,6 +184,14 @@ function sheep([x, y]: Point, i: number) {
 export function landmarks(): Landmarks {
     const group = new THREE.Group();
     const bobbers: { obj: THREE.Object3D; phase: number }[] = [];
+    // Hens strutting about their run, stopping to peck.
+    const peckers: {
+        obj: THREE.Object3D;
+        head: THREE.Object3D;
+        phase: number;
+        home: [number, number];
+        reach: [number, number];
+    }[] = [];
 
     // The Big Barn's yard, with straw bales either side.
     {
@@ -277,6 +287,54 @@ export function landmarks(): Landmarks {
         const [rx, ry] = at('henhouse', -70, -8);
         const run = fence(128, 40);
         group.add(placed(run, [rx + 64, ry + 20]));
+
+        // And the hens in it, brown and white.
+        for (let i = 0; i < 9; i++) {
+            const hen = new THREE.Group();
+            const feathers = seeded(`hen:c:${i}`) < 0.5 ? M.hen : M.white;
+            const body = new THREE.Mesh(
+                new THREE.SphereGeometry(2.4, 8, 6),
+                feathers,
+            );
+            body.scale.set(1.3, 1, 0.9);
+            body.position.y = 2.6;
+            const tail = box(1.2, 2.2, 1.6, feathers, -2.8, 3.8, 0);
+            tail.rotation.z = 0.5;
+            const legs = box(0.5, 1.4, 1.4, M.beak, 0, 0.7, 0);
+            // The head turns about the neck, so a peck dips it to the ground.
+            const head = new THREE.Group();
+            head.position.set(2.2, 4, 0);
+            const skull = new THREE.Mesh(
+                new THREE.SphereGeometry(1.2, 8, 6),
+                feathers,
+            );
+            skull.position.set(0.6, 0.8, 0);
+            head.add(
+                skull,
+                box(1, 0.5, 0.7, M.beak, 1.8, 0.7, 0),
+                box(0.9, 0.8, 0.4, M.comb, 0.6, 2.1, 0),
+                box(0.5, 0.7, 0.4, M.comb, 1.5, 0.1, 0),
+            );
+            hen.add(body, tail, legs, head);
+            const home: [number, number] = [
+                rx + 12 + seeded(`hen:x:${i}`) * 104,
+                ry + 6 + seeded(`hen:y:${i}`) * 28,
+            ];
+            hen.position.set(home[0], 0.2, home[1]);
+            hen.rotation.y = seeded(`hen:a:${i}`) * Math.PI * 2;
+            peckers.push({
+                obj: hen,
+                head,
+                phase: i * 2.3,
+                home,
+                // Room to wander without leaving the run.
+                reach: [
+                    Math.min(home[0] - rx - 6, rx + 122 - home[0], 14),
+                    Math.min(home[1] - ry - 4, ry + 36 - home[1], 6),
+                ],
+            });
+            group.add(hen);
+        }
     }
 
     // The cobbled Market Square.
@@ -514,7 +572,10 @@ export function landmarks(): Landmarks {
 
     // Everything that doesn't move becomes one shape per material: a handful of
     // draws instead of hundreds, which phones notice.
-    const moving = new Set<THREE.Object3D>(bobbers.map((b) => b.obj));
+    const moving = new Set<THREE.Object3D>([
+        ...bobbers.map((b) => b.obj),
+        ...peckers.map((p) => p.obj),
+    ]);
     const still: THREE.Mesh[] = [];
     group.updateMatrixWorld(true);
     group.traverse((o) => {
@@ -559,6 +620,25 @@ export function landmarks(): Landmarks {
             for (const { obj, phase } of bobbers) {
                 obj.position.y = 1.2 + Math.sin(now / 600 + phase) * 0.4;
                 obj.rotation.y += 0.0008;
+            }
+            for (const { obj, head, phase, home, reach } of peckers) {
+                const t = now / 4000 + phase;
+                const x = home[0] + Math.sin(t) * reach[0];
+                const z = home[1] + Math.sin(t * 0.7 + phase) * reach[1];
+                // Face the way it's strutting.
+                const dx = x - obj.position.x;
+                const dz = z - obj.position.z;
+                if (dx * dx + dz * dz > 1e-6) {
+                    obj.rotation.y = Math.atan2(-dz, dx);
+                }
+                obj.position.x = x;
+                obj.position.z = z;
+                // Now and then, a quick run of pecks.
+                const peck = Math.sin(now / 1300 + phase * 3);
+                head.rotation.z =
+                    peck > 0.55
+                        ? -0.9 * Math.abs(Math.sin(now / 120 + phase))
+                        : 0;
             }
         },
     };
