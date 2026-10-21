@@ -20,6 +20,7 @@
         <div class="relative mx-auto -mt-[7%] flex max-w-[1200px] flex-wrap items-center justify-center gap-3 px-[clamp(16px,4vw,40px)] pb-6">
             <a href="{{ $playUrl }}" class="glow flex h-12 items-center rounded-md bg-brand px-6 text-[17px] font-bold text-ground no-underline hover:text-ground">Play the test season</a>
             <a href="{{ route('puzzle') }}" class="flex h-12 items-center rounded-md border border-rule bg-ground/70 px-5 font-semibold text-ink no-underline hover:border-action hover:text-ink">Try today's puzzle</a>
+            <a href="{{ route('wiki') }}" class="flex h-12 items-center rounded-md border border-rule bg-ground/70 px-5 font-semibold text-ink no-underline hover:border-action hover:text-ink">How the game works</a>
         </div>
     </section>
 
@@ -40,6 +41,7 @@
                 <div class="flex flex-wrap items-center gap-3">
                     <a href="{{ $playUrl }}" class="glow flex h-12 items-center rounded-md bg-brand px-6 text-[17px] font-bold text-ground no-underline hover:text-ground">Play the test season</a>
                     <a href="{{ route('puzzle') }}" class="flex h-12 items-center rounded-md border border-rule px-5 font-semibold text-ink no-underline hover:border-action hover:text-ink">Try today's puzzle</a>
+                    <a href="{{ route('wiki') }}" class="flex h-12 items-center rounded-md border border-rule px-5 font-semibold text-ink no-underline hover:border-action hover:text-ink">How the game works</a>
                 </div>
                 <p class="text-sm text-muted">Free. Plays in your phone's browser, about five minutes a visit. Adults 18 and older.</p>
             </div>

@@ -102,6 +102,8 @@
         'money' => ['Pineapples, Apples and the Orchard', [
             'Pineapples are bought with real money through PayPal. Swap them for packs of Apples, or plant Apple trees with them.',
             'Apples are spent in shops that take them, on bounties, on horseshoes, on skins, on the Orchard, given to a faction, or swapped for Corn.',
+            'You can also earn Apples: sell copies of your own designs for Apples, or catch outlaws and collect the bounties on them.',
+            'Later in the game, Apples you earned can be paid out to your own PayPal account.',
             'The Orchard is a membership with extra shop shelves and a free daily horseshoe refill.',
             'Purchases are final. See the Terms and Conditions.',
         ]],
