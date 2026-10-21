@@ -6,6 +6,8 @@ use App\Enums\Species;
 use App\Game\Battles;
 use App\Game\Clock;
 use App\Game\GameException;
+use App\Game\Geography;
+use App\Game\Movement;
 use App\Game\RaidRules;
 use App\Game\Stock;
 use App\Models\Attack;
@@ -140,6 +142,25 @@ class BattlesTest extends TestCase
         $this->battles->resolveDue($this->season());
         $this->assertSame('called_off', $attack->fresh()->winner);
         $this->assertNotSame($this->red[0]->faction_id, $this->region('henhouse')->faction_id);
+    }
+
+    public function test_walking_somewhere_else_turns_the_raid_back(): void
+    {
+        config(['game.raids.on_arrival' => true]);
+        $attack = $this->battles->launch($this->red[0], $this->region('henhouse'), 2);
+        $this->travel(10)->seconds();
+
+        // Tapping the same farm again keeps the raid going.
+        app(Movement::class)->walk($this->red[0], $this->region('henhouse'));
+        $this->assertNull($attack->fresh()->resolved_at);
+
+        // Heading anywhere else calls it off, and the walk goes the new way.
+        $other = $this->region('thornbury');
+        app(Movement::class)->walk($this->red[0], $other);
+        $this->assertSame('called_off', $attack->fresh()->winner);
+        $leader = $this->red[0]->fresh();
+        $this->assertNotNull($leader->walk_arrives_at);
+        $this->assertSame(Geography::hub($other->key), [$leader->walk_to_x, $leader->walk_to_y]);
     }
 
     public function test_defenders_who_turn_up_hold_their_land(): void

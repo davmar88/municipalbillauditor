@@ -3,6 +3,7 @@
 namespace App\Game;
 
 use App\Enums\CrimeKind;
+use App\Models\Attack;
 use App\Models\Crime;
 use App\Models\Player;
 use App\Models\Region;
@@ -110,6 +111,15 @@ final class Movement
             if ($target->wild) {
                 throw new GameException("{$target->name} is still wild land. Its farm's holders can grow into it.");
             }
+
+            // Heading somewhere else while leading a raid turns the raid back.
+            Attack::query()
+                ->where('player_id', $player->id)
+                ->whereNull('resolved_at')
+                ->where('lands_at', '>', CarbonImmutable::now())
+                ->where('region_id', '!=', $target->id)
+                ->get()
+                ->each(fn (Attack $attack) => app(Battles::class)->callOff($player, $attack, stop: false));
 
             $this->head($player, self::position($player), [$x, $y]);
             Missions::record($player, 'walk');

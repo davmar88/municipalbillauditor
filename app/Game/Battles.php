@@ -153,13 +153,13 @@ final class Battles
      *
      * @throws GameException
      */
-    public function callOff(Player $player, Attack $attack): void
+    public function callOff(Player $player, Attack $attack, bool $stop = true): void
     {
         if ($attack->player_id !== $player->id) {
             throw new GameException('Only the animal leading the raid can call it off.');
         }
 
-        DB::transaction(function () use ($player, $attack) {
+        DB::transaction(function () use ($player, $attack, $stop) {
             $attack = Attack::query()->lockForUpdate()->findOrFail($attack->id);
 
             if ($attack->resolved_at !== null || $attack->lands_at->isPast()) {
@@ -167,7 +167,9 @@ final class Battles
             }
 
             $attack->forceFill(['resolved_at' => CarbonImmutable::now(), 'winner' => 'called_off'])->save();
-            app(Movement::class)->stop($player);
+            if ($stop) {
+                app(Movement::class)->stop($player);
+            }
 
             foreach ($attack->commitments()->get() as $commitment) {
                 Horseshoes::give(Players::lock($commitment->player), $commitment->horseshoes);
