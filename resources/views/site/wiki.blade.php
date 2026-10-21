@@ -111,6 +111,7 @@
             'Irongate is the humans\' town, where outlaws lie low and folk like Ma Vetch, Wick and Pell trade with animals.',
             'Ironfield is the humans\' mining country: missions there pay more the deeper you go, and the men guarding it get tougher.',
             'Every few hours in daylight, a band of plunderers rides out of Irongate for a farm. Every faction can fight them together: win and share their Corn; lose and they sack the farm, and the fighters are laid up a while (less with a Hospital).',
+            'A ruling House can strike a corrupt deal with the humans: the Irongate Pact on the Wall. While it stands, the House takes a share of whatever the plunderers carry off from other factions' farms, and the valley grows angrier.',
             'On Gate Night, Sundays at 19:00, Ironfield\'s men raid the gate. If it holds, every defender is rewarded; if not, fields burn.',
         ]],
         'seasons' => ['Seasons, missions and rankings', [

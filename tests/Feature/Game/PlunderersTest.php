@@ -7,7 +7,9 @@ use App\Enums\Species;
 use App\Game\Clock;
 use App\Game\Dice;
 use App\Game\GameException;
+use App\Game\LawTemplate;
 use App\Game\Plunderers;
+use App\Game\Wall;
 use App\Models\Building;
 use App\Models\Faction;
 use App\Models\Notice;
@@ -114,6 +116,26 @@ class PlunderersTest extends TestCase
         $this->assertSame(1000 - (int) floor(1000 * Plunderers::SACK_SHARE), $this->holders->fresh()->treasury);
         $this->assertSame(85, $this->holders->fresh()->materials['wood']);
         $this->assertTrue($fighter->fresh()->inPound());
+    }
+
+    public function test_a_house_with_an_irongate_pact_takes_a_cut_of_the_sack(): void
+    {
+        $ruler = $this->player(Species::Pig);
+        $house = $this->faction('The House', $ruler);
+        $this->hold($house, 'farmhouse');
+        $house->forceFill(['treasury' => 0, 'materials' => []])->save();
+        app(Wall::class)->setLaw($ruler->fresh(), 1, LawTemplate::IrongatePact, 40);
+
+        $band = $this->plunderers->muster($this->season());
+        $band->forceFill(['men' => 20, 'region_id' => $this->region('thornbury')->id])->save();
+        $this->travel(Plunderers::MARCH_MINUTES + 1)->minutes();
+        $this->plunderers->resolveDue($this->season());
+
+        $sacked = (int) floor(1000 * Plunderers::SACK_SHARE);
+        $this->assertSame((int) floor($sacked * 0.4), $house->fresh()->treasury);
+        $this->assertSame(6, $house->fresh()->material('wood'));
+        $this->assertTrue(Notice::query()->where('player_id', $ruler->id)->where('text', 'like', '%pact with Irongate paid off%')->exists());
+        $this->assertSame(16, LawTemplate::IrongatePact->unrest(40, null));
     }
 
     public function test_a_hospital_gets_beaten_fighters_up_sooner(): void

@@ -225,8 +225,10 @@ final class Plunderers
                 if ($holders !== null) {
                     $haul = (int) floor($holders->treasury * self::SACK_SHARE);
                     $materials = collect($holders->materials ?? [])->map(fn ($amount) => (int) $amount - (int) floor((int) $amount * self::SACK_SHARE))->all();
+                    $taken = collect($holders->materials ?? [])->map(fn ($amount) => (int) floor((int) $amount * self::SACK_SHARE))->filter()->all();
                     $holders->forceFill(['treasury' => $holders->treasury - $haul, 'materials' => $materials])->save();
                     Notices::send(Notices::members($holders->id), 'battle', "🏴 Irongate's plunderers sacked {$region->name} and carried off {$haul} Corn and a share of your store.", $map);
+                    $this->pactCut($season, $holders, $haul, $taken, $region->name);
                 }
 
                 foreach ($fighters as $fighter) {
@@ -256,6 +258,35 @@ final class Plunderers
                 $map,
             );
         });
+    }
+
+    /**
+     * The Irongate Pact: a ruling House that made a corrupt deal with the
+     * humans gets its share of what the plunderers carried off, unless it
+     * was the House's own farm they sacked.
+     *
+     * @param  array<string, int>  $materials
+     */
+    private function pactCut(Season $season, Faction $holders, int $corn, array $materials, string $where): void
+    {
+        $law = Wall::law($season, LawTemplate::IrongatePact);
+        $house = $season->valley->house();
+
+        if ($law === null || $house === null || $house->id === $holders->id) {
+            return;
+        }
+
+        $share = (int) $law->value / 100;
+        $cut = (int) floor($corn * $share);
+        $goods = collect($materials)->map(fn (int $amount) => (int) floor($amount * $share))->filter()->all();
+
+        if ($cut <= 0 && $goods === []) {
+            return;
+        }
+
+        $house = Faction::query()->lockForUpdate()->findOrFail($house->id);
+        Stores::add($house, $cut, $goods);
+        Notices::send(Notices::members($house->id), 'battle', "🤝 Your pact with Irongate paid off: a cut of {$cut} Corn".($goods !== [] ? ' and some goods' : '')." from the sack of {$where}.", route('play.wall', [], false));
     }
 
     /** @return Collection<int, int> Every animal in a faction, in the valley. */

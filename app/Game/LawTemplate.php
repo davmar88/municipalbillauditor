@@ -22,6 +22,7 @@ enum LawTemplate: string
     case CrimeFine = 'crime_fine';
     case ArrestReward = 'arrest_reward';
     case ArmsBan = 'arms_ban';
+    case IrongatePact = 'irongate_pact';
 
     public function label(): string
     {
@@ -37,6 +38,7 @@ enum LawTemplate: string
             self::CrimeFine => 'Crime Fine',
             self::ArrestReward => 'Arrest Reward',
             self::ArmsBan => 'Arms Ban',
+            self::IrongatePact => 'Irongate Pact',
         };
     }
 
@@ -54,6 +56,7 @@ enum LawTemplate: string
             self::CrimeFine => 'A criminal who is caught pays this much Corn to the House treasury, on top of paying back what they took.',
             self::ArrestReward => 'Whoever catches a criminal gets this much Corn from the House treasury.',
             self::ArmsBan => 'No Pitchforks, Cudgels, Slings or Iron Swords may be taken up in the valley.',
+            self::IrongatePact => "A corrupt deal with Irongate's men: when their plunderers sack a farm, the House gets this share of the loot. The valley won't like it.",
         };
     }
 
@@ -69,6 +72,7 @@ enum LawTemplate: string
             self::HarvestBonus => [1, 20],
             self::CrimeFine => [10, 200],
             self::ArrestReward => [10, 100],
+            self::IrongatePact => [10, 50],
             self::TradeBan, self::NightWatch, self::ArmsBan => null,
         };
     }
@@ -76,7 +80,7 @@ enum LawTemplate: string
     public function unit(): ?string
     {
         return match ($this) {
-            self::GrainTax, self::MarketLevy, self::Rations, self::HarvestBonus => '%',
+            self::GrainTax, self::MarketLevy, self::Rations, self::HarvestBonus, self::IrongatePact => '%',
             self::Curfew => 'hours',
             self::HomeTax, self::CrimeFine, self::ArrestReward => 'Corn',
             default => null,
@@ -109,6 +113,7 @@ enum LawTemplate: string
             self::HarvestBonus => 5,
             self::CrimeFine => 50,
             self::ArrestReward => 25,
+            self::IrongatePact => 25,
             default => null,
         };
     }
@@ -128,6 +133,8 @@ enum LawTemplate: string
             self::CrimeFine => 1,
             self::ArrestReward => 0,
             self::ArmsBan => 3,
+            // Selling out the valley to the humans angers everyone.
+            self::IrongatePact => 8 + intdiv((int) $value, 5),
         };
     }
 
@@ -146,6 +153,7 @@ enum LawTemplate: string
             self::CrimeFine => "A criminal who is caught pays a fine of {$value} Corn to the Farmhouse.",
             self::ArrestReward => "The Farmhouse pays {$value} Corn to whoever catches a criminal.",
             self::ArmsBan => 'No animal may take up arms in the valley.',
+            self::IrongatePact => "The Farmhouse takes {$value}% of whatever Irongate's plunderers carry off.",
         };
     }
 }
