@@ -7,7 +7,12 @@ import {
     Wheat,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import { CostList, duration, shortOf } from '@/components/game/faction-base';
+import {
+    CostList,
+    duration,
+    GiveShort,
+    shortOf,
+} from '@/components/game/faction-base';
 import { Button } from '@/components/ui/button';
 import { WhyNot, storeShort } from '@/components/game/why-not';
 import { act, clockTime } from '@/lib/game';
@@ -132,6 +137,12 @@ export function FactionStudyList({
                                                         : storeShort(short)
                                                 }
                                             />
+                                            {card.next && !busy && (
+                                                <GiveShort
+                                                    cost={card.next}
+                                                    store={store}
+                                                />
+                                            )}
                                         </>
                                     )}
                                 </div>

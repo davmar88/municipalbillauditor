@@ -48,7 +48,7 @@ export function storeShort(short: string[]): string | null {
         return null;
     }
 
-    return `Your faction's store is short of ${list(short)}. Members fill it from the Give box on the Faction page.`;
+    return `Your faction's store is short of ${list(short)}. Give what you carry with the buttons here, or from the Give box on the Faction page.`;
 }
 
 /** "a, b and c". */

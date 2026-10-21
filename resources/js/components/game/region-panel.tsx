@@ -19,6 +19,7 @@ import {
     BuildingDetails,
     BuildOptions,
     CostList,
+    GiveShort,
     shortOf,
 } from '@/components/game/faction-base';
 import { useEscape } from '@/components/game/animal-menu';
@@ -697,6 +698,14 @@ export function RegionPanel({
                                                                 ),
                                                             )}
                                                         />
+                                                        <GiveShort
+                                                            cost={
+                                                                region
+                                                                    .trenchPlan
+                                                                    .cost
+                                                            }
+                                                            store={base}
+                                                        />
                                                     </>
                                                 ) : (
                                                     <p className="text-xs text-muted-foreground">
@@ -796,6 +805,12 @@ export function RegionPanel({
                                                             base,
                                                         ),
                                                     )}
+                                                />
+                                                <GiveShort
+                                                    cost={
+                                                        region.growth.next.cost
+                                                    }
+                                                    store={base}
                                                 />
                                             </>
                                         ) : (

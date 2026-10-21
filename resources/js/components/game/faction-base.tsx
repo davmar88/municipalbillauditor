@@ -35,6 +35,60 @@ export function shortOf(cost: Cost, store: Store): string[] {
     return short;
 }
 
+/**
+ * Buttons that hand the store what it's short of straight from your bag, so
+ * nobody has to go to the Faction page first. Only for what you carry.
+ */
+export function GiveShort({ cost, store }: { cost: Cost; store: Store }) {
+    const { player } = usePage().props;
+
+    if (!player?.faction) {
+        return null;
+    }
+
+    const gifts: { what: string; label: string; amount: number }[] = [];
+    const corn = Math.min(cost.corn - store.treasury, player.corn);
+
+    if (corn > 0) {
+        gifts.push({ what: 'corn', label: 'Corn', amount: corn });
+    }
+
+    Object.entries(cost.materials).forEach(([material, amount]) => {
+        const give = Math.min(
+            amount - (store.materials[material] ?? 0),
+            player.materials[material] ?? 0,
+        );
+
+        if (give > 0) {
+            gifts.push({ what: material, label: material, amount: give });
+        }
+    });
+
+    if (gifts.length === 0) {
+        return null;
+    }
+
+    return (
+        <div className="flex basis-full flex-wrap gap-1.5">
+            {gifts.map((gift) => (
+                <Button
+                    key={gift.what}
+                    size="sm"
+                    variant="secondary"
+                    onClick={() =>
+                        act(give.url(), {
+                            what: gift.what,
+                            amount: gift.amount,
+                        })
+                    }
+                >
+                    Give {gift.amount} {gift.label} from your bag
+                </Button>
+            ))}
+        </div>
+    );
+}
+
 export function duration(minutes: number): string {
     const hours = Math.floor(minutes / 60);
     const rest = minutes % 60;
@@ -192,6 +246,9 @@ export function BuildingDetails({
                                 : storeShort(short)
                         }
                     />
+                    {(building.kind === 'den' || hasDen) && (
+                        <GiveShort cost={next} store={store} />
+                    )}
                 </div>
             )}
         </div>
@@ -279,6 +336,7 @@ export function BuildOptions({
                                 <Hammer className="size-4" /> Build
                             </Button>
                             <WhyNot reason={storeShort(short)} />
+                            <GiveShort cost={first} store={store} />
                         </div>
                         <p className="text-sm text-muted-foreground">
                             {first.does}
@@ -446,6 +504,7 @@ export function FactionBase({ treasury, base, kinds }: Props) {
                         {duration(kind.levels[0].minutes)})
                     </Button>
                     <WhyNot reason={storeShort(short)} />
+                    {kind && <GiveShort cost={kind.levels[0]} store={store} />}
                     {short.length > 0 && (
                         <p className="text-xs text-orange-300">
                             The store is short of {short.join(', ')}.
