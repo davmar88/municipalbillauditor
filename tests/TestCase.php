@@ -23,6 +23,8 @@ abstract class TestCase extends BaseTestCase
         config(['game.market.recipes_faction_only' => false]);
         // The daily streak would add Corn to every first visit: StreakTest turns it on.
         config(['game.streak.enabled' => false]);
+        // The crime tests were written with waits between crimes: they still check them.
+        config(['game.crime.cooldowns' => true]);
     }
 
     protected function skipUnlessFortifyHas(string $feature, ?string $message = null): void

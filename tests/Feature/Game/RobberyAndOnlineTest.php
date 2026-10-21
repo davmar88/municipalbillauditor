@@ -121,6 +121,18 @@ class RobberyAndOnlineTest extends TestCase
         $this->assertSame(CrimeKind::Rob, app(Crimes::class)->commit($robber->fresh(), CrimeKind::Rob, target: $newcomer->fresh())->kind);
     }
 
+    public function test_there_is_no_waiting_between_crimes(): void
+    {
+        config(['game.crime.cooldowns' => false]);
+        [$robber, $victim] = $this->pair();
+
+        $this->actingAs($robber->user)->post(route('play.crime'), ['kind' => 'rob', 'player_id' => $victim->id])->assertSessionHasNoErrors();
+        $this->actingAs($robber->user)->post(route('play.crime'), ['kind' => 'rob', 'player_id' => $victim->id])->assertSessionHasNoErrors();
+
+        $this->assertSame(2, Crime::query()->where('player_id', $robber->id)->count());
+        $this->assertFalse(Crimes::triedToday($robber->fresh()));
+    }
+
     public function test_a_speedo_on_the_way_speeds_up_the_robbery(): void
     {
         [$robber, $victim] = $this->pair();

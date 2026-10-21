@@ -9,7 +9,7 @@ use App\Enums\FactionRole;
 use App\Enums\Species;
 use App\Game\Banners;
 use App\Game\Bases;
-use App\Game\Clock;
+use App\Game\Crimes;
 use App\Game\Factions;
 use App\Game\RaidRules;
 use App\Game\Research;
@@ -129,7 +129,7 @@ class FactionController extends Controller
             'underworld' => [
                 'loneWolf' => $player->isLoneWolf(),
                 'level' => (int) config('game.levels.crime'),
-                'triedToday' => Crime::query()->where('player_id', $player->id)->where('created_at', '>=', Clock::startOfToday())->exists(),
+                'triedToday' => Crimes::triedToday($player),
                 'wanted' => $player->wanted,
                 // Plunder happens on the map, standing on a farm section.
                 'crimes' => array_map(fn (CrimeKind $kind) => ['value' => $kind->value, 'label' => $kind->label(), 'horseshoes' => $kind->horseshoes()], [CrimeKind::Loot, CrimeKind::Burn]),

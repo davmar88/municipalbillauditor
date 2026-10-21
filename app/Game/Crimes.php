@@ -95,12 +95,12 @@ final class Crimes
         }
 
         // Leaving a faction to steal and coming straight back doesn't work: a day as a lone wolf first.
-        if ($player->isLoneWolf() && $player->left_faction_at !== null && $player->left_faction_at->gt(now()->subHours(self::LONE_WOLF_HOURS))) {
+        if (config('game.crime.cooldowns') && $player->isLoneWolf() && $player->left_faction_at !== null && $player->left_faction_at->gt(now()->subHours(self::LONE_WOLF_HOURS))) {
             throw new GameException('You only just left your faction. Lie low as a lone wolf until '.Clock::local($player->left_faction_at->copy()->addHours(self::LONE_WOLF_HOURS))->format('j M \a\t H:i').' before your first crime.');
         }
 
         // Plunder and robbery run on their own clocks; looting and burning are once a day.
-        if (in_array($kind, [CrimeKind::Loot, CrimeKind::Burn], true) && self::triedToday($player)) {
+        if (config('game.crime.cooldowns') && in_array($kind, [CrimeKind::Loot, CrimeKind::Burn], true) && self::triedToday($player)) {
             throw new GameException('You have already tried a crime today. Lie low until tomorrow.');
         }
 
@@ -117,13 +117,13 @@ final class Crimes
 
             $last = Crime::query()->where('player_id', $player->id)->where('kind', CrimeKind::Plunder)->latest('id')->first();
 
-            if ($last !== null && $last->created_at->gt(CarbonImmutable::now()->subMinutes(self::PLUNDER_REST_MINUTES))) {
+            if (config('game.crime.cooldowns') && $last !== null && $last->created_at->gt(CarbonImmutable::now()->subMinutes(self::PLUNDER_REST_MINUTES))) {
                 throw new GameException('You plundered not long ago. Lie low until '.Clock::local($last->created_at->addMinutes(self::PLUNDER_REST_MINUTES))->format('H:i').'.');
             }
 
             $watched = Crime::query()->where('region_id', $region->id)->where('kind', CrimeKind::Plunder)->latest('id')->first();
 
-            if ($watched !== null && $watched->created_at->gt(CarbonImmutable::now()->subMinutes(self::PLUNDER_WATCH_MINUTES))) {
+            if (config('game.crime.cooldowns') && $watched !== null && $watched->created_at->gt(CarbonImmutable::now()->subMinutes(self::PLUNDER_WATCH_MINUTES))) {
                 throw new GameException("{$region->name} was plundered not long ago and its holders are watching. Try again after ".Clock::local($watched->created_at->addMinutes(self::PLUNDER_WATCH_MINUTES))->format('H:i').'.');
             }
 
@@ -165,7 +165,7 @@ final class Crimes
             $locked = Players::lock($player);
             Players::ensureFree($locked);
 
-            if ($locked->isLoneWolf() && $locked->left_faction_at !== null && $locked->left_faction_at->gt(now()->subHours(self::LONE_WOLF_HOURS))) {
+            if (config('game.crime.cooldowns') && $locked->isLoneWolf() && $locked->left_faction_at !== null && $locked->left_faction_at->gt(now()->subHours(self::LONE_WOLF_HOURS))) {
                 throw new GameException('You only just left your faction. Lie low as a lone wolf for a day before your first crime.');
             }
 
@@ -272,13 +272,13 @@ final class Crimes
 
         $last = Crime::query()->where('player_id', $player->id)->where('kind', CrimeKind::Rob)->latest('id')->first();
 
-        if ($last !== null && $last->created_at->gt(CarbonImmutable::now()->subMinutes(self::ROB_REST_MINUTES))) {
+        if (config('game.crime.cooldowns') && $last !== null && $last->created_at->gt(CarbonImmutable::now()->subMinutes(self::ROB_REST_MINUTES))) {
             throw new GameException('You robbed someone not long ago. Lie low until '.Clock::local($last->created_at->addMinutes(self::ROB_REST_MINUTES))->format('H:i').'.');
         }
 
         $robbed = Crime::query()->where('target_player_id', $target->id)->where('kind', CrimeKind::Rob)->latest('id')->first();
 
-        if ($robbed !== null && $robbed->created_at->gt(CarbonImmutable::now()->subHours(self::ROB_GUARD_HOURS))) {
+        if (config('game.crime.cooldowns') && $robbed !== null && $robbed->created_at->gt(CarbonImmutable::now()->subHours(self::ROB_GUARD_HOURS))) {
             throw new GameException("{$target->name} was robbed not long ago and is on guard. Try again after ".Clock::local($robbed->created_at->addHours(self::ROB_GUARD_HOURS))->format('H:i').'.');
         }
     }
@@ -286,6 +286,11 @@ final class Crimes
     /** Whether the animal has already tried a loot or a burn today. */
     public static function triedToday(Player $player): bool
     {
+        // No waits between crimes any more (her rule, 2026-10-21).
+        if (! config('game.crime.cooldowns')) {
+            return false;
+        }
+
         return Crime::query()->where('player_id', $player->id)->where('kind', '!=', CrimeKind::Plunder)->where('created_at', '>=', Clock::startOfToday())->exists();
     }
 

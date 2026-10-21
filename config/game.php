@@ -60,6 +60,11 @@ return [
         'start' => ['food' => 60, 'drink' => 60],
     ],
 
+    // Waits between crimes, and a robbed victim on guard: off (her rule, 2026-10-21).
+    'crime' => [
+        'cooldowns' => false,
+    ],
+
     // The daily streak: day after day, each first visit pays a little more.
     'streak' => [
         'enabled' => true,
