@@ -188,6 +188,20 @@ final class Market
     /**
      * @throws GameException
      */
+    /**
+     * Shelves in use: copies of one design at one price stack on a single
+     * shelf, however many there are (her rule, 2026-10-21).
+     */
+    public static function shelvesUsed(int $playerId): int
+    {
+        return Listing::query()
+            ->join('items', 'items.id', '=', 'listings.item_id')
+            ->where('listings.player_id', $playerId)
+            ->whereNull('listings.sold_at')
+            ->distinct()
+            ->count(DB::raw("CONCAT(items.item_design_id, '|', listings.price, '|', listings.currency)"));
+    }
+
     public function list(Player $player, Item $item, int $price, string $currency = 'corn'): Listing
     {
         $level = (int) config('game.levels.stall');
@@ -227,8 +241,17 @@ final class Market
             }
 
             $shelves = self::shelves($player);
+            // A copy joins a stack of the same design at the same price; anything else needs a shelf of its own.
+            $stacks = Listing::query()
+                ->join('items', 'items.id', '=', 'listings.item_id')
+                ->where('listings.player_id', $player->id)
+                ->whereNull('listings.sold_at')
+                ->where('items.item_design_id', $item->item_design_id)
+                ->where('listings.price', $price)
+                ->where('listings.currency', $currency)
+                ->exists();
 
-            if (Listing::query()->where('player_id', $player->id)->whereNull('sold_at')->count() >= $shelves) {
+            if (! $stacks && self::shelvesUsed($player->id) >= $shelves) {
                 throw new GameException("Your shop has {$shelves} shelves and they are full.".($player->inOrchard() ? '' : ' Orchard members get one more.'));
             }
 

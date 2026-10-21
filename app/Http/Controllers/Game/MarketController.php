@@ -99,7 +99,7 @@ class MarketController extends Controller
                 'level' => (int) config('game.levels.stall'),
                 'shelves' => Market::shelves($player),
                 'orchard' => $player->inOrchard(),
-                'used' => Listing::query()->where('player_id', $player->id)->whereNull('sold_at')->count(),
+                'used' => Market::shelvesUsed($player->id),
                 'prices' => [
                     'corn' => Market::priceRange('corn'),
                     'apples' => Market::priceRange('apples'),
@@ -148,15 +148,55 @@ class MarketController extends Controller
         $data = $request->validate([
             'price' => ['required', 'integer', 'min:1'],
             'currency' => ['sometimes', Rule::in(Market::CURRENCIES)],
+            // How many copies of this design to stack on the shelf at that price.
+            'count' => ['sometimes', 'integer', 'min:1', 'max:100'],
         ]);
-        $listing = $market->list($request->user()->player, $item, (int) $data['price'], $data['currency'] ?? 'corn');
+        $player = $request->user()->player;
+        $currency = $data['currency'] ?? 'corn';
+        $listing = $market->list($player, $item, (int) $data['price'], $currency);
+        $listed = 1;
 
-        return $this->told("On your shelves for {$listing->price} ".($listing->currency === 'apples' ? 'Apples.' : 'Corn.'));
+        if (($data['count'] ?? 1) > 1) {
+            $more = $player->items()
+                ->where('item_design_id', $item->item_design_id)
+                ->whereNull('used_at')
+                ->whereKeyNot($item->id)
+                ->whereDoesntHave('openListing')
+                ->orderBy('serial')
+                ->limit($data['count'] - 1)
+                ->get();
+
+            foreach ($more as $copy) {
+                $market->list($player, $copy, (int) $data['price'], $currency);
+                $listed++;
+            }
+        }
+
+        $what = $currency === 'apples' ? 'Apples' : 'Corn';
+
+        return $this->told($listed > 1
+            ? "{$listed} on your shelves for {$listing->price} {$what} each."
+            : "On your shelves for {$listing->price} {$what}.");
     }
 
     public function unlist(Request $request, Listing $listing, Market $market): RedirectResponse
     {
-        $market->unlist($request->user()->player, $listing);
+        $player = $request->user()->player;
+        $market->unlist($player, $listing);
+
+        // The whole stack: every copy of that design at that price.
+        if ($request->boolean('all')) {
+            $rest = Listing::query()
+                ->where('player_id', $player->id)
+                ->whereNull('sold_at')
+                ->where('price', $listing->price)
+                ->where('currency', $listing->currency)
+                ->whereHas('item', fn ($query) => $query->where('item_design_id', $listing->item->item_design_id))
+                ->get();
+            $rest->each(fn (Listing $other) => $market->unlist($player, $other));
+
+            return $this->told(($rest->count() + 1).' taken off your shelves.');
+        }
 
         return $this->told('Taken off your shelves.');
     }

@@ -176,76 +176,122 @@ function Shelves({
         );
     }
 
+    // Copies of one design a seller has at one price stack into one card.
+    const stacks = new Map<string, Props['listings']>();
+    for (const listing of listings) {
+        const key = `${listing.seller.id}|${listing.design.id}|${listing.price}|${listing.currency}`;
+        stacks.set(key, [...(stacks.get(key) ?? []), listing]);
+    }
+
     return (
         <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {listings.map((listing) => (
-                <li
-                    key={listing.id}
-                    className="flex gap-3 rounded-xl border bg-card p-3"
-                >
-                    <ItemPreview design={listing.design} />
-                    <div className="flex flex-1 flex-col gap-1">
-                        <p className="font-semibold">{listing.design.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                            {listing.design.templateLabel} #{listing.serial}
-                            {listing.design.edition &&
-                                ` of ${listing.design.edition}`}{' '}
-                            · by{' '}
+            {[...stacks.values()].map((stack) => {
+                const listing = stack.reduce((a, b) =>
+                    b.serial < a.serial ? b : a,
+                );
+
+                return (
+                    <li
+                        key={listing.id}
+                        className="flex gap-3 rounded-xl border bg-card p-3"
+                    >
+                        <ItemPreview design={listing.design} />
+                        <div className="flex flex-1 flex-col gap-1">
+                            <p className="font-semibold">
+                                {listing.design.name}
+                                {stack.length > 1 && (
+                                    <span className="ml-1.5 rounded-full bg-muted px-1.5 text-xs">
+                                        ×{stack.length}
+                                    </span>
+                                )}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                                {listing.design.templateLabel} #{listing.serial}
+                                {stack.length > 1 &&
+                                    `–${Math.max(...stack.map((l) => l.serial))}`}
+                                {listing.design.edition &&
+                                    ` of ${listing.design.edition}`}{' '}
+                                · by{' '}
+                                {listing.mine ? (
+                                    <span
+                                        style={
+                                            listing.seller.colour
+                                                ? {
+                                                      color: listing.seller
+                                                          .colour,
+                                                  }
+                                                : undefined
+                                        }
+                                    >
+                                        {listing.seller.name}
+                                        <OrchardBadge
+                                            member={listing.seller.orchard}
+                                        />
+                                    </span>
+                                ) : (
+                                    <ProfileLink
+                                        animal={listing.seller}
+                                        style={
+                                            listing.seller.colour
+                                                ? {
+                                                      color: listing.seller
+                                                          .colour,
+                                                  }
+                                                : undefined
+                                        }
+                                    >
+                                        {listing.seller.name}
+                                        <OrchardBadge
+                                            member={listing.seller.orchard}
+                                        />
+                                    </ProfileLink>
+                                )}
+                            </p>
+                            {listing.design.power && (
+                                <PowerLine design={listing.design} />
+                            )}
+                            <ListingPrice listing={listing} levy={levy} />
                             {listing.mine ? (
-                                <span
-                                    style={
-                                        listing.seller.colour
-                                            ? { color: listing.seller.colour }
-                                            : undefined
-                                    }
-                                >
-                                    {listing.seller.name}
-                                    <OrchardBadge
-                                        member={listing.seller.orchard}
-                                    />
+                                <span className="text-xs text-primary">
+                                    Your listing
+                                </span>
+                            ) : listing.seller.closed ? (
+                                <span className="text-xs text-muted-foreground">
+                                    Shop closed while the home is rebuilt
                                 </span>
                             ) : (
-                                <ProfileLink
-                                    animal={listing.seller}
-                                    style={
-                                        listing.seller.colour
-                                            ? { color: listing.seller.colour }
-                                            : undefined
-                                    }
-                                >
-                                    {listing.seller.name}
-                                    <OrchardBadge
-                                        member={listing.seller.orchard}
-                                    />
-                                </ProfileLink>
+                                <BuyButton listing={listing} levy={levy} />
                             )}
-                        </p>
-                        {listing.design.power && (
-                            <PowerLine design={listing.design} />
-                        )}
-                        <ListingPrice listing={listing} levy={levy} />
-                        {listing.mine ? (
-                            <span className="text-xs text-primary">
-                                Your listing
-                            </span>
-                        ) : listing.seller.closed ? (
-                            <span className="text-xs text-muted-foreground">
-                                Shop closed while the home is rebuilt
-                            </span>
-                        ) : (
-                            <BuyButton listing={listing} levy={levy} />
-                        )}
-                    </div>
-                </li>
-            ))}
+                        </div>
+                    </li>
+                );
+            })}
         </ul>
     );
+}
+
+type OwnedItem = Props['items'][number];
+
+/**
+ * Your items stacked: copies of one design you hold, and copies of one design
+ * on your shelves at one price. Each stack is one shelf.
+ */
+function stackItems(items: OwnedItem[]) {
+    const stacks = new Map<string, OwnedItem[]>();
+    for (const item of [...items].sort((a, b) => a.serial - b.serial)) {
+        const key = item.listing
+            ? `listed|${item.design.id}|${item.listing.price}|${item.listing.currency}`
+            : `held|${item.design.id}|${item.resale}`;
+        stacks.set(key, [...(stacks.get(key) ?? []), item]);
+    }
+    return [...stacks.values()];
 }
 
 function MyShop({ items, shop }: Props) {
     const { player } = usePage().props;
     const [prices, setPrices] = useState<Record<number, number>>({});
     const [currencies, setCurrencies] = useState<Record<number, Currency>>({});
+    const [counts, setCounts] = useState<Record<number, number>>({});
     const canSell = (player?.level ?? 1) >= shop.level;
 
     return (
@@ -272,93 +318,167 @@ function MyShop({ items, shop }: Props) {
                 </p>
             ) : (
                 <ul className="grid gap-3 sm:grid-cols-2">
-                    {items.map((item) => (
-                        <li
-                            key={item.id}
-                            className="flex gap-3 rounded-xl border bg-card p-3"
-                        >
-                            <ItemPreview design={item.design} />
-                            <div className="flex flex-1 flex-col gap-2">
-                                <p className="font-semibold">
-                                    {item.design.name}{' '}
-                                    <span className="text-xs text-muted-foreground">
-                                        #{item.serial}
-                                    </span>
-                                </p>
-                                {item.design.power && (
-                                    <PowerLine design={item.design} />
-                                )}
-                                {item.design.power && !item.listing && (
-                                    <Button
-                                        size="sm"
-                                        variant="secondary"
-                                        className="self-start"
-                                        onClick={() =>
-                                            confirm(
-                                                `Use ${item.design.name}? ${item.design.power} It's used up.`,
-                                            ) && act(useItem.url(item.id))
-                                        }
-                                    >
-                                        <Sparkles className="size-4" /> Use it
-                                    </Button>
-                                )}
-                                {item.listing ? (
-                                    <div className="flex items-center gap-2 text-sm">
-                                        On sale for{' '}
-                                        {money(
-                                            item.listing.price,
-                                            item.listing.currency,
-                                        )}
+                    {stackItems(items).map((stack) => {
+                        const item = stack[0];
+                        const many = stack.length > 1;
+                        const count = Math.min(
+                            stack.length,
+                            Math.max(1, counts[item.id] ?? stack.length),
+                        );
+
+                        return (
+                            <li
+                                key={item.id}
+                                className="flex gap-3 rounded-xl border bg-card p-3"
+                            >
+                                <ItemPreview design={item.design} />
+                                <div className="flex flex-1 flex-col gap-2">
+                                    <p className="font-semibold">
+                                        {item.design.name}{' '}
+                                        {many && (
+                                            <span className="rounded-full bg-muted px-1.5 text-xs">
+                                                ×{stack.length}
+                                            </span>
+                                        )}{' '}
+                                        <span className="text-xs text-muted-foreground">
+                                            #{item.serial}
+                                            {many &&
+                                                `–${stack[stack.length - 1].serial}`}
+                                        </span>
+                                    </p>
+                                    {item.design.power && (
+                                        <PowerLine design={item.design} />
+                                    )}
+                                    {item.design.power && !item.listing && (
                                         <Button
                                             size="sm"
-                                            variant="ghost"
+                                            variant="secondary"
+                                            className="self-start"
                                             onClick={() =>
-                                                act(
-                                                    unlist.url(
-                                                        item.listing!.id,
-                                                    ),
-                                                    {},
-                                                    'delete',
-                                                )
+                                                confirm(
+                                                    `Use ${item.design.name}? ${item.design.power} It's used up.`,
+                                                ) && act(useItem.url(item.id))
                                             }
                                         >
-                                            Take down
+                                            <Sparkles className="size-4" /> Use
+                                            it
                                         </Button>
-                                    </div>
-                                ) : (
-                                    canSell && (
-                                        <PriceTag
-                                            shop={shop}
-                                            resale={item.resale}
-                                            name={item.design.name}
-                                            price={prices[item.id]}
-                                            currency={
-                                                currencies[item.id] ?? 'corn'
-                                            }
-                                            onPrice={(price) =>
-                                                setPrices({
-                                                    ...prices,
-                                                    [item.id]: price,
-                                                })
-                                            }
-                                            onCurrency={(currency) =>
-                                                setCurrencies({
-                                                    ...currencies,
-                                                    [item.id]: currency,
-                                                })
-                                            }
-                                            onList={(price, currency) =>
-                                                act(list.url(item.id), {
-                                                    price,
-                                                    currency,
-                                                })
-                                            }
-                                        />
-                                    )
-                                )}
-                            </div>
-                        </li>
-                    ))}
+                                    )}
+                                    {item.listing ? (
+                                        <div className="flex flex-wrap items-center gap-2 text-sm">
+                                            {many
+                                                ? `${stack.length} on sale`
+                                                : 'On sale'}{' '}
+                                            for{' '}
+                                            {money(
+                                                item.listing.price,
+                                                item.listing.currency,
+                                            )}
+                                            {many && ' each'}
+                                            <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                onClick={() =>
+                                                    act(
+                                                        unlist.url(
+                                                            item.listing!.id,
+                                                        ),
+                                                        {},
+                                                        'delete',
+                                                    )
+                                                }
+                                            >
+                                                {many
+                                                    ? 'Take one down'
+                                                    : 'Take down'}
+                                            </Button>
+                                            {many && (
+                                                <Button
+                                                    size="sm"
+                                                    variant="ghost"
+                                                    onClick={() =>
+                                                        act(
+                                                            unlist.url(
+                                                                item.listing!
+                                                                    .id,
+                                                                {
+                                                                    query: {
+                                                                        all: 1,
+                                                                    },
+                                                                },
+                                                            ),
+                                                            {},
+                                                            'delete',
+                                                        )
+                                                    }
+                                                >
+                                                    Take all down
+                                                </Button>
+                                            )}
+                                        </div>
+                                    ) : (
+                                        canSell && (
+                                            <>
+                                                {many && (
+                                                    <label className="flex items-center gap-2 text-sm">
+                                                        How many
+                                                        <Input
+                                                            type="number"
+                                                            min={1}
+                                                            max={stack.length}
+                                                            className="w-20"
+                                                            value={count}
+                                                            onChange={(e) =>
+                                                                setCounts({
+                                                                    ...counts,
+                                                                    [item.id]:
+                                                                        Number(
+                                                                            e
+                                                                                .target
+                                                                                .value,
+                                                                        ),
+                                                                })
+                                                            }
+                                                        />
+                                                        of {stack.length}
+                                                    </label>
+                                                )}
+                                                <PriceTag
+                                                    shop={shop}
+                                                    resale={item.resale}
+                                                    name={item.design.name}
+                                                    price={prices[item.id]}
+                                                    currency={
+                                                        currencies[item.id] ??
+                                                        'corn'
+                                                    }
+                                                    onPrice={(price) =>
+                                                        setPrices({
+                                                            ...prices,
+                                                            [item.id]: price,
+                                                        })
+                                                    }
+                                                    onCurrency={(currency) =>
+                                                        setCurrencies({
+                                                            ...currencies,
+                                                            [item.id]: currency,
+                                                        })
+                                                    }
+                                                    onList={(price, currency) =>
+                                                        act(list.url(item.id), {
+                                                            price,
+                                                            currency,
+                                                            count,
+                                                        })
+                                                    }
+                                                />
+                                            </>
+                                        )
+                                    )}
+                                </div>
+                            </li>
+                        );
+                    })}
                 </ul>
             )}
         </section>

@@ -9,6 +9,7 @@ use App\Game\LawTemplate;
 use App\Game\Market;
 use App\Models\ItemDesign;
 use App\Models\Law;
+use App\Models\Listing;
 use App\Models\Player;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -169,13 +170,34 @@ class MarketTest extends TestCase
         $maker->forceFill(['materials' => [...$maker->materials, 'wool' => 100, 'dye' => 20]])->save();
         $design = $this->design($maker);
 
+        // Six prices: six shelves.
         for ($i = 0; $i < 6; $i++) {
-            $this->market->list($maker->fresh(), $this->market->craft($maker->fresh(), $design->fresh()), 20);
+            $this->market->list($maker->fresh(), $this->market->craft($maker->fresh(), $design->fresh()), 20 + $i);
         }
 
         $maker->forceFill(['horseshoes' => 10, 'horseshoes_at' => now()])->save();
-        $this->expectExceptionMessage('shelves');
+        // Another copy at a price already up stacks on that shelf.
         $this->market->list($maker->fresh(), $this->market->craft($maker->fresh(), $design->fresh()), 20);
+        $this->assertSame(6, Market::shelvesUsed($maker->id));
+
+        $this->expectExceptionMessage('shelves');
+        $this->market->list($maker->fresh(), $this->market->craft($maker->fresh(), $design->fresh()), 30);
+    }
+
+    public function test_copies_of_one_design_stack_on_one_shelf_and_come_down_together(): void
+    {
+        $maker = $this->maker();
+        $maker->forceFill(['materials' => [...$maker->materials, 'wool' => 100, 'dye' => 20], 'horseshoes' => 10, 'horseshoes_at' => now()])->save();
+        $design = $this->design($maker);
+        $items = collect(range(1, 4))->map(fn () => $this->market->craft($maker->fresh(), $design->fresh()));
+
+        $this->actingAs($maker->user)->post(route('play.list', $items->first()), ['price' => 25, 'count' => 3])->assertRedirect();
+        $this->assertSame(3, Listing::query()->where('player_id', $maker->id)->whereNull('sold_at')->count());
+        $this->assertSame(1, Market::shelvesUsed($maker->id));
+
+        $first = Listing::query()->where('player_id', $maker->id)->oldest('id')->first();
+        $this->actingAs($maker->user)->delete(route('play.unlist', ['listing' => $first, 'all' => 1]))->assertRedirect();
+        $this->assertSame(0, Listing::query()->where('player_id', $maker->id)->whereNull('sold_at')->count());
     }
 
     public function test_the_market_page_lists_what_is_for_sale(): void

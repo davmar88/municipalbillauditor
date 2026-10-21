@@ -137,22 +137,23 @@ class AppleShopsAndOrchardTest extends TestCase
         $design = ItemDesign::query()->findOrFail($this->item($maker)->item_design_id);
         $items = collect(range(2, 8))->map(fn (int $serial) => Item::create(['item_design_id' => $design->id, 'player_id' => $maker->id, 'serial' => $serial]));
 
-        foreach ($items->take(6) as $item) {
-            $this->market->list($maker->fresh(), $item, 20);
+        // Each at its own price, so each takes a shelf of its own.
+        foreach ($items->take(6)->values() as $i => $item) {
+            $this->market->list($maker->fresh(), $item, 20 + $i);
         }
 
         try {
-            $this->market->list($maker->fresh(), $items[6], 20);
+            $this->market->list($maker->fresh(), $items[6], 30);
             $this->fail('A seventh shelf opened for a non-member.');
         } catch (GameException $e) {
             $this->assertSame('Your shop has 6 shelves and they are full. Orchard members get one more.', $e->getMessage());
         }
 
         $member = $this->member($maker);
-        $this->market->list($member, $items[6], 20);
+        $this->market->list($member, $items[6], 30);
 
         $this->expectExceptionMessage('Your shop has 7 shelves and they are full.');
-        $this->market->list($member, Item::create(['item_design_id' => $design->id, 'player_id' => $maker->id, 'serial' => 9]), 20);
+        $this->market->list($member, Item::create(['item_design_id' => $design->id, 'player_id' => $maker->id, 'serial' => 9]), 31);
     }
 
     public function test_joining_the_orchard_costs_60_apples_and_renewing_adds_a_month(): void
