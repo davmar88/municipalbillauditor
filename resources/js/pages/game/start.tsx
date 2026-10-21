@@ -1,5 +1,5 @@
 import { Form, Head } from '@inertiajs/react';
-import { useState } from 'react';
+import { lazy, Suspense, useRef, useState } from 'react';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -8,6 +8,11 @@ import { Label } from '@/components/ui/label';
 import { NativeSelect } from '@/components/ui/native-select';
 import { cn } from '@/lib/utils';
 import { store } from '@/routes/play/start';
+
+// three.js and the models load after the page, so the cards show at once.
+const AnimalCardStage = lazy(
+    () => import('@/components/game/animal-card-stage'),
+);
 
 type SpeciesOption = {
     value: string;
@@ -31,6 +36,7 @@ export default function Start({
     suggestedName,
 }: Props) {
     const [picked, setPicked] = useState(species[0]?.value ?? 'pig');
+    const cardsRef = useRef<HTMLDivElement>(null);
 
     return (
         <>
@@ -57,43 +63,60 @@ export default function Start({
                                 <legend className="mb-1 text-sm font-semibold">
                                     Your animal
                                 </legend>
-                                <div className="grid gap-3 sm:grid-cols-2">
+                                <Suspense fallback={null}>
+                                    <AnimalCardStage within={cardsRef} />
+                                </Suspense>
+                                <div
+                                    ref={cardsRef}
+                                    className="grid gap-3 sm:grid-cols-2"
+                                >
                                     {species.map((option) => (
                                         <label
                                             key={option.value}
                                             className={cn(
-                                                'flex cursor-pointer flex-col gap-1 rounded-lg border-2 bg-card p-4 has-[:focus-visible]:ring-[3px] has-[:focus-visible]:ring-ring/50',
+                                                'flex cursor-pointer items-center gap-3 rounded-lg border-2 bg-card p-4 has-[:focus-visible]:ring-[3px] has-[:focus-visible]:ring-ring/50',
                                                 picked === option.value
                                                     ? 'border-primary'
                                                     : 'border-border',
                                             )}
                                         >
-                                            <span className="flex items-center gap-2">
-                                                <input
-                                                    type="radio"
-                                                    name="species"
-                                                    value={option.value}
-                                                    checked={
-                                                        picked === option.value
-                                                    }
-                                                    onChange={() =>
-                                                        setPicked(option.value)
-                                                    }
-                                                    className="size-4 accent-primary"
-                                                />
-                                                <span className="font-bold">
-                                                    {option.label}
+                                            <span className="flex min-w-0 flex-1 flex-col gap-1">
+                                                <span className="flex items-center gap-2">
+                                                    <input
+                                                        type="radio"
+                                                        name="species"
+                                                        value={option.value}
+                                                        checked={
+                                                            picked ===
+                                                            option.value
+                                                        }
+                                                        onChange={() =>
+                                                            setPicked(
+                                                                option.value,
+                                                            )
+                                                        }
+                                                        className="size-4 accent-primary"
+                                                    />
+                                                    <span className="font-bold">
+                                                        {option.label}
+                                                    </span>
+                                                    <span className="font-mono text-[11px] tracking-[0.1em] text-muted-foreground">
+                                                        {option.role.toUpperCase()}
+                                                    </span>
                                                 </span>
-                                                <span className="font-mono text-[11px] tracking-[0.1em] text-muted-foreground">
-                                                    {option.role.toUpperCase()}
+                                                <span className="text-sm">
+                                                    {option.talent}
+                                                </span>
+                                                <span className="text-sm text-muted-foreground">
+                                                    {option.weakSpot}
                                                 </span>
                                             </span>
-                                            <span className="text-sm">
-                                                {option.talent}
-                                            </span>
-                                            <span className="text-sm text-muted-foreground">
-                                                {option.weakSpot}
-                                            </span>
+                                            {/* The animal itself, drawn by the stage above. */}
+                                            <span
+                                                data-animal-view={option.value}
+                                                className="size-24 shrink-0"
+                                                aria-hidden
+                                            />
                                         </label>
                                     ))}
                                 </div>

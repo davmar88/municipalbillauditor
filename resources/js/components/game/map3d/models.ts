@@ -54,6 +54,8 @@ export type Actor = {
     root: THREE.Group;
     mixer: THREE.AnimationMixer;
     play: (names: string[], fade?: number) => void;
+    /** The moves its model knows. */
+    clips: string[];
     dispose: () => void;
 };
 
@@ -142,6 +144,7 @@ export async function makeActor(
         root: holder,
         mixer,
         play,
+        clips: gltf.animations.map((clip) => clip.name),
         dispose: () => {
             mixer.stopAllAction();
             mixer.uncacheRoot(model);
