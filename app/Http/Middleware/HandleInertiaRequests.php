@@ -80,6 +80,8 @@ class HandleInertiaRequests extends Middleware
                     'horseshoes' => Horseshoes::current($player),
                     'maxHorseshoes' => Horseshoes::max(),
                     'nextHorseshoeIn' => Horseshoes::nextIn($player),
+                    // Every 24 hours horseshoes are topped back up to the usual most.
+                    'horseshoeTopUpIn' => Horseshoes::topUpIn($player),
                     'corn' => $player->corn,
                     'apples' => (int) $player->apples,
                     'pineapples' => (int) $player->pineapples,

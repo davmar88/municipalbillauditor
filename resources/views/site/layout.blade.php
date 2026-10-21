@@ -17,7 +17,13 @@
         <meta property="og:title" content="@yield('title')">
         <meta property="og:description" content="@yield('description')">
         <meta property="og:url" content="@yield('canonical', url()->current())">
-        <meta name="twitter:card" content="summary">
+        {{-- The poster is the picture a shared link shows. --}}
+        <meta property="og:image" content="{{ url('/images/poster.jpg') }}">
+        <meta property="og:image:width" content="1168">
+        <meta property="og:image:height" content="784">
+        <meta property="og:image:alt" content="The animals of Animal Farm">
+        <meta name="twitter:card" content="summary_large_image">
+        <meta name="twitter:image" content="{{ url('/images/poster.jpg') }}">
         <meta name="theme-color" content="#16171D">
 
         <link rel="icon" href="/favicon.ico" sizes="any">
@@ -29,14 +35,6 @@
     </head>
     <body>
         <a href="#main" class="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-10 focus:rounded-md focus:bg-paper focus:px-4 focus:py-2">Skip to content</a>
-
-        <div class="bg-banner text-sm text-white">
-            <p class="mx-auto flex max-w-[1200px] flex-wrap items-center justify-center gap-x-2 gap-y-1 px-[clamp(16px,4vw,40px)] py-2 text-center">
-                <span class="rounded-full bg-white/15 px-2 py-0.5 font-mono text-[11px] font-semibold tracking-[0.12em]">TEST SEASON</span>
-                <span>The first season of the valley is free to play, for adults 18 and older.</span>
-                <a href="{{ $playUrl }}" class="font-semibold text-white underline underline-offset-[3px] hover:text-white">Join it</a>
-            </p>
-        </div>
 
         <header class="border-b border-rule">
             <div class="mx-auto flex max-w-[1200px] flex-wrap items-center justify-between gap-x-6 gap-y-3 px-[clamp(16px,4vw,40px)] py-3.5">

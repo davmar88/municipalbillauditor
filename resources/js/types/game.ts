@@ -43,6 +43,8 @@ export type PlayerSummary = {
     horseshoes: number;
     maxHorseshoes: number;
     nextHorseshoeIn: number | null;
+    /** Seconds until horseshoes are topped back up to the usual most, as they are every 24 hours. */
+    horseshoeTopUpIn: number;
     corn: number;
     /** The premium currency, bought with Pineapples in packs. */
     apples: number;

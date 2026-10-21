@@ -67,7 +67,7 @@
         <h2 class="max-w-[760px] text-[clamp(28px,3.6vw,44px)] leading-[1.1] font-extrabold tracking-tight">Five minutes a visit, a new story every week</h2>
         <div class="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
             @foreach ([
-                ['Spend your horseshoes', 'You hold up to '.config('game.horseshoes.max').', and one comes back every 45 minutes. Gather, raid, defend or craft.'],
+                ['Spend your horseshoes', 'You hold up to '.config('game.horseshoes.max').', one comes back every 45 minutes, and every 24 hours you are filled back up to '.config('game.horseshoes.max').'. Gather, raid, defend or craft.'],
                 ['Read the Wall', 'Save a copy each day. If the House sneaks in a change, expose it within 72 hours for fame and Rosettes.'],
                 ['Run your shop', 'Design hats, scarves and signs in the Workshop, make numbered copies, and sell them from your own shop.'],
                 ['Rise up', 'Every unfair law adds to the unrest. At 60 anyone can call an uprising, and the Farmhouse changes hands.'],

@@ -9,8 +9,9 @@ use Illuminate\Support\Str;
 
 /**
  * Every action costs horseshoes. A player holds up to 50, and one comes
- * back every 45 minutes. Extra ones handed out on top are kept until spent. They are worked out when read, so nothing has to
- * run on a timer.
+ * back every 45 minutes. Every 24 hours they're topped back up to 50, never
+ * past it. Extra ones bought or handed out on top are kept until spent. They
+ * are worked out when read, so nothing has to run on a timer.
  */
 final class Horseshoes
 {
@@ -24,6 +25,31 @@ final class Horseshoes
         return (int) config('game.horseshoes.refill_minutes');
     }
 
+    /** Hours between the daily top-ups to the usual most. */
+    public const DAILY_HOURS = 24;
+
+    /** When the last daily top-up was: the most recent 24-hour mark since the one recorded. The clock starts with the first horseshoe spent. */
+    private static function filledAt(Player $player): CarbonImmutable
+    {
+        $now = CarbonImmutable::now();
+
+        if ($player->horseshoes_filled_at === null) {
+            return $now;
+        }
+
+        $from = CarbonImmutable::instance($player->horseshoes_filled_at);
+        $days = intdiv(max(0, (int) $from->diffInHours($now)), self::DAILY_HOURS);
+
+        return $from->addHours($days * self::DAILY_HOURS);
+    }
+
+    /** Whether a daily top-up has come round since the one recorded. */
+    private static function topUpDue(Player $player): bool
+    {
+        return $player->horseshoes_filled_at !== null
+            && ! CarbonImmutable::instance($player->horseshoes_filled_at)->equalTo(self::filledAt($player));
+    }
+
     /** @return array{0: int, 1: CarbonImmutable} The count now, and the clock the next one runs from. */
     private static function settle(Player $player): array
     {
@@ -34,11 +60,22 @@ final class Horseshoes
             return [$player->horseshoes, $now];
         }
 
+        // Every 24 hours the purse is topped back up to the usual most.
+        if (self::topUpDue($player)) {
+            return [self::max(), $now];
+        }
+
         $at = CarbonImmutable::instance($player->horseshoes_at);
         $gained = intdiv(max(0, (int) $at->diffInMinutes($now)), self::minutes());
         $count = min(self::max(), $player->horseshoes + $gained);
 
         return [$count, $count >= self::max() ? $now : $at->addMinutes($gained * self::minutes())];
+    }
+
+    /** Seconds until the next daily top-up to the usual most. */
+    public static function topUpIn(Player $player): int
+    {
+        return max(0, (int) CarbonImmutable::now()->diffInSeconds(self::filledAt($player)->addHours(self::DAILY_HOURS)));
     }
 
     public static function current(Player $player): int
@@ -69,12 +106,13 @@ final class Horseshoes
 
         if ($current < $count) {
             throw new GameException($count === 1
-                ? 'You have no horseshoes left. One comes back every 45 minutes.'
-                : "That needs {$count} horseshoes and you have {$current}. One comes back every 45 minutes.");
+                ? 'You have no horseshoes left. One comes back every 45 minutes, and you are filled up to '.self::max().' every day.'
+                : "That needs {$count} horseshoes and you have {$current}. One comes back every 45 minutes, and you are filled up to ".self::max().' every day.');
         }
 
         $player->horseshoes = $current - $count;
         $player->horseshoes_at = $current >= self::max() ? CarbonImmutable::now() : $clock;
+        $player->horseshoes_filled_at = self::filledAt($player);
         $player->save();
     }
 
@@ -85,6 +123,7 @@ final class Horseshoes
 
         $player->horseshoes = max($current, min(self::max(), $current + max(0, $count)));
         $player->horseshoes_at = $player->horseshoes >= self::max() ? CarbonImmutable::now() : $clock;
+        $player->horseshoes_filled_at = self::filledAt($player);
         $player->save();
     }
 
@@ -130,6 +169,7 @@ final class Horseshoes
     {
         $player->horseshoes = self::current($player) + max(0, $count);
         $player->horseshoes_at = CarbonImmutable::now();
+        $player->horseshoes_filled_at = self::filledAt($player);
         $player->save();
     }
 }

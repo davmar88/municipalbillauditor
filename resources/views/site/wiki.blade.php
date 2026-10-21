@@ -21,6 +21,7 @@
         ]],
         'horseshoes' => ['Horseshoes', [
             'You hold up to '.$shoes['max'].' horseshoes, and one comes back every '.$shoes['refill_minutes'].' minutes.',
+            'Every 24 hours your horseshoes are filled back up to '.$shoes['max'].'. The daily fill never takes you past '.$shoes['max'].'; only bought horseshoes go higher.',
             'Gathering, raiding, defending, crimes, fights and arrests all cost horseshoes.',
             'In a hurry? Buy horseshoes with Apples on the Apples page: tap your horseshoe count at the top of any page. Bought ones stack past '.$shoes['max'].', up to '.$shoes['saddlebag'].'.',
             'A hot meal at the Black Dog in Irongate, a Veggie Stew, and an Orchard membership\'s daily refill also top you up.',

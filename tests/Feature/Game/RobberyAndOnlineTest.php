@@ -120,6 +120,34 @@ class RobberyAndOnlineTest extends TestCase
         $this->assertSame(CrimeKind::Rob, app(Crimes::class)->commit($robber->fresh(), CrimeKind::Rob, target: $newcomer->fresh())->kind);
     }
 
+    public function test_horseshoes_fill_back_up_to_the_usual_most_every_24_hours_and_never_past_it(): void
+    {
+        config(['game.horseshoes.refill_minutes' => 100000]);
+        $player = $this->player(attributes: ['horseshoes' => 10]);
+
+        // The clock starts with the first horseshoes spent.
+        Horseshoes::spend($player, 8);
+        $this->assertSame(2, Horseshoes::current($player->fresh()));
+        $this->travel(23)->hours();
+        $this->assertSame(2, Horseshoes::current($player->fresh()));
+        $this->assertGreaterThan(0, Horseshoes::topUpIn($player->fresh()));
+
+        // A day on, back to the usual most.
+        $this->travel(2)->hours();
+        $this->assertSame(10, Horseshoes::current($player->fresh()));
+        Horseshoes::spend($player->fresh(), 3);
+        $this->assertSame(7, Horseshoes::current($player->fresh()));
+
+        // The next fill comes 24 hours after the last one, not after the spend.
+        $this->travel(23)->hours();
+        $this->assertSame(10, Horseshoes::current($player->fresh()));
+
+        // Bought ones above the usual most are kept, and the daily fill never adds to them.
+        Horseshoes::bonus($player->fresh(), 15);
+        $this->travel(25)->hours();
+        $this->assertSame(25, Horseshoes::current($player->fresh()));
+    }
+
     public function test_horseshoes_bought_with_apples_stack_past_the_usual_ten(): void
     {
         $player = $this->player(attributes: ['horseshoes' => 10]);

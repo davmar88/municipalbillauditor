@@ -4,6 +4,18 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
 
+        {{-- What a shared link shows: the name, a line about the game, and the poster. --}}
+        <meta property="og:type" content="website">
+        <meta property="og:site_name" content="{{ config('app.name') }}">
+        <meta property="og:title" content="{{ config('app.name') }}">
+        <meta property="og:description" content="A farm of rival factions. Gather, raid, rob and rule the valley.">
+        <meta property="og:url" content="{{ url()->current() }}">
+        <meta property="og:image" content="{{ url('/images/poster.jpg') }}">
+        <meta property="og:image:width" content="1168">
+        <meta property="og:image:height" content="784">
+        <meta name="twitter:card" content="summary_large_image">
+        <meta name="twitter:image" content="{{ url('/images/poster.jpg') }}">
+
         {{-- Inline script to detect system dark mode preference and apply it immediately --}}
         <script>
             (function() {

@@ -47,7 +47,7 @@ export function GameBar({ showNextStep = true }: { showNextStep?: boolean }) {
                     <Link
                         href={`${apples.url()}#horseshoes`}
                         className="flex items-center gap-1.5 rounded-full border bg-card px-3 py-1.5 font-semibold hover:border-primary/60"
-                        title="Horseshoes: every action costs one or more. Tap to buy more with Apples."
+                        title={`Horseshoes: every action costs one or more. One comes back every 45 minutes, and every 24 hours you're filled up to ${player.maxHorseshoes} again (next ${fromNow(new Date(Date.now() + player.horseshoeTopUpIn * 1000).toISOString())}). Tap to buy more with Apples.`}
                     >
                         <Horseshoe className="size-4 text-primary" />
                         {player.horseshoes > player.maxHorseshoes
