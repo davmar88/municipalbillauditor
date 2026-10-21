@@ -84,6 +84,11 @@ final class Players
         Census::seen($player);
         $today = Clock::today();
 
+        // Day after day, the streak pays a little more.
+        if ($player->streak_on?->toDateString() !== $today && config('game.streak.enabled')) {
+            app(Streaks::class)->count($player);
+        }
+
         if ($player->last_visit_on?->toDateString() === $today) {
             return;
         }

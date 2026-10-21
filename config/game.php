@@ -60,6 +60,11 @@ return [
         'start' => ['food' => 60, 'drink' => 60],
     ],
 
+    // The daily streak: day after day, each first visit pays a little more.
+    'streak' => [
+        'enabled' => true,
+    ],
+
     // Only faction members may sell in the market (her rule, 2026-10-21).
     'market' => [
         'faction_only' => true,

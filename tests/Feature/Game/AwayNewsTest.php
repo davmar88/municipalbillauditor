@@ -37,6 +37,7 @@ class AwayNewsTest extends TestCase
         $this->assertStringContainsString('robbed you', (new AwayNewsMail($away->fresh(), ['💰 Bramble robbed you of 20 Corn.']))->render());
 
         // Nothing more for a few hours, however much happens.
+        $this->travel(1)->minutes();
         Notices::send($away->id, 'battle', 'Your faction took Hayfield.');
         $this->assertSame(0, app(AwayNews::class)->sendDue());
         $this->travel(AwayNews::EVERY_HOURS + 1)->hours();

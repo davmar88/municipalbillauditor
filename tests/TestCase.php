@@ -21,6 +21,8 @@ abstract class TestCase extends BaseTestCase
         config(['game.market.apples_only' => false]);
         // And make recipes outside a faction: MarketTest turns the recipe rule on to check it.
         config(['game.market.recipes_faction_only' => false]);
+        // The daily streak would add Corn to every first visit: StreakTest turns it on.
+        config(['game.streak.enabled' => false]);
     }
 
     protected function skipUnlessFortifyHas(string $feature, ?string $message = null): void

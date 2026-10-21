@@ -93,6 +93,7 @@ class Player extends Model
             'last_seen_at' => 'datetime',
             'news_emails' => 'boolean',
             'news_sent_at' => 'datetime',
+            'streak_on' => 'date',
             'muted_until' => 'datetime',
             'left_faction_at' => 'datetime',
             'inside_home_at' => 'datetime',
