@@ -6,8 +6,10 @@ use App\Enums\Species;
 use App\Game\Players;
 use App\Game\Valleys;
 use App\Http\Controllers\Controller;
+use App\Mail\Welcome;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -47,7 +49,7 @@ class StartController extends Controller
             'adult.accepted' => 'The test season is for adults only. Please confirm you are 18 or older.',
         ]);
 
-        $players->start(
+        $player = $players->start(
             $request->user(),
             Valleys::forNewcomer(),
             $data['name'],
@@ -55,6 +57,9 @@ class StartController extends Controller
             true,
             $data['language'] ?? 'English',
         );
+
+        // A welcome mail with the first few things to do, from the queue so it never holds up the farm.
+        Mail::to($request->user())->queue(new Welcome($player));
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Welcome to the valley.']);
 

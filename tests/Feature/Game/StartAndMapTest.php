@@ -13,12 +13,14 @@ use App\Game\Players;
 use App\Game\Powers;
 use App\Game\Survival;
 use App\Game\Wall;
+use App\Mail\Welcome;
 use App\Models\Item;
 use App\Models\ItemDesign;
 use App\Models\Law;
 use App\Models\Player;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Mail;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
@@ -64,6 +66,20 @@ class StartAndMapTest extends TestCase
         $this->assertSame(100, $player->corn);
         // No newcomer protection: crime can find you from day one.
         $this->assertFalse($player->isShielded());
+    }
+
+    public function test_a_newcomer_gets_a_welcome_mail_once_their_animal_is_made(): void
+    {
+        Mail::fake();
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->post(route('play.start.store'), ['name' => 'Sipho', 'species' => 'goat', 'adult' => '1'])->assertRedirect(route('play'));
+
+        Mail::assertQueued(Welcome::class, fn (Welcome $mail) => $mail->hasTo($user->email) && $mail->player->is($user->fresh()->player));
+        $rendered = (new Welcome($user->fresh()->player))->render();
+        $this->assertStringContainsString('Welcome to', $rendered);
+        $this->assertStringContainsString('Sipho', $rendered);
+        $this->assertStringContainsString('Goat', $rendered);
     }
 
     public function test_cows_llamas_and_zebras_can_join_each_with_its_own_knack(): void
