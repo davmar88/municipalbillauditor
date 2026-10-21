@@ -13,7 +13,7 @@
         ['What is Animal Farm?', "Animal Farm is a free online multiplayer strategy game, inspired by George Orwell's novel. You play an animal on a farm the humans have left. Join a faction, gather Corn and materials, raid rival land and fight for the Farmhouse, where the rulers write the laws on the Barn Wall."],
         ['Is Animal Farm free to play?', 'Yes. The game is free to play. You can buy Pineapples with real money through PayPal if you want extras, but you never have to.'],
         ['Do I need to download anything?', 'No. Animal Farm plays in the browser on any phone, tablet or computer: Android, iPhone, Windows or Mac. There is no app to install.'],
-        ['Can I play from anywhere in the world?', 'Yes. Anyone 18 or older can play from any country. Chat can be translated between 14 languages, so you can talk to players from other countries.'],
+        ['Can I play from anywhere in the world?', 'Yes. Anyone 18 or older can play from any country. Chat can be translated between '.count(\App\Game\Players::LANGUAGES).' languages, so you can talk to players from other countries.'],
         ['How long does a game take?', 'About five minutes a visit. Your horseshoes limit how much you can do at a time and fill up again while you are away, so it fits around your day.'],
         ['Which animals can I play?', 'Pigs, dogs, horses, sheep, goats, cows, llamas, zebras, tortoises and twelve kinds of cat. Each has one talent and one weak spot, and any of them can lead a faction.'],
         ['Can I earn anything?', 'You can earn Apples by selling copies of your own designs in your shop or by collecting bounties on outlaws. Later in the game, Apples you earned can be paid out to your PayPal account.'],

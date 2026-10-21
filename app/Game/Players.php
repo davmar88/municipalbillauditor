@@ -15,8 +15,16 @@ use Illuminate\Support\Facades\DB;
 final class Players
 {
     public const LANGUAGES = [
+        // South Africa's official languages first, where the game began.
         'English', 'Afrikaans', 'isiZulu', 'isiXhosa', 'Sesotho', 'Setswana', 'Sepedi',
-        'Xitsonga', 'siSwati', 'Tshivenda', 'isiNdebele', 'Portuguese', 'French', 'Swahili',
+        'Xitsonga', 'siSwati', 'Tshivenda', 'isiNdebele',
+        // Then the world's, so players anywhere can read each other.
+        'Spanish', 'Portuguese', 'French', 'German', 'Italian', 'Dutch', 'Polish', 'Russian', 'Ukrainian',
+        'Romanian', 'Greek', 'Czech', 'Hungarian', 'Swedish', 'Norwegian', 'Danish', 'Finnish',
+        'Turkish', 'Arabic', 'Hebrew', 'Persian', 'Hindi', 'Bengali', 'Urdu', 'Punjabi', 'Tamil',
+        'Telugu', 'Marathi', 'Chinese (Simplified)', 'Chinese (Traditional)', 'Japanese', 'Korean',
+        'Vietnamese', 'Thai', 'Indonesian', 'Malay', 'Filipino', 'Swahili', 'Amharic', 'Hausa',
+        'Yoruba', 'Igbo', 'Somali', 'Shona',
     ];
 
     /**
