@@ -1,6 +1,8 @@
 import { Head, Link, usePage } from '@inertiajs/react';
 import { Crown, Flame, Mail, MessagesSquare, Skull } from 'lucide-react';
 import { useState } from 'react';
+import { AllianceSection } from '@/components/game/alliance-section';
+import type { AllianceInfo } from '@/components/game/alliance-section';
 import { BannerEditor } from '@/components/game/banner-editor';
 import { FactionBanner } from '@/components/game/faction-banner';
 import type { BannerData } from '@/components/game/faction-banner';
@@ -78,6 +80,7 @@ type Props = {
                   }[];
               };
               studies: FactionStudies;
+              alliance: AllianceInfo;
               raidRules: RaidRulesInfo;
               members: {
                   id: number;
@@ -243,6 +246,8 @@ function MyFaction({
                     materials: faction.base.materials,
                 }}
             />
+
+            <AllianceSection alliance={faction.alliance} />
 
             <RaidRulesSection raidRules={faction.raidRules} />
 

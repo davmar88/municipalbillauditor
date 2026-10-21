@@ -511,6 +511,10 @@ final class Crimes
 
                 $victim->forceFill(['corn' => $victim->corn - $loot, 'materials' => $kept])->save();
                 $criminal->forceFill(['corn' => $criminal->corn + $loot, 'materials' => $carried])->save();
+                // A job on the board may have asked for just that.
+                if ($victim->faction_id !== null) {
+                    ValleyJobs::did($criminal, 'rob', $victim->faction_id);
+                }
                 // And roughed up.
                 $victim->forceFill(['health' => max(1, (float) $victim->health - (float) config('game.survival.robbed'))])->save();
             } elseif ($crime->kind === CrimeKind::Burn && $crime->target_player_id !== null && $crime->doused_by === null) {

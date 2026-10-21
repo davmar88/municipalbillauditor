@@ -456,6 +456,8 @@ export type MapRegion = {
     neighbours: number[];
     /** Irongate's plunderers riding for it. */
     plunderers: { men: number; landsAt: string } | null;
+    /** A valley event on here now. */
+    event: ValleyEventCard | null;
     incoming: {
         id: number;
         faction: { name: string; colour: string };
@@ -549,6 +551,22 @@ export type IrongateInfo = {
     smith: { stone: number; wood: number; daily: number };
     /** Corn for the innkeeper's hot meal, which gives a horseshoe. */
     meal: number;
+};
+
+/** A valley event: the first animals to get there and take part win. */
+export type ValleyEventCard = {
+    id: number;
+    kind: string;
+    label: string;
+    emoji: string;
+    says: string;
+    costs: string;
+    pays: string;
+    regionId: number;
+    region: string;
+    endsAt: string;
+    left: number;
+    joined: boolean;
 };
 
 /** A band of Irongate's plunderers riding for a farm. */

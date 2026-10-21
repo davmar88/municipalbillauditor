@@ -1090,6 +1090,13 @@ export function subtitle(
         };
     }
 
+    if (region.event && region.event.left > 0) {
+        return {
+            text: `${region.event.emoji} ${region.event.label} until ${clockTime(region.event.endsAt)}`,
+            colour: '#ffd166',
+        };
+    }
+
     if (gateNight && region.key === 'ironfield_gate') {
         return { text: '⚔ Ironfield raids at 19:00', colour: '#f5a27a' };
     }

@@ -136,7 +136,7 @@ final class GateNight
             $won = self::strength($defences) >= $humans;
 
             foreach ($defences as $defence) {
-                Rosettes::award($defence->player, $won ? 15 : 5, $won ? 'Held the gate' : 'Fought at the gate', "gate:{$night}:{$defence->player_id}", $season);
+                Rosettes::award($defence->player, ($won ? 15 : 5) * Finale::boost($season), $won ? 'Held the gate' : 'Fought at the gate', "gate:{$night}:{$defence->player_id}", $season);
             }
 
             $burned = $won ? collect() : Region::query()

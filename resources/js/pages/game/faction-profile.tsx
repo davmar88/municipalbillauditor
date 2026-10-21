@@ -1,11 +1,12 @@
 import { Head, Link } from '@inertiajs/react';
-import { Crown, Telescope } from 'lucide-react';
+import { Crown, HeartHandshake, Telescope } from 'lucide-react';
 import { FactionBanner } from '@/components/game/faction-banner';
 import { GameBar } from '@/components/game/game-bar';
 import { Button } from '@/components/ui/button';
 import { act, capitalise, shortWhen, speciesEmoji } from '@/lib/game';
 import { animal as profile, faction as myFactionPage } from '@/routes/play';
-import { spy as spyOn } from '@/routes/play/factions';
+import { propose as proposeAlliance } from '@/routes/play/alliance';
+import { show as factionProfileOf, spy as spyOn } from '@/routes/play/factions';
 import type { BannerData, Species } from '@/types/game';
 
 type Props = {
@@ -37,6 +38,10 @@ type Props = {
     }[];
     studies: { label: string; level: number; max: number }[];
     record: { raidsWon: number; raidsLost: number; held: number; lost: number };
+    alliance: {
+        ally: { id: number; name: string; colour: string } | null;
+        canOffer: boolean;
+    };
     /** Null on your own faction's page. */
     spy: {
         spyglasses: number;
@@ -187,6 +192,7 @@ export default function FactionProfilePage({
     studies,
     record,
     spy,
+    alliance,
 }: Props) {
     return (
         <>
@@ -261,6 +267,38 @@ export default function FactionProfilePage({
                         </div>
                     ))}
                 </dl>
+
+                {(alliance.ally || alliance.canOffer) && (
+                    <div className="flex flex-wrap items-center gap-2 text-sm">
+                        <HeartHandshake
+                            className="size-4 text-primary"
+                            aria-hidden
+                        />
+                        {alliance.ally ? (
+                            <span>
+                                Allied with{' '}
+                                <Link
+                                    href={factionProfileOf(alliance.ally.id)}
+                                    className="font-semibold"
+                                    style={{ color: alliance.ally.colour }}
+                                >
+                                    {alliance.ally.name}
+                                </Link>
+                                .
+                            </span>
+                        ) : (
+                            <Button
+                                size="sm"
+                                variant="secondary"
+                                onClick={() =>
+                                    act(proposeAlliance.url(faction.id))
+                                }
+                            >
+                                Offer an alliance
+                            </Button>
+                        )}
+                    </div>
+                )}
 
                 {spy && <SpyPanel factionId={faction.id} spy={spy} />}
 

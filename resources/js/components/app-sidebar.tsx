@@ -16,6 +16,7 @@ import {
     Bug,
     Megaphone,
     ChartLine,
+    Crown,
 } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavMain } from '@/components/nav-main';
@@ -42,6 +43,7 @@ import {
     exchange,
     online,
     rankings,
+    valley,
     wanted,
 } from '@/routes/play';
 import { designs, reports } from '@/routes/staff';
@@ -50,6 +52,7 @@ import type { NavItem } from '@/types';
 const moreNavItems: NavItem[] = [
     { title: 'Chat', href: chat(), icon: MessagesSquare },
     { title: 'Spot the Edit', href: puzzle(), icon: Puzzle },
+    { title: 'The valley', href: valley(), icon: Crown },
     { title: 'Rankings', href: rankings(), icon: Trophy },
     { title: 'Exchange', href: exchange(), icon: ChartLine },
     { title: "Who's online", href: online(), icon: Users },

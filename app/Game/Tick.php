@@ -62,6 +62,12 @@ final class Tick
         app(Homes::class)->checkLand($valley->id);
         // The animals the game runs itself go about their day.
         app(ValleyAnimals::class)->live($valley->id);
+        // Two events a day, jobs on the board, and Monday's rivalry winner.
+        if (config('game.valley_life.enabled')) {
+            app(ValleyEvents::class)->schedule($valley);
+            app(ValleyJobs::class)->post($valley);
+            Rivalry::settleWeek($valley, $season->number);
+        }
 
         // Studies finish first, so what was learned counts this half hour.
         $this->research->finishDue($valley->id);

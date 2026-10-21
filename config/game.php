@@ -75,6 +75,11 @@ return [
         'enabled' => true,
     ],
 
+    // The season finale, valley events, the job board and the weekly rivalry (her ask, 2026-10-22).
+    'valley_life' => [
+        'enabled' => true,
+    ],
+
     // Only faction members may sell in the market (her rule, 2026-10-21).
     'market' => [
         'faction_only' => true,

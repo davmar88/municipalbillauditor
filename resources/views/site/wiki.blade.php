@@ -126,6 +126,15 @@
             'Story missions walk you through the game, chapter by chapter; daily jobs change every day.',
             'Earn Rosettes to level up. The Rankings page shows the best traders, makers and most decorated animals.',
         ]],
+        'valley' => ['The valley page: finale, rivalry, events, jobs and pets', [
+            'The Valley page counts down to the end of the season. In the last 3 days every raid, defence and night at the gate pays double Rosettes.',
+            'When a season ends, the faction holding the most land and the 3 animals with the most Rosettes that season go into the Hall of Fame for good, with Corn and Rosettes as prizes.',
+            'Every week, Monday to Sunday, factions are scored on raids won, Corn stolen and land held. The top faction goes into the Hall of Fame and shows on the front page.',
+            'Twice a day something happens on one patch of land without warning: a gold rush, a wolf pack, a flood or a travelling merchant. The first 5 animals to walk there and take part win.',
+            'The bounty board holds jobs the valley animals pin up: rob a member of a faction, win a raid on its land, hold off a raid, or bring goods. The first animal to do a job is paid in Corn and Rosettes.',
+            'Take in a pet: a dog helps you gather more, a horse walks you faster. Feed it every 12 hours and it grows to level 5. Leave it unfed for 2 days and it sulks and helps with nothing.',
+            'Factions can make alliances. Allies cannot raid each other, can defend each other, and their homes are welcome on each other land. Either side can break it, and the whole valley hears of the betrayal.',
+        ]],
         'help' => ['Help and fair play', [
             'See who\'s online on the Who\'s online page. Message any animal, or talk in chat.',
             'Something broken? Report a bug from the menu, with a screenshot or a short video.',

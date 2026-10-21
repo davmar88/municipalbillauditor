@@ -77,7 +77,7 @@ final class Gathering
             // Gathering Gloves, a Feast Basket and the faction's Farming bring in more.
             // Summer brings plenty, winter little, and fall dries the water up.
             $weather = Weather::gathering($player->valley->currentSeason(), $region->produces);
-            $amount = min($left, max(1, (int) floor($base * $rich * $player->species->gathering() * ($own ? 1.5 : 1.0) * $workshop * Powers::gathering($player, $region->produces) * Research::gathering($player) * $weather)));
+            $amount = min($left, max(1, (int) floor($base * $rich * $player->species->gathering() * ($own ? 1.5 : 1.0) * $workshop * Powers::gathering($player, $region->produces) * Research::gathering($player) * Pets::gathering($player) * $weather)));
 
             // Water needs something to carry it in.
             if ($region->produces === 'water' && config('game.survival.enabled')) {

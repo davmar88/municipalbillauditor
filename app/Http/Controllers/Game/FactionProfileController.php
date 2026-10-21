@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Game;
 
 use App\Enums\Study;
+use App\Game\Alliances;
 use App\Game\Banners;
 use App\Game\Research;
 use App\Game\Spying;
@@ -79,6 +80,12 @@ class FactionProfileController extends Controller
                     'goingUp' => $building->ready_at?->isFuture() ?? false,
                 ])
                 ->values(),
+            // Who it stands with, and whether you can offer it an alliance.
+            'alliance' => [
+                'ally' => ($allyId = Alliances::allyOf($faction->id)) ? Faction::query()->whereKey($allyId)->first(['id', 'name', 'colour'])?->only(['id', 'name', 'colour']) : null,
+                'canOffer' => $player->decides() && $player->faction_id !== null && $player->faction_id !== $faction->id
+                    && Alliances::active($player->faction_id) === null && $allyId === null,
+            ],
             // A Spyglass shows what the faction keeps to itself, to the spy's faction.
             'spy' => $faction->id === $player->faction_id ? null : [
                 'spyglasses' => Spying::spyglasses($player),

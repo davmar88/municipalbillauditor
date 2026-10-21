@@ -61,6 +61,10 @@ final class Battles
             throw new GameException("Your faction already holds {$target->name}.");
         }
 
+        if (Alliances::allied($faction->id, $target->faction_id)) {
+            throw new GameException("{$target->name} belongs to your ally. Break the alliance first if you mean to raid it.");
+        }
+
         if ($target->settled_until !== null && $target->settled_until->isFuture()) {
             throw new GameException("{$target->name} just changed hands. It can be attacked again at ".Clock::local($target->settled_until)->format('H:i').'.');
         }
@@ -128,7 +132,9 @@ final class Battles
         $side = match (true) {
             $player->faction_id !== null && $player->faction_id === $attack->faction_id => 'attack',
             $player->faction_id !== null && $player->faction_id === $attack->region->faction_id => 'defence',
-            default => throw new GameException("Only the attackers' and defenders' factions can join this battle."),
+            // An ally may stand with the defenders.
+            Alliances::allied($player->faction_id, $attack->region->faction_id) => 'defence',
+            default => throw new GameException("Only the attackers' and defenders' factions, and the defenders' ally, can join this battle."),
         };
 
         if (BattleCommitment::query()->where('attack_id', $attack->id)->where('player_id', $player->id)->exists()) {
@@ -224,7 +230,7 @@ final class Battles
                 ->sum(fn (BattleCommitment $c) => $c->horseshoes * $c->boost * $c->player->species->attack()) * $underdog * $pigLed;
 
             $defenceStrength = $region->faction_id === null ? 0.0 : $commitments->where('side', 'defence')
-                ->filter(fn (BattleCommitment $c) => $c->player->faction_id === $region->faction_id)
+                ->filter(fn (BattleCommitment $c) => $c->player->faction_id === $region->faction_id || Alliances::allied($c->player->faction_id, $region->faction_id))
                 ->sum(fn (BattleCommitment $c) => $c->horseshoes * $c->boost * $c->player->species->defence()) * $region->ground() * 1.2;
 
             // A Den or Watchtower makes its region harder to take; a Drill Yard next door hits harder.
@@ -276,9 +282,12 @@ final class Battles
                 $onWinningSide = ($commitment->side === 'attack') === $won;
 
                 if ($onWinningSide) {
+                    // A job on the board may have asked for just that.
+                    $won ? ValleyJobs::did($commitment->player, 'raid', $defenderId) : ValleyJobs::did($commitment->player, 'defend');
+
                     Rosettes::award(
                         $commitment->player,
-                        $won ? 10 : 8,
+                        ($won ? 10 : 8) * Finale::boost($season),
                         $won ? "Won the raid on {$region->name}" : "Held {$region->name}",
                         "battle:{$attack->id}:{$commitment->player_id}",
                         $season,

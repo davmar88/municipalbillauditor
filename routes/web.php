@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\ValleyController as AdminValleyController;
 use App\Http\Controllers\Admin\VisitorController;
 use App\Http\Controllers\Auth\GoogleController;
+use App\Http\Controllers\Game\AllianceController;
 use App\Http\Controllers\Game\AppleController;
 use App\Http\Controllers\Game\BannerController;
 use App\Http\Controllers\Game\BaseController;
@@ -35,6 +36,7 @@ use App\Http\Controllers\Game\StartController;
 use App\Http\Controllers\Game\SurvivalController;
 use App\Http\Controllers\Game\TodayController;
 use App\Http\Controllers\Game\TreeController;
+use App\Http\Controllers\Game\ValleyController;
 use App\Http\Controllers\Game\WallController;
 use App\Http\Controllers\Game\WantedController;
 use App\Http\Controllers\PageController;
@@ -150,6 +152,16 @@ Route::middleware(['auth', 'verified', 'player', 'throttle:120,1'])->prefix('pla
     Route::get('today', [TodayController::class, 'index'])->name('play.today');
     Route::post('missions/{mission}/claim', [TodayController::class, 'claim'])->name('play.mission.claim');
     Route::get('rankings', [RankingsController::class, 'index'])->name('play.rankings');
+    // The valley: the season's podium, the rivalry, events, the job board and pets.
+    Route::get('valley', [ValleyController::class, 'index'])->name('play.valley');
+    Route::post('events/{event}/join', [ValleyController::class, 'joinEvent'])->name('play.event.join');
+    Route::post('jobs/{job}/bring', [ValleyController::class, 'bring'])->name('play.job.bring');
+    Route::post('pet', [ValleyController::class, 'adopt'])->name('play.pet.adopt');
+    Route::post('pet/feed', [ValleyController::class, 'feed'])->name('play.pet.feed');
+    // Alliances between factions.
+    Route::post('factions/{faction}/ally', [AllianceController::class, 'propose'])->name('play.alliance.propose');
+    Route::post('alliances/{alliance}/answer', [AllianceController::class, 'answer'])->name('play.alliance.answer');
+    Route::delete('alliance', [AllianceController::class, 'break'])->name('play.alliance.break');
     Route::get('online', [OnlineController::class, 'index'])->name('play.online');
     // Staying alive: eat, drink, a bigger water bag, and picking up what the dead left.
     Route::post('eat', [SurvivalController::class, 'eat'])->name('play.eat');

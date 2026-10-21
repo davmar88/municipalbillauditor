@@ -35,6 +35,8 @@ final class Seasons
     {
         return DB::transaction(function () use ($valley, $season) {
             $now = CarbonImmutable::now();
+            // Who won, before the map and the Corn are reset.
+            $podium = Finale::podium($valley, $season);
 
             $season->attacks()->whereNull('resolved_at')->update(['resolved_at' => $now]);
             $season->crimes()->whereNull('resolved_at')->update(['resolved_at' => $now]);
@@ -50,7 +52,12 @@ final class Seasons
                 ->forceFill(['materials' => array_map(fn (int $amount) => intdiv($amount, 10), $faction->materials)])->save());
             Player::query()->where('valley_id', $valley->id)->update(['corn' => DB::raw('FLOOR(corn / 5)')]);
 
-            return $this->builder->startSeason($valley, $season->number + 1);
+            $next = $this->builder->startSeason($valley, $season->number + 1);
+            if (config('game.valley_life.enabled')) {
+                Finale::crown($valley, $season, $next, $podium);
+            }
+
+            return $next;
         });
     }
 }

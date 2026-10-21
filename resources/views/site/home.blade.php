@@ -38,7 +38,7 @@
                 '@id' => $site.'/#game',
                 'name' => config('app.name'),
                 'url' => $site.'/',
-                'image' => url('/images/poster.jpg?v=3'),
+                'image' => url('/images/poster.jpg?v=4'),
                 'description' => 'A free online multiplayer strategy game inspired by George Orwell\'s Animal Farm. Pick an animal, join a faction, raid rivals, rule the Farmhouse and rewrite the laws.',
                 'genre' => ['Strategy', 'Role-playing', 'Massively multiplayer online'],
                 'gamePlatform' => ['Web browser', 'Android', 'iOS', 'Windows', 'macOS'],
@@ -67,9 +67,9 @@
     {{-- The poster, melting into the page on every side --}}
     <section class="relative overflow-hidden">
         <picture>
-            <source media="(max-width: 700px)" srcset="/images/poster-640.jpg?v=3">
-            <img src="/images/poster.jpg?v=3" width="1248" height="832" fetchpriority="high"
-                alt="Animal Farm by George Orwell: all animals are equal, but some animals are more equal than others. Pigs in coats stand on a platform under party flags, above a muddy yard of horses, cows, sheep and a dog, beside a crumbling barn painted with the Seven Commandments, under a stormy orange sky."
+            <source media="(max-width: 700px)" srcset="/images/poster-640.jpg?v=4">
+            <img src="/images/poster.jpg?v=4" width="1168" height="784" fetchpriority="high"
+                alt="Animal Farm by George Orwell: all animals are equal, but some animals are more equal than others. A pig stands on a stack of hay bales under a tattered red flag, with horses, a cow, sheep and hens around it, as storm clouds break into a golden sunset over the farm."
                 class="poster-melt mx-auto block h-auto w-full max-w-[1280px]">
         </picture>
         <div class="relative mx-auto -mt-[7%] flex max-w-[1200px] flex-wrap items-center justify-center gap-3 px-[clamp(16px,4vw,40px)] pb-6">
@@ -209,6 +209,16 @@
                 <div class="mt-10 grid gap-6 lg:grid-cols-2">
                     <div>
                         <h3 class="text-[22px] font-bold">Factions of {{ $valley['name'] }}</h3>
+                        @if (! empty($valley['weekWinner']) || ! empty($valley['weekLeader']))
+                            <p class="mt-2 text-ink-2">
+                                @if (! empty($valley['weekWinner']))
+                                    Last week's top faction: <strong style="color: {{ $valley['weekWinner']['colour'] ?? 'inherit' }}">{{ $valley['weekWinner']['name'] }}</strong> ({{ $valley['weekWinner']['points'] }} points).
+                                @endif
+                                @if (! empty($valley['weekLeader']))
+                                    Leading this week: <strong style="color: {{ $valley['weekLeader']['colour'] }}">{{ $valley['weekLeader']['name'] }}</strong> ({{ $valley['weekLeader']['points'] }} points).
+                                @endif
+                            </p>
+                        @endif
                         @if (empty($valley['factions']))
                             <p class="mt-3 text-ink-2">No factions yet. Found the first one.</p>
                         @else

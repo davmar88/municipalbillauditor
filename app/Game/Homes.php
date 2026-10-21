@@ -273,7 +273,8 @@ final class Homes
             ->get()
             ->each(function (Home $home) use ($now) {
                 $holders = $home->region?->faction;
-                $foreign = $holders !== null && $home->owner->faction_id !== $holders->id;
+                // An ally's land is as good as your own.
+                $foreign = $holders !== null && $home->owner->faction_id !== $holders->id && ! Alliances::allied($home->owner->faction_id, $holders->id);
                 $wall = route('play', [], false);
 
                 if (! $foreign) {

@@ -7,6 +7,7 @@ use App\Enums\CrimeKind;
 use App\Enums\EntryMode;
 use App\Enums\FactionRole;
 use App\Enums\Species;
+use App\Game\Alliances;
 use App\Game\Banners;
 use App\Game\Bases;
 use App\Game\Crimes;
@@ -73,6 +74,7 @@ class FactionController extends Controller
                         ->map(fn (Region $plot) => ['id' => $plot->id, 'name' => $plot->name, 'key' => $plot->key, 'produces' => $plot->produces, 'farm' => $plot->isFarm() && ! $plot->wild]),
                 ],
                 'studies' => Research::page($faction, $player),
+                'alliance' => Alliances::page($player),
                 // The raid rules the faction holds its members to, and who has broken them.
                 'raidRules' => [
                     ...RaidRules::of($faction),

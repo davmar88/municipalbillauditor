@@ -25,6 +25,7 @@ use App\Game\Stock;
 use App\Game\Survival;
 use App\Game\ValleyAnimals;
 use App\Game\ValleyBuilder;
+use App\Game\ValleyEvents;
 use App\Game\Wall;
 use App\Game\Wardrobe;
 use App\Game\Weather;
@@ -94,6 +95,8 @@ class MapController extends Controller
         $committed = BattleCommitment::query()->where('player_id', $player->id)->whereIn('attack_id', $open->pluck('id'))->pluck('attack_id')->all();
         $paddock = $regions->firstWhere('key', 'paddock');
         $band = $season !== null ? Plunderers::riding($season->id) : null;
+        // Valley events on now, by the region they're on.
+        $happening = collect(ValleyEvents::live($player))->keyBy('regionId');
 
         // Who stands where. Animals without a region are in the Paddock. You come
         // first, so the crowd count never counts you, then outlaws, so the map
@@ -218,6 +221,8 @@ class MapController extends Controller
                 'neighbours' => $region->neighbours->pluck('id'),
                 // Irongate's plunderers riding for it.
                 'plunderers' => $band?->region_id === $region->id ? ['men' => $band->men, 'landsAt' => $band->lands_at->toIso8601String()] : null,
+                // A valley event on here now: the first animals to come win.
+                'event' => $happening->get($region->id),
                 'incoming' => $open->where('region_id', $region->id)->values()->map(fn (Attack $attack) => [
                     'id' => $attack->id,
                     'faction' => ['name' => $attack->faction->name, 'colour' => $attack->faction->colour],

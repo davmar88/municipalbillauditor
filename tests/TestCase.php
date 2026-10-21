@@ -27,6 +27,8 @@ abstract class TestCase extends BaseTestCase
         config(['game.crime.cooldowns' => true]);
         // The raid tests count an hour's march: BattlesTest turns landing on arrival on to check it.
         config(['game.raids.on_arrival' => false]);
+        // Finale prizes, valley events, jobs and the weekly rivalry would add Corn and notices: ValleyLifeTest turns them on.
+        config(['game.valley_life.enabled' => false]);
     }
 
     protected function skipUnlessFortifyHas(string $feature, ?string $message = null): void

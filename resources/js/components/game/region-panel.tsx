@@ -34,6 +34,7 @@ import { act, capitalise, clockTime, fromNow, speciesEmoji } from '@/lib/game';
 import { openChat } from '@/lib/pulse';
 import { GateStrength } from '@/components/game/gate-strength';
 import { DistrictFolk } from '@/components/game/irongate-folk';
+import { join as joinEvent } from '@/routes/play/event';
 import { arrest as arrestOutlaw } from '@/routes/play/warrant';
 import {
     attack,
@@ -354,6 +355,41 @@ export function RegionPanel({
                         </div>
                     );
                 })}
+
+                {region.event && (
+                    <div className="flex flex-col gap-1.5 rounded-lg border border-amber-300/40 bg-amber-400/10 p-3 text-sm">
+                        <p className="font-semibold">
+                            {region.event.emoji} {region.event.label} here until{' '}
+                            {clockTime(region.event.endsAt)}
+                        </p>
+                        <p className="text-muted-foreground">
+                            {region.event.says} Costs {region.event.costs}; pays{' '}
+                            {region.event.pays}. {region.event.left} of 5 places
+                            left.
+                        </p>
+                        {region.event.joined ? (
+                            <p className="font-semibold text-primary">
+                                You took part.
+                            </p>
+                        ) : (
+                            region.event.left > 0 && (
+                                <Button
+                                    size="sm"
+                                    className="self-start"
+                                    disabled={!isHere}
+                                    onClick={() =>
+                                        act(joinEvent.url(region.event!.id))
+                                    }
+                                >
+                                    Take part
+                                </Button>
+                            )
+                        )}
+                        {!isHere && !region.event.joined && (
+                            <WhyNot reason="Walk here first: only animals standing here can take part." />
+                        )}
+                    </div>
+                )}
 
                 {region.settledUntil && (
                     <p className="flex items-start gap-2 text-muted-foreground">

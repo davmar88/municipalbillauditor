@@ -129,6 +129,9 @@ final class Census
                     'animals' => (int) ($row->animals ?? 0),
                     'online' => (int) ($row->online ?? 0),
                     'house' => $valley->house()?->name,
+                    // Last week's rivalry winner, and the leader this week.
+                    'weekWinner' => Rivalry::lastWinner($valley->id)?->only(['name', 'colour', 'points']),
+                    'weekLeader' => collect(Rivalry::board($valley))->first(fn (array $row) => $row['points'] > 0),
                     'corn' => (int) ($row->corn ?? 0) + (int) $factions->sum('treasury'),
                     'apples' => (int) ($row->apples ?? 0) + (int) $factions->sum('apples'),
                     'materials' => $materials,
