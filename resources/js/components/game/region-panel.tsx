@@ -903,10 +903,11 @@ export function RegionPanel({
                             Plunder {region.name}
                         </p>
                         <p className="text-muted-foreground">
-                            Carry off {plunder.crop} {region.produces} and up to{' '}
-                            {plunder.corn} Corn from {region.faction?.name}'s
-                            treasury. It settles in half an hour: you may be
-                            caught, and the House may put a warrant out for you.
+                            Strip the field bare: everything it holds goes into
+                            your bag, with up to {plunder.corn} Corn from{' '}
+                            {region.faction?.name}'s treasury. It settles in
+                            half an hour: you may be caught, and the House may
+                            put a warrant out for you.
                         </p>
                         {!isHere ? (
                             <p className="text-xs text-muted-foreground">

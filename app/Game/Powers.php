@@ -112,6 +112,11 @@ final class Powers
                 Players::ensureFree($player);
             }
 
+            // The Arms Ban on the Wall: no weapons taken up in the valley.
+            if (in_array($template, [ItemTemplate::Pitchfork, ItemTemplate::Cudgel, ItemTemplate::Sling, ItemTemplate::Sword], true) && Wall::armsBanned($player)) {
+                throw new GameException('The Arms Ban on the Wall forbids weapons in the valley. Keep it for when the law comes down.');
+            }
+
             $told = match ($template) {
                 ItemTemplate::Gloves => $this->charge($player, 'gloves', self::GLOVES_USES, 'Your gloves are on: your next 5 gathers bring in half as much again.'),
                 ItemTemplate::Shoes => $this->charge($player, 'shoes', 1, 'Your Iron Shoes are on: your horseshoes count a third more in your next raid or defence.'),

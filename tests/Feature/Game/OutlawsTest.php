@@ -11,6 +11,7 @@ use App\Game\Dice;
 use App\Game\GameException;
 use App\Game\Horseshoes;
 use App\Game\Seasons;
+use App\Game\Stock;
 use App\Game\Warrants;
 use App\Models\AppleEntry;
 use App\Models\Crime;
@@ -117,7 +118,10 @@ class OutlawsTest extends TestCase
         $this->travel(31)->minutes();
         $this->crimes->resolveDue($this->season());
 
-        $this->assertSame(Crimes::PLUNDER_CROP, $wolf->fresh()->material('honey'));
+        // Everything the field held went into the wolf's bag, and the field is bare.
+        $this->assertSame(Stock::rule($this->region('thornbury'))['max'], $wolf->fresh()->material('honey'));
+        $this->assertSame(0, Stock::state($this->region('thornbury'))['left']);
+        $this->assertStringContainsString('stripped Thornbury Farm bare', Notice::query()->where('player_id', $wolf->id)->latest('id')->value('text'));
         $this->assertSame(100 + Crimes::PLUNDER_CORN, $wolf->fresh()->corn);
         $this->assertSame(500 - Crimes::PLUNDER_CORN, $keepers->fresh()->treasury);
         $this->assertStringContainsString('plundered Thornbury Farm', Notice::query()->where('player_id', $keeper->id)->value('text'));

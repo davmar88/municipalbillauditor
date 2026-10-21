@@ -97,7 +97,9 @@ final class Gathering
             if ($region->produces === 'corn') {
                 $season = $player->valley->currentSeason();
                 $tax = $this->tax($season, $amount);
-                $player->corn += $amount - $tax;
+                $bonus = $this->bonus($season, $amount);
+                $player->corn += $amount - $tax + $bonus;
+                $amount += $bonus;
             } else {
                 $materials = $player->materials;
                 $materials[$region->produces] = (int) ($materials[$region->produces] ?? 0) + $amount;
@@ -109,6 +111,21 @@ final class Gathering
 
             return ['what' => $region->produces, 'amount' => $amount - $tax, 'tax' => $tax];
         });
+    }
+
+    /** The Harvest Bonus: the House adds a share from its treasury, while it can pay. */
+    private function bonus(?Season $season, int $amount): int
+    {
+        $law = $season !== null ? Wall::law($season, LawTemplate::HarvestBonus) : null;
+        $house = $season?->valley->house();
+
+        if ($law === null || $house === null) {
+            return 0;
+        }
+
+        $bonus = (int) floor($amount * $law->value / 100);
+
+        return $bonus > 0 && Faction::query()->whereKey($house->id)->where('treasury', '>=', $bonus)->decrement('treasury', $bonus) ? $bonus : 0;
     }
 
     private function tax(?Season $season, int $amount): int

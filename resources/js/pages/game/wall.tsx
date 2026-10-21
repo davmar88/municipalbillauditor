@@ -451,8 +451,12 @@ function HouseControls({
                 </label>
                 {template.range && (
                     <label className="grid gap-1 text-sm">
-                        {template.unit === '%' ? 'Percent' : 'Hours'} (
-                        {template.range[0]} to {template.range[1]})
+                        {template.unit === '%'
+                            ? 'Percent'
+                            : template.unit === 'Corn'
+                              ? 'Corn'
+                              : 'Hours'}{' '}
+                        ({template.range[0]} to {template.range[1]})
                         <Input
                             type="number"
                             min={template.range[0]}

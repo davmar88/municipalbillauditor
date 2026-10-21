@@ -3,6 +3,7 @@
 namespace App\Game;
 
 use App\Models\Faction;
+use App\Models\Home;
 use App\Models\Player;
 use App\Models\PlunderBand;
 use App\Models\Season;
@@ -129,6 +130,35 @@ final class Tick
         $law->delete();
     }
 
+    /** The Home Tax: each morning every animal with a home, outside the House, pays it as far as its Corn goes. */
+    private function collectHomeTax(Season $season): void
+    {
+        $law = Wall::law($season, LawTemplate::HomeTax);
+        $house = $season->valley->house();
+
+        if ($law === null || $house === null) {
+            return;
+        }
+
+        $collected = 0;
+        $payers = Player::query()
+            ->where('valley_id', $season->valley_id)
+            ->where(fn ($query) => $query->whereNull('faction_id')->orWhere('faction_id', '!=', $house->id))
+            ->whereIn('id', Home::query()->select('player_id'))
+            ->where('corn', '>', 0)
+            ->get(['id', 'corn']);
+
+        foreach ($payers as $payer) {
+            $paid = min((int) $law->value, (int) $payer->corn);
+            Player::query()->whereKey($payer->id)->decrement('corn', $paid);
+            $collected += $paid;
+        }
+
+        if ($collected > 0) {
+            Faction::query()->whereKey($house->id)->increment('treasury', $collected);
+        }
+    }
+
     /**
      * Each morning from 06:00 the House hands back its share of the grain
      * tax, split among everyone who visited in the last two days. The
@@ -155,6 +185,7 @@ final class Tick
             $pot = ($law !== null && $house !== null) ? min($house->treasury, (int) floor($season->tax_collected * $law->value / 100)) : 0;
 
             $season->forceFill(['last_rations_on' => $today, 'tax_collected' => 0])->save();
+            $this->collectHomeTax($season);
 
             if ($pot <= 0) {
                 return;

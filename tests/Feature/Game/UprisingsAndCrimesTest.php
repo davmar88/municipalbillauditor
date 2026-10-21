@@ -11,9 +11,11 @@ use App\Game\Crimes;
 use App\Game\Dice;
 use App\Game\GameException;
 use App\Game\GateNight;
+use App\Game\Gathering;
 use App\Game\Homes;
 use App\Game\LawTemplate;
 use App\Game\RaidRules;
+use App\Game\Tick;
 use App\Game\Uprisings;
 use App\Game\Wall;
 use App\Game\Warrants;
@@ -26,6 +28,7 @@ use App\Models\UnrestEvent;
 use App\Models\Warrant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
+use ReflectionMethod;
 use Tests\TestCase;
 
 /**
@@ -54,6 +57,52 @@ class UprisingsAndCrimesTest extends TestCase
     private function anger(int $amount): void
     {
         UnrestEvent::create(['season_id' => $this->season()->id, 'amount' => $amount, 'reason' => 'Test anger', 'expires_at' => now()->addDays(3)]);
+    }
+
+    public function test_the_new_laws_fine_reward_tax_homes_add_to_harvests_and_ban_arms(): void
+    {
+        $wall = app(Wall::class);
+        $this->house->forceFill(['treasury' => 1000])->save();
+        $criminal = $this->player(attributes: ['corn' => 30]);
+        $catcher = $this->player(attributes: ['corn' => 0]);
+
+        // Crime Fine and Arrest Reward: the fine as far as the criminal's Corn goes.
+        $wall->setLaw($this->ruler->fresh(), 1, LawTemplate::CrimeFine, 50);
+        $wall->setLaw($this->ruler->fresh(), 2, LawTemplate::ArrestReward, 40);
+        $said = Wall::justice($catcher->fresh(), $criminal->fresh());
+        $this->assertSame(0, $criminal->fresh()->corn);
+        $this->assertSame(40, $catcher->fresh()->corn);
+        $this->assertSame(1000 + 30 - 40, $this->house->fresh()->treasury);
+        $this->assertStringContainsString('Arrest Reward of 40 Corn', $said);
+
+        // Home Tax: animals with homes outside the House pay each morning.
+        $wall->setLaw($this->ruler->fresh(), 3, LawTemplate::HomeTax, 10);
+        $owner = $this->player(attributes: ['corn' => 25]);
+        $this->homeFor($owner);
+        $this->homeFor($this->ruler->fresh());
+        $rulerCorn = $this->ruler->fresh()->corn;
+        $before = $this->house->fresh()->treasury;
+        $season = $this->valley->currentSeason();
+        (new ReflectionMethod(Tick::class, 'collectHomeTax'))->invoke(app(Tick::class), $season);
+        $this->assertSame(15, $owner->fresh()->corn);
+        $this->assertSame($rulerCorn, $this->ruler->fresh()->corn, 'The House pays no Home Tax.');
+        $this->assertSame($before + 10, $this->house->fresh()->treasury);
+
+        // Harvest Bonus: a share on top, from the treasury.
+        // The House makes only so many changes a day.
+        $this->travel(1)->days();
+        $wall->setLaw($this->ruler->fresh(), 4, LawTemplate::HarvestBonus, 20);
+        $before = $this->house->fresh()->treasury;
+        $bonus = (new ReflectionMethod(Gathering::class, 'bonus'))->invoke(app(Gathering::class), $season, 50);
+        $this->assertSame(10, $bonus);
+        $this->assertSame($before - 10, $this->house->fresh()->treasury);
+
+        // Arms Ban.
+        $this->assertFalse(Wall::armsBanned($owner->fresh()));
+        $wall->setLaw($this->ruler->fresh(), 5, LawTemplate::ArmsBan);
+        $this->assertTrue(Wall::armsBanned($owner->fresh()));
+        $this->assertSame('No animal may take up arms in the valley.', LawTemplate::ArmsBan->wording(null, null));
+        $this->assertSame(4, LawTemplate::HomeTax->unrest(10, null));
     }
 
     public function test_an_uprising_needs_unrest_of_sixty(): void

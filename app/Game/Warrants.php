@@ -258,6 +258,11 @@ final class Warrants
             Apples::award($hunter, $apples, "Caught {$wanted->name}", "bounty:{$warrant->id}");
             $warrant->forceFill(['status' => 'served', 'hunter_id' => $hunter->id, 'served_at' => CarbonImmutable::now()])->save();
             Rosettes::award($hunter, 15, "Caught {$wanted->name}", "arrest:{$warrant->id}", $hunter->valley->currentSeason());
+            $reward = Wall::justice($hunter, $wanted);
+
+            if ($reward !== '') {
+                Notices::send($hunter->id, 'warrant', '💰'.$reward, $wantedPage);
+            }
             Missions::record($hunter, 'bounty');
             $repaid = self::payBack($wanted, $warrant->season_id);
             $owing = $repaid > 0 ? " You paid back {$repaid} Corn to those your crimes hurt." : '';

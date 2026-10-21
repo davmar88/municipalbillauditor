@@ -17,6 +17,11 @@ enum LawTemplate: string
     case Curfew = 'curfew';
     case TradeBan = 'trade_ban';
     case NightWatch = 'night_watch';
+    case HomeTax = 'home_tax';
+    case HarvestBonus = 'harvest_bonus';
+    case CrimeFine = 'crime_fine';
+    case ArrestReward = 'arrest_reward';
+    case ArmsBan = 'arms_ban';
 
     public function label(): string
     {
@@ -27,6 +32,11 @@ enum LawTemplate: string
             self::Curfew => 'Curfew',
             self::TradeBan => 'Trade Ban',
             self::NightWatch => 'Night Watch',
+            self::HomeTax => 'Home Tax',
+            self::HarvestBonus => 'Harvest Bonus',
+            self::CrimeFine => 'Crime Fine',
+            self::ArrestReward => 'Arrest Reward',
+            self::ArmsBan => 'Arms Ban',
         };
     }
 
@@ -39,6 +49,11 @@ enum LawTemplate: string
             self::Curfew => 'No raids on House land for some hours after 22:00.',
             self::TradeBan => 'One named faction may not buy or sell in the market, for 72 hours.',
             self::NightWatch => 'Raises the chance of catching criminals by 25%. Costs the treasury 50 Corn every half hour.',
+            self::HomeTax => 'Every morning each animal with a home pays this much Corn to the House treasury. The House itself pays nothing.',
+            self::HarvestBonus => 'The House treasury adds this share on top of all Corn gathered, for as long as it can pay.',
+            self::CrimeFine => 'A criminal who is caught pays this much Corn to the House treasury, on top of paying back what they took.',
+            self::ArrestReward => 'Whoever catches a criminal gets this much Corn from the House treasury.',
+            self::ArmsBan => 'No Pitchforks, Cudgels, Slings or Iron Swords may be taken up in the valley.',
         };
     }
 
@@ -50,15 +65,20 @@ enum LawTemplate: string
             self::MarketLevy => [0, 5],
             self::Rations => [30, 100],
             self::Curfew => [1, 8],
-            self::TradeBan, self::NightWatch => null,
+            self::HomeTax => [1, 30],
+            self::HarvestBonus => [1, 20],
+            self::CrimeFine => [10, 200],
+            self::ArrestReward => [10, 100],
+            self::TradeBan, self::NightWatch, self::ArmsBan => null,
         };
     }
 
     public function unit(): ?string
     {
         return match ($this) {
-            self::GrainTax, self::MarketLevy, self::Rations => '%',
+            self::GrainTax, self::MarketLevy, self::Rations, self::HarvestBonus => '%',
             self::Curfew => 'hours',
+            self::HomeTax, self::CrimeFine, self::ArrestReward => 'Corn',
             default => null,
         };
     }
@@ -85,6 +105,10 @@ enum LawTemplate: string
             self::MarketLevy => 2,
             self::Rations => 50,
             self::Curfew => 4,
+            self::HomeTax => 10,
+            self::HarvestBonus => 5,
+            self::CrimeFine => 50,
+            self::ArrestReward => 25,
             default => null,
         };
     }
@@ -98,6 +122,12 @@ enum LawTemplate: string
             self::Curfew => 4,
             self::TradeBan => 5,
             self::NightWatch => 2,
+            // Taxing homes angers everyone; the rest are popular or cost the valley little.
+            self::HomeTax => (int) ceil((int) $value / 3),
+            self::HarvestBonus => 0,
+            self::CrimeFine => 1,
+            self::ArrestReward => 0,
+            self::ArmsBan => 3,
         };
     }
 
@@ -111,6 +141,11 @@ enum LawTemplate: string
             self::Curfew => "No raids on House land for {$value} hours after 22:00.",
             self::TradeBan => (Faction::query()->whereKey($target)->value('name') ?? 'That faction').' may not trade in the market.',
             self::NightWatch => 'The Night Watch patrols the valley after dark.',
+            self::HomeTax => "Every animal with a home pays {$value} Corn to the Farmhouse each morning.",
+            self::HarvestBonus => "The Farmhouse adds {$value}% to all Corn gathered.",
+            self::CrimeFine => "A criminal who is caught pays a fine of {$value} Corn to the Farmhouse.",
+            self::ArrestReward => "The Farmhouse pays {$value} Corn to whoever catches a criminal.",
+            self::ArmsBan => 'No animal may take up arms in the valley.',
         };
     }
 }

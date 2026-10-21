@@ -45,6 +45,52 @@ final class Wall
         return $season->laws()->where('template', $template)->first();
     }
 
+    /**
+     * When a criminal is caught: the Crime Fine goes from them to the House,
+     * and the Arrest Reward from the House to whoever caught them. Both rows
+     * locked. Returns a line for the catcher's notice, or ''.
+     */
+    public static function justice(Player $catcher, Player $criminal): string
+    {
+        $season = $catcher->valley->currentSeason();
+        $house = $season?->valley->house();
+
+        if ($season === null || $house === null) {
+            return '';
+        }
+
+        $said = '';
+        $fine = self::law($season, LawTemplate::CrimeFine);
+
+        if ($fine !== null && ($paid = min((int) $fine->value, (int) $criminal->fresh()->corn)) > 0) {
+            Player::query()->whereKey($criminal->id)->decrement('corn', $paid);
+            Faction::query()->whereKey($house->id)->increment('treasury', $paid);
+            Notices::send($criminal->id, 'crime', "⚖️ The Crime Fine on the Wall cost you {$paid} Corn, paid to the Farmhouse.", route('play.wall', [], false));
+        }
+
+        $reward = self::law($season, LawTemplate::ArrestReward);
+
+        if ($reward !== null) {
+            $paid = (int) min((int) $reward->value, (int) Faction::query()->whereKey($house->id)->value('treasury'));
+
+            if ($paid > 0) {
+                Faction::query()->whereKey($house->id)->decrement('treasury', $paid);
+                Player::query()->whereKey($catcher->id)->increment('corn', $paid);
+                $said = " The Farmhouse paid you an Arrest Reward of {$paid} Corn.";
+            }
+        }
+
+        return $said;
+    }
+
+    /** Whether the Arms Ban stands in the player's valley. */
+    public static function armsBanned(Player $player): bool
+    {
+        $season = $player->valley->currentSeason();
+
+        return $season !== null && $season->valley->house() !== null && self::law($season, LawTemplate::ArmsBan) !== null;
+    }
+
     public static function unrest(Season $season): int
     {
         $laws = (int) self::laws($season)->sum(fn (Law $law) => $law->unrest());

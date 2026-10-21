@@ -8,6 +8,7 @@ use App\Models\Crime;
 use App\Models\Faction;
 use App\Models\Home;
 use App\Models\Player;
+use App\Models\Region;
 use App\Models\Season;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
@@ -385,6 +386,11 @@ final class Crimes
 
             $crime->forceFill(['caught' => true, 'caught_by' => $victim->id, 'repaid_at' => CarbonImmutable::now()])->save();
             Rosettes::award($victim, 10, "Caught {$criminal->name}", "catch:{$crime->id}", $victim->valley->currentSeason());
+            $reward = Wall::justice($victim, $criminal);
+
+            if ($reward !== '') {
+                Notices::send($victim->id, 'crime', '💰'.$reward, $wanted);
+            }
             Missions::record($victim, 'bounty');
             $back = $owed > 0 ? " They paid back {$owed} Corn." : '';
             Notices::send($criminal->id, 'crime', "🚨 {$victim->name} caught you in {$where->name}. You're in the pound until ".Clock::local($criminal->fresh()->pound_until)->format('H:i').'.'.($owed > 0 ? " You paid back {$owed} Corn." : ''), $wanted);
@@ -444,12 +450,30 @@ final class Crimes
                     $criminal->forceFill(['corn' => $criminal->corn + $loot, 'materials' => $carried])->save();
                 }
             } elseif ($crime->kind === CrimeKind::Plunder && $crime->region_id !== null) {
-                // The plunderer gathers the section's crop, and takes Corn from its holders.
-                $region = $crime->region;
-                $materials = $criminal->materials;
-                $materials[$region->produces] = (int) ($materials[$region->produces] ?? 0) + self::PLUNDER_CROP;
-                $criminal->materials = $materials;
-                $criminal->save();
+                // The plunderer strips the field bare into its bag (her rule, 2026-10-21), and takes Corn from its holders.
+                $region = Region::query()->lockForUpdate()->findOrFail($crime->region_id);
+                $taken = $region->produces !== null ? Stock::state($region)['left'] : 0;
+
+                // Water still needs something to carry it in.
+                if ($region->produces === 'water' && config('game.survival.enabled')) {
+                    $taken = min($taken, max(0, Survival::waterCap($criminal) - $criminal->material('water')));
+                }
+
+                if ($taken > 0) {
+                    Stock::take($region, $taken);
+
+                    if ($region->produces === 'corn') {
+                        $criminal->corn += $taken;
+                    } else {
+                        $materials = $criminal->materials;
+                        $materials[$region->produces] = (int) ($materials[$region->produces] ?? 0) + $taken;
+                        $criminal->materials = $materials;
+                    }
+
+                    $criminal->save();
+                }
+
+                $this->haul[] = "{$taken} {$region->produces}";
 
                 $faction = $crime->target_faction_id !== null ? Faction::query()->lockForUpdate()->find($crime->target_faction_id) : null;
 
@@ -526,8 +550,8 @@ final class Crimes
         }
 
         if ($crime->kind === CrimeKind::Plunder) {
-            $crop = $crime->region?->produces;
-            Notices::send($criminal->id, 'crime', '🌾 You plundered '.self::PLUNDER_CROP." {$crop} and {$loot} Corn from {$section}.", route('play', [], false));
+            $crop = $haul[0] ?? '0 '.$crime->region?->produces;
+            Notices::send($criminal->id, 'crime', "🌾 You stripped {$section} bare: {$crop} and {$loot} Corn into your bag.", route('play', [], false));
             Notices::send($victims, 'crime', "🔥 {$criminal->name} plundered {$section}, taking {$loot} Corn from your treasury.".self::CATCH_IT, route('play.wanted', [], false));
 
             return;
