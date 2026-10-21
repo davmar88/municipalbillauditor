@@ -45,9 +45,19 @@ class PageController extends Controller
 
     public function sitemap(): Response
     {
-        $urls = [route('home'), route('puzzle'), route('privacy'), route('terms'), route('updates'), route('fair-play'), route('wiki')];
+        // The pages that change most come first and say so.
+        $today = now()->toDateString();
+        $urls = [
+            [route('home'), 'daily', '1.0'],
+            [route('wiki'), 'weekly', '0.8'],
+            [route('puzzle'), 'daily', '0.7'],
+            [route('updates'), 'daily', '0.6'],
+            [route('fair-play'), 'monthly', '0.4'],
+            [route('privacy'), 'yearly', '0.2'],
+            [route('terms'), 'yearly', '0.2'],
+        ];
         $xml = '<?xml version="1.0" encoding="UTF-8"?>'."\n".'<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
-            .implode('', array_map(fn (string $url) => '<url><loc>'.e($url).'</loc></url>', $urls))
+            .implode('', array_map(fn (array $url) => '<url><loc>'.e($url[0]).'</loc><lastmod>'.$today.'</lastmod><changefreq>'.$url[1].'</changefreq><priority>'.$url[2].'</priority></url>', $urls))
             .'</urlset>';
 
         return response($xml, 200, ['Content-Type' => 'application/xml']);

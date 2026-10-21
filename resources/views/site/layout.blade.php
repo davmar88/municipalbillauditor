@@ -3,16 +3,22 @@
     $contact = config('game.contact_email');
 @endphp
 <!DOCTYPE html>
-<html lang="en-ZA">
+<html lang="en">
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <title>@yield('title')</title>
         <meta name="description" content="@yield('description')">
         <link rel="canonical" href="@yield('canonical', url()->current())">
+        {{-- One English site for players everywhere. --}}
+        <link rel="alternate" hreflang="en" href="@yield('canonical', url()->current())">
+        <link rel="alternate" hreflang="x-default" href="@yield('canonical', url()->current())">
+        <meta name="robots" content="index, follow, max-image-preview:large">
 
         <meta property="og:type" content="website">
-        <meta property="og:locale" content="en_ZA">
+        <meta property="og:locale" content="en_US">
+        <meta property="og:locale:alternate" content="en_GB">
+        <meta property="og:locale:alternate" content="en_ZA">
         <meta property="og:site_name" content="{{ config('app.name') }}">
         <meta property="og:title" content="@yield('title')">
         <meta property="og:description" content="@yield('description')">
@@ -32,6 +38,7 @@
 
         @fonts
         @vite('resources/css/site.css')
+        @stack('head')
     </head>
     <body>
         <a href="#main" class="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-10 focus:rounded-md focus:bg-paper focus:px-4 focus:py-2">Skip to content</a>

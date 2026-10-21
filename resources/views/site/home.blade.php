@@ -4,9 +4,64 @@
     $playUrl = auth()->check() ? route('play') : route('register');
 @endphp
 
-@section('title', config('app.name').': take the farm, write the rules, guard the treasury')
-@section('description', 'A free online strategy game for your phone. Join a faction, rule the valley from the Farmhouse, catch the rulers rewriting the laws, run your own shop, and rise up.')
+@section('title', config('app.name').': free online multiplayer strategy game')
+@section('description', 'Play Animal Farm free in your browser, anywhere in the world. Pick an animal, join a faction, raid rivals and rule the Farmhouse. No download needed.')
 @section('canonical', route('home'))
+
+@php
+    $faq = [
+        ['What is Animal Farm?', "Animal Farm is a free online multiplayer strategy game, inspired by George Orwell's novel. You play an animal on a farm the humans have left. Join a faction, gather Corn and materials, raid rival land and fight for the Farmhouse, where the rulers write the laws on the Barn Wall."],
+        ['Is Animal Farm free to play?', 'Yes. The game is free to play. You can buy Pineapples with real money through PayPal if you want extras, but you never have to.'],
+        ['Do I need to download anything?', 'No. Animal Farm plays in the browser on any phone, tablet or computer: Android, iPhone, Windows or Mac. There is no app to install.'],
+        ['Can I play from anywhere in the world?', 'Yes. Anyone 18 or older can play from any country. Chat can be translated between 14 languages, so you can talk to players from other countries.'],
+        ['How long does a game take?', 'About five minutes a visit. Your horseshoes limit how much you can do at a time and fill up again while you are away, so it fits around your day.'],
+        ['Which animals can I play?', 'Pigs, dogs, horses, sheep, goats, cows, llamas, zebras, tortoises and twelve kinds of cat. Each has one talent and one weak spot, and any of them can lead a faction.'],
+        ['Can I earn anything?', 'You can earn Apples by selling copies of your own designs in your shop or by collecting bounties on outlaws. Later in the game, Apples you earned can be paid out to your PayPal account.'],
+    ];
+    $site = rtrim(route('home'), '/');
+@endphp
+
+@push('head')
+    {{-- What search engines read about the game, the site and the questions people ask. --}}
+    <script type="application/ld+json">{!! json_encode([
+        '@context' => 'https://schema.org',
+        '@graph' => [
+            [
+                '@type' => 'WebSite',
+                '@id' => $site.'/#website',
+                'url' => $site.'/',
+                'name' => config('app.name'),
+                'inLanguage' => 'en',
+            ],
+            [
+                '@type' => 'VideoGame',
+                '@id' => $site.'/#game',
+                'name' => config('app.name'),
+                'url' => $site.'/',
+                'image' => url('/images/poster.jpg'),
+                'description' => 'A free online multiplayer strategy game inspired by George Orwell\'s Animal Farm. Pick an animal, join a faction, raid rivals, rule the Farmhouse and rewrite the laws.',
+                'genre' => ['Strategy', 'Role-playing', 'Massively multiplayer online'],
+                'gamePlatform' => ['Web browser', 'Android', 'iOS', 'Windows', 'macOS'],
+                'applicationCategory' => 'Game',
+                'operatingSystem' => 'Any',
+                'playMode' => 'MultiPlayer',
+                'inLanguage' => 'en',
+                'typicalAgeRange' => '18-',
+                'isAccessibleForFree' => true,
+                'offers' => ['@type' => 'Offer', 'price' => '0', 'priceCurrency' => 'USD', 'availability' => 'https://schema.org/InStock'],
+            ],
+            [
+                '@type' => 'FAQPage',
+                '@id' => $site.'/#faq',
+                'mainEntity' => array_map(fn (array $item) => [
+                    '@type' => 'Question',
+                    'name' => $item[0],
+                    'acceptedAnswer' => ['@type' => 'Answer', 'text' => $item[1]],
+                ], $faq),
+            ],
+        ],
+    ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG) !!}</script>
+@endpush
 
 @section('content')
     {{-- The poster, melting into the page on every side --}}
@@ -29,7 +84,7 @@
         <div class="bg-grid pointer-events-none absolute inset-0" aria-hidden="true"></div>
         <div class="relative mx-auto grid max-w-[1200px] items-center gap-12 px-[clamp(16px,4vw,40px)] py-[clamp(48px,8vw,104px)] lg:grid-cols-[1.1fr_0.9fr]">
             <div class="flex flex-col gap-6">
-                <p class="font-mono text-[13px] tracking-[0.14em] text-action">THE ANIMALS RUN THE FARM NOW</p>
+                <p class="font-mono text-[13px] tracking-[0.14em] text-action">A FREE ONLINE STRATEGY GAME. THE ANIMALS RUN THE FARM NOW.</p>
                 <h1 class="text-[clamp(40px,6vw,72px)] leading-[1.02] font-extrabold tracking-tight">
                     Take the farm.<br>
                     Write the rules.<br>
@@ -43,7 +98,7 @@
                     <a href="{{ route('puzzle') }}" class="flex h-12 items-center rounded-md border border-rule px-5 font-semibold text-ink no-underline hover:border-action hover:text-ink">Try today's puzzle</a>
                     <a href="{{ route('wiki') }}" class="flex h-12 items-center rounded-md border border-rule px-5 font-semibold text-ink no-underline hover:border-action hover:text-ink">How the game works</a>
                 </div>
-                <p class="text-sm text-muted">Free. Plays in your phone's browser, about five minutes a visit. Adults 18 and older.</p>
+                <p class="text-sm text-muted">Free. Plays in the browser on any phone or computer, from anywhere in the world. About five minutes a visit. Adults 18 and older.</p>
             </div>
 
             {{-- The Wall, with one law quietly changed. --}}
@@ -62,6 +117,13 @@
                 <p class="mt-5 border-t border-rule-soft pt-4 text-sm text-ink-2">Yesterday the levy was 2%. A donkey with a saved copy of the Wall noticed at breakfast.</p>
             </figure>
         </div>
+    </section>
+
+    {{-- What the game is, in plain words, for anyone who just found it --}}
+    <section class="mx-auto max-w-[860px] px-[clamp(16px,4vw,40px)] pt-[clamp(48px,7vw,88px)]">
+        <h2 class="text-[clamp(28px,3.6vw,44px)] leading-[1.1] font-extrabold tracking-tight">A multiplayer strategy game, inspired by George Orwell</h2>
+        <p class="mt-4 text-[18px] text-ink-2">Animal Farm is a free online multiplayer strategy and role-playing game. The humans have left the farm and the animals run it now. You play one of them: a pig, a dog, a horse, a cow, a tortoise, a cat or one of the others, each with a talent and a weak spot.</p>
+        <p class="mt-4 text-[18px] text-ink-2">Gather Corn and materials across a big shared map, build a home, trade in the Market, rob and raid, and band together with other players in factions. The faction that takes the Farmhouse writes the laws everyone lives by, and the rest of the valley watches for cheats.</p>
     </section>
 
     {{-- How it plays --}}
@@ -195,6 +257,38 @@
             @endforeach
         </section>
     @endif
+
+    {{-- From anywhere --}}
+    <section class="bg-glow-low border-y border-rule">
+        <div class="mx-auto grid max-w-[1200px] gap-5 px-[clamp(16px,4vw,40px)] py-[clamp(48px,7vw,88px)] sm:grid-cols-2 lg:grid-cols-4">
+            <h2 class="text-[clamp(28px,3.6vw,44px)] leading-[1.1] font-extrabold tracking-tight sm:col-span-2 lg:col-span-4">Play from anywhere in the world</h2>
+            @foreach ([
+                ['No download', 'Open the site and play. It runs in the browser on Android, iPhone, Windows and Mac.'],
+                ['Chat across borders', 'Chat with players from other countries, translated into '.count(\App\Game\Players::LANGUAGES).' languages.'],
+                ['Fits your day', 'About five minutes a visit. Your horseshoes fill up again while you sleep, whatever your time zone.'],
+                ['Free to play', 'Free for everyone 18 and older. Pay only if you want extras.'],
+            ] as [$point, $text])
+                <div class="flex flex-col gap-2 rounded-xl border border-rule-soft bg-paper p-6">
+                    <h3 class="text-[19px] font-bold">{{ $point }}</h3>
+                    <p class="text-ink-2">{{ $text }}</p>
+                </div>
+            @endforeach
+        </div>
+    </section>
+
+    {{-- Questions people ask, the same ones search engines read above --}}
+    <section id="faq" class="mx-auto max-w-[860px] px-[clamp(16px,4vw,40px)] py-[clamp(48px,7vw,88px)]">
+        <h2 class="text-[clamp(28px,3.6vw,44px)] leading-[1.1] font-extrabold tracking-tight">Questions</h2>
+        <div class="mt-8 flex flex-col gap-3">
+            @foreach ($faq as [$question, $answer])
+                <details class="group rounded-xl border border-rule-soft bg-paper px-5 py-4" @if ($loop->first) open @endif>
+                    <summary class="cursor-pointer text-[18px] font-bold">{{ $question }}</summary>
+                    <p class="mt-3 text-ink-2">{{ $answer }}</p>
+                </details>
+            @endforeach
+        </div>
+        <p class="mt-6 text-ink-2">More in <a href="{{ route('wiki') }}">how the game works</a>.</p>
+    </section>
 
     {{-- Closing --}}
     <section class="mx-auto flex max-w-[860px] flex-col items-center gap-6 px-[clamp(16px,4vw,40px)] py-[clamp(56px,8vw,104px)] text-center">
