@@ -109,7 +109,10 @@ class MapController extends Controller
         // Every animal stays on the map, online or not: offline ones can still be robbed, their homes burned.
         // Animals hiding in their homes don't show at all, except to themselves.
         $visible = fn ($query) => $query->where('valley_id', $valley->id)
-            ->where(fn ($query) => $query->whereNull('inside_home_at')->orWhere('id', $player->id));
+            ->where(fn ($query) => $query->whereNull('inside_home_at')->orWhere('id', $player->id))
+            // Animals still on their way aren't anywhere yet: they show only as moving discs until they arrive.
+            ->where(fn ($query) => $query->whereNull('walk_arrives_at')->orWhere('walk_arrives_at', '<=', now())->orWhere('id', $player->id))
+            ->when(! ValleyAnimals::on(), fn ($query) => $query->where('npc', false));
         $paddockId = (int) ($paddock?->id ?? 0);
         // How many stand in each region, counted by the database.
         $counts = Player::query()->toBase()->tap($visible)
