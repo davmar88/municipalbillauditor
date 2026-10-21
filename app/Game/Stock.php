@@ -2,6 +2,7 @@
 
 namespace App\Game;
 
+use App\Models\Player;
 use App\Models\Region;
 use Carbon\CarbonImmutable;
 
@@ -72,6 +73,42 @@ final class Stock
         ['left' => $left, 'max' => $max, 'from' => $from] = self::state($region);
 
         return $from === null ? null : $from->addMinutes((int) ceil(($max - $left) * 60 / self::rule($region)['per_hour']));
+    }
+
+    /**
+     * Strip a field bare into an animal's bag, as a plunder or a won raid does
+     * (her rule, 2026-10-21). Water still needs a barrel to carry it. Both rows
+     * must be locked. Returns how much was taken.
+     */
+    public static function strip(Region $region, Player $player): int
+    {
+        if ($region->produces === null || $region->isScrub()) {
+            return 0;
+        }
+
+        $taken = self::state($region)['left'];
+
+        if ($region->produces === 'water' && config('game.survival.enabled')) {
+            $taken = min($taken, max(0, Survival::waterCap($player) - $player->material('water')));
+        }
+
+        if ($taken <= 0) {
+            return 0;
+        }
+
+        self::take($region, $taken);
+
+        if ($region->produces === 'corn') {
+            $player->corn += $taken;
+        } else {
+            $materials = $player->materials;
+            $materials[$region->produces] = (int) ($materials[$region->produces] ?? 0) + $taken;
+            $player->materials = $materials;
+        }
+
+        $player->save();
+
+        return $taken;
     }
 
     /** Take what was gathered. The region must be locked. */

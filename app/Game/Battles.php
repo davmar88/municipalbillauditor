@@ -215,6 +215,16 @@ final class Battles
 
             if ($won) {
                 $this->take($season, $region, $attack->faction_id);
+
+                // The one who led the raid strips the field bare into their bag, as a plunder does.
+                if ($attack->player_id !== null && ($leader = Player::query()->find($attack->player_id)) !== null) {
+                    $leader = Players::lock($leader);
+                    $taken = Stock::strip($region, $leader);
+
+                    if ($taken > 0) {
+                        Notices::send($leader->id, 'battle', "🌾 You stripped {$region->name} bare: {$taken} {$region->produces} into your bag.", route('play', [], false));
+                    }
+                }
             }
 
             $this->announce($region->name, $attack->faction_id, $defenderId, $won);

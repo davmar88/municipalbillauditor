@@ -7,6 +7,7 @@ use App\Game\Battles;
 use App\Game\Clock;
 use App\Game\GameException;
 use App\Game\RaidRules;
+use App\Game\Stock;
 use App\Models\Attack;
 use App\Models\Faction;
 use App\Models\Notice;
@@ -87,6 +88,10 @@ class BattlesTest extends TestCase
         $this->assertSame('attack', $attack->fresh()->winner);
         $this->assertSame($this->redHooves->id, $this->region('henhouse')->faction_id);
         $this->assertSame(10, $this->red[0]->fresh()->rosettes - 0);
+
+        // The raid's leader strips the field bare into their bag.
+        $this->assertSame(Stock::rule($this->region('henhouse'))['max'], $this->red[0]->fresh()->material('eggs'));
+        $this->assertSame(0, Stock::state($this->region('henhouse'))['left']);
     }
 
     public function test_defenders_who_turn_up_hold_their_land(): void

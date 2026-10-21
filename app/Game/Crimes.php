@@ -452,26 +452,7 @@ final class Crimes
             } elseif ($crime->kind === CrimeKind::Plunder && $crime->region_id !== null) {
                 // The plunderer strips the field bare into its bag (her rule, 2026-10-21), and takes Corn from its holders.
                 $region = Region::query()->lockForUpdate()->findOrFail($crime->region_id);
-                $taken = $region->produces !== null ? Stock::state($region)['left'] : 0;
-
-                // Water still needs something to carry it in.
-                if ($region->produces === 'water' && config('game.survival.enabled')) {
-                    $taken = min($taken, max(0, Survival::waterCap($criminal) - $criminal->material('water')));
-                }
-
-                if ($taken > 0) {
-                    Stock::take($region, $taken);
-
-                    if ($region->produces === 'corn') {
-                        $criminal->corn += $taken;
-                    } else {
-                        $materials = $criminal->materials;
-                        $materials[$region->produces] = (int) ($materials[$region->produces] ?? 0) + $taken;
-                        $criminal->materials = $materials;
-                    }
-
-                    $criminal->save();
-                }
+                $taken = Stock::strip($region, $criminal);
 
                 $this->haul[] = "{$taken} {$region->produces}";
 
