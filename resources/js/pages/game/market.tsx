@@ -301,18 +301,18 @@ function MyShop({ items, shop }: Props) {
     const [prices, setPrices] = useState<Record<number, number>>({});
     const [currencies, setCurrencies] = useState<Record<number, Currency>>({});
     const [counts, setCounts] = useState<Record<number, number>>({});
-    // Only faction members sell in the market.
+    // Anyone sells looks; only faction members sell recipes, the items with a power.
     const inFaction = player?.faction != null;
-    const canSell = (player?.level ?? 1) >= shop.level && inFaction;
+    const canSell = (player?.level ?? 1) >= shop.level;
 
     return (
         <section className="flex flex-col gap-3">
             <p className="text-sm text-muted-foreground">
                 {canSell
                     ? `${shop.used} of ${shop.shelves} shelves in use.`
-                    : !inFaction
-                      ? 'Only faction members can sell in the market: join a faction to open your shop.'
-                      : `You get a shop at level ${shop.level}.`}{' '}
+                    : `You get a shop at level ${shop.level}.`}{' '}
+                {!inFaction &&
+                    'You can sell looks like hats and scarves; recipes, the items with a power, only faction members sell.'}{' '}
                 Every sale earns you 3 Rosettes.{' '}
                 {shop.applesOnly
                     ? 'Items sell for Apples, which are bought with real money.'
@@ -431,6 +431,13 @@ function MyShop({ items, shop }: Props) {
                                                 </Button>
                                             )}
                                         </div>
+                                    ) : item.design.power && !inFaction ? (
+                                        canSell && (
+                                            <p className="text-xs text-muted-foreground">
+                                                Join a faction to sell this
+                                                recipe.
+                                            </p>
+                                        )
                                     ) : (
                                         canSell && (
                                             <>

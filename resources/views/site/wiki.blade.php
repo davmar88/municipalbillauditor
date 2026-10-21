@@ -96,7 +96,7 @@
         'market' => ['The Market, items and weapons', [
             'Design hats, scarves, shop signs and dozens of other items on the Workshop\'s shapes. A design is checked before it can be made. Every copy is numbered.',
             'Sell copies from your own shop for Apples. Better shapes open up as your Creativity grows.',
-            'Only faction members can put things on the market. Lone wolves can still buy and use items.',
+            'Anyone can sell looks like hats and scarves. Only faction members can sell recipes, the items with a power. Lone wolves can still buy and use anything.',
             'Recipes, the items with a power, belong to faction members: only they can design and make them. Anyone can design looks like hats and scarves.',
             'Many items have a power that\'s used up when you use them: gloves for gathering, a Night Cloak for crime, a War Banner for raids, an Iron Lock for your home.',
             'Weapons: a Pitchfork makes your next 3 raids hit half as hard again; a Cudgel makes your next robbery take twice as much; a Sling doubles you against Irongate\'s plunderers; an Iron Sword doubles your next 3 raids, defences or plunderer fights.',

@@ -184,21 +184,31 @@ class MarketTest extends TestCase
         $this->market->list($maker->fresh(), $this->market->craft($maker->fresh(), $design->fresh()), 30);
     }
 
-    public function test_only_faction_members_can_put_things_on_the_market(): void
+    public function test_anyone_sells_looks_but_only_faction_members_sell_recipes(): void
     {
         config(['game.market.faction_only' => true]);
         $maker = $this->maker();
         $item = $this->market->craft($maker, $this->design($maker));
 
+        // A scarf is only for looks: anyone may sell it.
+        $this->assertSame(20, $this->market->list($maker->fresh(), $item, 20)->price);
+
+        // A recipe, an item with a power, only a faction member may sell.
+        $maker->forceFill(['creativity_skill' => 10000, 'materials' => [...$maker->fresh()->materials, 'wool' => 50, 'dye' => 50, 'wood' => 50, 'straw' => 50, 'clay' => 50, 'stone' => 50, 'iron' => 50]])->save();
+        config(['game.market.recipes_faction_only' => false]);
+        $gloves = $this->market->design($maker->fresh(), ItemTemplate::Gloves, 'Work Gloves', ['#ffffff', '#16171d'], 'plain', null);
+        $gloves->forceFill(['status' => 'approved'])->save();
+        $pair = $this->market->craft($maker->fresh(), $gloves->fresh());
+
         try {
-            $this->market->list($maker->fresh(), $item, 20);
-            $this->fail('A lone animal put something on the market.');
+            $this->market->list($maker->fresh(), $pair, 30);
+            $this->fail('A lone animal put a recipe on the market.');
         } catch (GameException $e) {
-            $this->assertStringContainsString('Only faction members can sell', $e->getMessage());
+            $this->assertStringContainsString('Only faction members can sell recipes', $e->getMessage());
         }
 
         $this->faction('Sellers', $maker);
-        $this->assertSame(20, $this->market->list($maker->fresh(), $item, 20)->price);
+        $this->assertSame(30, $this->market->list($maker->fresh(), $pair, 30)->price);
     }
 
     public function test_recipes_belong_to_faction_members_but_anyone_designs_looks(): void

@@ -230,9 +230,9 @@ final class Market
             throw new GameException("You get a shop at level {$level}.");
         }
 
-        // Only faction members trade in the market (her rule, 2026-10-21).
-        if ($player->faction_id === null && config('game.market.faction_only')) {
-            throw new GameException('Only faction members can sell in the market. Join a faction first.');
+        // Only faction members sell recipes in the market; looks like hats and scarves anyone may sell (her rules, 2026-10-21).
+        if ($player->faction_id === null && config('game.market.faction_only') && $item->design->template->power() !== null) {
+            throw new GameException('Only faction members can sell recipes, the items with a power. Join a faction first, or sell looks like hats and scarves.');
         }
 
         if ($player->homeIsClosed()) {
