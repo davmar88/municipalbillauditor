@@ -344,7 +344,7 @@ class MapController extends Controller
                 'lootShare' => (int) round(Crimes::LOOT_SHARE * 100),
             ],
             'buildingKinds' => array_map(fn (BuildingKind $kind) => $kind->card(), BuildingKind::cases()),
-            'laws' => $season ? Wall::laws($season)->map(fn (Law $law) => [
+            'laws' => $season ? Wall::laws($season)->filter(fn (Law $law) => Wall::canSee($player, $law))->map(fn (Law $law) => [
                 'label' => $law->template->label(),
                 'wording' => $law->wording(),
             ])->values() : [],

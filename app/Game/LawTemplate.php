@@ -42,6 +42,16 @@ enum LawTemplate: string
         };
     }
 
+    /**
+     * A law painted in the dark: the House chooses to make it, but only the
+     * House and those with eyes to see it (goats, the valley's auditors) find
+     * it on the Wall. The valley still feels its unrest.
+     */
+    public function secret(): bool
+    {
+        return $this === self::IrongatePact;
+    }
+
     public function explains(): string
     {
         return match ($this) {
@@ -56,7 +66,7 @@ enum LawTemplate: string
             self::CrimeFine => 'A criminal who is caught pays this much Corn to the House treasury, on top of paying back what they took.',
             self::ArrestReward => 'Whoever catches a criminal gets this much Corn from the House treasury.',
             self::ArmsBan => 'No Pitchforks, Cudgels, Slings or Iron Swords may be taken up in the valley.',
-            self::IrongatePact => "A corrupt deal with Irongate's men: when their plunderers sack a farm, the House gets this share of the loot. The valley won't like it.",
+            self::IrongatePact => "A secret, corrupt deal with Irongate's men: when their plunderers sack another faction's farm, the House gets this share of the loot. Only the House and goats can see it on the Wall, but the valley still feels it.",
         };
     }
 

@@ -40,6 +40,38 @@ final class Wall
         return $season->laws()->orderBy('slot')->get();
     }
 
+    /** Whether a player can see a law: secret ones only show to the House and to goats, who have eyes to see. */
+    public static function canSee(Player $player, Law $law): bool
+    {
+        if (! $law->template->secret()) {
+            return true;
+        }
+
+        $house = $player->valley->house();
+
+        return ($house !== null && $player->faction_id === $house->id) || $player->species === Species::Goat;
+    }
+
+    /**
+     * Who hears of a change to a law: everyone in the valley, or for a secret
+     * one only the House and the valley's goats.
+     *
+     * @return Collection<int, int>
+     */
+    private static function audience(Season $season, LawTemplate $template): Collection
+    {
+        if (! $template->secret()) {
+            return Notices::valley($season->valley_id);
+        }
+
+        $house = $season->valley->house();
+
+        return Player::query()
+            ->where('valley_id', $season->valley_id)
+            ->where(fn ($query) => $query->where('species', Species::Goat->value)->when($house, fn ($q) => $q->orWhere('faction_id', $house->id)))
+            ->pluck('id');
+    }
+
     public static function law(Season $season, LawTemplate $template): ?Law
     {
         return $season->laws()->where('template', $template)->first();
@@ -130,7 +162,7 @@ final class Wall
                 $existing->delete();
                 $this->record($season, $player, $slot, null, null, null, 'This place on the Wall was painted over.', false);
                 $this->useChange($season);
-                Notices::send(Notices::valley($season->valley_id), 'law', "📜 The House painted over the {$existing->template->label()} law on the Barn Wall.", route('play.wall', [], false));
+                Notices::send(self::audience($season, $existing->template), 'law', "📜 The House painted over the {$existing->template->label()} law on the Barn Wall.", route('play.wall', [], false));
 
                 return null;
             }
@@ -151,7 +183,7 @@ final class Wall
 
             $this->record($season, $player, $slot, $template, $value, $target, $law->wording(), false);
             $this->useChange($season);
-            Notices::send(Notices::valley($season->valley_id), 'law', "📜 New on the Barn Wall: {$law->wording()}", route('play.wall', [], false));
+            Notices::send(self::audience($season, $template), 'law', ($template->secret() ? '🤫 Painted in the dark on the Barn Wall: ' : '📜 New on the Barn Wall: ').$law->wording(), route('play.wall', [], false));
 
             return $law;
         });
@@ -438,7 +470,8 @@ final class Wall
     /** @return array<int, array{slot: int, template: string, value: int|null, target: string|null, wording: string}> */
     public function snapshot(Season $season): array
     {
-        return self::laws($season)->map(fn (Law $law) => [
+        // A saved copy holds what everyone can read: secret laws aren't on it.
+        return self::laws($season)->reject(fn (Law $law) => $law->template->secret())->map(fn (Law $law) => [
             'slot' => $law->slot,
             'template' => $law->template->value,
             'value' => $law->value,

@@ -136,6 +136,15 @@ class PlunderersTest extends TestCase
         $this->assertSame(6, $house->fresh()->material('wood'));
         $this->assertTrue(Notice::query()->where('player_id', $ruler->id)->where('text', 'like', '%pact with Irongate paid off%')->exists());
         $this->assertSame(16, LawTemplate::IrongatePact->unrest(40, null));
+
+        // A secret: the House and goats see it on the Wall; everyone else sees an empty place, but feels the unrest.
+        $goat = $this->player(Species::Goat);
+        $sheep = $this->player(Species::Sheep);
+        $this->actingAs($ruler->user)->get(route('play.wall'))->assertInertia(fn (Assert $page) => $page->where('laws.0.template', 'irongate_pact')->where('laws.0.secret', true));
+        $this->actingAs($goat->user)->get(route('play.wall'))->assertInertia(fn (Assert $page) => $page->where('laws.0.template', 'irongate_pact'));
+        $this->actingAs($sheep->user)->get(route('play.wall'))->assertInertia(fn (Assert $page) => $page->missing('laws.0.template')->where('unrest', fn ($unrest) => $unrest >= 16));
+        $this->assertFalse(Notice::query()->where('player_id', $this->holders->members()->first()->id)->where('text', 'like', '%Painted in the dark%')->exists());
+        $this->assertTrue(Notice::query()->where('player_id', $ruler->id)->where('text', 'like', '%Painted in the dark%')->exists());
     }
 
     public function test_a_hospital_gets_beaten_fighters_up_sooner(): void

@@ -40,7 +40,8 @@ class WallController extends Controller
         $unrest = Wall::unrest($season);
 
         return Inertia::render('game/wall', [
-            'laws' => collect(range(1, Wall::SLOTS))->map(fn (int $slot) => ($law = $laws->get($slot)) ? $this->law($law) : ['slot' => $slot]),
+            // A secret law shows as an empty place to those without eyes to see it.
+            'laws' => collect(range(1, Wall::SLOTS))->map(fn (int $slot) => ($law = $laws->get($slot)) && Wall::canSee($player, $law) ? $this->law($law) : ['slot' => $slot]),
             'templates' => array_map(fn (LawTemplate $template) => [
                 'value' => $template->value,
                 'label' => $template->label(),
@@ -174,6 +175,7 @@ class WallController extends Controller
             'target' => $law->target,
             'wording' => $law->wording(),
             'unrest' => $law->unrest(),
+            'secret' => $law->template->secret(),
             'expiresAt' => $law->expires_at?->toIso8601String(),
         ];
     }

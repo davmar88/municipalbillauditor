@@ -27,6 +27,8 @@ type Law = {
     target?: string | null;
     wording?: string;
     unrest?: number;
+    /** Painted in the dark: only the House and goats see it. */
+    secret?: boolean;
     expiresAt?: string | null;
 };
 
@@ -157,6 +159,8 @@ export default function WallPage(props: Props) {
                                         </span>
                                         {law.unrest !== undefined && (
                                             <span className="text-xs text-muted-foreground">
+                                                {law.secret &&
+                                                    '🤫 Secret, seen only by the House and goats · '}
                                                 {law.label} · adds {law.unrest}{' '}
                                                 unrest
                                                 {law.expiresAt &&
