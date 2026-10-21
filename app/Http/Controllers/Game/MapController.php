@@ -22,6 +22,7 @@ use App\Game\Powers;
 use App\Game\RaidRules;
 use App\Game\Stock;
 use App\Game\Survival;
+use App\Game\ValleyAnimals;
 use App\Game\ValleyBuilder;
 use App\Game\Wall;
 use App\Game\Wardrobe;
@@ -116,6 +117,8 @@ class MapController extends Controller
         $animals = DB::query()
             ->fromSub(
                 Player::query()->toBase()->tap($visible)
+                    // Switched off, the valley animals leave the map.
+                    ->when(! ValleyAnimals::on(), fn ($query) => $query->where('npc', false))
                     ->select(['id', 'name', 'species', 'faction_id', 'region_id', 'inside_home_at', 'food', 'drink', 'health', 'vitals_at', 'corn', 'materials', 'pos_x', 'pos_y', 'walk_to_x', 'walk_to_y', 'walk_arrives_at', 'npc'])
                     ->selectRaw("ROW_NUMBER() OVER (PARTITION BY COALESCE(region_id, ?) ORDER BY id = ? DESC, id IN ({$first}) DESC, last_seen_at DESC, id) AS place", [$paddockId, $player->id]),
                 'ranked',
@@ -268,6 +271,7 @@ class MapController extends Controller
                 ->where('id', '!=', $player->id)
                 ->where('walk_arrives_at', '>', now())
                 ->whereNull('inside_home_at')
+                ->when(! ValleyAnimals::on(), fn ($query) => $query->where('npc', false))
                 ->orderBy('walk_arrives_at')
                 ->limit(150)
                 ->get(['id', 'name', 'species', 'faction_id', 'walk_from_x', 'walk_from_y', 'walk_to_x', 'walk_to_y', 'walk_started_at', 'walk_arrives_at'])

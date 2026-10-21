@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Game\ValleyAnimals;
 use App\Http\Controllers\Controller;
 use App\Models\AppleEntry;
 use App\Models\ApplePurchase;
@@ -68,6 +69,12 @@ class SettingsController extends Controller
                 'mailFromAddress' => $settings->get('mail_from_address'),
                 // Until a mailbox is saved here, mail goes through the server's .env.
                 'mailFromServer' => $settings->get('mail_host') === null ? config('mail.mailers.smtp.host') : null,
+                // The animals the game runs itself, until there are enough real players.
+                'valleyAnimals' => [
+                    'on' => ValleyAnimals::on(),
+                    'count' => Player::query()->where('npc', true)->count(),
+                    'inFactions' => Player::query()->where('npc', true)->whereNotNull('faction_id')->count(),
+                ],
             ],
             'ready' => $paypal->ready(),
             'sales' => [
@@ -152,6 +159,17 @@ class SettingsController extends Controller
         $settings->put('cashout_open', $request->boolean('cashout_open') ? '1' : null, $user);
 
         return $this->told('Saved.');
+    }
+
+    /** Switch the valley animals on or off. */
+    public function valleyAnimals(Request $request, ValleyAnimals $animals): RedirectResponse
+    {
+        $on = (bool) $request->validate(['on' => ['required', 'boolean']])['on'];
+        $animals->switch($on, $request->user());
+
+        return $this->told($on
+            ? 'The valley animals are back at work.'
+            : 'The valley animals have gone: they left their factions and the map. Real players have the valley to themselves.');
     }
 
     public function forget(Request $request, string $key, Settings $settings): RedirectResponse

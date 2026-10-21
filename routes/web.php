@@ -247,6 +247,7 @@ Route::post('play-as/stop', [ImpersonateController::class, 'stop'])->middleware(
 Route::middleware(['auth', 'verified', 'can:admin'])->prefix('admin')->group(function () {
     Route::get('/', [SettingsController::class, 'index'])->name('admin');
     Route::put('settings', [SettingsController::class, 'update'])->name('admin.settings.update');
+    Route::put('valley-animals', [SettingsController::class, 'valleyAnimals'])->name('admin.valley-animals');
     Route::delete('settings/{key}', [SettingsController::class, 'forget'])->whereIn('key', SettingsController::REMOVABLE)->name('admin.settings.forget');
     Route::post('settings/test/{service}', [SettingsController::class, 'test'])->whereIn('service', ['paypal', 'google', 'claude', 'mail'])->middleware('throttle:10,1,admin-test')->name('admin.settings.test');
 

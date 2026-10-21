@@ -78,6 +78,7 @@ final class Census
         return Player::query()
             ->with(['faction:id,name,colour', 'region:id,name'])
             ->where('valley_id', $valley->id)
+            ->when(! ValleyAnimals::on(), fn ($query) => $query->where('npc', false))
             ->orderByRaw('last_seen_at IS NULL')
             ->orderByDesc('last_seen_at')
             ->limit($limit)

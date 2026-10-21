@@ -31,6 +31,7 @@ final class Settings
         'mail_username',
         'mail_password',
         'mail_from_address',
+        'valley_animals_off',
     ];
 
     /** @var array<string, string>|null */

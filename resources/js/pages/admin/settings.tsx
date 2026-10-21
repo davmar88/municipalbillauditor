@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { NativeSelect } from '@/components/ui/native-select';
 import { act, dollars, shortWhen } from '@/lib/game';
-import { cashouts } from '@/routes/admin';
+import { cashouts, valleyAnimals as valleyAnimalsRoute } from '@/routes/admin';
 import { forget, test, update } from '@/routes/admin/settings';
 
 type Props = {
@@ -36,6 +36,7 @@ type Props = {
         mailFromAddress: string | null;
         /** No mailbox saved here: the mail server in the server's .env. */
         mailFromServer: string | null;
+        valleyAnimals: { on: boolean; count: number; inFactions: number };
     };
     /** Whether the PayPal keys are in. */
     ready: boolean;
@@ -450,6 +451,43 @@ export default function AdminSettings({
                         </>
                     )}
                 </Form>
+
+                <Card
+                    title="Valley animals"
+                    actions={
+                        <Button
+                            type="button"
+                            size="sm"
+                            variant={
+                                settings.valleyAnimals.on
+                                    ? 'outline'
+                                    : 'default'
+                            }
+                            onClick={() =>
+                                (settings.valleyAnimals.on
+                                    ? confirm(
+                                          'Switch the valley animals off? They leave their factions (factions of only valley animals break up and their land goes back) and the map.',
+                                      )
+                                    : true) &&
+                                act(
+                                    valleyAnimalsRoute.url(),
+                                    { on: !settings.valleyAnimals.on },
+                                    'put',
+                                )
+                            }
+                        >
+                            {settings.valleyAnimals.on
+                                ? 'Switch off'
+                                : 'Switch on'}
+                        </Button>
+                    }
+                >
+                    <p className="text-sm text-muted-foreground">
+                        {settings.valleyAnimals.on
+                            ? `On: ${settings.valleyAnimals.count} animals the game runs itself walk, gather, chat and fill their factions' stores (${settings.valleyAnimals.inFactions} in factions). Switch them off once there are enough real players.`
+                            : `Off: the ${settings.valleyAnimals.count} valley animals are gone from the map and the factions. Real players have the valley to themselves.`}
+                    </p>
+                </Card>
 
                 <section className="flex flex-col gap-2">
                     <h2 className="text-lg font-bold">Latest purchases</h2>
