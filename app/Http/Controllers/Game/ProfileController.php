@@ -66,6 +66,7 @@ class ProfileController extends Controller
             ],
             'languages' => Players::LANGUAGES,
             'language' => $player->language,
+            'newsEmails' => (bool) $player->news_emails,
             // When the name can change again; null when it can now.
             'renameFrom' => $player->renamed_at?->addDays(Players::RENAME_DAYS)->isFuture() ? $player->renamed_at->addDays(Players::RENAME_DAYS)->toIso8601String() : null,
         ]);
@@ -153,6 +154,23 @@ class ProfileController extends Controller
         $players->setLanguage($request->user()->player, $language);
 
         return $this->told("Chat translations will be in {$language}.");
+    }
+
+    /** News by email while you're away: on or off. */
+    public function news(Request $request): RedirectResponse
+    {
+        $on = (bool) $request->validate(['on' => ['required', 'boolean']])['on'];
+        $request->user()->player->forceFill(['news_emails' => $on])->save();
+
+        return $this->told($on ? "We'll email you what happens while you're away." : 'No more news emails.');
+    }
+
+    /** The link at the foot of a news email: no more of them. */
+    public function newsOff(Player $player): RedirectResponse
+    {
+        $player->forceFill(['news_emails' => false])->save();
+
+        return redirect()->route('home')->with('status', 'No more news emails. You can turn them back on from your Me page.');
     }
 
     private function seasonRosettes(Player $player, ?Season $season): int

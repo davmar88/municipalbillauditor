@@ -63,6 +63,9 @@
             </div>
         </header>
 
+        @if (session('status'))
+            <p role="status" class="mx-auto mt-4 max-w-[1200px] rounded-md border border-rule bg-paper px-4 py-3 text-ink">{{ session('status') }}</p>
+        @endif
         <main id="main">
             @yield('content')
         </main>

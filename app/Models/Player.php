@@ -91,6 +91,8 @@ class Player extends Model
             'home_burned_at' => 'datetime',
             'pound_until' => 'datetime',
             'last_seen_at' => 'datetime',
+            'news_emails' => 'boolean',
+            'news_sent_at' => 'datetime',
             'muted_until' => 'datetime',
             'left_faction_at' => 'datetime',
             'inside_home_at' => 'datetime',

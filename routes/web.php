@@ -50,6 +50,8 @@ Route::get('terms', [PageController::class, 'terms'])->name('terms');
 Route::get('updates', [PageController::class, 'updates'])->name('updates');
 Route::get('fair-play', [PageController::class, 'fairPlay'])->name('fair-play');
 Route::get('wiki', [PageController::class, 'wiki'])->name('wiki');
+// One click from a news email turns them off, signed-in or not.
+Route::get('news/off/{player}', [ProfileController::class, 'newsOff'])->middleware('signed')->name('news.off');
 Route::get('banners/{faction}', [BannerController::class, 'show'])->name('faction.banner');
 Route::get('sitemap.xml', [PageController::class, 'sitemap'])->name('sitemap');
 Route::get('robots.txt', [PageController::class, 'robots'])->name('robots');
@@ -183,6 +185,7 @@ Route::middleware(['auth', 'verified', 'player', 'throttle:120,1'])->prefix('pla
 
     Route::get('me', [ProfileController::class, 'show'])->name('play.me');
     Route::put('me/language', [ProfileController::class, 'language'])->name('play.me.language');
+    Route::put('me/news', [ProfileController::class, 'news'])->name('play.me.news');
     Route::put('me/name', [ProfileController::class, 'rename'])->name('play.me.rename');
     Route::get('animals/{player}', [ProfileController::class, 'animal'])->name('play.animal');
 

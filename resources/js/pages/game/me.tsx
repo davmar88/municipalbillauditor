@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
     language as languageRoute,
+    news as newsRoute,
     rename as nameRoute,
 } from '@/routes/play/me';
 import type { Worn } from '@/lib/animal-dress';
@@ -47,6 +48,8 @@ type Props = {
     };
     languages: string[];
     language: string;
+    /** Email me what happens while I'm away. */
+    newsEmails: boolean;
     renameFrom: string | null;
 };
 
@@ -58,6 +61,7 @@ export default function Me({
     collection,
     languages,
     language,
+    newsEmails,
     renameFrom,
 }: Props) {
     const [name, setName] = useState(animal.name);
@@ -241,6 +245,27 @@ export default function Me({
                             </option>
                         ))}
                     </NativeSelect>
+                </section>
+
+                <section className="flex flex-col gap-2">
+                    <h2 className="text-lg font-bold">News by email</h2>
+                    <label className="flex items-center gap-2 text-sm">
+                        <input
+                            type="checkbox"
+                            className="size-4 accent-primary"
+                            checked={newsEmails}
+                            onChange={(e) =>
+                                act(
+                                    newsRoute.url(),
+                                    { on: e.target.checked },
+                                    'put',
+                                )
+                            }
+                        />
+                        Email me what happens to my animal while I&rsquo;m away:
+                        robberies, raids, fires, sales. At most one email every
+                        few hours.
+                    </label>
                 </section>
             </div>
         </>
