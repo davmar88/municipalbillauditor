@@ -98,7 +98,7 @@ type Props = {
         poster: string;
         says: string;
         target: { id: number; name: string; colour: string } | null;
-        corn: number;
+        apples: number;
         rosettes: number;
         expiresAt: string;
         doneBy: string | null;
@@ -493,8 +493,9 @@ function Jobs({ jobs }: Pick<Props, 'jobs'>) {
                         >
                             <span className="font-semibold">📌 {job.says}</span>
                             <span className="text-xs text-muted-foreground">
-                                Posted by {job.poster} · pays {job.corn} Corn
-                                and {job.rosettes} Rosettes
+                                Posted by {job.poster} · pays {job.apples}{' '}
+                                {job.apples === 1 ? 'Apple' : 'Apples'} and{' '}
+                                {job.rosettes} Rosettes
                                 {job.doneBy
                                     ? ` · done by ${job.doneBy}`
                                     : ` · comes down ${fromNow(job.expiresAt)}`}

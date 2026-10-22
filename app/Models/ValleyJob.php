@@ -19,12 +19,13 @@ use Illuminate\Support\Carbon;
  * @property string|null $material
  * @property int $amount
  * @property int $reward_corn
+ * @property int $reward_apples
  * @property int $reward_rosettes
  * @property int|null $done_by
  * @property Carbon|null $done_at
  * @property Carbon $expires_at
  */
-#[Fillable(['valley_id', 'kind', 'poster', 'target_faction_id', 'region_id', 'material', 'amount', 'reward_corn', 'reward_rosettes', 'done_by', 'done_at', 'expires_at'])]
+#[Fillable(['valley_id', 'kind', 'poster', 'target_faction_id', 'region_id', 'material', 'amount', 'reward_corn', 'reward_apples', 'reward_rosettes', 'done_by', 'done_at', 'expires_at'])]
 class ValleyJob extends Model
 {
     protected function casts(): array

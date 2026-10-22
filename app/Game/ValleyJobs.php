@@ -23,6 +23,12 @@ final class ValleyJobs
 
     public const HOURS = 24;
 
+    /** Apples a job pays. */
+    public const APPLES = ['rob' => 3, 'raid' => 5, 'defend' => 3];
+
+    /** A "bring" job pays an Apple for every so many goods. */
+    public const GOODS_PER_APPLE = 10;
+
     /** Goods the board asks for. */
     public const GOODS = ['wood', 'stone', 'clay', 'straw', 'wool', 'eggs', 'dye'];
 
@@ -44,11 +50,12 @@ final class ValleyJobs
         $material = self::GOODS[array_rand(self::GOODS)];
         $amount = random_int(3, 8) * 5;
 
-        [$corn, $rosettes] = match ($kind) {
-            'rob' => [120, 30],
-            'raid' => [200, 40],
-            'defend' => [120, 30],
-            default => [$amount * 4, 10],
+        // Jobs pay Apples (her call, 2026-10-22), and Rosettes.
+        [$apples, $rosettes] = match ($kind) {
+            'rob' => [self::APPLES['rob'], 30],
+            'raid' => [self::APPLES['raid'], 40],
+            'defend' => [self::APPLES['defend'], 30],
+            default => [max(1, intdiv($amount, self::GOODS_PER_APPLE)), 10],
         };
 
         return ValleyJob::create([
@@ -58,7 +65,8 @@ final class ValleyJobs
             'target_faction_id' => in_array($kind, ['rob', 'raid'], true) ? $target?->id : null,
             'material' => $kind === 'bring' ? $material : null,
             'amount' => $kind === 'bring' ? $amount : 0,
-            'reward_corn' => $corn,
+            'reward_corn' => 0,
+            'reward_apples' => $apples,
             'reward_rosettes' => $rosettes,
             'expires_at' => CarbonImmutable::now()->addHours(self::HOURS),
         ]);
@@ -142,7 +150,7 @@ final class ValleyJobs
                 'target' => $job->target ? ['id' => $job->target->id, 'name' => $job->target->name, 'colour' => $job->target->colour] : null,
                 'material' => $job->material,
                 'amount' => $job->amount,
-                'corn' => $job->reward_corn,
+                'apples' => $job->reward_apples,
                 'rosettes' => $job->reward_rosettes,
                 'expiresAt' => $job->expires_at->toIso8601String(),
                 'doneBy' => $job->doer?->name,
@@ -167,10 +175,9 @@ final class ValleyJobs
     private static function pay(Player $player, ValleyJob $job): ValleyJob
     {
         $job->forceFill(['done_by' => $player->id, 'done_at' => CarbonImmutable::now()])->save();
-        Player::query()->whereKey($player->id)->increment('corn', $job->reward_corn);
-        $player->corn += $job->reward_corn;
+        Apples::award($player, $job->reward_apples, "A job on the board: {$job->poster}", "job:{$job->id}");
         Rosettes::award($player, $job->reward_rosettes, 'A job on the board', "job:{$job->id}", $player->valley->currentSeason());
-        Notices::send($player->id, 'job', "📌 {$job->poster} paid you {$job->reward_corn} Corn and {$job->reward_rosettes} Rosettes: ".self::says($job), route('play.valley', [], false));
+        Notices::send($player->id, 'job', "📌 {$job->poster} paid you {$job->reward_apples} ".($job->reward_apples === 1 ? 'Apple' : 'Apples')." and {$job->reward_rosettes} Rosettes: ".self::says($job), route('play.valley', [], false));
 
         return $job;
     }

@@ -197,10 +197,12 @@ class ValleyLifeTest extends TestCase
 
         $bring = $jobs->postOne($this->valley, 'bring');
         $runner = $this->player(Species::Goat, 1, ['materials' => [$bring->material => $bring->amount + 2]]);
-        $corn = $runner->corn;
+        $apples = $runner->apples;
         $this->actingAs($runner->user)->post(route('play.job.bring', $bring))->assertRedirect();
         $this->assertSame(2, $runner->fresh()->material($bring->material));
-        $this->assertSame($corn + $bring->reward_corn, $runner->fresh()->corn);
+        // The board pays Apples (her call), at least one.
+        $this->assertGreaterThanOrEqual(1, $bring->reward_apples);
+        $this->assertSame($apples + $bring->reward_apples, $runner->fresh()->apples);
         $this->assertNotNull($bring->fresh()->done_at);
 
         $rob = $jobs->postOne($this->valley, 'rob');

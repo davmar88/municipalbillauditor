@@ -131,7 +131,7 @@
             'When a season ends, the faction holding the most land and the 3 animals with the most Rosettes that season go into the Hall of Fame for good, with Corn and Rosettes as prizes.',
             'Every week, Monday to Sunday, factions are scored on raids won, Corn stolen and land held. The top faction goes into the Hall of Fame and shows on the front page.',
             'Twice a day something happens on one patch of land without warning: a gold rush, a wolf pack, a flood or a travelling merchant. The first 5 animals to walk there and take part win.',
-            'The bounty board holds jobs the valley animals pin up: rob a member of a faction, win a raid on its land, hold off a raid, or bring goods. The first animal to do a job is paid in Corn and Rosettes.',
+            'The bounty board holds jobs the valley animals pin up: rob a member of a faction, win a raid on its land, hold off a raid, or bring goods. The first animal to do a job is paid in Apples and Rosettes.',
             'Take in a pet: a dog helps you gather more, a horse walks you faster. Feed it every 12 hours and it grows to level 5. Leave it unfed for 2 days and it sulks and helps with nothing.',
             'Factions can make alliances. Allies cannot raid each other, can defend each other, and their homes are welcome on each other land. Either side can break it, and the whole valley hears of the betrayal.',
         ]],

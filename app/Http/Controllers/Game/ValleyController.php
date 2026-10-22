@@ -70,7 +70,7 @@ class ValleyController extends Controller
     {
         $jobs->bring($request->user()->player, $job);
 
-        return $this->told("You handed in {$job->amount} {$job->material}: {$job->reward_corn} Corn and {$job->reward_rosettes} Rosettes are yours.");
+        return $this->told("You handed in {$job->amount} {$job->material}: {$job->reward_apples} Apples and {$job->reward_rosettes} Rosettes are yours.");
     }
 
     public function adopt(Request $request, Pets $pets): RedirectResponse
